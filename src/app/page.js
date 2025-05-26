@@ -392,7 +392,7 @@ export default function Home() {
           {/* Title with edit button */}
           <h1 className="text-3xl text-gray-900 md:text-4xl font-medium text-center mb-6 tracking-tight py-12">
             Scheduled trips starts from{" "}
-            <span className="text-primary-600 underline underline-offset-4 relative">
+            <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
               {startLocation}
             </span>
             <i
@@ -428,7 +428,7 @@ export default function Home() {
                   <input
                     type="text"
                     id="location"
-                    className="block w-full rounded-md border border-gray-300 pl-10 pr-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500 focus:outline-none shadow-sm transition h-10"
+                    className="block w-full rounded-full border border-gray-300 pl-10 pr-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-primary-500 focus:ring-primary-500 focus:outline-none shadow-sm transition h-10"
                     placeholder="Enter city or destination name..."
                     value={searchQuery}
                     onChange={(e) => handleLocationSearch(e.target.value)}
@@ -638,7 +638,7 @@ export default function Home() {
               startingFrom={startLocation}
               duration="6N 7D"
               price={18900}
-              slotsAvailable={7}
+              slotsAvailable={50}
             />
 
             {/* Ladakh Package */}

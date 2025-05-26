@@ -1502,33 +1502,35 @@ export default function PackageDetailPage() {
                         
                         {/* Meal Inclusion Display */}
                         <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-1 px-1 md:py-3 md:px-4 flex  items-start lg:items-center  md:border-r border-gray-200">
-                            {/* icon */}
-                            <div className="">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            {/* content */}
-                            <div className="mb-1">
-                              <div className="font-medium text-sm">Breakfast</div>
-                              <div className="text-sm text-gray-600">Included</div>
-                            </div>
-
                           </div>
-                          
-                          <div className="flex-1 py-1 px-1 md:py-3 md:px-4 flex flex-col items-start lg:items-center md:border-r border-gray-200">
-                            <div className="flex items-start md:items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-1 px-1 md:py-3 md:px-4 flex flex-col items-start lg:items-center text-lg">
-                            <div className="flex items-start md:items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>
@@ -1659,35 +1661,42 @@ export default function PackageDetailPage() {
                         <p className="text-gray-800">
                           Arrive in Jaisalmer in the morning. After check-in and
                           freshening up, explore the magnificent Jaisalmer Fort,
-                          known as the "Golden Fort". In the afternoon, visit
+                          known as the &quot;Golden Fort&quot;. In the afternoon, visit
                           Patwon Ki Haveli and Gadisar Lake. Evening will be at
                           Sam Sand Dunes for a camel safari and cultural program
                           followed by dinner under the stars.
                         </p>
                         {/* Meal Inclusion Display */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Breakfast</span>
+                        <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center text-lg">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>
@@ -1826,29 +1835,36 @@ export default function PackageDetailPage() {
                           the houseboat.
                         </p>
                         {/* Meal Inclusion Display */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Breakfast</span>
+                        <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center text-lg">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>
@@ -1984,29 +2000,36 @@ export default function PackageDetailPage() {
                           houseboat for dinner and overnight stay.
                         </p>
                         {/* Meal Inclusion Display */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Breakfast</span>
+                        <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center text-lg">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>
@@ -2138,37 +2161,44 @@ export default function PackageDetailPage() {
                           Mountain Adventure
                         </h4>
                         <p className="text-gray-800">
-                          Full day excursion to Gulmarg, the "Meadow of
-                          Flowers". Experience Gondola ride to phase 1 with
+                          Full day excursion to Gulmarg, the &quot;Meadow of
+                          Flowers&quot;. Experience Gondola ride to phase 1 with
                           stunning views of snow-capped mountains. Optional
                           activities like horse riding or skiing (as per
                           season). Return to Srinagar by evening for dinner and
                            overnight stay.
                         </p>
                       {/* Meal Inclusion Display */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Breakfast</span>
+                      <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center text-lg">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>
@@ -2304,29 +2334,36 @@ export default function PackageDetailPage() {
                           in Pahalgam.
                         </p>
                         {/* Meal Inclusion Display */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Breakfast</span>
+                        <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                          {/* breakfast */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Breakfast</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center md:border-r border-gray-200">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-lg"></i>
-                              <span className="font-medium text-sm">Lunch</span>
+                          {/* lunch */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Lunch</div>
+                                <div className="text-sm text-gray-600">Not Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Not Included</span>
                           </div>
-                          
-                          <div className="flex-1 py-3 px-4 flex flex-col items-center text-lg">
-                            <div className="flex items-center mb-1">
-                              <i className="fi fi-rr-room-service text-primary-500 mr-2"></i>
-                              <span className="font-medium text-sm">Dinner</span>
+                          {/* dinner */}
+                          <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mt-3 md:mt-0">
+                            <div className="flex items-center">
+                              <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
+                              <div>
+                                <div className="font-medium text-sm">Dinner</div>
+                                <div className="text-sm text-gray-600">Included</div>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-600">Included</span>
                           </div>
                         </div>
                       </div>

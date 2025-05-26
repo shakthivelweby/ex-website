@@ -9,15 +9,26 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@flaticon/flaticon-uicons": "^3.3.1",
+    "@headlessui/react": "^2.2.3",
+    "date-fns": "^4.1.0",
+    "next": "15.3.2",
+    "rc-slider": "^11.1.8",
     "react": "^19.0.0",
+    "react-calendar": "^5.1.0",
+    "react-date-range": "^2.0.1",
+    "react-datepicker": "^8.3.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.2"
+    "react-slick": "^0.30.3",
+    "react-tailwindcss-datepicker": "^2.0.0",
+    "slick-carousel": "^1.8.1",
+    "styled-components": "^6.1.18"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.3.2",
-    "@eslint/eslintrc": "^3"
+    "tailwindcss": "^4"
   }
 }

@@ -8,17 +8,78 @@ import RangeSlider from "@/components/RangeSlider/RangeSlider";
 import DateRangePicker from "@/components/DateRangePicker/DateRangePicker";
 import Dropdown from "@/components/Dropdown/Dropdown";
 import Popup from "@/components/Popup";
+import { useScheduledTrips } from "./query";
 
-export default function Home() {
+export default function Scheduled() {
   // State for selected date from DateNavBar
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Add state for start location and location edit popup
-  const [startLocation, setStartLocation] = useState("Kochi");
+  const [startLocation, setStartLocation] = useState("");
+
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [locationCoordinates, setLocationCoordinates] = useState({
+    latitude: null,
+    longitude: null,
+  });
+
+  // State for all filters
+  const [filters, setFilters] = useState({
+    destination: "",
+    budget: "",
+    selectedDate: "",
+    longitude: "",
+    latitude: "",
+    dateRange: {
+      startDate: "",
+      endDate: "",
+    },
+    pax: "",
+    duration: "",
+  });
+
+  // Use a key to force re-render components when clearing filters
+  const [resetKey, setResetKey] = useState(0);
+
+  // State to control the filter popup visibility
+  const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false);
+
+  // save to local storage
+  useEffect(() => {
+    if (locationCoordinates.latitude && locationCoordinates.longitude) {
+      localStorage.setItem(
+        "locationCoordinates",
+        JSON.stringify(locationCoordinates)
+      );
+    }
+    if (startLocation) {
+      localStorage.setItem("startLocation", startLocation);
+    }
+  }, [locationCoordinates, startLocation]);
+
+  // get from local storage
+  useEffect(() => {
+    const locationCoordinates = localStorage.getItem("locationCoordinates");
+    const startLocation = localStorage.getItem("startLocation");
+    if (locationCoordinates) {
+      setLocationCoordinates(JSON.parse(locationCoordinates));
+      setStartLocation(startLocation);
+    } else {
+      setLocationCoordinates({
+        latitude: 10.1631526,
+        longitude: 76.64127119999999,
+      });
+      localStorage.setItem("startLocation", "Kerala");
+    }
+  }, []);
+
+  const sendData = () => {};
+
+  const { data: scheduledTrips } = useScheduledTrips(filters);
+  const packages = scheduledTrips?.data;
 
   // Sample destination options
   const destinationOptions = [
@@ -40,13 +101,29 @@ export default function Home() {
   const sessionToken = useRef(null);
   const googleApiKey = "AIzaSyDaNPqSBObLDby0rpTvEUbQ8Ek9kxAABK0";
 
-  // Load Google Places API
+  // Add a new ref for Places Service
+  const placesService = useRef(null);
+
+  // Update the useEffect that loads Google Places API
   useEffect(() => {
-    // Skip if already loaded
-    if (placesLoaded) return;
+    // Skip if already loaded or if window.google exists
+    if (placesLoaded || window.google?.maps?.places) {
+      setPlacesLoaded(true);
+      autocompleteService.current =
+        new window.google.maps.places.AutocompleteService();
+      // Create a dummy div for PlacesService (required)
+      const mapDiv = document.createElement("div");
+      placesService.current = new window.google.maps.places.PlacesService(
+        mapDiv
+      );
+      sessionToken.current =
+        new window.google.maps.places.AutocompleteSessionToken();
+      return;
+    }
 
     // Create a script element to load the Google Places API
     const script = document.createElement("script");
+    script.id = "google-maps-script"; // Add an ID to check if script exists
     script.src = `https://maps.googleapis.com/maps/api/js?key=${googleApiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
@@ -56,6 +133,11 @@ export default function Home() {
       setPlacesLoaded(true);
       autocompleteService.current =
         new window.google.maps.places.AutocompleteService();
+      // Create a dummy div for PlacesService (required)
+      const mapDiv = document.createElement("div");
+      placesService.current = new window.google.maps.places.PlacesService(
+        mapDiv
+      );
       sessionToken.current =
         new window.google.maps.places.AutocompleteSessionToken();
     };
@@ -65,8 +147,11 @@ export default function Home() {
       console.error("Failed to load Google Places API");
     };
 
-    // Add script to document
-    document.head.appendChild(script);
+    // Check if script already exists
+    const existingScript = document.getElementById("google-maps-script");
+    if (!existingScript) {
+      document.head.appendChild(script);
+    }
 
     // Cleanup
     return () => {
@@ -74,7 +159,7 @@ export default function Home() {
         document.head.removeChild(script);
       }
     };
-  }, [placesLoaded]);
+  }, [placesLoaded, googleApiKey]);
 
   // Update the location search function to use Google Places API
   const handleLocationSearch = async (query) => {
@@ -92,7 +177,7 @@ export default function Home() {
       autocompleteService.current.getPlacePredictions(
         {
           input: query,
-          types: ["(cities)"], // Restrict to cities only
+          types: ["(regions)"], // Restrict to cities only
           componentRestrictions: { country: "in" }, // Restrict to India
           sessionToken: sessionToken.current,
         },
@@ -153,43 +238,51 @@ export default function Home() {
     }
   }, [isLocationPopupOpen, placesLoaded]);
 
-  // Update the selectLocation function to get full details
+  // Update the selectLocation function to get coordinates
   const selectLocation = (location) => {
-    // Use the formatted name from Google Places
-    setStartLocation(location.name);
+    // Request additional place details including geometry
+    placesService.current.getDetails(
+      {
+        placeId: location.placeId,
+        fields: ["geometry", "formatted_address", "name"],
+      },
+      (place, status) => {
+        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
+          const locationData = {
+            name: place.name,
+            latitude: place.geometry.location.lat(),
+            longitude: place.geometry.location.lng(),
+            formattedAddress: place.formatted_address,
+          };
 
-    // If you need more details, you could use the Place Details API here
-    // with location.placeId
+          // Update your state with the location data
+          setStartLocation(place.name);
+          // You might want to store coordinates in state as well
+          setLocationCoordinates({
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+          });
+        } else {
+          console.error("Error fetching place details:", status);
+        }
 
-    setIsLocationPopupOpen(false);
-    setSearchQuery(""); // Clear search when closing
-    setSearchResults([]); // Clear results when closing
+        // Close popup and reset search
+        setIsLocationPopupOpen(false);
+        setSearchQuery("");
+        setSearchResults([]);
+      }
+    );
   };
 
-  // Format date for display in the divider
-  const formatDateForDivider = (date) => {
-    return `Today ${date.getDate()} ${date.toLocaleString("default", {
-      month: "May",
-    })}`;
-  };
-
-  // State for all filters
-  const [filters, setFilters] = useState({
-    destination: null,
-    budget: null,
-    dateRange: {
-      startDate: null,
-      endDate: null,
-    },
-    pax: null,
-    duration: null,
-  });
-
-  // Use a key to force re-render components when clearing filters
-  const [resetKey, setResetKey] = useState(0);
-
-  // State to control the filter popup visibility
-  const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false);
+  // use effect to update selected date, and longitude and latitude in filters
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      selectedDate: selectedDate.toISOString().split("T")[0],
+      longitude: locationCoordinates.longitude,
+      latitude: locationCoordinates.latitude,
+    }));
+  }, [selectedDate, locationCoordinates]);
 
   // Update individual filter values
   const updateFilter = (name, value) => {
@@ -248,7 +341,7 @@ export default function Home() {
           placeholder="--"
           value={filters.destination}
           onChange={(option) => updateFilter("destination", option)}
-          className={ 
+          className={
             filters.destination ? "border-primary-600 bg-primary-50/30" : ""
           }
         />
@@ -279,39 +372,6 @@ export default function Home() {
           onChange={(value) => updateFilter("budget", value)}
           className={
             filters.budget !== null ? "border-primary-600 bg-primary-50/30" : ""
-          }
-        />
-      </div>
-
-      {/* Travel Period */}
-      <div className="flex flex-col">
-        <label
-          className={`mb-2 font-medium text-sm ${
-            filters.dateRange.startDate || filters.dateRange.endDate
-              ? "text-primary-600"
-              : "text-gray-800"
-          }`}
-        >
-          Travel Period
-        </label>
-        <DateRangePicker
-          key={`date-range-${resetKey}`}
-          onChange={(dates) => {
-            if (Array.isArray(dates) && dates.length === 2) {
-              const [startDate, endDate] = dates;
-              updateFilter("dateRange", { startDate, endDate });
-            } else if (dates && typeof dates === "object") {
-              const { startDate, endDate } = dates;
-              updateFilter("dateRange", { startDate, endDate });
-            }
-          }}
-          initialStartDate={filters.dateRange.startDate}
-          initialEndDate={filters.dateRange.endDate}
-          placeholder="--"
-          className={
-            filters.dateRange.startDate || filters.dateRange.endDate
-              ? "border-primary-600 bg-primary-50/30"
-              : ""
           }
         />
       </div>
@@ -368,6 +428,14 @@ export default function Home() {
       </div>
     </>
   );
+
+  // function searchPackages() {
+  //   // console.log(startLocation);
+  //   usePackages({
+  //     startLongitude: locationCoordinates.longitude,
+  //     startLatitude: locationCoordinates.latitude,
+  //   });
+  // }
 
   return (
     <main className="min-h-screen bg-white flex flex-col items-center relative">
@@ -534,7 +602,7 @@ export default function Home() {
                     onClick={applyFilters}
                     className="h-10 px-4 rounded-full bg-primary-500 text-white text-sm font-medium flex-1 cursor-pointer hover:bg-primary-700 transition-colors"
                   >
-                    Apply 
+                    Apply
                   </button>
                 </div>
               </div>
@@ -542,7 +610,7 @@ export default function Home() {
           </Popup>
 
           {/* Desktop Filter Bar - Hidden on mobile */}
-          <div className="hidden lg:grid lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <div className="hidden lg:grid lg:grid-cols-3 xl:grid-cols-5 gap-6">
             <FilterComponents />
 
             {/* Clear All & Apply Buttons */}
@@ -576,92 +644,86 @@ export default function Home() {
           {/* Trip Cards - Grid View */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2">
             {/* Rajasthan Package */}
-            <PackageCard
-              packageId="rajasthan-tour"
-              imageSrc="https://images.unsplash.com/photo-1599661046289-e31897846e41?q=80&w=1000&auto=format&fit=crop"
-              title="Rajasthan - Jaisalmer - Delhi - Kashmir - Amritsar - Agra"
-              startingFrom={startLocation}
-              duration="12N 13D"
-              price={20500}
-              slotsAvailable={5}
-            />
+            {packages?.length === 0 && (
+              <div className="col-span-full text-center py-16">
+                <div className="max-w-md mx-auto">
+                  <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>
 
-            {/* Kashmir Package */}
-            <PackageCard
-              packageId="kashmir-tour"
-              imageSrc="https://images.unsplash.com/photo-1606821061030-9eedf225857b?q=80&w=3127&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              title="Kashmir - Srinagar - Gulmarg - Sonmarg"
-              startingFrom={startLocation}
-              duration="5N 6D"
-              price={15800}
-              slotsAvailable={8}
-            />
+                  <p className="text-gray-600 mb-8">
+                    Sorry, we couldn't find any packages starting from{" "}
+                    <span className="font-medium text-gray-900">
+                      {startLocation}
+                    </span>{" "}
+                    right now
+                  </p>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600 font-medium">
+                      Try these nearby starting locations:
+                    </p>
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        onClick={() =>
+                          selectLocation({
+                            placeId: "ChIJv8a-SlENCDsRkkGEpcqC1Qs",
+                            name: "Kochi",
+                          })
+                        }
+                        className="px-4 py-2 rounded-full text-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                      >
+                        Kochi
+                      </button>
+                      <button
+                        onClick={() =>
+                          selectLocation({
+                            placeId: "ChIJR827Bbi7BTsRy4FcXKufQxU",
+                            name: "Trivandrum",
+                          })
+                        }
+                        className="px-4 py-2 rounded-full text-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                      >
+                        Trivandrum
+                      </button>
+                      <button
+                        onClick={() =>
+                          selectLocation({
+                            placeId: "ChIJR827Bbi7BTsRy4FcXKufQxU",
+                            name: "Thiruvananthapuram",
+                          })
+                        }
+                        className="px-4 py-2 rounded-full text-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                      >
+                        Thiruvananthapuram
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {packages?.map((trip) => {
+              const {
+                id,
+                name,
+                images,
+                total_days,
+                total_nights,
+                starting_location,
+                adult_price,
+              } = trip;
 
-            {/* Kerala Package */}
-            <PackageCard
-              packageId="kerala-tour"
-              imageSrc="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?q=80&w=3132&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              title="Kerala - Munnar - Thekkady - Alleppey - Kovalam"
-              startingFrom={startLocation}
-              duration="6N 7D"
-              price={12500}
-              slotsAvailable={12}
-            />
-
-            {/* Goa Package */}
-            <PackageCard
-              packageId="goa-tour"
-              imageSrc="https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?q=80&w=1000&auto=format&fit=crop"
-              title="Goa - Beach Paradise - North & South Goa"
-              startingFrom={startLocation}
-              duration="4N 5D"
-              price={9500}
-              slotsAvailable={3}
-            />
-
-            {/* Himachal Package */}
-            <PackageCard
-              packageId="himachal-tour"
-              imageSrc="https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?q=80&w=1000&auto=format&fit=crop"
-              title="Himachal - Shimla - Manali - Dharamshala"
-              startingFrom={startLocation}
-              duration="7N 8D"
-              price={14200}
-              slotsAvailable={15}
-            />
-
-            {/* Andaman Package */}
-            <PackageCard
-              packageId="andaman-tour"
-              imageSrc="https://images.unsplash.com/photo-1589481169991-40ee02888551?q=80&w=1000&auto=format&fit=crop"
-              title="Andaman - Port Blair - Havelock - Neil Island"
-              startingFrom={startLocation}
-              duration="6N 7D"
-              price={18900}
-              slotsAvailable={50}
-            />
-
-            {/* Ladakh Package */}
-            <PackageCard
-              packageId="ladakh-tour"
-              imageSrc="https://images.unsplash.com/photo-1600356033695-a003690a6351?q=80&w=2934&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              title="Ladakh - Leh - Nubra Valley - Pangong Lake"
-              startingFrom={startLocation}
-              duration="8N 9D"
-              price={22500}
-              slotsAvailable={4}
-            />
-
-            {/* Agra-Delhi Package */}
-            <PackageCard
-              packageId="agra-delhi-tour"
-              imageSrc="https://images.unsplash.com/photo-1548013146-72479768bada?q=80&w=1000&auto=format&fit=crop"
-              title="Golden Triangle - Delhi - Agra - Jaipur"
-              startingFrom={startLocation}
-              duration="5N 6D"
-              price={10900}
-              slotsAvailable={9}
-            />
+              return (
+                <PackageCard
+                  packageId={id}
+                  imageSrc={images[0].image_url}
+                  title={name}
+                  startingFrom={starting_location}
+                  duration={`${total_days}N ${total_nights}D`}
+                  price={adult_price}
+                  slotsAvailable={5}
+                  key={id}
+                  isCertified={false}
+                />
+              );
+            })}
           </div>
         </div>
       </div>

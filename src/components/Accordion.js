@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 
 export default function Accordion({
@@ -15,7 +14,7 @@ export default function Accordion({
       className={`mb-2 border bg-[#F7F7F7] border-gray-100 rounded-2xl overflow-hidden ${className}`}
     >
       <div
-        className=" px-3 py-3 flex items-center justify-between cursor-pointer"
+        className="px-3 py-3 flex items-center justify-between cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
         <h3 className="text-base font-medium text-gray-900 m-0">{title}</h3>
@@ -25,7 +24,15 @@ export default function Accordion({
           } transition-transform`}
         ></i>
       </div>
-      {isOpen && <div className="mx-2 mb-2 p-4 bg-white rounded-2xl">{children}</div>}
+
+      {/* SEO-friendly: render always, hide/show with CSS only */}
+      <div
+        className={`mx-2 mb-2 p-4 bg-white rounded-2xl transition-all duration-300 ease-in-out ${
+          isOpen ? "block" : "hidden"
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

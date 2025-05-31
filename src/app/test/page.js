@@ -12,8 +12,17 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { createGlobalStyle } from "styled-components";
 
-
-
+// function getServerSideProps() {
+//   const { data } = getPackageDetails(4);
+//   return {
+//     props: {
+//       data,
+//     },
+//   };
+// }
+// export async function getServerSideProps(context) {
+//   console.log(context.params.id);
+// }
 
 // Add GlobalStyle component for the carousel
 const GlobalCarouselStyle = createGlobalStyle`
@@ -259,15 +268,15 @@ export default function PackageDetailPage() {
 
   const handleTabChange = (tabName) => {
     setActiveTab(tabName);
-    const tabContent = document.querySelector('.tab-content');
+    const tabContent = document.querySelector(".tab-content");
     if (tabContent) {
       const offset = 80; // Adjust this value based on your sticky header height
       const elementPosition = tabContent.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
-      
+
       window.scrollTo({
         top: offsetPosition,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   };
@@ -511,11 +520,13 @@ export default function PackageDetailPage() {
                 </h3>
                 <div className="flex flex-wrap gap-4">
                   {/* Budget Stay option */}
-                  <label className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-2 text-sm cursor-pointer transition-all ${
-                    selectedStayCategory === "budget"
-                      ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
-                      : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
-                  }`}>
+                  <label
+                    className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-2 text-sm cursor-pointer transition-all ${
+                      selectedStayCategory === "budget"
+                        ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="stayCategory"
@@ -525,29 +536,35 @@ export default function PackageDetailPage() {
                       className="sr-only" // Hide the actual radio input
                     />
                     <div className="flex items-center">
-                      <div className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
-                        selectedStayCategory === "budget" 
-                          ? "border-[#0057C9] bg-white" 
-                          : "border-gray-400 bg-white"
-                      }`}>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
+                          selectedStayCategory === "budget"
+                            ? "border-[#0057C9] bg-white"
+                            : "border-gray-400 bg-white"
+                        }`}
+                      >
                         {selectedStayCategory === "budget" && (
                           <div className="w-2 h-2 rounded-full bg-[#0057C9] m-auto flex items-center justify-center"></div>
                         )}
                       </div>
-                      <span className={`font-medium ${
-                        selectedStayCategory === "budget" ? "font-medium" : ""
-                      } whitespace-nowrap`}>
+                      <span
+                        className={`font-medium ${
+                          selectedStayCategory === "budget" ? "font-medium" : ""
+                        } whitespace-nowrap`}
+                      >
                         Budget Stay
                       </span>
                     </div>
                   </label>
 
                   {/* Standard Stay option */}
-                  <label className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-2 text-sm cursor-pointer transition-all ${
-                    selectedStayCategory === "standard"
-                      ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
-                      : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
-                  }`}>
+                  <label
+                    className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-2 text-sm cursor-pointer transition-all ${
+                      selectedStayCategory === "standard"
+                        ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="stayCategory"
@@ -557,29 +574,37 @@ export default function PackageDetailPage() {
                       className="sr-only" // Hide the actual radio input
                     />
                     <div className="flex items-center">
-                      <div className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
-                        selectedStayCategory === "standard" 
-                          ? "border-[#0057C9] bg-white" 
-                          : "border-gray-400 bg-white"
-                      }`}>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
+                          selectedStayCategory === "standard"
+                            ? "border-[#0057C9] bg-white"
+                            : "border-gray-400 bg-white"
+                        }`}
+                      >
                         {selectedStayCategory === "standard" && (
                           <div className="w-2 h-2 rounded-full bg-[#0057C9] m-auto flex items-center justify-center"></div>
                         )}
                       </div>
-                      <span className={`${
-                        selectedStayCategory === "standard" ? "font-medium" : ""
-                      } whitespace-nowrap`}>
+                      <span
+                        className={`${
+                          selectedStayCategory === "standard"
+                            ? "font-medium"
+                            : ""
+                        } whitespace-nowrap`}
+                      >
                         Standard Stay
                       </span>
                     </div>
                   </label>
 
                   {/* Luxury Stay option */}
-                  <label className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-4 text-sm cursor-pointer transition-all ${
-                    selectedStayCategory === "luxury"
-                      ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
-                      : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
-                  }`}>
+                  <label
+                    className={`bg-[#F7F7F7] flex items-center border rounded-full py-2 px-4 text-sm cursor-pointer transition-all ${
+                      selectedStayCategory === "luxury"
+                        ? "border-gray-100 bg-[#dfeeff] text-[#0057C9] border-1 font-medium"
+                        : "border-gray-200 text-gray-700 hover:bg-gray-50 border-1 hover:border-gray-300 font-medium"
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="stayCategory"
@@ -589,18 +614,22 @@ export default function PackageDetailPage() {
                       className="sr-only" // Hide the actual radio input
                     />
                     <div className="flex items-center">
-                      <div className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
-                        selectedStayCategory === "luxury" 
-                          ? "border-[#0057C9] bg-white" 
-                          : "border-gray-400 bg-white"
-                      }`}>
+                      <div
+                        className={`w-4 h-4 rounded-full border flex-shrink-0 flex justify-center items-center mr-2 ${
+                          selectedStayCategory === "luxury"
+                            ? "border-[#0057C9] bg-white"
+                            : "border-gray-400 bg-white"
+                        }`}
+                      >
                         {selectedStayCategory === "luxury" && (
                           <div className="w-2 h-2 rounded-full bg-[#0057C9] m-auto flex items-center justify-center"></div>
                         )}
                       </div>
-                      <span className={`${
-                        selectedStayCategory === "luxury" ? "font-medium" : ""
-                      } whitespace-nowrap`}>
+                      <span
+                        className={`${
+                          selectedStayCategory === "luxury" ? "font-medium" : ""
+                        } whitespace-nowrap`}
+                      >
                         Luxury Stay
                       </span>
                     </div>
@@ -613,14 +642,18 @@ export default function PackageDetailPage() {
                 <div className="flex items-center">
                   <i className="fi fi-rr-bus text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Transportation</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Transportation
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center">
                   <i className="fi fi-rr-building text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Accommodation</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Accommodation
+                    </p>
                   </div>
                 </div>
 
@@ -634,7 +667,9 @@ export default function PackageDetailPage() {
                 <div className="flex items-center">
                   <i className="fi fi-rr-ticket text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Entry Ticket</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Entry Ticket
+                    </p>
                   </div>
                 </div>
 
@@ -648,7 +683,9 @@ export default function PackageDetailPage() {
                 <div className="flex items-center">
                   <i className="fi fi-rr-car-side text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Jeep Safari</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Jeep Safari
+                    </p>
                   </div>
                 </div>
               </div>
@@ -666,9 +703,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("details");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -683,9 +724,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("itinerary");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -700,9 +745,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("stay");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -717,9 +766,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("inclusion");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -734,9 +787,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("terms");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -751,9 +808,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("cancellation");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -768,9 +829,13 @@ export default function PackageDetailPage() {
                       onClick={() => {
                         setActiveTab("reviews");
                         // Scroll to tab content
-                        const tabContent = document.querySelector('.tab-content');
+                        const tabContent =
+                          document.querySelector(".tab-content");
                         if (tabContent) {
-                          tabContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          tabContent.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
                         }
                       }}
                     >
@@ -797,8 +862,8 @@ export default function PackageDetailPage() {
                   <div className="prose max-w-none text-gray-800">
                     {/* Main description */}
                     <p className="text-gray-800 leading-relaxed">
-                      Embark on a 12-day, 13-night journey through India&apos;s most
-                      iconic destinations. Experience the royal heritage of
+                      Embark on a 12-day, 13-night journey through India&apos;s
+                      most iconic destinations. Experience the royal heritage of
                       Rajasthan, the golden desert landscapes of Jaisalmer, and
                       the serene valleys of Kashmir. Visit Amritsar to witness
                       the peaceful beauty of the Golden Temple, explore the rich
@@ -821,7 +886,7 @@ export default function PackageDetailPage() {
                         <div>
                           <span className="font-medium text-gray-800">
                             Explore Iconic Destinations:
-                          </span>{' '}
+                          </span>{" "}
                           Visit the royal heritage of Rajasthan, the golden
                           desert of Jaisalmer, the serene landscapes of Kashmir,
                           and the historic landmarks of Delhi and Agra.
@@ -834,10 +899,10 @@ export default function PackageDetailPage() {
                         <div>
                           <span className="font-medium text-gray-800">
                             Cultural & Spiritual Immersion:
-                          </span>{' '}
-                          Experience the spiritual serenity of Amritsar&apos;s Golden
-                          Temple and discover India&apos;s rich history and culture
-                          throughout the journey.
+                          </span>{" "}
+                          Experience the spiritual serenity of Amritsar&apos;s
+                          Golden Temple and discover India&apos;s rich history
+                          and culture throughout the journey.
                         </div>
                       </li>
                       <li className="flex items-start">
@@ -847,7 +912,7 @@ export default function PackageDetailPage() {
                         <div>
                           <span className="font-medium text-gray-800">
                             Natural Beauty:
-                          </span>{' '}
+                          </span>{" "}
                           Witness diverse landscapes from desert dunes to
                           mountain valleys, providing breathtaking views and
                           photography opportunities.
@@ -860,7 +925,7 @@ export default function PackageDetailPage() {
                         <div>
                           <span className="font-medium text-gray-800">
                             Historical Significance:
-                          </span>{' '}
+                          </span>{" "}
                           Explore UNESCO World Heritage sites, ancient forts,
                           and monuments that tell the story of India&apos;s
                           fascinating past.
@@ -1068,7 +1133,13 @@ export default function PackageDetailPage() {
                       defaultOpen={false}
                     >
                       <p className="text-gray-800">
-                        Booking is simple! You can book directly through our website by selecting your preferred dates and number of travelers, then following the checkout process. Alternatively, you can contact our customer service team by phone or email for assistance with your booking. A 25% deposit is required to confirm your reservation, with the balance due 30 days before departure.
+                        Booking is simple! You can book directly through our
+                        website by selecting your preferred dates and number of
+                        travelers, then following the checkout process.
+                        Alternatively, you can contact our customer service team
+                        by phone or email for assistance with your booking. A
+                        25% deposit is required to confirm your reservation,
+                        with the balance due 30 days before departure.
                       </p>
                     </Accordion>
                   </div>
@@ -1112,21 +1183,27 @@ export default function PackageDetailPage() {
                           </div>
                           <div className="flex-1">
                             <h4 className="text-base font-medium text-gray-800 mb-2">
-                             Udaipur City Palace Hotel
+                              Udaipur City Palace Hotel
                             </h4>
                             <div className="mb-2">
                               <div>
                                 <div className="flex items-center mb-1">
                                   <i className="fi fi-rr-marker text-gray-700 mr-2 flex-shrink-0 text-sm"></i>
-                                  <p className="text-gray-800 text-xs font-medium mb-0">Location</p>
+                                  <p className="text-gray-800 text-xs font-medium mb-0">
+                                    Location
+                                  </p>
                                 </div>
-                                <p className="text-gray-800 text-sm font-medium">Udaipur, Rajasthan</p>
+                                <p className="text-gray-800 text-sm font-medium">
+                                  Udaipur, Rajasthan
+                                </p>
                               </div>
                             </div>
                             <div className="mt-2">
                               <div className="flex items-center mb-1">
                                 <i className="fi fi-rr-globe text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                <p className="text-gray-700 text-xs font-medium mb-0">Website</p>
+                                <p className="text-gray-700 text-xs font-medium mb-0">
+                                  Website
+                                </p>
                               </div>
                               <a
                                 href="https://hoteludaipurpalace.com"
@@ -1165,15 +1242,21 @@ export default function PackageDetailPage() {
                               <div>
                                 <div className="flex items-center mb-1">
                                   <i className="fi fi-rr-marker text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                  <p className="text-gray-700 text-xs font-medium mb-0">Location</p>
+                                  <p className="text-gray-700 text-xs font-medium mb-0">
+                                    Location
+                                  </p>
                                 </div>
-                                <p className="text-gray-800 text-sm font-medium">Jaipur, Rajasthan</p>
+                                <p className="text-gray-800 text-sm font-medium">
+                                  Jaipur, Rajasthan
+                                </p>
                               </div>
                             </div>
                             <div className="mt-2">
                               <div className="flex items-center mb-1">
                                 <i className="fi fi-rr-globe text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                <p className="text-gray-700 text-xs font-medium mb-0">Website</p>
+                                <p className="text-gray-700 text-xs font-medium mb-0">
+                                  Website
+                                </p>
                               </div>
                               <a
                                 href="https://palacechokhidhani.com"
@@ -1232,15 +1315,21 @@ export default function PackageDetailPage() {
                               <div>
                                 <div className="flex items-center mb-1">
                                   <i className="fi fi-rr-marker text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                  <p className="text-gray-700 text-xs font-medium mb-0">Location</p>
+                                  <p className="text-gray-700 text-xs font-medium mb-0">
+                                    Location
+                                  </p>
                                 </div>
-                                <p className="text-gray-800 text-sm font-medium">Jaisalmer, Rajasthan</p>
+                                <p className="text-gray-800 text-sm font-medium">
+                                  Jaisalmer, Rajasthan
+                                </p>
                               </div>
                             </div>
                             <div className="mt-2">
                               <div className="flex items-center mb-1">
                                 <i className="fi fi-rr-globe text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                <p className="text-gray-700 text-xs font-medium mb-0">Website</p>
+                                <p className="text-gray-700 text-xs font-medium mb-0">
+                                  Website
+                                </p>
                               </div>
                               <a
                                 href="https://lalgarhfortpalace.com"
@@ -1279,15 +1368,21 @@ export default function PackageDetailPage() {
                               <div>
                                 <div className="flex items-center mb-1">
                                   <i className="fi fi-rr-marker text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                  <p className="text-gray-700 text-xs font-medium mb-0">Location</p>
+                                  <p className="text-gray-700 text-xs font-medium mb-0">
+                                    Location
+                                  </p>
                                 </div>
-                                <p className="text-gray-800 text-sm font-medium">Jaisalmer, Rajasthan</p>
+                                <p className="text-gray-800 text-sm font-medium">
+                                  Jaisalmer, Rajasthan
+                                </p>
                               </div>
                             </div>
                             <div className="mt-2">
                               <div className="flex items-center mb-1">
                                 <i className="fi fi-rr-globe text-gray-800 mr-2 flex-shrink-0 text-sm"></i>
-                                <p className="text-gray-700 text-xs font-medium mb-0">Website</p>
+                                <p className="text-gray-700 text-xs font-medium mb-0">
+                                  Website
+                                </p>
                               </div>
                               <a
                                 href="https://goldenhaveli.com"
@@ -1485,8 +1580,8 @@ export default function PackageDetailPage() {
                             Evening Drop
                           </h5>
                           <p className="text-gray-800">
-                            At 9:00 PM, you&apos;ll be dropped off at Sabarmati BG
-                            Railway Station.
+                            At 9:00 PM, you&apos;ll be dropped off at Sabarmati
+                            BG Railway Station.
                           </p>
                         </div>
 
@@ -1499,7 +1594,7 @@ export default function PackageDetailPage() {
                             (20492).
                           </p>
                         </div>
-                        
+
                         {/* Meal Inclusion Display */}
                         <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
                           {/* breakfast */}
@@ -1507,8 +1602,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1518,7 +1617,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1527,8 +1628,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1661,10 +1766,11 @@ export default function PackageDetailPage() {
                         <p className="text-gray-800">
                           Arrive in Jaisalmer in the morning. After check-in and
                           freshening up, explore the magnificent Jaisalmer Fort,
-                          known as the &quot;Golden Fort&quot;. In the afternoon, visit
-                          Patwon Ki Haveli and Gadisar Lake. Evening will be at
-                          Sam Sand Dunes for a camel safari and cultural program
-                          followed by dinner under the stars.
+                          known as the &quot;Golden Fort&quot;. In the
+                          afternoon, visit Patwon Ki Haveli and Gadisar Lake.
+                          Evening will be at Sam Sand Dunes for a camel safari
+                          and cultural program followed by dinner under the
+                          stars.
                         </p>
                         {/* Meal Inclusion Display */}
                         <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
@@ -1673,8 +1779,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1684,7 +1794,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1693,8 +1805,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1841,8 +1957,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1852,7 +1972,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1861,8 +1983,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2006,8 +2132,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2017,7 +2147,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2026,8 +2158,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2166,17 +2302,21 @@ export default function PackageDetailPage() {
                           stunning views of snow-capped mountains. Optional
                           activities like horse riding or skiing (as per
                           season). Return to Srinagar by evening for dinner and
-                           overnight stay.
+                          overnight stay.
                         </p>
-                      {/* Meal Inclusion Display */}
-                      <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                        {/* Meal Inclusion Display */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
                           {/* breakfast */}
                           <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2186,7 +2326,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2195,8 +2337,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2340,8 +2486,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-sandwich text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Breakfast</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Breakfast
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2351,7 +2501,9 @@ export default function PackageDetailPage() {
                               <i className="fi fi-rr-utensils text-primary-500 mr-2 text-xl"></i>
                               <div>
                                 <div className="font-medium text-sm">Lunch</div>
-                                <div className="text-sm text-gray-600">Not Included</div>
+                                <div className="text-sm text-gray-600">
+                                  Not Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2360,8 +2512,12 @@ export default function PackageDetailPage() {
                             <div className="flex items-center">
                               <i className="fi fi-rr-room-service text-primary-500 mr-2 text-xl"></i>
                               <div>
-                                <div className="font-medium text-sm">Dinner</div>
-                                <div className="text-sm text-gray-600">Included</div>
+                                <div className="font-medium text-sm">
+                                  Dinner
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Included
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -2490,9 +2646,8 @@ export default function PackageDetailPage() {
                     <Accordion title="Things to Carry" defaultOpen={false}>
                       <ul className="space-y-3 m-0">
                         <li className="flex items-start">
-                          
-                            <i className="fi fi-rr-angle-circle-right text-violet-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
-                   
+                          <i className="fi fi-rr-angle-circle-right text-violet-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
+
                           <div>
                             <span className="font-medium text-gray-800">
                               Others:
@@ -2505,7 +2660,7 @@ export default function PackageDetailPage() {
                           </div>
                         </li>
                         <li className="flex items-start">
-                            <i className="fi fi-rr-angle-circle-right text-violet-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
+                          <i className="fi fi-rr-angle-circle-right text-violet-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
                           <div>
                             <span className="font-medium text-gray-800">
                               Personal Care:
@@ -2544,7 +2699,7 @@ export default function PackageDetailPage() {
                         </li>
                         <li className="flex items-start">
                           <i className="fi fi-rr-angle-circle-right text-violet-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
-                         
+
                           <div>
                             <span className="font-medium text-gray-800">
                               Documents:
@@ -2752,7 +2907,7 @@ export default function PackageDetailPage() {
                     </div>
 
                     <div className="mb-8">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-4">
                         7. Liability Disclaimer
                       </h4>
                       <ul className="space-y-3">
@@ -3035,11 +3190,11 @@ export default function PackageDetailPage() {
                             This journey through India was everything we hoped
                             for and more! The Golden Temple in Amritsar was
                             spiritually moving, and the evening Aarti ceremony
-                            is something I&apos;ll never forget. The accommodations
-                            exceeded our expectations, especially the houseboat
-                            in Kashmir and the heritage haveli in Jaipur. Our
-                            tour guide Ravi went above and beyond to make our
-                            experience special. The food everywhere was
+                            is something I&apos;ll never forget. The
+                            accommodations exceeded our expectations, especially
+                            the houseboat in Kashmir and the heritage haveli in
+                            Jaipur. Our tour guide Ravi went above and beyond to
+                            make our experience special. The food everywhere was
                             delicious, and we appreciated the balance of guided
                             tours and free time to explore on our own. Worth
                             every penny!
@@ -3149,8 +3304,8 @@ export default function PackageDetailPage() {
                             experiences arranged throughout the journey. The
                             beauty of Kashmir exceeded our expectations
                             completely. This tour provides excellent value for
-                            money and I&apos;ve already recommended it to several
-                            friends.
+                            money and I&apos;ve already recommended it to
+                            several friends.
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <span className="bg-gray-100 text-gray-800 text-xs px-2.5 py-1 rounded">
@@ -3260,7 +3415,9 @@ export default function PackageDetailPage() {
                     <span className="text-3xl font-bold text-gray-800">
                       ₹ {packageData.price.toLocaleString()}
                     </span>
-                    <span className="text-gray-700 text-sm font-medium ml-1">/ Person</span>
+                    <span className="text-gray-700 text-sm font-medium ml-1">
+                      / Person
+                    </span>
                   </div>
                   <div className="bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
                     {packageData.nights} N &nbsp; {packageData.days} D
@@ -3276,7 +3433,6 @@ export default function PackageDetailPage() {
                       ? "Standard Stay"
                       : "Luxury Stay"}
                   </span>
- 
                 </div>
 
                 {/* Starting Date */}
@@ -3464,7 +3620,9 @@ export default function PackageDetailPage() {
 
       {/* Mobile booking drawer */}
       <div
-        className={`mobile-booking-drawer ${isBookingDrawerOpen ? "open" : ""} !z-[100]`}
+        className={`mobile-booking-drawer ${
+          isBookingDrawerOpen ? "open" : ""
+        } !z-[100]`}
       >
         {/* Sticky header */}
         <div className="sticky top-0 bg-white p-4 border-b border-gray-200 z-10">
@@ -3504,8 +3662,6 @@ export default function PackageDetailPage() {
                 : "Luxury Stay"}
             </span>
           </div>
-
-        
 
           {/* Starting Date */}
           <div className="mb-6">

@@ -4,7 +4,7 @@ import Link from "next/link";
 const PackageCard = ({
   imageSrc = "/test.avif",
   imageAlt = "Package Image",
-  isCertified = true,
+  isCertified = false,
   duration = "6N 7D",
   title = "Manali - Shimla - Himachal Tour Package",
   startingFrom = "Delhi",
@@ -40,7 +40,7 @@ const PackageCard = ({
   }
 
   return (
-    <Link href={`/package?id=${packageId}`} className="block">
+    <Link href={`/package/${packageId}`} className="block">
       <div className="bg-white rounded-3xl overflow-hidden shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-300">
         <div className="relative p-2 rounded-2xl group">
           <Image

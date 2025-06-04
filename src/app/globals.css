@@ -283,3 +283,7 @@ i {
   position: relative;
   top: 3px;
 }
+
+.react-datepicker__week {
+  margin-bottom: 8px;
+}

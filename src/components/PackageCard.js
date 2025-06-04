@@ -2,15 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 
 const PackageCard = ({
-  imageSrc = "/test.avif",
-  imageAlt = "Package Image",
+  imageSrc,
+  imageAlt,
   isCertified = false,
-  duration = "6N 7D",
-  title = "Manali - Shimla - Himachal Tour Package",
-  startingFrom = "Delhi",
-  slotsAvailable = 10,
-  price = 17000,
-  packageId = "default-package",
+  duration,
+  title,
+  startingFrom,
+  slotsAvailable,
+  price,
+  packageId,
+  date,
 }) => {
   let slotElement = null;
   if (slotsAvailable <= 0) {
@@ -40,7 +41,7 @@ const PackageCard = ({
   }
 
   return (
-    <Link href={`/package/${packageId}`} className="block">
+    <Link href={`/package/${packageId}?date=${date}`} className="block">
       <div className="bg-white rounded-3xl overflow-hidden shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-300">
         <div className="relative p-2 rounded-2xl group">
           <Image

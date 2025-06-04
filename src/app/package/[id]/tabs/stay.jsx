@@ -2,14 +2,9 @@
 import Image from "next/image";
 
 const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
-  // const stayData = packageData.data.stays.find(
-  //   (stay) => stay.stay_category.id === selectedStayCategory
-  // );
-  console.log(packageData.data);
-  // console.log(selectedStayCategory);
-
+  console.log("packageData1", packageData);
   const stays = packageData.data.stays.filter(
-    (stay) => stay.stay_category_id == selectedStayCategory
+    (stay) => stay.stay_category_id == selectedStayCategory.stay_category_id
   );
 
   const HotelCard = ({ hotel_name, image_url, location, website }) => {

@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from "react";
 const navLinks = [
   {
     name: "Scheduled Trips",
-    href: "/",
+    href: "/scheduled",
     icon: "fi fi-rr-pending",
     active: true,
   },

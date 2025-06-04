@@ -128,11 +128,6 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                 </>
               ) : null}
 
-              <h4 className="text-[15px] font-medium mb-6 flex items-center">
-                <i className="fi fi-rr-info text-primary-500 mr-2"></i>
-                Description
-              </h4>
-
               <div>
                 <div
                   className="itineary-description"

@@ -714,6 +714,7 @@ export default function Scheduled() {
                 <PackageCard
                   packageId={id}
                   imageSrc={images[0].image_url}
+                  imageAlt={name}
                   title={name}
                   startingFrom={starting_location}
                   duration={`${total_days}N ${total_nights}D`}
@@ -721,6 +722,7 @@ export default function Scheduled() {
                   slotsAvailable={5}
                   key={id}
                   isCertified={false}
+                  date={selectedDate.toISOString().split("T")[0]}
                 />
               );
             })}

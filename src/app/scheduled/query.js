@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getScheduledTrips } from "../services/scheduled/service";
+import { getScheduledTrips } from "./service";
 
 export const useScheduledTrips = (filters) => {
   return useQuery({

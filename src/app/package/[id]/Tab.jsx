@@ -80,7 +80,7 @@ const Tab = ({ packageData, selectedStayCategory }) => {
             >
               Cancellation Policy
             </button>
-            <button
+            {/* <button
               className={`whitespace-nowrap text-sm font-medium cursor-pointer ${
                 activeTab === "reviews"
                   ? "bg-gray-900 text-white rounded-full px-4 py-2 font-medium"
@@ -89,7 +89,7 @@ const Tab = ({ packageData, selectedStayCategory }) => {
               onClick={() => handleTabClick("reviews")}
             >
               Reviews
-            </button>
+            </button> */}
           </nav>
 
           <button className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 bg-white text-gray-800 border border-gray-200 rounded-full flex items-center justify-center shadow-md z-10">

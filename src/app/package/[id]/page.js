@@ -11,6 +11,8 @@ export default async function PackageDetailPage({ params, searchParams }) {
   const packageStayCategory = packageData.data.package_stay_categories[0];
   const packageCombinations = await getPackageCombinations(id, date);
 
+
+
   const packageRate = await getPackageRateServer(
     id,
     packageStayCategory.id,

@@ -2,7 +2,7 @@
 import Image from "next/image";
 
 const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
-  console.log("packageData1", packageData);
+
   const stays = packageData.data.stays.filter(
     (stay) => stay.stay_category_id == selectedStayCategory.stay_category_id
   );

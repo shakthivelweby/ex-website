@@ -8,6 +8,8 @@ import MobileCarousel from "./mobileCarousel";
 import StayCategory from "./StayCategory";
 import { usePackageRate } from "./query";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import PackageDuration from "../packageDuration";
+
 
 export default function ClientWrapper({
   packageData,
@@ -43,6 +45,7 @@ export default function ClientWrapper({
 
   return (
     <div>
+
       <ImageViewer
         images={images}
         isOpen={isImageViewerOpen}
@@ -143,25 +146,7 @@ export default function ClientWrapper({
                   Choose Trip Duration
                 </h3>
                 <div className="flex flex-wrap gap-4">
-                  {console.log(packageCombinations.data)}
-                  {packageCombinations.data.map((combination) => {
-                    const { id, days, night, images } = combination;
-
-                    return (
-                      <div key={combination.id}>
-                        <div className="flex items-center">
-                          <img
-                            src={images[0]?.image_url}
-                            alt={images[0]?.image_name}
-                            className="w-6 h-6 mr-2"
-                          />
-                          <p className="text-sm font-medium text-gray-700">
-                            {days} days, {night} nights
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
                 </div>
               </div>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
+import Button from "./common/Button";
 
 const navLinks = [
   {
@@ -18,9 +19,31 @@ const navLinks = [
   { name: "Events", href: "#", icon: "fi fi-rr-glass-cheers" },
 ];
 
-export default function Header() {
+export default function Header({setShowLogin}) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+
+    // Close menu when clicking outside
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Handle active link selection
   const handleLinkClick = (index) => {
@@ -36,6 +59,24 @@ export default function Header() {
         behavior: "smooth",
       });
     }
+  };
+
+  const handleLogin = () => {
+    setIsLoading(true);
+    // Simulate a small delay before showing the login modal
+    setTimeout(() => {
+      setShowLogin(true);
+      setIsLoading(false);
+    }, 300);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    setShowUserMenu(false);
+    // You might want to redirect to home page or refresh the page here
+    window.location.reload();
   };
 
   // Scroll to active link on mount
@@ -96,15 +137,100 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* User Icon */}
-        <div className="flex items-center">
-          <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-100">
-            <i className="fi fi-rr-user text-primary-600 text-sm"></i>
-          </span>
+        {/* User Menu */}
+        <div className="flex items-center relative" ref={userMenuRef}>
+          {user ? (
+            <>
+              <button 
+                className="inline-flex items-center justify-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+              >
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                    {user.avatar ? (
+                      <Image
+                        src={user.avatar}
+                        alt={user.name}
+                        width={32}
+                        height={32}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <i className="fi fi-rr-user text-primary-600 text-sm"></i>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
+                    {/* <p className="text-xs text-gray-500 line-clamp-1">{user.email}</p> */}
+                  </div>
+                  <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
+                </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
+                  </div>
+                  <div className="py-1">
+                    <Link 
+                      href="/profile" 
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                    >
+                      <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">Profile</span>
+                        <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
+                      </div>
+                    </Link>
+                    <Link 
+                      href="/bookings" 
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                    >
+                      <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">My Bookings</span>
+                        <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
+                    >
+                      <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">Logout</span>
+                        <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogin}
+                icon={<i className="fi fi-rr-user"></i>}
+                isLoading={isLoading}
+              >
+                Sign in
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Minimal Horizontal Navigation */}
+      {/* Mobile Navigation */}
       <div className="lg:hidden relative border-t border-gray-100 bg-white">
         {/* Scroll indicators */}
         <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>

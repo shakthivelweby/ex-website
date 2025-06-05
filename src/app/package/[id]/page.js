@@ -19,6 +19,8 @@ export default async function PackageDetailPage({ params, searchParams }) {
     date
   );
 
+
+
   return (
     <ClientWrapper
       packageData={packageData}

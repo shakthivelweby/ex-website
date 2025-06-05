@@ -1,184 +1,265 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Button from "@/components/common/Button";
+import ChangePassword from "@/components/ChangePassword/ChangePassword";
+import axios from "axios";
 
 const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState("profile");
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    avatar: "",
+  });
 
-  const tabs = [
-    { id: "profile", label: "Profile" },
-    { id: "bookings", label: "Bookings" },
-    { id: "saved", label: "Saved" },
-  ];
+  useEffect(() => {
+    // Check if user is logged in
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      router.push("/");
+      return;
+    }
+    const parsedUser = JSON.parse(userData);
+    setUser(parsedUser);
+    setFormData({
+      name: parsedUser.name || "",
+      email: parsedUser.email || "",
+      phone: parsedUser.phone || "",
+      avatar: parsedUser.avatar || "",
+    });
+  }, [router]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (response.data) {
+        // Update local storage with new user data
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+        setUser(response.data.data);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error("Profile update failed:", error);
+      alert(error.response?.data?.message || "Failed to update profile. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Profile Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-8">
-            <div className="flex flex-col items-center gap-3">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full bg-gray-200 overflow-hidden">
-                  <img
-                    src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1740&q=80"
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+    <>
+      <main className="min-h-screen bg-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h1 className="text-2xl font-bold text-gray-800">Profile Settings</h1>
+                {!isEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                    icon={<i className="fi fi-rr-edit"></i>}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Profile Picture */}
+                <div className="flex items-center space-x-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden border-2 border-primary-100">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <i className="fi fi-rr-user text-primary-600 text-2xl"></i>
+                      )}
+                    </div>
+                    {isEditing && (
+                      <button
+                        type="button"
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary-700 transition-colors"
+                      >
+                        <i className="fi fi-rr-camera text-sm"></i>
+                      </button>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-800">{user.name}</h2>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      Full Name
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i className="fi fi-rr-user text-gray-400"></i>
+                      </div>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                        placeholder="Enter your full name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i className="fi fi-rr-envelope text-gray-400"></i>
+                      </div>
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        required
+                        placeholder="Enter your email"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i className="fi fi-rr-phone-call text-gray-400"></i>
+                      </div>
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        disabled={!isEditing}
+                        className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        placeholder="Enter your phone number"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                {isEditing && (
+                  <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-100">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setFormData({
+                          name: user.name || "",
+                          email: user.email || "",
+                          phone: user.phone || "",
+                          avatar: user.avatar || "",
+                        });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      isLoading={isLoading}
+                      icon={<i className="fi fi-rr-check"></i>}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                )}
+              </form>
+
+              {/* Additional Sections */}
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Security</h3>
+                <div className="space-y-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    icon={<i className="fi fi-rr-lock"></i>}
+                    onClick={() => setShowChangePassword(true)}
+                  >
+                    Change Password
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto text-red-600 hover:bg-red-50 border-red-200"
+                    icon={<i className="fi fi-rr-trash text-red-600"></i>}
+                  >
+                    Delete Account
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button className="px-4 py-1.5 text-sm font-medium bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors inline-flex items-center gap-2">
-                  <i className="fi fi-rr-upload text-gray-600"></i>
-                  Upload picture
-                </button>
-                <button className="text-red-600 text-sm font-medium hover:text-red-700 transition-colors">
-                  Delete
-                </button>
-              </div>
             </div>
-      
           </div>
         </div>
-      </div>
+      </main>
 
-      {/* Tabs Navigation */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-4 text-sm font-medium border-b-2 ${
-                  activeTab === tab.id
-                    ? "border-primary-600 text-primary-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      {/* Tab Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === "profile" && (
-          <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  defaultValue="John Doe"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  defaultValue="john.doe@example.com"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                <input
-                  type="tel"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  defaultValue="+1 (555) 000-0000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                  defaultValue="New York, USA"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <button className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                Save Changes
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "bookings" && (
-          <div className="space-y-4">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">Hotel Booking #1234</h3>
-                  <p className="text-sm text-gray-600">Check-in: Jan 15, 2024</p>
-                  <p className="text-sm text-gray-600">Check-out: Jan 20, 2024</p>
-                </div>
-                <span className="px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">
-                  Confirmed
-                </span>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-medium text-gray-900">Flight Booking #5678</h3>
-                  <p className="text-sm text-gray-600">Departure: Jan 15, 2024</p>
-                  <p className="text-sm text-gray-600">Return: Jan 20, 2024</p>
-                </div>
-                <span className="px-3 py-1 text-sm font-medium text-yellow-800 bg-yellow-100 rounded-full">
-                  Pending
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "saved" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img
-                  src="https://images.unsplash.com/photo-1566073771259-6a8506099945"
-                  alt="Hotel"
-                  className="object-cover w-full h-full"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="font-medium text-gray-900">Luxury Hotel</h3>
-                <p className="text-sm text-gray-600">New York, USA</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <i className="fi fi-rr-star text-yellow-400"></i>
-                  <span className="text-sm text-gray-600">4.8 (120 reviews)</span>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                <img
-                  src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9"
-                  alt="Restaurant"
-                  className="object-cover w-full h-full"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="font-medium text-gray-900">Fine Dining Restaurant</h3>
-                <p className="text-sm text-gray-600">San Francisco, USA</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <i className="fi fi-rr-star text-yellow-400"></i>
-                  <span className="text-sm text-gray-600">4.9 (85 reviews)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      {/* Change Password Modal */}
+      <ChangePassword 
+        show={showChangePassword} 
+        onClose={() => setShowChangePassword(false)} 
+      />
+    </>
   );
 };
 

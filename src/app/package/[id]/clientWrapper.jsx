@@ -18,6 +18,7 @@ export default function ClientWrapper({
   packageStayCategory,
   packageCombinations,
 }) {
+
   /* all states */
   const [selectedStayCategory, setSelectedStayCategory] = useState({
     stay_category_id: packageStayCategory.stay_category_id,
@@ -31,7 +32,21 @@ export default function ClientWrapper({
     date
   );
   const [enquireOnly, setEnquireOnly] = useState(false);
+    const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      setEnquireOnly(!packagePriceData.rateAvailable);
+    }
+  }, [isClient, packagePriceData.rateAvailable]);
+  
   /* end all states */
+
+
 
   // update rate
   useEffect(() => {
@@ -39,6 +54,10 @@ export default function ClientWrapper({
       setPackagePrice(packageRate.data.adultPrice);
     }
   }, [packageRate, selectedStayCategory]);
+
+
+ 
+
 
   const { images, name, inclusions, package_stay_categories } =
     packageData.data;
@@ -199,6 +218,7 @@ export default function ClientWrapper({
                 selectedStayCategory={selectedStayCategory}
                 packagePrice={packagePrice}
                 enquireOnly={enquireOnly}
+                setEnquireOnly={setEnquireOnly}
               />
             </div>
           </div>

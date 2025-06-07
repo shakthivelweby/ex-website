@@ -19,6 +19,7 @@ export default function ClientWrapper({
   packageCombinations,
 }) {
 
+
   /* all states */
   const [selectedStayCategory, setSelectedStayCategory] = useState({
     stay_category_id: packageStayCategory.stay_category_id,
@@ -219,6 +220,7 @@ export default function ClientWrapper({
                 packagePrice={packagePrice}
                 enquireOnly={enquireOnly}
                 setEnquireOnly={setEnquireOnly}
+                packagePriceData={packagePriceData}
               />
             </div>
           </div>

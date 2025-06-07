@@ -1,8 +1,9 @@
 import axios from "axios";
 import { useState } from "react";
 import Button from "../common/Button";
+import { handleLoginRedirect } from "@/utils/isLogin";
 
-const Login = ({show, onClose, onSignupClick, loginFormData, setloginFormData}) => {
+const Login = ({show, onClose, onSignupClick, loginFormData, setloginFormData, onLoginSuccess}) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -20,9 +21,20 @@ const Login = ({show, onClose, onSignupClick, loginFormData, setloginFormData}) 
         // Store token and user data in localStorage
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        
         // Close modal
         onClose();
-        window.location.reload();
+        
+        // Handle redirect if needed
+        const hasRedirect = handleLoginRedirect();
+        
+        // If no redirect was performed, refresh the page
+        if (!hasRedirect) {
+          window.location.reload();
+        }
+        
+        // Call onLoginSuccess callback if provided
+        onLoginSuccess?.();
       }
     } catch (error) {
       console.error('Login failed:', error);

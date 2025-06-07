@@ -64,7 +64,7 @@ const ChangePassword = ({ show, onClose }) => {
               <h1 className="text-2xl font-bold text-gray-800">Change Password</h1>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-2  hover:bg-gray-100 rounded-full transition-colors !flex !items-center !justify-center w-10 h-10"
               >
                 <i className="fi fi-rr-cross-small text-gray-600 text-xl"></i>
               </button>
@@ -85,7 +85,7 @@ const ChangePassword = ({ show, onClose }) => {
                     name="currentPassword"
                     value={formData.currentPassword}
                     onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
                     placeholder="Enter your current password"
                   />
@@ -113,7 +113,7 @@ const ChangePassword = ({ show, onClose }) => {
                     name="newPassword"
                     value={formData.newPassword}
                     onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
                     placeholder="Create a new password"
                     minLength={8}
@@ -143,7 +143,7 @@ const ChangePassword = ({ show, onClose }) => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
                     placeholder="Confirm your new password"
                     minLength={8}
@@ -164,7 +164,7 @@ const ChangePassword = ({ show, onClose }) => {
                   variant="primary"
                   size="lg"
                   isLoading={isLoading}
-                  className="w-full"
+                  className="w-full !rounded-full"
                 >
                   Change Password
                 </Button>

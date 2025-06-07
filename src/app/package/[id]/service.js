@@ -36,3 +36,16 @@ export const getPackageRate = async (
   );
   return response.data;
 };
+
+// get calendar rates
+export const getPackageCalendarRates = async (
+  id,
+  start_date,
+  end_date,
+  stay_category_id
+) => {
+  const response = await apiServerMiddleware.get(
+    `/package-calendar-rates?package_id=${id}&start_date=${start_date}&end_date=${end_date}&stay_category_id=${stay_category_id}`
+  );
+  return response.data;
+};

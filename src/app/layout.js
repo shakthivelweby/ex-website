@@ -4,7 +4,8 @@ import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { handleLoginRedirect } from "@/utils/isLogin";
 import Login from "@/components/Login/Login";
 import Signup from "@/components/Login/Signup";
 
@@ -21,6 +22,16 @@ export default function RootLayout({ children }) {
     email: '',
     password: ''
   });
+
+  useEffect(() => {
+    const handleShowLoginEvent = () => {
+      setShowSignup(false);
+      setShowLogin(true);
+    };
+
+    window.addEventListener('showLogin', handleShowLoginEvent);
+    return () => window.removeEventListener('showLogin', handleShowLoginEvent);
+  }, []);
 
   const handleShowLogin = () => {
     setShowSignup(false);
@@ -48,6 +59,10 @@ export default function RootLayout({ children }) {
             show={showLogin} 
             onClose={() => setShowLogin(false)}
             onSignupClick={handleShowSignup}
+            onLoginSuccess={() => {
+              setShowLogin(false);
+              handleLoginRedirect();
+            }}
           />
           <Signup 
             show={showSignup} 

@@ -10,7 +10,6 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     firstName: "",
-    lastName: "",
     email: "",
     phone: "",
     address: "",
@@ -60,6 +59,23 @@ export default function CheckoutPage() {
       },
     });
   }, [searchParams]);
+
+
+  // populate user details from local storage
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      const data = JSON.parse(user);
+      // {"id":3,"name":"Kannan Uthaman","email":"webkyat@gmail.com","role":"user","email_verified_at":null,"phone":null,"is_blocked":0,"created_at":"2025-06-05T07:31:41.000000Z","updated_at":"2025-06-05T12:17:19.000000Z","created_at_formatted":"05 Jun 2025"}
+      
+      setFormData({
+        firstName : data.name,
+        email : data.email,
+        phone : data.phone,
+      })
+      // setFormData(JSON.parse(user));
+    }
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -167,28 +183,11 @@ export default function CheckoutPage() {
                     value={formData.firstName}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-none focus:border-primary-500 transition-colors"
-                    placeholder="Enter your first name"
+                    className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight"
+                    placeholder="Enter your full name"
                   />
                 </div>
-                <div>
-                  <label
-                    htmlFor="lastName"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-none focus:border-primary-500 transition-colors"
-                    placeholder="Enter your last name"
-                  />
-                </div>
+               
                 <div>
                   <label
                     htmlFor="email"
@@ -203,7 +202,7 @@ export default function CheckoutPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-none focus:border-primary-500 transition-colors"
+                    className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -221,7 +220,7 @@ export default function CheckoutPage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-none focus:border-primary-500 transition-colors"
+                    className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight"
                     placeholder="Enter your phone number"
                   />
                 </div>

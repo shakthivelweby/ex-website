@@ -142,11 +142,11 @@ export default function Header({setShowLogin}) {
           {user ? (
             <>
               <button 
-                className="inline-flex items-center justify-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group"
+                className="inline-flex items-center justify-center gap-3 px-2 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group"
                 onClick={() => setShowUserMenu(!showUserMenu)}
               >
                 <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
                     {user.avatar ? (
                       <Image
                         src={user.avatar}
@@ -163,10 +163,10 @@ export default function Header({setShowLogin}) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-left">
-                    <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
+                    <p className="text-xs md:text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
                     {/* <p className="text-xs text-gray-500 line-clamp-1">{user.email}</p> */}
                   </div>
-                  <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
+                  <i className={`fi fi-rr-angle-small-down text-gray-600 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
                 </div>
               </button>
 

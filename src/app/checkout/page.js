@@ -4,10 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { checkoutData, book, createOrder, verifyPayment } from "./service";
+import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import { initializeRazorpayPayment } from "@/sdk/razorpay";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({
+    title: "",
+    message: "",
+  });
   const [formData, setFormData] = useState({
     firstName: "",
     email: "",
@@ -21,59 +29,60 @@ export default function CheckoutPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [packageDetails, setPackageDetails] = useState(null);
-  const [travelers, setTravelers] = useState({
-    adults: 2,
-    children: 0,
-    infants: 0,
-  });
-  const [startDate, setStartDate] = useState("");
-  const [stayCategory, setStayCategory] = useState("standard");
+  const [isLoadingPackage, setIsLoadingPackage] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Fetch package details from API
   useEffect(() => {
-    // In a real app, you'd fetch this from an API or get it from URL params
-    // For now, we'll use mock data
-    const adults = parseInt(searchParams.get("adults") || "2");
-    const children = parseInt(searchParams.get("children") || "0");
-    const infants = parseInt(searchParams.get("infants") || "0");
-    const date = searchParams.get("date") || "";
-    const stayCategory = searchParams.get("stayCategory") || "standard";
-    const duration = searchParams.get("duration") || "12n13d";
+    const fetchPackageDetails = async () => {
+      try {
+        setIsLoadingPackage(true);
+        const params = {
+          package_id: searchParams.get("package_id"),
+          stay_category_id: searchParams.get("stay_category_id"),
+          booking_date: searchParams.get("booking_date"),
+          adult_count: searchParams.get("adult_count"),
+          child_count: searchParams.get("child_count"),
+          infant_count: searchParams.get("infant_count"),
+          package_price_rate_id: searchParams.get("package_price_rate_id")
+        };
 
-    setTravelers({ adults, children, infants });
-    setStartDate(date);
-    setStayCategory(stayCategory);
+        const response = await checkoutData(params);
+        if (response.status) {
+          setPackageDetails({
+            ...response.data,
+            travelers: {
+              adults: parseInt(params.adult_count),
+              children: parseInt(params.child_count),
+              infants: parseInt(params.infant_count)
+            },
+            startDate: params.booking_date
+          });
+        } else {
+          setError("Failed to load package details");
+        }
+      } catch (error) {
+        console.error("Error fetching package details:", error);
+        setError("Failed to load package details. Please try again.");
+      } finally {
+        setIsLoadingPackage(false);
+      }
+    };
 
-    // Mock package data
-    setPackageDetails({
-      id: "raj-jais-kash-amr-del-agra",
-      title: "Rajasthan - Jaisalmer - Kashmir - Amritsar - Delhi - Agra",
-      basePrice: 20500,
-      nights: duration === "11n12d" ? 11 : 12,
-      days: duration === "11n12d" ? 12 : 13,
-      image:
-        "https://images.unsplash.com/photo-1599661046827-dacff0c0f09a?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-      stayPriceMultipliers: {
-        budget: 0.85,
-        standard: 1,
-        luxury: 1.3,
-      },
-    });
+    fetchPackageDetails();
   }, [searchParams]);
 
-
-  // populate user details from local storage
+  // Populate user details from local storage
   useEffect(() => {
     const user = localStorage.getItem("user");
     if (user) {
       const data = JSON.parse(user);
-      // {"id":3,"name":"Kannan Uthaman","email":"webkyat@gmail.com","role":"user","email_verified_at":null,"phone":null,"is_blocked":0,"created_at":"2025-06-05T07:31:41.000000Z","updated_at":"2025-06-05T12:17:19.000000Z","created_at_formatted":"05 Jun 2025"}
-      
-      setFormData({
-        firstName : data.name,
-        email : data.email,
-        phone : data.phone,
-      })
-      // setFormData(JSON.parse(user));
+      setFormData(prev => ({
+        ...prev,
+        firstName: data.name,
+        email: data.email,
+        phone: data.phone || "",
+      }));
     }
   }, []);
 
@@ -85,53 +94,139 @@ export default function CheckoutPage() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
+  
+    try {
+      const bookingData = {
+        package_id: searchParams.get("package_id"),
+        stay_category_id: searchParams.get("stay_category_id"),
+        booking_date: searchParams.get("booking_date"),
+        adult_count: searchParams.get("adult_count"),
+        child_count: searchParams.get("child_count"),
+        infant_count: searchParams.get("infant_count"),
+        package_price_rate_id: searchParams.get("package_price_rate_id"),
+        payment_type: formData.paymentOption, // 'full' or 'partial'
+        name: formData.firstName,
+        email: formData.email,
+        phone: formData.phone,
+        total_amount: packageDetails.total_price
+      };
 
-    // Simulate API call
-    setTimeout(() => {
+      // First create booking to get order ID
+      const response = await book(bookingData);
+      
+      if (response.status) {
+        const paymentAmount = formData.paymentOption === 'full' ? prices.total : prices.advanceAmount;
+        
+        // Create order for payment
+        const orderRes = await createOrder({
+          package_id: bookingData.package_id,
+          package_booking_id: response.data.id,
+          payment_type: formData.paymentOption,
+          amount: paymentAmount
+        });
+      
+
+        if (orderRes.status) {
+      
+          // Initialize Razorpay payment
+          const paymentResponse = await initializeRazorpayPayment({
+            amount: paymentAmount,
+            currency: "INR",
+            name: "Explore World",
+            description: `Payment for ${packageDetails.package_name}`,
+            orderId: orderRes.data.order_id,
+            email: formData.email,
+            contact: formData.phone,
+          });
+  
+          console.log(paymentResponse)
+          if (paymentResponse.status) {
+            // Verify payment with the correct parameters
+            const verificationResponse = await verifyPayment({
+              razorpay_order_id: paymentResponse.data.razorpay_order_id,
+              razorpay_signature: paymentResponse.data.razorpay_signature
+            });
+
+            if (verificationResponse.status) {
+              setSuccessMessage({
+                title: "Booking Successful!",
+                message: "Your trip has been booked successfully. Check your email for details.",
+              });
+              setShowSuccess(true);
+              
+              // Redirect after a short delay
+              setTimeout(() => {
+                router.push("/my-bookings");
+              }, 2000);
+            } else {
+              setError("Payment verification failed. Please contact support.");
+            }
+          } else {
+            setError(paymentResponse.error?.description || "Payment failed. Please try again.");
+          }
+        } else {
+          setError(orderRes.message || "Failed to create payment order. Please try again.");
+        }
+      } else {
+        setError(response.message || "Failed to complete booking. Please try again.");
+      }
+    } catch (error) {
+      console.error("Booking error:", error);
+      setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
+    } finally {
       setIsLoading(false);
-      alert(
-        "Booking successful! You will receive a confirmation email shortly."
-      );
-      router.push("/booking-confirmation?id=123456");
-    }, 1500);
+    }
   };
 
-  // Calculate prices
+  // Calculate prices based on API data
   const calculatePrices = () => {
     if (!packageDetails) return { baseTotal: 0, total: 0, advanceAmount: 0 };
 
-    const pricePerAdult =
-      packageDetails.basePrice *
-      (packageDetails.stayPriceMultipliers[stayCategory] || 1);
-    const pricePerChild = pricePerAdult * 0.7; // 70% of adult price
+    const { adult_price, child_price, infant_price, discount_price, advance_price, total_price, final_price, advance_percentage } = packageDetails;
+    const { adults, children, infants } = packageDetails.travelers;
 
-    const baseTotal =
-      travelers.adults * pricePerAdult + travelers.children * pricePerChild;
+    const baseTotal = (adults * parseFloat(adult_price)) + 
+                     (children * parseFloat(child_price)) + 
+                     (infants * parseFloat(infant_price));
 
-    // Add any taxes or fees here
-    const taxes = baseTotal * 0.05; // Example: 5% tax
-    const total = baseTotal + taxes;
-
-    // Calculate advance amount (25%)
-    const advanceAmount = total * 0.25;
+    const total = final_price;
+    const advanceAmount = advance_price || 0;
 
     return {
       baseTotal: Math.round(baseTotal),
-      taxes: Math.round(taxes),
       total: Math.round(total),
       advanceAmount: Math.round(advanceAmount),
+      showAdvance: advance_percentage && advance_percentage < 100,
+      advancePercentage: advance_percentage || 0
     };
   };
 
   const prices = calculatePrices();
 
-  if (!packageDetails) {
+  if (isLoadingPackage) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         Loading...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!packageDetails) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        No package details found
       </div>
     );
   }
@@ -235,7 +330,7 @@ export default function CheckoutPage() {
                   Choose Payment Option <span className="text-red-500">*</span>
                 </label>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className={`grid grid-cols-1 ${prices.showAdvance ? 'md:grid-cols-2' : ''} gap-6`}>
                   {/* Full Payment Card */}
                   <div
                     className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
@@ -274,45 +369,47 @@ export default function CheckoutPage() {
                     </p>
                   </div>
 
-                  {/* Partial Payment Card */}
-                  <div
-                    className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                      formData.paymentOption === "partial"
-                        ? "border-primary-500 bg-primary-50/50"
-                        : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
-                    }`}
-                    onClick={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        paymentOption: "partial",
-                      }))
-                    }
-                  >
-                    <div className="flex items-center mb-2">
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          formData.paymentOption === "partial"
-                            ? "border-primary-500"
-                            : "border-gray-300"
-                        }`}
-                      >
-                        {formData.paymentOption === "partial" && (
-                          <div className="w-3 h-3 rounded-full bg-primary-500"></div>
-                        )}
+                  {/* Partial Payment Card - Only show if advance payment is available and less than full amount */}
+                  {prices.showAdvance && (
+                    <div
+                      className={`border-2 rounded-xl p-6 cursor-pointer transition-all ${
+                        formData.paymentOption === "partial"
+                          ? "border-primary-500 bg-primary-50/50"
+                          : "border-gray-100 hover:border-gray-200 hover:bg-gray-50"
+                      }`}
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          paymentOption: "partial",
+                        }))
+                      }
+                    >
+                      <div className="flex items-center mb-2">
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            formData.paymentOption === "partial"
+                              ? "border-primary-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {formData.paymentOption === "partial" && (
+                            <div className="w-3 h-3 rounded-full bg-primary-500"></div>
+                          )}
+                        </div>
+                        <span className="ml-2 font-medium text-gray-800">
+                          {prices.advancePercentage}% Advance
+                        </span>
                       </div>
-                      <span className="ml-2 font-medium text-gray-800">
-                        25% Advance
-                      </span>
+                      <div className="text-lg font-bold text-gray-800 mb-1">
+                        ₹{prices.advanceAmount.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        Pay {prices.advancePercentage}% now and ₹
+                        {(prices.total - prices.advanceAmount).toLocaleString()}{" "}
+                        later
+                      </p>
                     </div>
-                    <div className="text-lg font-bold text-gray-800 mb-1">
-                      ₹{prices.advanceAmount.toLocaleString()}
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      Pay 25% now and ₹
-                      {(prices.total - prices.advanceAmount).toLocaleString()}{" "}
-                      30 days before trip
-                    </p>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -392,102 +489,58 @@ export default function CheckoutPage() {
               </h2>
 
               <div className="space-y-6">
-                {/* <h2 className="text-xl font-semibold text-gray-900">
-                  Package Details
-                </h2> */}
-
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                  {/* Package details */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-4">
                       <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0">
                         <img  
-                          src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?q=80&w=300&auto=format&fit=crop"
-                          alt="Tour Package"
+                          src={packageDetails.package_image}
+                          alt={packageDetails.package_name}
                           className="object-cover w-full h-full"
                         />
                       </div>
                       <div className="min-w-0">
                         <div className="space-y-2">
-                            <h3 className="text-sm font-medium text-gray-900 leading-snug">
-                              {packageDetails.title}
-                            </h3>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <i className="fi fi-rr-calendar mr-2"></i>
-                                {startDate ? (
-                                  <span>
-                                    {(() => {
-                                      const start = new Date(startDate);
-                                      const end = new Date(startDate);
-                                      end.setDate(end.getDate() + packageDetails.nights);
-                                      
-                                      const formatDate = (date) => {
-                                        return date.toLocaleDateString("en-US", {
-                                          month: "short",
-                                          day: "numeric",
-                                          year: "numeric",
-                                        });
-                                      };
-                                      
-                                      return (
-                                        <>
-                                          {formatDate(start)} - {formatDate(end)}
-                                        </>
-                                      );
-                                    })()}
-                                  </span>
-                                ) : (
-                                  <span>
-                                    jul-12-2025 - jul-20-2025 
-                                  </span>
-                                )}
-                            </div>
+                          <h3 className="text-sm font-medium text-gray-900 leading-snug">
+                            {packageDetails.package_name}
+                          </h3>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <i className="fi fi-rr-calendar mr-2"></i>
+                            <span>
+                              {packageDetails.startDate}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600 mt-4">
-                            <div className="inline-flex items-center">
-                              <i className="fi fi-rr-hotel mr-1.5"></i>
-                              <span className="capitalize">{stayCategory} Stay</span>
-                            </div>
-                            <span className="text-gray-400 mx-2">|</span>
-                            <div className="inline-flex items-center">
-                              <i className="fi fi-rr-pending mr-1.5"></i>
-                              <span>Scheduled Trip</span>
-                            </div>
-                    </div>
-                   
                   </div>
                 </div>
 
-                {/* <div className="border-t border-gray-200"></div> */}
-                
-            
                 <div className="">
                   <h3 className="font-medium text-gray-800 mb-4 flex items-center">
-                  <i className="fi fi-rr-users mr-2"></i>
+                    <i className="fi fi-rr-users mr-2"></i>
                     Travelers
                   </h3>
                   <div className="space-y-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Adults</span>
                       <span className="text-gray-800 font-medium">
-                        {travelers.adults}
+                        {packageDetails.travelers.adults}
                       </span>
                     </div>
-                    {travelers.children > 0 && (
+                    {packageDetails.travelers.children > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Children</span>
                         <span className="text-gray-800 font-medium">
-                          {travelers.children}
+                          {packageDetails.travelers.children}
                         </span>
                       </div>
                     )}
-                    {travelers.infants > 0 && (
+                    {packageDetails.travelers.infants > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Infants</span>
                         <span className="text-gray-800 font-medium">
-                          {travelers.infants}
+                          {packageDetails.travelers.infants}
                         </span>
                       </div>
                     )}
@@ -496,7 +549,7 @@ export default function CheckoutPage() {
 
                 <div className="mb-6">
                   <h3 className="font-medium text-gray-800 mb-4 flex items-center">
-                  <i className="fi fi-rr-money-bill-wave mr-2"></i>
+                    <i className="fi fi-rr-money-bill-wave mr-2"></i>
                     Price Details
                   </h3>
                   <div className="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-100">
@@ -506,21 +559,27 @@ export default function CheckoutPage() {
                         ₹{prices.baseTotal.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Taxes & Fees</span>
-                      <span className="text-gray-800 font-medium">
-                        ₹{prices.taxes.toLocaleString()}
-                      </span>
-                    </div>
+                    {packageDetails.discount_percentage > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Discount ({packageDetails.discount_percentage}%)</span>
+                        <span className="font-medium">
+                          -₹{packageDetails.discount_price.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between font-medium pt-3 border-t border-gray-200">
                       <span className="text-gray-800">Total Amount</span>
                       <span className="text-primary-600 text-lg">
                         ₹{prices.total.toLocaleString()}
                       </span>
                     </div>
-                    {formData.paymentOption === "partial" && (
+                    {formData.paymentOption === "partial" && prices.showAdvance && (
                       <div className="flex justify-between text-sm mt-3 pt-3 border-t border-dashed border-gray-300 bg-blue-50 -mx-4 px-4 pb-4">
-                        <span className="text-blue-700">Due Now (25%)</span>
+                        <span className="text-blue-700">
+                          {prices.advancePercentage === 25 ? "Due Now (25% Advance)" : 
+                           prices.advancePercentage === 50 ? "Due Now (50% Advance)" :
+                           `Due Now (${prices.advancePercentage}% Advance)`}
+                        </span>
                         <span className="text-blue-700 font-bold">
                           ₹{prices.advanceAmount.toLocaleString()}
                         </span>
@@ -561,6 +620,24 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Success Popup */}
+      <SuccessPopup
+        show={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        title={successMessage.title}
+        message={successMessage.message}
+      />
+      
+      {/* Error message */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded z-50">
+          <p className="flex items-center">
+            <i className="fi fi-rr-exclamation mr-2"></i>
+            {error}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

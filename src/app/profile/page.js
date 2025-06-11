@@ -332,7 +332,7 @@ const ProfilePage = () => {
                   {/* Delete Account */}
                   <div className="flex items-center justify-between py-4 border-t border-gray-200">
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
                         <i className="fi fi-rr-trash text-red-600"></i>
                       </div>
                       <div>
@@ -341,12 +341,11 @@ const ProfilePage = () => {
                       </div>
                     </div>
                     <Button
-                      variant="danger"
                       size="sm"
                       onClick={() => {
                         setShowDeleteAccount(true);
                       }}
-                      className="hover:bg-red-700 !rounded-full"
+                      className="border border-red-300 !text-red-600 bg-white  hover:bg-red-100 !rounded-full"
                     >
                       Delete Account
                     </Button>

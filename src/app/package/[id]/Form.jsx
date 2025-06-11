@@ -340,7 +340,7 @@ const Form = ({
                 );
               }}
             />
-            <div className="absolute right-0 top-1/2 transform -translate-y-1/2  pointer-events-none text-gray-500">
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2  pointer-events-none text-gray-800">
               <i className="fi fi-rr-calendar text-lg"></i>
             </div>
           </div>
@@ -440,7 +440,7 @@ const Form = ({
                 value={fullName}
                 onChange={handleFullNameChange}
                 type="text"
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.fullName ? "border-red-500" : ""
+                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.fullName ? "border-red-500" : ""
                   }`}
                 placeholder="Enter your full name"
               />
@@ -461,7 +461,7 @@ const Form = ({
                 value={email}
                 onChange={handleEmailChange}
                 type="email"
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.email ? "border-red-500" : ""
+                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.email ? "border-red-500" : ""
                   }`}
                 placeholder="Enter your email"
               />
@@ -483,7 +483,7 @@ const Form = ({
                 onChange={handlePhoneChange}
                 type="tel"
                 maxLength={10}
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.phone ? "border-red-500" : ""
+                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.phone ? "border-red-500" : ""
                   }`}
                 placeholder="Enter your phone number"
               />
@@ -501,7 +501,7 @@ const Form = ({
         <Button
           onClick={submitHandler}
           size="lg"
-          className="w-full mb-3"
+          className="w-full mb-3 rounded-full"
           isLoading={isLoading}
           icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
         >
@@ -512,7 +512,7 @@ const Form = ({
           onClick={downloadHandler}
           variant="outline"
           size="lg"
-          className="w-full"
+          className="w-full rounded-full"
           icon={<i className="fi fi-rr-download ml-2"></i>}
         >
           Download Itinerary

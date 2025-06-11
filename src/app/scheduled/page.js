@@ -438,7 +438,7 @@ export default function Scheduled() {
   // }
 
   return (
-    <main className="min-h-screen bg-white flex flex-col items-center relative">
+    <main className="min-h-screPackage provided  bg-white flex flex-col items-center relative">
       {/* Decorative blurred circle background at the top */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] lg:w-[800px] lg:h-[800px] bg-primary-100 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
       {/* wrap div */}
@@ -650,7 +650,7 @@ export default function Scheduled() {
                   <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>
 
                   <p className="text-gray-600 mb-8">
-                    Sorry, we couldn't find any packages starting from{" "}
+                    Sorry, we couldn&apos;t find any packages starting from{" "}
                     <span className="font-medium text-gray-900">
                       {startLocation}
                     </span>{" "}

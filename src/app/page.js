@@ -81,7 +81,7 @@ export default function HomePage() {
 
                     {/* Search Button */}
                     <button className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
-                      <span className="text-base font-medium md:hidden">Search</span>
+                      <span className="text-base font-semibold md:hidden">Search</span>
                       <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
                     </button>
                   </div>

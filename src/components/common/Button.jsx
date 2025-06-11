@@ -24,11 +24,11 @@ const Button = ({
 
   // Variant variations
   const variantClasses = {
-    primary: "bg-primary-600 text-white hover:bg-primary-700 focus:!outline-none focus:border-primary-500 focus:!ring-none",
-    secondary: "bg-gray-600 text-white hover:bg-gray-700 focus:!outline-none focus:border-primary-500 focus:!ring-none",
-    outline: "border border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:!outline-none focus:border-primary-500 focus:!ring-none",
-    danger: "bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 focus:!outline-none focus:border-red-500 focus:!ring-none",
-    text: "text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+    primary: "bg-primary-600 text-white hover:bg-primary-700 focus:!outline-none focus:border-primary-500 focus:!ring-none !rounded-full",
+    secondary: "bg-gray-600 text-white hover:bg-gray-700 focus:!outline-none focus:border-primary-500 focus:!ring-none !rounded-full",
+    outline: "border border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100 focus:!outline-none focus:border-primary-500 focus:!ring-none !rounded-full",
+    danger: "bg-red-50 border border-red-300 text-red-600 hover:bg-red-100 hover:text-white focus:!outline-none focus:border-red-500 focus:!ring-none !rounded-full",
+    text: "text-gray-700 hover:bg-gray-100 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-full"
   };
 
   // Loading spinner component

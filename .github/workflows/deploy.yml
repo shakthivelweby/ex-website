@@ -26,5 +26,8 @@ jobs:
           git pull origin main
           npm install
           npm run build
-          pm2 restart exploreworld || pm2 start npm --name "exploreworld" -- start
+          pm2 stop exploreworld || true
+          pm2 delete exploreworld || true
+          pm2 start npm --name "exploreworld" -- start
+          pm2 save
         EOF

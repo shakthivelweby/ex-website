@@ -1,16 +1,33 @@
 import { useState } from "react";
-import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
+import { changePassword } from "@/app/profile/service";
 import Button from "../common/Button";
 
 const ChangePassword = ({ show, onClose }) => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    old_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: () => {
+      alert("Password changed successfully!");
+      onClose();
+      // Reset form
+      setFormData({
+        old_password: "",
+        new_password: "",
+        confirm_password: "",
+      });
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Failed to change password. Please try again.");
+    },
   });
 
   const handleChange = (e) => {
@@ -19,36 +36,23 @@ const ChangePassword = ({ show, onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.newPassword !== formData.confirmPassword) {
+    if (formData.new_password !== formData.confirm_password) {
       alert("New passwords don't match!");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/change-password`,
-        {
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.data) {
-        alert("Password changed successfully!");
-        onClose();
-      }
-    } catch (error) {
-      console.error("Password change failed:", error);
-      alert(error.response?.data?.message || "Failed to change password. Please try again.");
-    } finally {
-      setIsLoading(false);
+    if (formData.new_password.length < 8) {
+      alert("Password must be at least 8 characters long");
+      return;
     }
+
+    // Submit only old_password and new_password
+    const payload = {
+      old_password: formData.old_password,
+      new_password: formData.new_password,
+    };
+
+    changePasswordMutation.mutate(payload);
   };
 
   if (!show) return null;
@@ -72,7 +76,7 @@ const ChangePassword = ({ show, onClose }) => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="old_password" className="block text-sm font-medium text-gray-700">
                   Current Password
                 </label>
                 <div className="relative">
@@ -81,9 +85,9 @@ const ChangePassword = ({ show, onClose }) => {
                   </div>
                   <input
                     type={showCurrentPassword ? "text" : "password"}
-                    id="currentPassword"
-                    name="currentPassword"
-                    value={formData.currentPassword}
+                    id="old_password"
+                    name="old_password"
+                    value={formData.old_password}
                     onChange={handleChange}
                     className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
@@ -100,7 +104,7 @@ const ChangePassword = ({ show, onClose }) => {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">
                   New Password
                 </label>
                 <div className="relative">
@@ -109,9 +113,9 @@ const ChangePassword = ({ show, onClose }) => {
                   </div>
                   <input
                     type={showNewPassword ? "text" : "password"}
-                    id="newPassword"
-                    name="newPassword"
-                    value={formData.newPassword}
+                    id="new_password"
+                    name="new_password"
+                    value={formData.new_password}
                     onChange={handleChange}
                     className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
@@ -130,7 +134,7 @@ const ChangePassword = ({ show, onClose }) => {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
                   Confirm New Password
                 </label>
                 <div className="relative">
@@ -139,9 +143,9 @@ const ChangePassword = ({ show, onClose }) => {
                   </div>
                   <input
                     type={showConfirmPassword ? "text" : "password"}
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
+                    id="confirm_password"
+                    name="confirm_password"
+                    value={formData.confirm_password}
                     onChange={handleChange}
                     className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
                     required
@@ -163,7 +167,7 @@ const ChangePassword = ({ show, onClose }) => {
                   type="submit"
                   variant="primary"
                   size="lg"
-                  isLoading={isLoading}
+                  isLoading={changePasswordMutation.isPending}
                   className="w-full !rounded-full"
                 >
                   Change Password

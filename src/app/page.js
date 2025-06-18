@@ -1,167 +1,205 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import LocationSearchPopup from "@/components/LocationSearchPopup";
+import { useRouter } from "next/navigation";
+
 
 export default function HomePage() {
-  const [selectedTrip, setSelectedTrip] = useState("Scheduled Trips");
-  const [selectedLocation, setSelectedLocation] = useState("Kerala");
+  const [selectedTrip, setSelectedTrip] = useState("Scheduled");
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
+  const [locationCoordinates, setLocationCoordinates] = useState({
+    latitude: 10.1631526,
+    longitude: 76.64127119999999,
+  });
+  const router = useRouter();
+
+  // Google API Key
+  const googleApiKey = "AIzaSyDaNPqSBObLDby0rpTvEUbQ8Ek9kxAABK0";
+
+  const locationText = {
+    Packages: 'Where you want to start from?',
+    Scheduled: 'Where you want to start from?',
+    Activities: 'Where you want to do activity?',
+    Attractions: 'Where you want to visit?',
+    Rentals: 'Where you want to rent a vehicle?',
+    Events: 'Where you want to attend an event?'
+  }
+
+  const redirects = {
+    Packages: "/packages",
+    Scheduled: "/scheduled",
+    Activities: "/activities",
+    Attractions: "/attractions",
+    Rentals: "/rentals",
+    Events: "/events"
+  }
+
+  // Handle place selection from Google Autocomplete
+  const handlePlaceSelect = (place) => {
+    if (place.geometry && place.geometry.location) {
+      const locationData = {
+        name: place.name || place.formatted_address,
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng(),
+        formattedAddress: place.formatted_address,
+      };
+
+      // Update state with the location data
+      setSelectedLocation(locationData.name);
+      setLocationCoordinates({
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+      });
+
+      // Save to localStorage
+      localStorage.setItem("locationCoordinates", JSON.stringify({
+        latitude: locationData.latitude,
+        longitude: locationData.longitude,
+      }));
+      localStorage.setItem("startLocation", locationData.name);
+
+      // Close popup
+      setIsLocationPopupOpen(false);
+    }
+  };
+
+  // Load location from localStorage on mount
+  useEffect(() => {
+    const savedLocation = localStorage.getItem("startLocation");
+    const savedCoordinates = localStorage.getItem("locationCoordinates");
+
+    if (savedLocation && savedCoordinates) {
+      setSelectedLocation(savedLocation);
+      setLocationCoordinates(JSON.parse(savedCoordinates));
+    } else {
+      // Set default location if none exists
+      setSelectedLocation("Kerala");
+      setLocationCoordinates({
+        latitude: 10.1631526,
+        longitude: 76.64127119999999,
+      });
+      localStorage.setItem("startLocation", "Kerala");
+      localStorage.setItem("locationCoordinates", JSON.stringify({
+        latitude: 10.1631526,
+        longitude: 76.64127119999999,
+      }));
+    }
+  }, []);
+
+  // Handle search form submission
+  const handleSearch = (e) => {
+    e.preventDefault();
+
+    // Save current location and coordinates to localStorage
+    localStorage.setItem("startLocation", selectedLocation);
+    localStorage.setItem("locationCoordinates", JSON.stringify(locationCoordinates));
+
+    // Get the redirect URL for the selected trip type
+    const redirectUrl = redirects[selectedTrip.split(" ")[0]];
+
+    // Redirect to the appropriate page if URL exists
+    if (redirectUrl) {
+     router.push(redirectUrl);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white mx-auto">
+      <div className="relative">
+        <LocationSearchPopup
+          title={locationText[selectedTrip.split(" ")[0]]}
+          isOpen={isLocationPopupOpen}
+          onClose={() => setIsLocationPopupOpen(false)}
+          onPlaceSelected={handlePlaceSelect}
+          googleApiKey={googleApiKey}
+        />
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
         <div className="bg-white relative z-10">
-            {/* Background Image */}
-            <div className="md:h-[500px] h-[470px] rounded-[32px]">
+          {/* Background Image */}
+          <div className="md:h-[500px] h-[470px] rounded-[32px]">
             <Image
-                src="/home/banner-img.webp"
-                alt="banner image"
-                className="w-full h-full object-cover rounded-[32px]"
-                width={1920}
-                height={1080}
+              src="/home/banner-img.webp"
+              alt="banner image"
+              className="w-full h-full object-cover rounded-[32px]"
+              width={1920}
+              height={1080}
             />
-            </div>
+          </div>
 
-            {/* Hero Content */}
-            <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32">
+          {/* Hero Content */}
+          <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32">
             <div className="max-w-3xl mx-auto text-center">
-                <h1 className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter">
+              <h1 className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter">
                 Pay Less, Book Direct
-                </h1>
-                <p className="text-xl text-white/90 mb-6 md:mb-12">
+              </h1>
+              <p className="text-xl text-white/90 mb-6 md:mb-12">
                 The new way to plan your trip!
-                </p>
+              </p>
 
-                {/* Search Box */}
-                <div className="bg-white rounded-[32px] md:rounded-full shadow-lg  overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {/* What you are looking for */}
-                    <div className="flex-1 relative">
-                      <label className="absolute top-2 left-4 text-sm text-gray-600">
-                        What you are looking for?
-                      </label>
-                      <div className="relative">
-                        <select 
-                          className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer"
-                        >
-                          <option>Scheduled Trips</option>
-                          <option>Packages</option>
-                          <option>Activities</option>
-                          <option>Attractions</option>
-                          <option>Rentals</option>
-                          <option>Events</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 pointer-events-none">
-                          <i className="fi fi-rr-angle-small-down text-gray-800"></i>
-                        </div>
+              {/* Search Box */}
+              <form onSubmit={handleSearch} className="bg-white rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full">
+                <div className="flex flex-col md:flex-row gap-4">
+                  {/* What you are looking for */}
+                  <div className="flex-1 relative">
+                    <label className="absolute top-2 left-4 text-sm text-gray-600">
+                      What you are looking for?
+                    </label>
+                    <div className="relative">
+                      <select
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px]"
+                        onChange={(e) => setSelectedTrip(e.target.value)}
+                        value={selectedTrip}
+                      >
+                        <option value="Scheduled">Scheduled Trips</option>
+                        <option value="Packages">Packages</option>
+                        <option  value="Activities">Activities</option>
+                        <option  value="Attractions">Attractions</option>
+                        <option  value="Rentals">Rentals</option>
+                        <option  value="Events">Events</option>
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <i className="fi fi-rr-angle-small-down text-gray-800"></i>
                       </div>
                     </div>
-                     {/* line */}
-                     <div className=" md:hidden h-[1px] bg-gray-100 w-full"></div>
-                    {/* Where you want to start from */}
-                    <div className="flex-1 relative">
-                      <label className="absolute top-2 left-4 text-sm text-gray-600">
-                        Where you want to start from?
-                      </label>
-                      <div className="relative">
-                        <select 
-                          className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer"
-                        >
-                          <option>Kerala</option>
-                          <option>Tamil Nadu</option>
-                          <option>Karnataka</option>
-                        </select>
-                        <div className="absolute right-4 top-1/2 pointer-events-none">
-                          <i className="fi fi-rr-angle-small-down text-gray-800"></i>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Search Button */}
-                    <button className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
-                      <span className="text-base font-semibold md:hidden">Search</span>
-                      <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
-                    </button>
                   </div>
+
+                  {/* line */}
+                  <div className="md:hidden h-[1px] bg-gray-100 w-full"></div>
+
+                  {/* Where you want to start from */}
+                  <div className="flex-1 relative">
+                    <label className="absolute top-2 left-4 text-sm text-gray-600 z-10">
+                      {locationText[selectedTrip.split(" ")[0]]}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={selectedLocation}
+                        onClick={() => setIsLocationPopupOpen(true)}
+                        readOnly
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px]"
+                        placeholder="Enter location..."
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <i className="fi fi-rr-angle-small-down text-gray-800"></i>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search Button */}
+                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
+                    <span className="text-base font-semibold md:hidden">Search</span>
+                    <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
+                  </button>
                 </div>
+              </form>
             </div>
-            </div>
-
-            {/* <style jsx global>{`
-              .search-pulse {
-                transition: 0.3s;
-                transform: translateY(0px);
-                opacity: 1;
-                visibility: visible;
-                animation: borderPulse 2000ms infinite ease-out;
-              }
-              
-              .search-pulse-none {
-                animation: none!important;
-              }
-
-              @keyframes borderPulse {
-                0%,
-                45% {
-                  box-shadow: 0px 0px 0px 0px rgba(163, 163, 163, 0.815);
-                }
-                100% {
-                  box-shadow: 0px 0px 0px 15px rgba(167, 167, 167, 0);
-                }
-              }
-            `}</style> */}
-
-            {/* Navigation */}
-            {/* <div className="bg-cyan-500 rounded-b-2xl">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <nav className="flex items-center gap-6">
-                    <Link 
-                        href="/scheduled-trips"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-primary-600 border-b-2 border-primary-600"
-                    >
-                        <i className="fi fi-rr-calendar"></i>
-                        <span>Scheduled Trips</span>
-                    </Link>
-                    <Link 
-                        href="/packages"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-800"
-                    >
-                        <i className="fi fi-rr-apps"></i>
-                        <span>Packages</span>
-                    </Link>
-                    <Link 
-                        href="/activities"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-800"
-                    >
-                        <i className="fi fi-rr-hiking"></i>
-                        <span>Activities</span>
-                    </Link>
-                    <Link 
-                        href="/attractions"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-800"
-                    >
-                        <i className="fi fi-rr-building"></i>
-                        <span>Attractions</span>
-                    </Link>
-                    <Link 
-                        href="/rentals"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-800"
-                    >
-                        <i className="fi fi-rr-car-side"></i>
-                        <span>Rentals</span>
-                    </Link>
-                    <Link 
-                        href="/events"
-                        className="flex items-center gap-2 px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-800"
-                    >
-                        <i className="fi fi-rr-ticket"></i>
-                        <span>Events</span>
-                    </Link>
-                    </nav>
-                </div>
-            </div> */}
+          </div>
         </div>
         
 
@@ -835,7 +873,8 @@ export default function HomePage() {
             </div>
          </div>
 
-      </section>
+        </section>
+        </div>
     
     </div>
   );

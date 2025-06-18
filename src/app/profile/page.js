@@ -6,21 +6,67 @@ import Image from "next/image";
 import Button from "@/components/common/Button";
 import ChangePassword from "@/components/ChangePassword/ChangePassword";
 import DeleteAccount from "@/components/DeleteAccount/DeleteAccount";
-import axios from "axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { updateProfile, updateProfileImage, getProfile } from "./service";
 
 const ProfilePage = () => {
   const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showDeleteAccount, setShowDeleteAccount] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    avatar: "",
+    profile_image: "",
+  });
+
+  // Fetch profile data
+  const { data: profileData, isLoading: isProfileLoading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: getProfile,
+  });
+
+  // Update form data when profile data changes
+  useEffect(() => {
+    if (profileData?.data) {
+      setFormData({
+        name: profileData.data.name || "",
+        email: profileData.data.email || "",
+        phone: profileData.data.phone || "",
+        profile_image: profileData.data.profile_image || "",
+      });
+    }
+  }, [profileData]);
+
+  // Update Profile Mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (response) => {
+      // Update local storage with new user data
+      localStorage.setItem("user", JSON.stringify(response.data));
+      setIsEditing(false);
+      // Refresh profile data
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Failed to update profile. Please try again.");
+    }
+  });
+
+  // Update Profile Image Mutation
+  const updateProfileImageMutation = useMutation({
+    mutationFn: updateProfileImage,
+    onSuccess: (response) => {
+      // Update local storage with new user data
+      localStorage.setItem("user", JSON.stringify(response.data));
+      // Refresh profile data
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    },
+    onError: (error) => {
+      alert(error.response?.data?.message || "Failed to upload image. Please try again.");
+    }
   });
 
   useEffect(() => {
@@ -30,14 +76,6 @@ const ProfilePage = () => {
       router.push("/");
       return;
     }
-    const parsedUser = JSON.parse(userData);
-    setUser(parsedUser);
-    setFormData({
-      name: parsedUser.name || "",
-      email: parsedUser.email || "",
-      phone: parsedUser.phone || "",
-      avatar: parsedUser.avatar || "",
-    });
   }, [router]);
 
   const handleChange = (e) => {
@@ -50,30 +88,7 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      if (response.data) {
-        // Update local storage with new user data
-        localStorage.setItem("user", JSON.stringify(response.data.data));
-        setUser(response.data.data);
-        setIsEditing(false);
-      }
-    } catch (error) {
-      console.error("Profile update failed:", error);
-      alert(error.response?.data?.message || "Failed to update profile. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    updateProfileMutation.mutate(formData);
   };
 
   const handleImageUpload = async (e) => {
@@ -85,48 +100,25 @@ const ProfilePage = () => {
       return;
     }
 
-    setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append("avatar", file);
-
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/users/avatar`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response.data) {
-        const updatedUser = { ...user, avatar: response.data.data.avatar };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        setUser(updatedUser);
-        setFormData(prev => ({ ...prev, avatar: response.data.data.avatar }));
-      }
+      formData.append("profile_image", file);
+      await updateProfileImageMutation.mutateAsync(formData);
     } catch (error) {
-      console.error("Avatar upload failed:", error);
-      alert(error.response?.data?.message || "Failed to upload image. Please try again.");
-    } finally {
-      setUploadingImage(false);
+      // Error is handled by the mutation
     }
   };
 
-  if (!user) {
-    return null;
+  if (isProfileLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
+
+  const userData = profileData?.data || {};
 
   return (
     <main className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto">
-
-        {/* Main Content */}
         <div className="flex flex-col lg:flex-row justify-center">
-          {/* Main Content Area */}
           <div className="flex-1 p-6 flex justify-center">
             <div className="max-w-2xl w-full">
               {/* Profile Information Section */}
@@ -151,13 +143,13 @@ const ProfilePage = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Profile Picture Section */}
-                  <div className="flex  items-center text-center gap-4 pb-6 border-b border-gray-200">
+                  <div className="flex items-center text-center gap-4 pb-6 border-b border-gray-200">
                     <div className="relative">
                       <div className="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden border-2 border-primary-100">
-                        {user.avatar ? (
+                        {userData.profile_image ? (
                           <Image
-                            src={user.avatar}
-                            alt={user.name}
+                            src={userData.profile_image}
+                            alt={userData.name}
                             fill
                             className="object-cover"
                             sizes="96px"
@@ -170,26 +162,26 @@ const ProfilePage = () => {
                         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
                           <input
                             type="file"
-                            id="avatar"
+                            id="profile_image"
                             accept="image/*"
                             onChange={handleImageUpload}
                             className="hidden"
                           />
                           <button
                             type="button"
-                            onClick={() => document.getElementById("avatar").click()}
-                            disabled={uploadingImage}
+                            onClick={() => document.getElementById("profile_image").click()}
+                            disabled={updateProfileImageMutation.isPending}
                             className="bg-primary-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
                           >
                             <i className="fi fi-rr-camera text-[10px]"></i>
-                            <span>{uploadingImage ? "Uploading..." : "Change"}</span>
+                            <span>{updateProfileImageMutation.isPending ? "Uploading..." : "Change"}</span>
                           </button>
                         </div>
                       )}
                     </div>
                     <div>
-                      <h4 className="text-base font-medium text-gray-900 text-left">{user.name}</h4>
-                      <p className="text-sm text-gray-500 text-left">{user.email}</p>
+                      <h4 className="text-base font-medium text-gray-900 text-left">{userData.name}</h4>
+                      <p className="text-sm text-gray-500 text-left">{userData.email}</p>
                       {isEditing && (
                         <p className="text-xs text-gray-500 mt-2">
                           Recommended: Square image, at least 400x400 pixels
@@ -274,10 +266,10 @@ const ProfilePage = () => {
                         onClick={() => {
                           setIsEditing(false);
                           setFormData({
-                            name: user.name || "",
-                            email: user.email || "",
-                            phone: user.phone || "",
-                            avatar: user.avatar || "",
+                            name: userData.name || "",
+                            email: userData.email || "",
+                            phone: userData.phone || "",
+                            profile_image: userData.profile_image || "",
                           });
                         }}
                         className="hover:bg-gray-50 !rounded-full"
@@ -288,7 +280,7 @@ const ProfilePage = () => {
                         type="submit"
                         variant="primary"
                         size="sm"
-                        isLoading={isLoading}
+                        isLoading={updateProfileMutation.isPending}
                         className="bg-primary-600 hover:bg-primary-700 !rounded-full"
                       >
                         Save Changes
@@ -329,27 +321,7 @@ const ProfilePage = () => {
                     </Button>
                   </div>
 
-                  {/* Delete Account */}
-                  <div className="flex items-center justify-between py-4 border-t border-gray-200">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                        <i className="fi fi-rr-trash text-red-600"></i>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">Delete Account</h4>
-                        <p className="text-sm text-gray-500">This action cannot be undone</p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setShowDeleteAccount(true);
-                      }}
-                      className="border border-red-300 !text-red-600 bg-white  hover:bg-red-100 !rounded-full"
-                    >
-                      Delete Account
-                    </Button>
-                  </div>
+                 
                 </div>
               </div>
             </div>

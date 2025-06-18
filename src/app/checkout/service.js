@@ -35,10 +35,12 @@ const createOrder = async (data) => {
 
 const verifyPayment = async (data) => {
     try {
-        alert('hi')
+     
         const queryString = new URLSearchParams({
             order_id: data.razorpay_order_id,
-            signature: data.razorpay_signature
+            signature: data.razorpay_signature,
+            payment_id : data.payment_id
+        
         }).toString();
         const response = await apiMiddleware.post(`/package-payment-verify?${queryString}`);
         return response.data;
@@ -47,4 +49,16 @@ const verifyPayment = async (data) => {
     }
 };
 
-export { checkoutData, book, createOrder, verifyPayment };
+
+const paymentFailure = async (package_payment_id) => {
+    try {
+        const response = await apiMiddleware.post("/package-payment-failed", {
+            package_payment_id : package_payment_id
+        });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export { checkoutData, book, createOrder, verifyPayment, paymentFailure };

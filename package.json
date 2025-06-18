@@ -21,6 +21,7 @@
     "react-date-range": "^2.0.1",
     "react-datepicker": "^8.3.0",
     "react-dom": "^19.0.0",
+    "react-google-autocomplete": "^2.7.5",
     "react-slick": "^0.30.3",
     "react-tailwindcss-datepicker": "^2.0.0",
     "slick-carousel": "^1.8.1",

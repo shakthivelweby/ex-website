@@ -36,21 +36,21 @@ export const initializeRazorpayPayment = async ({
   }
 
   return new Promise((resolve) => {
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: amount * 100, // Amount in smallest currency unit (paise for INR)
-      currency,
+  const options = {
+    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+    amount: amount * 100, // Amount in smallest currency unit (paise for INR)
+    currency,
       name,
       description,
-      order_id: orderId,
-      prefill: {
-        name,
-        email,
-        contact,
-      },
-      theme: {
-        color: "#4338CA",
-      },
+    order_id: orderId,
+    prefill: {
+      name,
+      email,
+      contact,
+    },
+    theme: {
+      color: "#4338CA",
+    },
       handler: function (response) {
         // This function will be called on successful payment
         console.log("Payment successful:", response);
@@ -63,6 +63,7 @@ export const initializeRazorpayPayment = async ({
           }
         });
       },
+      
       modal: {
         ondismiss: function() {
           // This function will be called when user closes the payment modal
@@ -76,10 +77,10 @@ export const initializeRazorpayPayment = async ({
           });
         }
       }
-    };
+  };
 
-    const paymentObject = new window.Razorpay(options);
-    
+  const paymentObject = new window.Razorpay(options);
+
     paymentObject.on("payment.failed", function (response) {
       console.log("Payment failed:", response.error);
       resolve({

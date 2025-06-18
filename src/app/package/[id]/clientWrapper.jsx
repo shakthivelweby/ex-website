@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Tab from "./Tab";
 import Form from "./Form";
@@ -20,6 +20,9 @@ export default function ClientWrapper({
 }) {
 
 
+
+
+
   /* all states */
   const [selectedStayCategory, setSelectedStayCategory] = useState({
     stay_category_id: packageStayCategory.stay_category_id,
@@ -27,13 +30,47 @@ export default function ClientWrapper({
   });
   const [packagePrice, setPackagePrice] = useState(packagePriceData.adultPrice);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [showMobileForm, setShowMobileForm] = useState(false);
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
     date
   );
+
+
+
+   
   const [enquireOnly, setEnquireOnly] = useState(false);
-    const [isClient, setIsClient] = useState(false);
+
+  const [isClient, setIsClient] = useState(false);
+
+  // Add ref for scroll container
+  const scrollContainerRef = useRef(null);
+
+  // Handle scroll animation when popup opens
+  useEffect(() => {
+    if (showMobileForm && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      
+      // Initial scroll down after a short delay
+      const timeoutId = setTimeout(() => {
+        container.scrollTo({
+          top: 300,
+          behavior: 'smooth'
+        });
+
+        // Scroll back up after another delay
+        setTimeout(() => {
+          container.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        }, 600);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [showMobileForm]);
 
   useEffect(() => {
     setIsClient(true);
@@ -41,24 +78,52 @@ export default function ClientWrapper({
 
   useEffect(() => {
     if (isClient) {
+      
       setEnquireOnly(!packagePriceData.rateAvailable);
     }
   }, [isClient, packagePriceData.rateAvailable]);
   
   /* end all states */
 
+  // Handle body scroll lock
+  useEffect(() => {
+    if (showMobileForm) {
+      // Save current scroll position and add styles
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+    }
 
+    // Cleanup function
+    return () => {
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+    };
+  }, [showMobileForm]);
 
   // update rate
   useEffect(() => {
     if (packageRate?.data) {
+      console.log(packageRate)
       setPackagePrice(packageRate.data.adultPrice);
+       setEnquireOnly(!packageRate.data.rateAvailable);
     }
   }, [packageRate, selectedStayCategory]);
 
-
- 
-
+  // Handle itinerary download
+  const downloadHandler = () => {
+    console.log("Downloading itinerary for package:", packageData.data.id);
+    // Implement your download logic here
+  };
 
   const { images, name, inclusions, package_stay_categories } =
     packageData.data;
@@ -71,6 +136,39 @@ export default function ClientWrapper({
         isOpen={isImageViewerOpen}
         onClose={() => setIsImageViewerOpen(false)}
       />
+
+      {/* Mobile Form Popup */}
+      {showMobileForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden">
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl h-[75vh] flex flex-col">
+            <div className="flex-none px-4 py-3 border-b flex justify-between items-center z-10">
+              <h3 className="text-base font-semibold">Book Your Trip</h3>
+              <button 
+                onClick={() => setShowMobileForm(false)}
+                className="text-gray-500 hover:text-gray-700 p-1"
+              >
+                <i className="fi fi-rr-cross text-lg"></i>
+              </button>
+            </div>
+            <div 
+              ref={scrollContainerRef}
+              className="flex-1 overflow-y-auto px-4 pt-2 scroll-smooth"
+            >
+              <Form
+                date={date}
+                packageData={packageData}
+                selectedStayCategory={selectedStayCategory}
+                packagePrice={packagePrice}
+                enquireOnly={enquireOnly}
+                setEnquireOnly={setEnquireOnly}
+                packagePriceData={packagePriceData}
+                isMobilePopup={true}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
           <div className="flex flex-col lg:flex-row gap-8">
@@ -146,7 +244,10 @@ export default function ClientWrapper({
                     </div>
                   </div>
                 </div>
-                <MobileCarousel packageData={packageData} />
+                <MobileCarousel 
+                  packageData={packageData} 
+                  onViewAllClick={() => setIsImageViewerOpen(true)} 
+                />
               </div>
               {/* provided by supplier */}
               <div className="flex   mb-2">
@@ -180,6 +281,32 @@ export default function ClientWrapper({
                     selectedStayCategory={selectedStayCategory}
                     setSelectedStayCategory={setSelectedStayCategory}
                   />
+                </div>
+              </div>
+
+              {/* Download Itinerary Button - Mobile Only */}
+              <div className="lg:hidden">
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                      <i className="fi fi-rr-document-signed text-gray-600 text-xl"></i>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">
+                        Detailed Itinerary
+                      </h3>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Download the complete day-by-day travel plan and inclusions
+                      </p>
+                      <button
+                        onClick={downloadHandler}
+                        className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        <i className="fi fi-rr-download mr-2"></i>
+                        Download PDF
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -226,6 +353,22 @@ export default function ClientWrapper({
           </div>
         </div>
       </main>
+
+      {/* Fixed Mobile Booking Button */}
+      <div className="fixed bottom-4 left-4 right-4 lg:hidden z-40">
+        <button
+          onClick={() => setShowMobileForm(true)}
+          className={`w-full ${enquireOnly ? 'bg-yellow-500' : 'bg-primary-500'} text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg`}
+        >
+          <div className="flex items-center">
+            <span className="text-sm">{enquireOnly ? 'Send Enquiry' : 'Check Availability'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm font-bold">₹{packagePrice}</span>
+            <i className={`${enquireOnly ? 'fi fi-rr-envelope' : 'fi fi-rr-calendar-clock'} ml-2 text-sm`}></i>
+          </div>
+        </button>
+      </div>
     </div>
   );
 }

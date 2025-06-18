@@ -22,10 +22,12 @@ const navLinks = [
 export default function Header({setShowLogin}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
   const userMenuRef = useRef(null);
+  const mobileNavRef = useRef(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -36,37 +38,28 @@ export default function Header({setShowLogin}) {
 
     // Close menu when clicking outside
     const handleClickOutside = (event) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setShowUserMenu(false);
+      if (mobileNavRef.current && !mobileNavRef.current.contains(event.target)) {
+        setShowMobileNav(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    if (showMobileNav) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showMobileNav]);
 
-  // Handle active link selection
   const handleLinkClick = (index) => {
     setActiveIndex(index);
-    if (scrollRef.current) {
-      const linkElement = scrollRef.current.children[index];
-      const scrollLeft =
-        linkElement.offsetLeft -
-        scrollRef.current.clientWidth / 2 +
-        linkElement.clientWidth / 2;
-      scrollRef.current.scrollTo({
-        left: scrollLeft,
-        behavior: "smooth",
-      });
-    }
+    setShowMobileNav(false);
   };
 
   const handleLogin = () => {
     setIsLoading(true);
-    // Simulate a small delay before showing the login modal
     setTimeout(() => {
       setShowLogin(true);
       setIsLoading(false);
+      setShowMobileNav(false);
     }, 300);
   };
 
@@ -74,34 +67,20 @@ export default function Header({setShowLogin}) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setShowUserMenu(false);
-    // You might want to redirect to home page or refresh the page here
+    setShowMobileNav(false);
     window.location.reload();
   };
 
-  // Scroll to active link on mount
-  useEffect(() => {
-    if (scrollRef.current) {
-      const activeIndex = navLinks.findIndex((link) => link.active);
-      if (activeIndex >= 0) {
-        const activeElement = scrollRef.current.children[activeIndex];
-        setTimeout(() => {
-          const scrollLeft =
-            activeElement.offsetLeft -
-            scrollRef.current.clientWidth / 2 +
-            activeElement.clientWidth / 2;
-          scrollRef.current.scrollLeft = scrollLeft;
-        }, 100);
-      }
-    }
-  }, []);
+  const handleMobileMenuToggle = () => {
+    setShowMobileNav(!showMobileNav);
+  };
 
   return (
     <header className="w-full bg-white shadow-sm relative z-50">
       <div className="container mx-auto flex items-center justify-between py-4 px-3">
         {/* Logo */}
         <div className="flex items-center">
-          <Link href="/">
+          <Link href="/" onClick={() => setShowMobileNav(false)}>
             <Image
               src="/exploreworld-logo.png"
               alt="Logo"
@@ -123,6 +102,10 @@ export default function Header({setShowLogin}) {
                   ? "text-primary-600"
                   : "text-gray-700 hover:text-gray-900"
               }`}
+              onClick={() => {
+                setActiveIndex(index);
+                setShowMobileNav(false);
+              }}
             >
               <i
                 className={`${link.icon} text-sm mr-2 ${
@@ -137,166 +120,177 @@ export default function Header({setShowLogin}) {
           ))}
         </nav>
 
-        {/* User Menu */}
-        <div className="flex items-center relative" ref={userMenuRef}>
-          {user ? (
-            <>
+        {/* Mobile Menu and User Menu */}
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50"
+            onClick={() => setShowMobileNav(prev => !prev)}
+          >
+            <i className={`fi ${showMobileNav ? 'fi-rr-cross' : 'fi-rr-menu-burger'} text-gray-700`}></i>
+          </button>
+
+          {/* User Menu */}
+          <div className="relative" ref={userMenuRef}>
+            {user ? (
               <button 
-                className="inline-flex items-center justify-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group"
                 onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center"
               >
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                {/* Mobile Avatar Only */}
+                <div className="lg:hidden relative flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
                     {user.avatar ? (
                       <Image
                         src={user.avatar}
                         alt={user.name}
-                        width={32}
-                        height={32}
+                        width={36}
+                        height={36}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <i className="fi fi-rr-user text-primary-600 text-sm"></i>
+                      <i className="fi fi-rr-user text-primary-600 text-base"></i>
                     )}
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
-                    {/* <p className="text-xs text-gray-500 line-clamp-1">{user.email}</p> */}
+
+                {/* Desktop Full Menu */}
+                <div className="hidden lg:flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group">
+                  <div className="relative">
+                    <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                      {user.avatar ? (
+                        <Image
+                          src={user.avatar}
+                          alt={user.name}
+                          width={32}
+                          height={32}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <i className="fi fi-rr-user text-primary-600 text-sm"></i>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                   </div>
-                  <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
+                  <div className="flex items-center gap-2">
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
+                    </div>
+                    <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
+                  </div>
                 </div>
               </button>
-
-              {/* Dropdown Menu */}
-              {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
-                  </div>
-                  <div className="py-1">
-                    <Link 
-                      href="/profile" 
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                    >
-                      <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">Profile</span>
-                        <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
-                      </div>
-                    </Link>
-                    <Link 
-                      href="/bookings" 
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                    >
-                      <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">My Bookings</span>
-                        <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
-                      </div>
-                    </Link>
-                  </div>
-                  <div className="border-t border-gray-100 mt-1 pt-1">
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
-                    >
-                      <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">Logout</span>
-                        <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-3">
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogin}
                 icon={<i className="fi fi-rr-user"></i>}
                 isLoading={isLoading}
+                className="hidden lg:flex"
               >
                 Sign in
               </Button>
-            </div>
-          )}
+            )}
+
+            {/* User Dropdown Menu */}
+            {showUserMenu && user && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right z-50">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
+                </div>
+                <div className="py-1">
+                  <Link 
+                    href="/profile" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                  >
+                    <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                    <div>
+                      <span className="font-medium">Profile</span>
+                      <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
+                    </div>
+                  </Link>
+                  <Link 
+                    href="/bookings" 
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                  >
+                    <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                    <div>
+                      <span className="font-medium">My Bookings</span>
+                      <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
+                    </div>
+                  </Link>
+                </div>
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button 
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
+                  >
+                    <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
+                    <div>
+                      <span className="font-medium">Logout</span>
+                      <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden relative border-t border-gray-100 bg-white">
-        {/* Scroll indicators */}
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-white to-transparent pointer-events-none z-10"></div>
-
-        {/* Small arrow indicator */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 animate-pulse z-20">
-          <i className="fi fi-rr-angle-circle-right text-xs"></i>
-        </div>
-
-        <style jsx>{`
-          .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-          }
-          .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-
-          @keyframes scroll-hint {
-            0% {
-              transform: translateX(0);
-            }
-            50% {
-              transform: translateX(3px);
-            }
-            100% {
-              transform: translateX(0);
-            }
-          }
-
-          .scroll-hint {
-            animation: scroll-hint 1.5s ease-in-out infinite;
-          }
-        `}</style>
-
-        <div
-          ref={scrollRef}
-          className="flex w-full py-2 px-3 overflow-x-auto snap-x snap-mandatory scroll-smooth hide-scrollbar"
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
-          {navLinks.map((link, index) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className={`flex items-center px-3 py-1 mx-1 min-w-[auto] snap-center rounded-full transition-all text-xs font-medium whitespace-nowrap ${
-                index === activeIndex
-                  ? "text-primary-600 bg-primary-50"
-                  : "text-gray-600"
-              } ${index > 0 && index < 3 ? "scroll-hint" : ""}`}
-              onClick={(e) => {
-                e.preventDefault();
-                handleLinkClick(index);
-              }}
-            >
-              <i
-                className={`${link.icon} text-sm mr-2.5 ${
-                  index === activeIndex ? "text-primary-600" : "text-gray-500"
+      {/* Mobile Navigation Menu */}
+      <div 
+        ref={mobileNavRef}
+        className={`lg:hidden fixed inset-0 top-[72px] bg-white shadow-lg border-t border-gray-100 transition-all duration-300 ease-in-out transform ${
+          showMobileNav ? 'translate-y-0 opacity-100 visible' : 'translate-y-full opacity-0 invisible'
+        }`}
+      >
+        <div className="h-full overflow-y-auto">
+          <nav className="flex flex-col divide-y divide-gray-100">
+            {navLinks.map((link, index) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className={`flex items-center px-6 py-4 transition-all ${
+                  index === activeIndex
+                    ? "bg-primary-50/50 text-primary-600"
+                    : "text-gray-700 hover:bg-gray-50"
                 }`}
-              ></i>
-              {link.name}
-              {index === activeIndex && (
-                <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
-              )}
-            </Link>
-          ))}
+                onClick={() => {
+                  setActiveIndex(index);
+                  setShowMobileNav(false);
+                }}
+              >
+                <i
+                  className={`${link.icon} text-sm mr-4 ${
+                    index === activeIndex ? "text-primary-600" : "text-gray-500"
+                  }`}
+                ></i>
+                <span className="font-medium text-base">{link.name}</span>
+                {index === activeIndex && (
+                  <div className="ml-auto">
+                    <i className="fi fi-rr-check text-primary-600"></i>
+                  </div>
+                )}
+              </Link>
+            ))}
+
+            {!user && (
+              <button
+                onClick={() => {
+                  handleLogin();
+                  setShowMobileNav(false);
+                }}
+                className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all lg:hidden"
+              >
+                <i className="fi fi-rr-user text-xl mr-4"></i>
+                <span className="font-medium text-base">Sign in</span>
+              </button>
+            )}
+          </nav>
         </div>
       </div>
     </header>

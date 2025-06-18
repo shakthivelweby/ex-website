@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,6 +23,7 @@ import { formatDate } from "@/utils/formatDate";
  * @param {number} props.packagePrice - Price per person
  * @param {boolean} props.enquireOnly - Flag to determine if form is for enquiry only
  * @param {Object} props.packagePriceData - Contains pricing details including rate ID
+ * @param {boolean} props.isMobilePopup - Flag to determine if form is in mobile popup view
  */
 const Form = ({
   packageData,
@@ -30,8 +31,11 @@ const Form = ({
   date,
   packagePrice,
   enquireOnly,
-  packagePriceData
+  packagePriceData,
+  isMobilePopup = false,
+  onDownload
 }) => {
+
   // Navigation and URL handling
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -64,6 +68,11 @@ const Form = ({
   // Extract package details
   const { total_days, total_nights } = packageData.data;
 
+  // Refs for form fields
+  const fullNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const phoneRef = useRef(null);
+
   /**
    * Helper function to get date range for a given month
    * Used for fetching calendar rates
@@ -92,6 +101,8 @@ const Form = ({
     enabled: !!selectedDate,
   });
 
+  console.log(calendarRates)
+
   // Process calendar rates for display
   const ratesByDate = useMemo(() => {
     if (!calendarRates?.data) return {};
@@ -102,6 +113,13 @@ const Form = ({
       return acc;
     }, {});
   }, [calendarRates]);
+
+  // Function to check if a date should be disabled
+  const isDateDisabled = (date) => {
+    const formattedDate = formatDate(date);
+    const rateData = calendarRates?.data?.find(rate => rate.date === formattedDate);
+    return rateData?.stopSale === true;
+  };
 
   /**
    * Handle date selection change
@@ -160,6 +178,52 @@ const Form = ({
     }
   };
 
+  // Function to scroll to element with smooth behavior
+  const scrollToElement = (elementRef) => {
+    if (elementRef.current) {
+      const yOffset = -100; // Offset to account for header
+      const element = elementRef.current;
+      const container = isMobilePopup ? element.closest('.overflow-y-auto') : window;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      
+      container.scrollTo({ top: y, behavior: 'smooth' });
+      
+      // Add focus effect
+      element.focus();
+      element.classList.add('border-red-500', 'bg-red-50');
+      setTimeout(() => {
+        element.classList.remove('bg-red-50');
+      }, 2000);
+    }
+  };
+
+  // Validate and scroll to first error
+  const validateAndScroll = () => {
+    const newErrors = {
+      fullName: fullName.trim() ? "" : "Full Name is required",
+      email: email ? (validateEmail(email) ? "" : "Please enter a valid email") : "Email is required",
+      phone: phone ? (validatePhone(phone) ? "" : "Please enter a valid 10-digit phone number") : "Phone is required"
+    };
+
+    setError(newErrors);
+
+    // Find first error and scroll to it
+    if (newErrors.fullName) {
+      scrollToElement(fullNameRef);
+      return false;
+    }
+    if (newErrors.email) {
+      scrollToElement(emailRef);
+      return false;
+    }
+    if (newErrors.phone) {
+      scrollToElement(phoneRef);
+      return false;
+    }
+
+    return true;
+  };
+
   /**
    * Handle form submission for both booking and enquiry
    * Validates form data and makes API calls
@@ -167,16 +231,8 @@ const Form = ({
   async function submitHandler() {
     setIsLoading(true);
 
-    // Validate enquiry form fields if applicable
     if (enquireOnly) {
-      const newErrors = {
-        fullName: fullName.trim() ? "" : "Full Name is required",
-        email: email ? (validateEmail(email) ? "" : "Please enter a valid email") : "Email is required",
-        phone: phone ? (validatePhone(phone) ? "" : "Please enter a valid 10-digit phone number") : "Phone is required"
-      };
-
-      if (Object.values(newErrors).some(error => error !== "")) {
-        setError(newErrors);
+      if (!validateAndScroll()) {
         setIsLoading(false);
         return;
       }
@@ -274,9 +330,28 @@ const Form = ({
     <>
       {/* Main form container */}
       <div
-        className={`${!enquireOnly ? "sticky top-6" : ""
-          } bg-[#f7f7f7] rounded-xl p-3 shadow-sm`}
+        className={`${!enquireOnly && !isMobilePopup ? "sticky top-6" : ""
+          } ${isMobilePopup ? "" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"}`}
       >
+        {/* Enquiry Only Message */}
+        {enquireOnly && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <i className="fi fi-rr-info text-yellow-600"></i>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Enquiry Only
+                </h3>
+                <div className="mt-1 text-sm text-yellow-700">
+                  Online booking is not available for your selected dates. Please submit an enquiry and our team will get back to you with availability.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Package status badge */}
         <span className="text-xs font-medium text-gray-800  bg-green-200 rounded-full px-2 py-1 mb-2">
           <i className="fi fi-rr-pending mr-2 relative !top-0.5"></i>
@@ -304,46 +379,129 @@ const Form = ({
             Starting Date
           </label>
           <div className="relative">
-            <DatePicker
-              minDate={new Date()}
-              placeholderText="Choose Date"
-              className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium"
-              selected={selectedDate}
-              onChange={(date) => onDateChange(date)}
-              onMonthChange={(date) => {
-                setCurrentMonth(date);
-              }}
-              popperPlacement="bottom-start"
-              renderDayContents={(day, date) => {
-                const dateStr = formatDate(date);
-                const rate = ratesByDate[dateStr];
-                return (
-                  <div style={{ textAlign: "center", position: "relative" }}>
-                    <div>{day}</div>
-                    {rate && (
-                      <div
-                        style={{
-                          fontSize: "0.7em",
-                          color: "#FF385C",
-                          position: "absolute",
-                          left: 0,
-                          top: "23px",
-                          textAlign: "center",
-                          width: "100%",
-                          fontWeight: "500"
-                        }}
-                      >
-                        ₹{rate}
+            {isMobilePopup ? (
+              // Inline calendar for mobile
+              <div className="border-t border-gray-200 pt-3">
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => onDateChange(date)}
+                  onMonthChange={(date) => {
+                    setCurrentMonth(date);
+                  }}
+                  inline
+                  minDate={new Date()}
+                  filterDate={date => !isDateDisabled(date)}
+                  renderDayContents={(day, date) => {
+                    const dateStr = formatDate(date);
+                    const rateData = calendarRates?.data?.find(rate => rate.date === dateStr);
+                    const rate = ratesByDate[dateStr];
+                    return (
+                      <div style={{ textAlign: "center", position: "relative" }}>
+                        <div>{day}</div>
+                        {rateData?.stopSale ? (
+                          <div
+                            style={{
+                              fontSize: "0.65em",
+                              color: "#EF4444",
+                              position: "absolute",
+                              left: 0,
+                              top: "23px",
+                              textAlign: "center",
+                              width: "100%",
+                              fontWeight: "500"
+                            }}
+                          >
+                            N/A
+                          </div>
+                        ) : rate && (
+                          <div
+                            style={{
+                              fontSize: "0.7em",
+                              color: "#FF385C",
+                              position: "absolute",
+                              left: 0,
+                              top: "23px",
+                              textAlign: "center",
+                              width: "100%",
+                              fontWeight: "500"
+                            }}
+                          >
+                            ₹{rate}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                );
-              }}
-            />
-            <div className="absolute right-0 top-1/2 transform -translate-y-1/2  pointer-events-none text-gray-800">
-              <i className="fi fi-rr-calendar text-lg"></i>
-            </div>
+                    );
+                  }}
+                />
+              </div>
+            ) : (
+              // Popup calendar for desktop
+              <>
+                <DatePicker
+                  minDate={new Date()}
+                  placeholderText="Choose Date"
+                  className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium"
+                  selected={selectedDate}
+                  onChange={(date) => onDateChange(date)}
+                  onMonthChange={(date) => {
+                    setCurrentMonth(date);
+                  }}
+                  filterDate={date => !isDateDisabled(date)}
+                  popperPlacement="bottom-start"
+                  renderDayContents={(day, date) => {
+                    const dateStr = formatDate(date);
+                    const rateData = calendarRates?.data?.find(rate => rate.date === dateStr);
+                    const rate = ratesByDate[dateStr];
+                    return (
+                      <div style={{ textAlign: "center", position: "relative" }}>
+                        <div>{day}</div>
+                        {rateData?.stopSale ? (
+                          <div
+                            style={{
+                              fontSize: "0.65em",
+                              color: "#EF4444",
+                              position: "absolute",
+                              left: 0,
+                              top: "23px",
+                              textAlign: "center",
+                              width: "100%",
+                              fontWeight: "500"
+                            }}
+                          >
+                            N/A
+                          </div>
+                        ) : rate && (
+                          <div
+                            style={{
+                              fontSize: "0.7em",
+                              color: "#FF385C",
+                              position: "absolute",
+                              left: 0,
+                              top: "23px",
+                              textAlign: "center",
+                              width: "100%",
+                              fontWeight: "500"
+                            }}
+                          >
+                            ₹{rate}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }}
+                />
+                <div className="absolute right-0 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-800">
+                  <i className="fi fi-rr-calendar text-lg"></i>
+                </div>
+              </>
+            )}
           </div>
+          {isMobilePopup && (
+            <div className="mt-3 text-sm text-gray-500 flex items-center">
+              <i className="fi fi-rr-info mr-2"></i>
+              Selected date: {selectedDate ? selectedDate.toLocaleDateString() : 'None'}
+            </div>
+          )}
         </div>
 
         {/* Ticket count section */}
@@ -437,11 +595,11 @@ const Form = ({
                 Full Name
               </label>
               <input
+                ref={fullNameRef}
                 value={fullName}
                 onChange={handleFullNameChange}
                 type="text"
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.fullName ? "border-red-500" : ""
-                  }`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.fullName ? "border-red-500" : ""}`}
                 placeholder="Enter your full name"
               />
               {error.fullName && (
@@ -458,11 +616,11 @@ const Form = ({
                 Email
               </label>
               <input
+                ref={emailRef}
                 value={email}
                 onChange={handleEmailChange}
                 type="email"
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.email ? "border-red-500" : ""
-                  }`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.email ? "border-red-500" : ""}`}
                 placeholder="Enter your email"
               />
               {error.email && (
@@ -479,12 +637,14 @@ const Form = ({
                 Phone
               </label>
               <input
+                ref={phoneRef}
                 value={phone}
                 onChange={handlePhoneChange}
                 type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 maxLength={10}
-                className={`w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 bg-white placeholder:text-sm focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer placeholder:font-normal font-medium tracking-tight ${error.phone ? "border-red-500" : ""
-                  }`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.phone ? "border-red-500" : ""}`}
                 placeholder="Enter your phone number"
               />
               {error.phone && (
@@ -498,26 +658,59 @@ const Form = ({
         )}
 
         {/* Action buttons */}
-        <Button
-          onClick={submitHandler}
-          size="lg"
-          className="w-full mb-3 rounded-full"
-          isLoading={isLoading}
-          icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
-        >
-          {enquireOnly ? "Enquire Now" : "Book Now"}
-        </Button>
+        {isMobilePopup ? (
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+            <Button
+              onClick={submitHandler}
+              size="lg"
+              className="w-full rounded-full"
+              isLoading={isLoading}
+              icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
+            >
+              {enquireOnly ? "Enquire Now" : "Book Now"}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Button
+              onClick={submitHandler}
+              size="lg"
+              className="w-full mb-3 rounded-full"
+              isLoading={isLoading}
+              icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
+            >
+              {enquireOnly ? "Enquire Now" : "Book Now"}
+            </Button>
 
-        <Button
-          onClick={downloadHandler}
-          variant="outline"
-          size="lg"
-          className="w-full rounded-full"
-          icon={<i className="fi fi-rr-download ml-2"></i>}
-        >
-          Download Itinerary
-        </Button>
+            {/* Download Itinerary Section */}
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i className="fi fi-rr-document-signed text-gray-600 text-xl"></i>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-gray-800 mb-1">
+                    Detailed Itinerary
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Download the complete day-by-day travel plan and inclusions
+                  </p>
+                  <button
+                    onClick={downloadHandler}
+                    className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    <i className="fi fi-rr-download mr-2"></i>
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Add padding at bottom when in popup to account for fixed button */}
+      {isMobilePopup && <div className="h-20"></div>}
 
       {/* Success popup */}
       <SuccessPopup

@@ -13,7 +13,7 @@ export default function About() {
               Our Story
             </h2>
             <p className="text-gray-600 mb-6">
-              Welcome to our modern Next.js website! We're passionate about
+              Welcome to our modern Next.js website! We&apos;re passionate about
               creating beautiful, performant web applications using the latest
               technologies.
             </p>
@@ -39,7 +39,7 @@ export default function About() {
               </h3>
               <p className="text-gray-600">
                 To be at the forefront of web development, pushing the
-                boundaries of what's possible with modern technologies.
+                boundaries of what&apos;s possible with modern technologies.
               </p>
             </div>
           </div>

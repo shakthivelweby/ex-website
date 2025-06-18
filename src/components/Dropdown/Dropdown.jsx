@@ -20,22 +20,23 @@ const Dropdown = ({
   };
 
   // Determine if a value has been set
-  const hasValue = selected !== null;
+  const hasValue = selected ? true : false;
+  console.log("selected", hasValue);
 
   return (
     <div className={`relative ${className}`}>
       <Listbox value={selected} onChange={handleChange}>
         <div className="relative">
           <Listbox.Button
-            className={`relative w-full h-10 cursor-pointer rounded-full ${
+            className={`relative w-full h-10 cursor-pointer  ${
               hasValue
-                ? "border-2 border-primary-500"
-                : "border border-gray-300"
-            } bg-white py-2 pl-4 pr-10 text-left focus:outline-none focus:ring-none focus:border-primary-300 hover:border-primary-300 text-sm font-medium`}
+                ? "border-b-2 border-primary-500"
+                : "border-b border-gray-300"
+            }  py-2  pr-10 text-left   text-sm font-medium`}
           >
             <span
               className={`block truncate ${
-                hasValue ? "text-gray-800" : "text-gray-500"
+                hasValue ? "text-gray-800 font-bold" : "text-gray-500"
               }`}
             >
               {selected ? selected.label : placeholder}
@@ -45,9 +46,7 @@ const Dropdown = ({
             </span>
           </Listbox.Button>
 
-          {hasValue && (
-            <span className="absolute -top-2 -right-2 w-3 h-3 bg-primary-500 rounded-full"></span>
-          )}
+        
 
           <Transition
             as={Fragment}

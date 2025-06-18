@@ -125,7 +125,7 @@ const ProfilePage = () => {
               <div className="mb-8" id="profile">
                 <div className="md:flex items-center justify-between mb-6">
                   <div className="mb-4 md:mb-0">
-                    <h3 className="text-lg font-semibold text-gray-900">Profile Information</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 tracking-tighter">Profile Information</h3>
                     <p className="text-sm text-gray-500 mt-1">Update your personal details and profile picture</p>
                   </div>
                   {!isEditing && (
@@ -294,14 +294,14 @@ const ProfilePage = () => {
               <div className="mb-8 pt-8 border-t border-gray-200" id="security">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Security Settings</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 tracking-tighter">Security Settings</h3>
                     <p className="text-sm text-gray-500 mt-1">Manage your account security</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   {/* Password Change */}
-                  <div className="flex items-center justify-between py-4">
+                  <div className="md:flex items-center justify-between py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
                         <i className="fi fi-rr-lock text-primary-600"></i>
@@ -315,7 +315,7 @@ const ProfilePage = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowChangePassword(true)}
-                      className="hover:bg-gray-50 !rounded-full"
+                      className="hover:bg-gray-50 !rounded-full mt-4 md:mt-0"
                     >
                       Change Password
                     </Button>

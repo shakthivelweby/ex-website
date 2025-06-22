@@ -6,3 +6,9 @@ export const getScheduledTrips = async (filters) => {
   );
   return response.data;
 };
+
+export const getDestinations = async () => {
+  const response = await apiMiddleware.get("/state-destinations");
+  return response.data;
+};
+

@@ -4,22 +4,49 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import Button from "./common/Button";
+import { usePathname } from 'next/navigation';
 
 const navLinks = [
   {
     name: "Scheduled Trips",
     href: "/scheduled",
     icon: "fi fi-rr-pending",
-    active: true,
+    matchPath: (path) => path === "/scheduled"
   },
-  { name: "Packages", href: "#", icon: "fi fi-rr-umbrella-beach" },
-  { name: "Activities", href: "#", icon: "fi fi-rr-person-climbing" },
-  { name: "Attractions", href: "#", icon: "fi fi-rr-binoculars" },
-  { name: "Rentals", href: "#", icon: "fi fi-rr-biking" },
-  { name: "Events", href: "#", icon: "fi fi-rr-glass-cheers" },
+  { 
+    name: "Packages", 
+    href: "/explore", 
+    icon: "fi fi-rr-umbrella-beach",
+    matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
+  },
+  { 
+    name: "Activities", 
+    href: "#", 
+    icon: "fi fi-rr-person-climbing",
+    matchPath: (path) => path === "/activities"
+  },
+  { 
+    name: "Attractions", 
+    href: "#", 
+    icon: "fi fi-rr-binoculars",
+    matchPath: (path) => path === "/attractions"
+  },
+  { 
+    name: "Rentals", 
+    href: "#", 
+    icon: "fi fi-rr-biking",
+    matchPath: (path) => path === "/rentals"
+  },
+  { 
+    name: "Events", 
+    href: "#", 
+    icon: "fi fi-rr-glass-cheers",
+    matchPath: (path) => path === "/events"
+  },
 ];
 
 export default function Header({setShowLogin}) {
+  const pathname = usePathname();
   const [activeIndex, setActiveIndex] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
@@ -28,6 +55,14 @@ export default function Header({setShowLogin}) {
   const scrollRef = useRef(null);
   const userMenuRef = useRef(null);
   const mobileNavRef = useRef(null);
+
+  // Set active index based on current path
+  useEffect(() => {
+    const index = navLinks.findIndex(link => link.matchPath(pathname));
+    if (index !== -1) {
+      setActiveIndex(index);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     // Check if user is logged in
@@ -93,31 +128,31 @@ export default function Header({setShowLogin}) {
 
         {/* Desktop Navigation */}
         <nav className="hidden lg:flex items-center gap-5">
-          {navLinks.map((link, index) => (
-            <Link
-              key={link.name}
-              href={link.href}
-              className={`flex items-center text-sm font-medium mr-4 ${
-                link.active
-                  ? "text-primary-600"
-                  : "text-gray-700 hover:text-gray-900"
-              }`}
-              onClick={() => {
-                setActiveIndex(index);
-                setShowMobileNav(false);
-              }}
-            >
-              <i
-                className={`${link.icon} text-sm mr-2 ${
-                  link.active ? "text-primary-600" : "text-gray-500"
+          {navLinks.map((link, index) => {
+            const isActive = link.matchPath(pathname);
+            return (
+              <Link
+                key={link.name}
+                href={link.href}
+                className={`flex items-center text-sm font-medium mr-4 ${
+                  isActive
+                    ? "text-primary-600"
+                    : "text-gray-700 hover:text-gray-900"
                 }`}
-              ></i>
-              {link.name}
-              {link.active && (
-                <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
-              )}
-            </Link>
-          ))}
+                onClick={() => handleLinkClick(index)}
+              >
+                <i
+                  className={`${link.icon} text-sm mr-2 ${
+                    isActive ? "text-primary-600" : "text-gray-500"
+                  }`}
+                ></i>
+                {link.name}
+                {isActive && (
+                  <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Mobile Menu and User Menu */}
@@ -250,33 +285,33 @@ export default function Header({setShowLogin}) {
       >
         <div className="h-full overflow-y-auto">
           <nav className="flex flex-col divide-y divide-gray-100">
-            {navLinks.map((link, index) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`flex items-center px-6 py-4 transition-all ${
-                  index === activeIndex
-                    ? "bg-primary-50/50 text-primary-600"
-                    : "text-gray-700 hover:bg-gray-50"
-                }`}
-                onClick={() => {
-                  setActiveIndex(index);
-                  setShowMobileNav(false);
-                }}
-              >
-                <i
-                  className={`${link.icon} text-sm mr-4 ${
-                    index === activeIndex ? "text-primary-600" : "text-gray-500"
+            {navLinks.map((link, index) => {
+              const isActive = link.matchPath(pathname);
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`flex items-center px-6 py-4 transition-all ${
+                    isActive
+                      ? "bg-primary-50/50 text-primary-600"
+                      : "text-gray-700 hover:bg-gray-50"
                   }`}
-                ></i>
-                <span className="font-medium text-base">{link.name}</span>
-                {index === activeIndex && (
-                  <div className="ml-auto">
-                    <i className="fi fi-rr-check text-primary-600"></i>
-                  </div>
-                )}
-              </Link>
-            ))}
+                  onClick={() => handleLinkClick(index)}
+                >
+                  <i
+                    className={`${link.icon} text-sm mr-4 ${
+                      isActive ? "text-primary-600" : "text-gray-500"
+                    }`}
+                  ></i>
+                  <span className="font-medium text-base">{link.name}</span>
+                  {isActive && (
+                    <div className="ml-auto">
+                      <i className="fi fi-rr-check text-primary-600"></i>
+                    </div>
+                  )}
+                </Link>
+              );
+            })}
 
             {!user && (
               <button

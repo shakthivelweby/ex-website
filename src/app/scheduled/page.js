@@ -8,7 +8,7 @@ import RangeSlider from "@/components/RangeSlider/RangeSlider";
 import DateRangePicker from "@/components/DateRangePicker/DateRangePicker";
 import Dropdown from "@/components/Dropdown/Dropdown";
 import Popup from "@/components/Popup";
-import { useScheduledTrips } from "./query";
+import { useScheduledTrips, useDestinations } from "./query";
 import Autocomplete from "react-google-autocomplete";
 
 export default function Scheduled() {
@@ -92,22 +92,28 @@ export default function Scheduled() {
   const sendData = () => {};
 
   const { data: scheduledTrips } = useScheduledTrips(filters);
+  const { data: destinationsData } = useDestinations();
   const packages = scheduledTrips?.data;
 
-  // Sample destination options
-  const destinationOptions = [
-    { value: "", label: "All" },
-    { value: "goa", label: "Goa" },
-    { value: "delhi", label: "Delhi" },
-    { value: "mumbai", label: "Mumbai" },
-    { value: "jaipur", label: "Jaipur" },
-    { value: "bangalore", label: "Bangalore" },
-    { value: "kolkata", label: "Kolkata" },
-    { value: "chennai", label: "Chennai" },
-    { value: "hyderabad", label: "Hyderabad" },
-    { value: "agra", label: "Agra" },
-    { value: "udaipur", label: "Udaipur" },
-  ];
+  // Format destinations for dropdown
+  const destinationOptions = destinationsData?.data?.map(dest => ({
+    value: dest.id.toString(),
+    label: dest.name,
+    coordinates: {
+      latitude: dest.latitude,
+      longitude: dest.longitude
+    }
+  })) || [];
+
+  // Update coordinates when destination changes
+  useEffect(() => {
+    if (filters.destination) {
+      const selectedDest = destinationOptions.find(opt => opt.value === filters.destination);
+      if (selectedDest?.coordinates) {
+        setLocationCoordinates(selectedDest.coordinates);
+      }
+    }
+  }, [filters.destination]);
 
   // Handle place selection from Google Autocomplete
   const handlePlaceSelect = (place) => {

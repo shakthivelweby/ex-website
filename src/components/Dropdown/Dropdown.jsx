@@ -11,17 +11,23 @@ const Dropdown = ({
   className = "",
 }) => {
   const [selected, setSelected] = useState(value);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleChange = (option) => {
     setSelected(option);
+    setSearchQuery(""); // Clear search when option is selected
     if (onChange) {
       onChange(option);
     }
   };
 
+  // Filter options based on search query
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Determine if a value has been set
   const hasValue = selected ? true : false;
-  console.log("selected", hasValue);
 
   return (
     <div className={`relative ${className}`}>
@@ -46,8 +52,6 @@ const Dropdown = ({
             </span>
           </Listbox.Button>
 
-        
-
           <Transition
             as={Fragment}
             leave="transition ease-in duration-100"
@@ -55,7 +59,22 @@ const Dropdown = ({
             leaveTo="opacity-0"
           >
             <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-sm shadow-lg ring-1 ring-gray-200 focus:outline-none">
-              {options.map((option, index) => (
+              {/* Search Input */}
+              <div className="sticky top-0 bg-white px-3 py-2 border-b border-gray-100 z-20">
+                <div className="relative">
+                  <i className="fi fi-rr-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+
+              {/* Filtered Options */}
+              {filteredOptions.map((option, index) => (
                 <Listbox.Option
                   key={index}
                   className={({ active }) =>
@@ -85,6 +104,13 @@ const Dropdown = ({
                   )}
                 </Listbox.Option>
               ))}
+
+              {/* No results message */}
+              {filteredOptions.length === 0 && (
+                <div className="py-2.5 px-4 text-gray-500 text-center">
+                  No results found
+                </div>
+              )}
             </Listbox.Options>
           </Transition>
         </div>

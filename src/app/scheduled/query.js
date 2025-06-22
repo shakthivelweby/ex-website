@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getScheduledTrips } from "./service";
+import { getScheduledTrips, getDestinations } from "./service";
 
 export const useScheduledTrips = (filters) => {
   return useQuery({
@@ -12,5 +12,12 @@ export const useScheduledTrips = (filters) => {
     queryFn: () => getScheduledTrips(filters),
     enabled:
       !!filters.latitude && !!filters.longitude && !!filters.selectedDate,
+  });
+};
+
+export const useDestinations = () => {
+  return useQuery({
+    queryKey: ["destinations"],
+    queryFn: () => getDestinations(),
   });
 };

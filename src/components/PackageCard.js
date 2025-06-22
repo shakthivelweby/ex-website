@@ -47,6 +47,7 @@ const PackageCard = ({
 
   // Determine slot status
   const getSlotStatus = () => {
+    if (slotsAvailable === null) return null;
     if (slotsAvailable <= 0) return slotConfig.sold;
     if (slotsAvailable < 10) return slotConfig.critical;
     if (slotsAvailable < 30) return slotConfig.limited;
@@ -102,13 +103,16 @@ const PackageCard = ({
                 )}
               </div>
               
-              {/* Location */}
-              <div className="flex items-center text-gray-500 text-xs">
-                <div className="w-3 h-3 bg-gray-100 rounded-full flex items-center justify-center mr-1.5">
-                  <i className="fi fi-rr-marker text-gray-400 text-[8px]"></i>
+              {startingFrom && (
+
+                < div className="flex items-center text-gray-500 text-xs">
+                  <div className="w-3 h-3 bg-gray-100 rounded-full flex items-center justify-center mr-1.5">
+                    <i className="fi fi-rr-marker text-gray-400 text-[8px]"></i>
+                  </div>
+                  <span className="truncate font-medium">From {startingFrom}</span>
                 </div>
-                <span className="truncate font-medium">From {startingFrom}</span>
-              </div>
+              )}
+             
             </div>
 
             {/* Bottom section */}
@@ -120,10 +124,12 @@ const PackageCard = ({
               </div>
               
               {/* Availability Status */}
+              {slotStatus && (
               <div className={`${slotStatus.bg} ${slotStatus.text} px-2.5 py-1 rounded-lg text-[9px] font-semibold flex items-center gap-1.5`}>
                 <div className={`w-1.5 h-1.5 ${slotStatus.dot} rounded-full`}></div>
                 {slotStatus.label}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -166,6 +172,7 @@ const PackageCard = ({
             </div>
             
             {/* Bottom location */}
+            {startingFrom && (
             <div className="absolute bottom-3 left-3 right-3">
               <div className="flex items-center text-white">
                 <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center mr-2 backdrop-blur-sm">
@@ -174,6 +181,7 @@ const PackageCard = ({
                 <span className="truncate text-sm font-semibold">From {startingFrom}</span>
               </div>
             </div>
+            )}
           </div>
 
           {/* Content Section - Desktop */}
@@ -194,10 +202,12 @@ const PackageCard = ({
               </div>
               
               {/* Availability Status - Desktop Clean */}
+              {slotStatus && (
               <div className={`${slotStatus.bg} ${slotStatus.text} px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 border border-gray-200`}>
                 <div className={`w-2 h-2 ${slotStatus.dot} rounded-full`}></div>
                 <span>{slotStatus.label}</span>
               </div>
+              )}
             </div>
           </div>
         </div>

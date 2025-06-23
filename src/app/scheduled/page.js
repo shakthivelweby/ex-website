@@ -15,6 +15,7 @@ export default function Scheduled() {
   // State for selected date from DateNavBar - Initialize with null to prevent hydration mismatch
   const [selectedDate, setSelectedDate] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [mobileLayout, setMobileLayout] = useState('list'); // Add layout state
 
   // Add state for start location and location edit popup
   const [startLocation, setStartLocation] = useState("");
@@ -28,7 +29,9 @@ export default function Scheduled() {
   // State for all filters
   const [filters, setFilters] = useState({
     destination: "",
-    budget: "",
+    budget_from: "",
+    budget_to: "",
+    sort_by_price: "",
     selectedDate: "",
     longitude: "",
     latitude: "",
@@ -154,10 +157,31 @@ export default function Scheduled() {
 
   // Update individual filter values
   const updateFilter = (name, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "budget") {
+      // When budget changes, update both from and to values
+      setFilters((prev) => ({
+        ...prev,
+        budget_from: value,
+        budget_to: Math.min(value + 3000, 53000),
+      }));
+    } else if (name === "destination") {
+      // For destination dropdown, extract the value from the option object
+      setFilters((prev) => ({
+        ...prev,
+        destination: value?.value || null, // value.value contains the destination_id
+      }));
+    } else if (name === "sort_by_price") {
+      // For sort_by_price dropdown, extract the value from the option object
+      setFilters((prev) => ({
+        ...prev,
+        sort_by_price: value?.value || null, // value.value contains 'asc' or 'desc'
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   // Clear all filters
@@ -165,7 +189,9 @@ export default function Scheduled() {
     setFilters((prev) => ({
       ...prev,
       destination: null,
-      budget: null,
+      budget_from: null,
+      budget_to: null,
+      sort_by_price: null,
       dateRange: {
         startDate: null,
         endDate: null,
@@ -183,7 +209,9 @@ export default function Scheduled() {
   const hasActiveFilters = () => {
     return !!(
       filters.destination ||
-      filters.budget ||
+      filters.budget_from ||
+      filters.budget_to ||
+      filters.sort_by_price ||
       (filters.dateRange?.startDate || filters.dateRange?.endDate) ||
       filters.pax ||
       filters.duration
@@ -194,7 +222,8 @@ export default function Scheduled() {
   const getActiveFilterCount = () => {
     let count = 0;
     if (filters.destination) count++;
-    if (filters.budget) count++;
+    if (filters.budget_from || filters.budget_to) count++;
+    if (filters.sort_by_price) count++;
     if (filters.dateRange?.startDate || filters.dateRange?.endDate) count++;
     if (filters.pax) count++;
     if (filters.duration) count++;
@@ -213,9 +242,8 @@ export default function Scheduled() {
               endDate: value.endDate?.toISOString().split('T')[0] || null,
             };
           }
-        } else if (key === 'destination' && value?.value) {
-          acc[key] = value.value;
         } else {
+          // Remove the object check since we're now storing direct values
           acc[key] = value;
         }
       }
@@ -248,7 +276,7 @@ export default function Scheduled() {
             key={`destination-${resetKey}`}
             options={destinationOptions}
             placeholder="Select destination"
-            value={filters.destination || ""}
+            value={destinationOptions.find(opt => opt.value === filters.destination) || null}
             onChange={(option) => updateFilter("destination", option)}
             className={filters.destination ? "" : ""}
           />
@@ -261,13 +289,13 @@ export default function Scheduled() {
           Your Budget
         </label>
         <div>
-          {filters.budget ? <span className="absolute bottom-4 right-0 w-3 h-3 bg-primary-500 rounded-full"></span> : null}
+          {filters.budget_from || filters.budget_to ? <span className="absolute bottom-4 right-0 w-3 h-3 bg-primary-500 rounded-full"></span> : null}
           <RangeSlider
             key={`budget-${resetKey}`}
             min={6000}
             max={53000}
             step={1000}
-            initialValue={filters.budget || ""}
+            initialValue={filters.budget_from || filters.budget_to || ""}
             formatDisplay={(val) => {
               if (!val) return "Select budget range";
               const maxVal = Math.min(val + 3000, 53000);
@@ -275,7 +303,31 @@ export default function Scheduled() {
             }}
             title="Price Range"
             onChange={(value) => updateFilter("budget", value)}
-            className={filters.budget ? "border-b-2 border-primary-500 font-bold" : "border-b border-gray-300"}
+            className={filters.budget_from || filters.budget_to ? "border-b-2 border-primary-500 font-bold" : "border-b border-gray-300"}
+          />
+        </div>
+      </div>
+
+      {/* Sort by Price */}
+      <div className="flex flex-col relative">
+        <label className="mb-2 font-medium text-sm text-gray-800 relative">
+          Sort by Price
+        </label>
+        <div>
+          {filters.sort_by_price ? <span className="absolute bottom-4 right-0 w-3 h-3 bg-primary-500 rounded-full"></span> : null}
+          <Dropdown
+            key={`sort-${resetKey}`}
+            options={[
+              { value: "asc", label: "Low to High" },
+              { value: "desc", label: "High to Low" }
+            ]}
+            placeholder="Select price sorting"
+            value={[
+              { value: "asc", label: "Low to High" },
+              { value: "desc", label: "High to Low" }
+            ].find(opt => opt.value === filters.sort_by_price) || null}
+            onChange={(option) => updateFilter("sort_by_price", option)}
+            className={filters.sort_by_price ? "" : ""}
           />
         </div>
       </div>
@@ -467,24 +519,62 @@ export default function Scheduled() {
                 </div>
               </div>
               
-              {/* Filter button - Mobile only */}
-              <div className="lg:hidden">
-                <button
-                  onClick={() => setIsFilterPopupOpen(true)}
-                  className="flex items-center px-3 py-1.5 text-sm rounded-full border transition-all shadow-md relative bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                >
-                  <i className="fi fi-rr-filter text-sm mr-1.5"></i>
-                  <span className="font-medium">Filters</span>
-                  {hasActiveFilters() && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary-500 rounded-full border-2 border-white"></span>
-                  )}
-                </button>
+              {/* Layout Toggle Controls */}
+              <div className="flex items-center gap-4">
+                {/* Filter button - Mobile only */}
+              
+
+                {/* View Toggle */}
+                <div className="flex items-center bg-white rounded-full p-0.5 border border-gray-100 shadow-sm">
+                  <button
+                    onClick={() => setMobileLayout('list')}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+                      mobileLayout === 'list'
+                      ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
+                      : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    aria-label="List view"
+                  >
+                    <i className={`fi fi-rr-list text-[13px] transition-transform ${
+                      mobileLayout === 'list' ? 'scale-110' : ''
+                    }`}></i>
+                  </button>
+                  <button
+                    onClick={() => setMobileLayout('grid')}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+                      mobileLayout === 'grid'
+                      ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
+                      : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                    aria-label="Grid view"
+                  >
+                    <i className={`fi fi-rr-apps text-[13px] transition-transform ${
+                      mobileLayout === 'grid' ? 'scale-110' : ''
+                    }`}></i>
+                  </button>
+                </div>
+                <div className="lg:hidden">
+                  <button
+                    onClick={() => setIsFilterPopupOpen(true)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 text-white shadow-sm hover:bg-black transition-colors text-sm"
+                  >
+                    <i className="fi fi-rr-settings-sliders text-[13px]"></i>
+                    <span className="font-medium">Filters</span>
+                    {hasActiveFilters() && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary-500 rounded-full border-2 border-white"></span>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Trip Cards - Grid View */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-2">
+          {/* Trip Cards - Grid/List View */}
+          <div className={`${
+            mobileLayout === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+            : 'flex flex-col gap-4'
+          }`}>
             {/* Rajasthan Package */}
             {packages?.length === 0 && (
               <div className="col-span-full text-center py-16">
@@ -552,22 +642,23 @@ export default function Scheduled() {
                 total_days,
                 total_nights,
                 starting_location,
-                adult_price,
+                final_adult_price,
               } = trip;
 
               return (
                 <PackageCard
+                  key={id}
                   packageId={id}
                   imageSrc={images[0].image_url}
                   imageAlt={name}
                   title={name}
                   startingFrom={starting_location}
                   duration={`${total_days}N ${total_nights}D`}
-                  price={adult_price}
+                  price={final_adult_price}
                   slotsAvailable={5}
-                  key={id}
                   isCertified={false}
                   date={selectedDate?.toISOString().split("T")[0] || ""}
+                  mobileLayout={mobileLayout}
                 />
               );
             })}

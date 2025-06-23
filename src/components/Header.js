@@ -19,30 +19,30 @@ const navLinks = [
     icon: "fi fi-rr-umbrella-beach",
     matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
   },
-  { 
-    name: "Activities", 
-    href: "#", 
-    icon: "fi fi-rr-person-climbing",
-    matchPath: (path) => path === "/activities"
-  },
-  { 
-    name: "Attractions", 
-    href: "#", 
-    icon: "fi fi-rr-binoculars",
-    matchPath: (path) => path === "/attractions"
-  },
-  { 
-    name: "Rentals", 
-    href: "#", 
-    icon: "fi fi-rr-biking",
-    matchPath: (path) => path === "/rentals"
-  },
-  { 
-    name: "Events", 
-    href: "#", 
-    icon: "fi fi-rr-glass-cheers",
-    matchPath: (path) => path === "/events"
-  },
+  // { 
+  //   name: "Activities", 
+  //   href: "#", 
+  //   icon: "fi fi-rr-hiking",
+  //   matchPath: (path) => path === "/activities"
+  // },
+  // { 
+  //   name: "Attractions", 
+  //   href: "#", 
+  //   icon: "fi fi-rr-binoculars",
+  //   matchPath: (path) => path === "/attractions"
+  // },
+  // { 
+  //   name: "Rentals", 
+  //   href: "#", 
+  //   icon: "fi fi-rr-biking",
+  //   matchPath: (path) => path === "/rentals"
+  // },
+  // { 
+  //   name: "Events", 
+  //   href: "#", 
+  //   icon: "fi fi-rr-glass-cheers",
+  //   matchPath: (path) => path === "/events"
+  // },
 ];
 
 export default function Header({setShowLogin}) {
@@ -111,7 +111,7 @@ export default function Header({setShowLogin}) {
   };
 
   return (
-    <header className="w-full bg-white shadow-sm relative z-50">
+    <header className="w-full bg-white shadow-sm  z-50 fixed top-0 left-0 right-0">
       <div className="container mx-auto flex items-center justify-between py-4 px-3">
         {/* Logo */}
         <div className="flex items-center">

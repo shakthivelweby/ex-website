@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
+
+const mobileIp = '172.20.10.2';
 const nextConfig = {
+  allowedDevOrigins: [mobileIp, 'http://localhost:3000'],
   images: {
     remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: mobileIp,
+      },
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
@@ -16,7 +23,7 @@ const nextConfig = {
       }
     ],
   },
-  
 };
+
 
 export default nextConfig;

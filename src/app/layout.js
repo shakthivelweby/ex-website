@@ -9,6 +9,7 @@ import { handleLoginRedirect } from "@/utils/isLogin";
 import Login from "@/components/Login/Login";
 import Signup from "@/components/Login/Signup";
 import LoadingSpinner from './components/LoadingSpinner'
+import MobileNav from '@/components/MobileNav';
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -52,7 +53,7 @@ export default function RootLayout({ children }) {
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
         />
       </head>
-      <body className={dmSans.className}>
+      <body className={`${dmSans.className} pt-20`}>
         <Suspense>
           <LoadingSpinner />
         </Suspense>
@@ -84,6 +85,7 @@ export default function RootLayout({ children }) {
           <Suspense>
             {children}
           </Suspense>
+          <MobileNav />
         </QueryClientProvider>
       </body>
     </html>

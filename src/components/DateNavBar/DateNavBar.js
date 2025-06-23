@@ -241,7 +241,7 @@ const DateNavBar = ({ onDateChange }) => {
   return (
     <div
       ref={navBarRef}
-      className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center px-1 py-1 rounded-full shadow-xl bg-primary-500/90 backdrop-blur-md transition-all duration-500 ease-in-out ${
+      className={`fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 flex items-center px-1 py-1 rounded-full shadow-xl bg-primary-500/90 backdrop-blur-md transition-all duration-500 ease-in-out ${
         isExpanded ? "w-[70%] sm:w-auto max-w-[400px]" : "w-auto"
       } justify-between`}
       style={{ boxShadow: "0 4px 24px 0 #FF2D55" }}

@@ -1,9 +1,13 @@
 import Accordion from "@/components/Accordion";
-import Slider from "react-slick";
-import "slick-carousel/slick/slick.css";
-import "slick-carousel/slick/slick-theme.css";
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import Image from "next/image";
 import { useEffect, useState } from "react";
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 const ItinearyTab = ({ packageData, activeTab }) => {
   const [isClient, setIsClient] = useState(false);
@@ -36,48 +40,38 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                   </h4>
                   <div className="mb-8 w-full">
                     {isClient ? (
-                      <Slider
-                        dots={true}
-                        infinite={true}
+                      <Swiper
+                        modules={[Navigation, Pagination, Autoplay]}
+                        spaceBetween={12}
+                        slidesPerView={'auto'}
+                        centeredSlides={true}
+                        navigation={true}
+                        pagination={{ clickable: true }}
+                        autoplay={{
+                          delay: 3000,
+                          disableOnInteraction: false,
+                        }}
+                        loop={true}
                         speed={500}
-                        slidesToShow={3}
-                        slidesToScroll={1}
-                        autoplay={true}
-                        autoplaySpeed={3000}
-                        centerMode={false}
-                        variableWidth={false}
-                        arrows={true}
-                        responsive={[
-                          {
-                            breakpoint: 1024,
-                            settings: {
-                              slidesToShow: 2,
-                              slidesToScroll: 1,
-                              infinite: true,
-                              dots: true,
-                              arrows: true,
-                              centerMode: false,
-                            },
+                        breakpoints={{
+                          640: {
+                            slidesPerView: 'auto',
+                            spaceBetween: 16,
+                            centeredSlides: true,
                           },
-                          {
-                            breakpoint: 768,
-                            settings: {
-                              slidesToShow: 1,
-                              slidesToScroll: 1,
-                              initialSlide: 0,
-                              centerMode: false,
-                              arrows: true,
-                              centerPadding: "0",
-                            },
+                          1024: {
+                            slidesPerView: 'auto',
+                            spaceBetween: 20,
+                            centeredSlides: true,
                           },
-                        ]}
-                        className="attraction-slider"
+                        }}
+                        className="attraction-swiper"
                       >
                         {day.attractions.map((attr) => {
                           const { id, name, image_url } = attr.attraction;
 
                           return (
-                            <div className="px-2 w-full" key={attr.id}>
+                            <SwiperSlide key={attr.id} className="w-[85%] sm:w-[45%] lg:w-[30%]">
                               <div className="flex flex-col h-full">
                                 <div className="relative h-40 rounded-lg overflow-hidden mb-2">
                                   <Image
@@ -93,10 +87,10 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                                   {name}
                                 </p>
                               </div>
-                            </div>
+                            </SwiperSlide>
                           );
                         })}
-                      </Slider>
+                      </Swiper>
                     ) : (
                       <div className="flex items-center justify-center h-40">
                         {day.attractions?.length > 0 &&
@@ -159,6 +153,37 @@ const ItinearyTab = ({ packageData, activeTab }) => {
           </Accordion>
         );
       })}
+
+      {/* Add Swiper styles */}
+      <style jsx global>{`
+        .attraction-swiper {
+          padding: 1rem 0 3rem 0 !important;
+          overflow: visible !important;
+        }
+        .attraction-swiper .swiper-button-next,
+        .attraction-swiper .swiper-button-prev {
+          color: #000;
+          background: white;
+          width: 2rem;
+          height: 2rem;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .attraction-swiper .swiper-button-next:after,
+        .attraction-swiper .swiper-button-prev:after {
+          font-size: 1rem;
+        }
+        .attraction-swiper .swiper-pagination-bullet-active {
+          background: #000;
+        }
+        .attraction-swiper .swiper-slide {
+          transition: all 0.3s ease;
+          opacity: 0.5;
+        }
+        .attraction-swiper .swiper-slide-active {
+          opacity: 1;
+        }
+      `}</style>
     </div>
   );
 };

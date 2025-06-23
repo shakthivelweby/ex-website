@@ -121,9 +121,10 @@ export default function HomePage() {
 
         <div className="bg-white relative z-10">
           {/* Background Image */}
-          <div className="md:h-[500px] h-[470px] rounded-[32px]">
+          <div className="md:h-[500px] h-[470px] rounded-[32px] relative">
+            <div className="absolute inset-0 bg-black/0 rounded-[32px] z-[1]"></div>
             <Image
-              src="/home/banner-img.webp"
+                src="https://images.pexels.com/photos/210307/pexels-photo-210307.jpeg"
               alt="banner image"
               className="w-full h-full object-cover rounded-[32px]"
               width={1920}
@@ -132,7 +133,7 @@ export default function HomePage() {
           </div>
 
           {/* Hero Content */}
-          <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32">
+          <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32 z-[2]">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter">
                 Pay Less, Book Direct
@@ -142,25 +143,26 @@ export default function HomePage() {
               </p>
 
               {/* Search Box */}
-              <form onSubmit={handleSearch} className="bg-white rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full">
+              <form onSubmit={handleSearch} className="backdrop-blur-md bg-white/80 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20">
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* What you are looking for */}
                   <div className="flex-1 relative">
-                    <label className="absolute top-2 left-4 text-sm text-gray-600">
+                    <label className="absolute top-2 left-4 text-sm text-gray-600 flex items-center gap-1.5">
+                      <i className="fi fi-rr-search text-[12px] relative top-[0px]"></i>
                       What you are looking for?
                     </label>
                     <div className="relative">
                       <select
-                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px]"
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px] hover:bg-black/5 transition-colors"
                         onChange={(e) => setSelectedTrip(e.target.value)}
                         value={selectedTrip}
                       >
                         <option value="Scheduled">Scheduled Trips</option>
                         <option value="Packages">Packages</option>
-                        <option  value="Activities">Activities</option>
-                        <option  value="Attractions">Attractions</option>
-                        <option  value="Rentals">Rentals</option>
-                        <option  value="Events">Events</option>
+                        <option value="Activities">Activities</option>
+                        <option value="Attractions">Attractions</option>
+                        <option value="Rentals">Rentals</option>
+                        <option value="Events">Events</option>
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                         <i className="fi fi-rr-angle-small-down text-gray-800"></i>
@@ -169,11 +171,12 @@ export default function HomePage() {
                   </div>
 
                   {/* line */}
-                  <div className="md:hidden h-[1px] bg-gray-100 w-full"></div>
+                  {/* <div className="md:hidden h-[1px] bg-gray-100 w-full"></div> */}
 
                   {/* Where you want to start from */}
                   <div className="flex-1 relative">
-                    <label className="absolute top-2 left-4 text-sm text-gray-600 z-10">
+                    <label className="absolute top-2 left-4 text-sm text-gray-600 z-10 flex items-center gap-1.5">
+                        <i className="fi fi-rr-marker text-[12px] top-[0px]"></i>
                       {locationText[selectedTrip.split(" ")[0]]}
                     </label>
                     <div className="relative">
@@ -192,7 +195,7 @@ export default function HomePage() {
                   </div>
 
                   {/* Search Button */}
-                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-4 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
+                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
                     <span className="text-base font-semibold md:hidden">Search</span>
                     <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
                   </button>
@@ -204,7 +207,7 @@ export default function HomePage() {
         
 
         {/* Book without agency section */}
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden hidden">
         {/* Decorative blurred circle background at the top */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 !z-0"></div>
            {/* Heading */}
@@ -311,7 +314,7 @@ export default function HomePage() {
 
 
          {/* Popular Destinations */}
-         <div className="container mx-auto py-20 relative">
+         <div className="container mx-auto py-20 relative hidden">
             {/* Decorative blurred circle background at the top */}
             <div className="absolute left-0 bottom-22 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
 
@@ -443,7 +446,7 @@ export default function HomePage() {
          
 
          {/* What you can do section */}
-         <div className="container mx-auto py-20 relative">
+         <div className="container mx-auto py-20 relative hidden">
           
 
            {/* Content Grid */}
@@ -622,7 +625,7 @@ export default function HomePage() {
          </div>
          
          {/* blog section */}
-         <div className="container mx-auto  relative">
+         <div className="container mx-auto  relative hidden">
             {/* Decorative blurred circle background at the top */}
             <div className="absolute left-0 bottom-0 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
 
@@ -761,7 +764,7 @@ export default function HomePage() {
          </div>
 
          {/* testimonials */}
-         <div className="container mx-auto py-20 relative">
+         <div className="container mx-auto py-20 relative hidden">
             {/* Decorative blurred circle background */}
             <div className="absolute right-0 top-0 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
 

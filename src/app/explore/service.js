@@ -6,4 +6,10 @@ const getExploreData = async () => {
     return response.data;
 };
 
-export { getExploreData };
+
+const getFeaturedDestinations = async () => {
+    const response = await apiServerMiddleware.get(`/featured-destinations`);
+    return response.data;
+};
+
+export { getExploreData, getFeaturedDestinations };

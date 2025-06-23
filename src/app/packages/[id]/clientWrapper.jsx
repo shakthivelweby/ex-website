@@ -2,54 +2,177 @@
 
 import PackageCard from "@/components/PackageCard";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import RangeSlider from "@/components/RangeSlider/RangeSlider";
 import Dropdown from "@/components/Dropdown/Dropdown";
 import Link from "next/link";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { suitableFor } from "./service";
+import { useQuery } from "@tanstack/react-query";
 
-const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, destinationId }) => {
+const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, destinationId, initialFilters, featuredDestinations }) => {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [mobileLayout, setMobileLayout] = useState('list'); // 'list' or 'grid'
 
-    
+    const { data: suitableForData, isLoading: isSuitableForLoading } = useQuery({
+        queryKey: ['suitableFor', stateInfo.id],
+        queryFn: () => suitableFor(stateInfo.id)
+    });
+
+    // Define options first
+    const tourTypeOptions = [
+        { value: "fixed_departure", label: "Scheduled Tours" },
+        { value: "private", label: "Private Packages" }
+    ];
+
+    // Format suitable for options from API data using useMemo
+    const suitableForOptions = useMemo(() => {
+        if (!suitableForData?.data) return [];
+        return [
+            { value: "", label: "All" },
+            ...suitableForData.data.map(item => ({
+                value: item.id.toString(),
+                label: item.name
+            }))
+        ];
+    }, [suitableForData]);
+
+    const sortOptions = [
+        { value: "", label: "Default" },
+        { value: "asc", label: "Price: Low to High" },
+        { value: "desc", label: "Price: High to Low" }
+    ];
 
     const [coverImage, setCoverImage] = useState(stateInfo.cover_image_url);
     const [coverName, setCoverName] = useState(stateInfo.name);
     const [selectedDestination, setSelectedDestination] = useState('all');
 
- 
+    // Initialize filters with useMemo
+    const initialFilterState = useMemo(() => {
+        return {
+            tourType: initialFilters?.tourType ? {
+                value: initialFilters.tourType,
+                label: initialFilters.tourType === "scheduled" ? "Scheduled Tours" : "Private Packages"
+            } : "",
+            priceRange: initialFilters?.price_range_from && initialFilters?.price_range_to ? {
+                from: parseInt(initialFilters.price_range_from),
+                to: parseInt(initialFilters.price_range_to)
+            } : "",
+            suitableFor: "",  // Start empty and let useEffect handle it
+            sortBy: initialFilters?.sortBy ? {
+                value: initialFilters.sortBy,
+                label: sortOptions.find(opt => opt.value === initialFilters.sortBy)?.label || ""
+            } : "",
+            destination: initialFilters?.destination ? {
+                value: initialFilters.destination,
+                label: stateDestinations.destinations.find(dest => dest.id.toString() === initialFilters.destination)?.name || ""
+            } : ""
+        };
+    }, [initialFilters, stateDestinations.destinations]);
 
-    // Filter states
-    const [filters, setFilters] = useState({
-        tourType: "",
-        priceRange: "",
-        suitableFor: "",
-        sortBy: "",
-        destination: ""
-    });
+    const [filters, setFilters] = useState(initialFilterState);
 
+    // Update filters when suitableForData loads
+    useEffect(() => {
+        if (suitableForData?.data) {
+            // Always update options when data loads
+            if (initialFilters?.suitableFor) {
+                const matchedOption = suitableForData.data.find(
+                    item => item.id.toString() === initialFilters.suitableFor
+                );
+                if (matchedOption) {
+                    setFilters(prev => ({
+                        ...prev,
+                        suitableFor: {
+                            value: matchedOption.id.toString(),
+                            label: matchedOption.name
+                        }
+                    }));
+                }
+            }
+        }
+    }, [suitableForData, initialFilters?.suitableFor]);
+
+    // Function to update URL with current filters
+    const updateURL = (newFilters) => {
+        const params = new URLSearchParams(searchParams);
+        
+        // Update or remove tour_type parameter
+        if (newFilters.tourType) {
+            params.set('tour_type', newFilters.tourType.value);
+        } else {
+            params.delete('tour_type');
+        }
+
+        // Update or remove suitable_id parameter
+        if (newFilters.suitableFor) {
+            params.set('suitable_id', newFilters.suitableFor.value);
+        } else {
+            params.delete('suitable_id');
+        }
+
+        // Update or remove sort_by_price parameter
+        if (newFilters.sortBy) {
+            params.set('sort_by_price', newFilters.sortBy.value);
+        } else {
+            params.delete('sort_by_price');
+        }
+
+        // Update or remove price range parameters
+        if (newFilters.priceRange) {
+            params.set('price_range_from', newFilters.priceRange.from.toString());
+            params.set('price_range_to', newFilters.priceRange.to.toString());
+        } else {
+            params.delete('price_range_from');
+            params.delete('price_range_to');
+        }
+
+        // Update or remove destination parameter
+        if (newFilters.destination) {
+            params.set('destination', typeof newFilters.destination === 'object' ? 
+                newFilters.destination.value : newFilters.destination);
+        } else {
+            params.delete('destination');
+        }
+
+        // Update the URL without refreshing the page
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     useEffect(() => {
-        if (isDestination) {
-
+        if (isDestination && stateDestinations?.destinations?.length > 0) {
             const destination = stateDestinations.destinations.find(dest => dest.id === parseInt(destinationId));
-            const cover = destination.cover_image_url;
-            const name = destination.name;
-            setCoverImage(cover);
-            setCoverName(name);
+            
+            if (destination) {
+                const cover = destination.cover_image_url;
+                const name = destination.name;
+                setCoverImage(cover);
+                setCoverName(name);
 
-            setFilters(prev => ({
-                ...prev,
-                destination: {
-                    value: name,
-                    label: name
-                }
-            }));
-         
-            setSelectedDestination(destinationId);
+                setFilters(prev => ({
+                    ...prev,
+                    destination: {
+                        value: name,
+                        label: name
+                    }
+                }));
+             
+                setSelectedDestination(destinationId);
+            } else {
+                // Fallback to state info if destination not found
+                setCoverImage(stateInfo.cover_image_url);
+                setCoverName(stateInfo.name);
+                setSelectedDestination('all');
+            }
         } else {
             setCoverImage(stateInfo.cover_image_url);
             setCoverName(stateInfo.name);
+            setSelectedDestination('all');
         }
-    }, [isDestination, destinationId]);
+    }, [isDestination, destinationId, stateDestinations, stateInfo]);
 
     // Selected destination state
    
@@ -63,69 +186,79 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
         label: dest.name
     }));
 
-    // Tour type options
-    const tourTypeOptions = [
-
-        { value: "scheduled", label: "Scheduled Tours" },
-        { value: "package", label: "Private Packages" }
-    ];
-
-    // Suitable for options
-    const suitableForOptions = [
-        { value: "", label: "All" },
-        { value: "family", label: "Family" },
-        { value: "friends", label: "Friends" },
-        { value: "couple", label: "Couple" },
-        { value: "solo", label: "Solo" }
-    ];
-
-    // Sort options
-    const sortOptions = [
-        { value: "", label: "Default" },
-        { value: "price_low", label: "Price: Low to High" },
-        { value: "price_high", label: "Price: High to Low" },
-        { value: "duration_short", label: "Duration: Shortest First" },
-        { value: "duration_long", label: "Duration: Longest First" }
-    ];
-
     // Update individual filter values
     const updateFilter = (name, value) => {
-        setFilters(prev => ({
-            ...prev,
+        const newFilters = {
+            ...filters,
             [name]: value
-        }));
+        };
+        setFilters(newFilters);
+        updateURL(newFilters);
     };
 
     // Clear all filters
     const clearAllFilters = () => {
-        setFilters({
+        const newFilters = {
             tourType: "",
             priceRange: "",
             suitableFor: "",
             sortBy: "",
             destination: ""
-        });
+        };
+        setFilters(newFilters);
+        updateURL(newFilters);
         setResetKey(prev => prev + 1);
     };
 
     // Apply filters
     const applyFilters = () => {
-        // Create a clean filters object without empty values
-        const cleanFilters = Object.entries(filters).reduce((acc, [key, value]) => {
-            if (value) {
-                acc[key] = value;
-            }
-            return acc;
-        }, {});
-
+        updateURL(filters);
         // Here you would typically make an API call with the filters
-        console.log('Applied filters:', cleanFilters);
+        console.log('Applied filters:', filters);
+    };
+
+    // Handle price range change
+    const handlePriceRangeChange = (value) => {
+        const newFilters = {
+            ...filters,
+            priceRange: {
+                from: value,
+                to: value + 10000 // Assuming 10000 is your range step
+            }
+        };
+        setFilters(newFilters);
+        updateURL(newFilters);
+    };
+
+    // Function to toggle filter popup
+    const toggleFilter = () => {
+        setIsFilterOpen(!isFilterOpen);
+        // Prevent body scroll when filter is open
+        if (!isFilterOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+    };
+
+    // Close filter when applying filters
+    const handleApplyFilters = () => {
+        applyFilters();
+        setIsFilterOpen(false);
+        document.body.style.overflow = 'unset';
+    };
+
+    // Close filter when clearing all
+    const handleClearAllFilters = () => {
+        clearAllFilters();
+        setIsFilterOpen(false);
+        document.body.style.overflow = 'unset';
     };
 
     return (
         <main className="min-h-screen bg-white">
             {/* Modern Minimalist Banner */}
-            <div className="relative h-[60vh] w-full overflow-hidden">
+            <div className="relative h-[50vh] md:h-[75vh] w-full overflow-hidden">
                 {/* Background Image with Modern Overlay */}
                 <div className="absolute inset-0">
                     <Image
@@ -142,27 +275,51 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
                 {/* Minimalist Content Layout */}
                 <div className="relative h-full container mx-auto px-4">
                     <div className="absolute bottom-[15%] max-w-3xl">
-                        <div className="space-y-6">
+                        <div className="space-y-2">
                             <span className="inline-block text-xs tracking-[0.2em] uppercase text-white/80 font-light">
                                 Welcome to {coverName}
                             </span>
                             <h1 className="text-4xl sm:text-6xl md:text-6xl font-light text-white leading-[1.1]">
                                 Explore {coverName}
                             </h1>
-                            <p className="text-base sm:text-lg text-white/80 font-light max-w-xl leading-relaxed">
-                                Discover the perfect blend of tranquil backwaters, misty mountains, and golden beaches in God's Own Country.
-                            </p>
+                            
                         </div>
                     </div>
                 </div>
 
-                {/* Scroll Indicator */}
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-white/60 text-xs tracking-widest uppercase">Scroll</span>
-                        <div className="w-[1px] h-8 bg-white/20"></div>
-                    </div>
-                </div>
+             
+            </div>
+
+            {/* Breadcrumb Navigation */}
+            <div className="container mx-auto px-4 py-4 border-b border-gray-100 hidden md:block">
+                <nav className="flex items-center space-x-2 text-sm ">
+                    <Link 
+                        href="/"
+                        className="text-gray-600 hover:text-primary-600 transition-colors flex items-center"
+                    >
+                        <i className="fi fi-rr-home text-xs mr-1"></i>
+                        Home
+                    </Link>
+                    <span className="text-gray-400">
+                        <i className="fi fi-rr-angle-right text-xs"></i>
+                    </span>
+                    <Link 
+                        href={`/packages/${stateInfo.id}`}
+                        className={`hover:text-primary-600 transition-colors ${isDestination ? 'text-gray-600' : 'text-primary-600 font-medium'}`}
+                    >
+                        {stateInfo.name}
+                    </Link>
+                    {isDestination && (
+                        <>
+                            <span className="text-gray-400">
+                                <i className="fi fi-rr-angle-right text-xs"></i>
+                            </span>
+                            <span className="text-primary-600 font-medium">
+                                {stateDestinations.destinations.find(dest => dest.id === parseInt(destinationId))?.name || ''}
+                            </span>
+                        </>
+                    )}
+                </nav>
             </div>
 
             {/* Destinations Scroll Section */}
@@ -252,32 +409,72 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
             </div>
 
             {/* Filters Section */}
-            <div className="container mx-auto px-4 py-2">
+            <div className="container mx-auto px-4 py-0">
                 {/* Heading Section */}
-                <div className="mb-6">
-                    <div className="flex flex-col md:flex-row md:items-end md:justify-between">
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-medium text-gray-900 mb-1">
-                                Available Tour Packages
-                                <span className="text-primary-600 ml-2 text-lg md:text-xl">({packages.length})</span>
+                <div className="mb-2">
+                    <div className="flex items-center justify-between">
+                        {/* Package Count */}
+                        <div className="flex items-center">
+                            <h2 className="text-base font-medium text-gray-900">
+                                All Packages <span className="text-primary-600">({packages.length})</span>
                             </h2>
-                            <p className="text-gray-500 text-xs md:text-sm">
-                                Handpicked experiences to make your Kerala journey unforgettable
-                            </p>
                         </div>
-                        
+
+                        {/* Mobile View Controls */}
+                        <div className="lg:hidden flex items-center gap-2">
+                            {/* Layout Toggle */}
+                            <div className="flex items-center bg-white rounded-full p-0.5 border border-gray-100 shadow-sm">
+                                <button
+                                    onClick={() => setMobileLayout('list')}
+                                    className={`flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                                        mobileLayout === 'list'
+                                        ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
+                                        : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                                    aria-label="List view"
+                                >
+                                    <i className={`fi fi-rr-list text-[13px] transition-transform ${
+                                        mobileLayout === 'list' ? 'scale-110' : ''
+                                    }`}></i>
+                                </button>
+                                <button
+                                    onClick={() => setMobileLayout('grid')}
+                                    className={`flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                                        mobileLayout === 'grid'
+                                        ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
+                                        : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                                    aria-label="Grid view"
+                                >
+                                    <i className={`fi fi-rr-apps text-[13px] transition-transform ${
+                                        mobileLayout === 'grid' ? 'scale-110' : ''
+                                    }`}></i>
+                                </button>
+                            </div>
+                            
+                            {/* Filter Button */}
+                            <button
+                                onClick={toggleFilter}
+                                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 text-white shadow-sm hover:bg-black transition-colors text-sm"
+                            >
+                                <i className="fi fi-rr-settings-sliders text-[13px]"></i>
+                                <span className="font-medium">Filters</span>
+                            </button>
+                        </div>
+
+
                     </div>
                 </div>
 
                 {/* Main Content Layout */}
                 <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Filters Sidebar */}
-                    <div className="lg:w-1/4">
+                    {/* Filters Sidebar - Desktop */}
+                    <div className="hidden lg:block lg:w-1/4">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6 sticky top-4">
                             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
                                 <h3 className="font-medium text-gray-900">Filters</h3>
                                 <button
-                                    onClick={clearAllFilters}
+                                    onClick={handleClearAllFilters}
                                     className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                                 >
                                     Clear All
@@ -327,8 +524,8 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
                                     min={1000}
                                     max={50000}
                                     step={1000}
-                                    initialValue={filters.priceRange}
-                                    onChange={(value) => updateFilter("priceRange", value)}
+                                    initialValue={filters.priceRange ? filters.priceRange.from : undefined}
+                                    onChange={handlePriceRangeChange}
                                     formatDisplay={(val) => {
                                         if (!val) return "Select price range";
                                         return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
@@ -349,6 +546,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
                                     value={filters.suitableFor}
                                     onChange={(option) => updateFilter("suitableFor", option)}
                                     placeholder="Select group type"
+                                    isLoading={isSuitableForLoading}
                                     className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
                                 />
                             </div>
@@ -371,7 +569,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
 
                             {/* Apply Button */}
                             <button
-                                onClick={applyFilters}
+                                onClick={handleApplyFilters}
                                 className="w-full py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
                             >
                                 Apply Filters
@@ -379,25 +577,170 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, isDestination, 
                         </div>
                     </div>
 
+                    {/* Filter Popup - Mobile */}
+                    <div className={`lg:hidden fixed inset-0 bg-black/50 z-[100] transition-opacity ${isFilterOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <div className={`absolute left-0 top-0 h-full w-full  bg-white transform transition-transform ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+                            <div className="p-6 space-y-6 overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
+
+
+                                {/* Filter Content */}
+                                <div className="flex items-center justify-between  ">
+                                <span className="text-gray-900 font-medium text-lg">Filters</span>
+                                <button onClick={toggleFilter} className="p-2 hover:bg-gray-100 rounded-full text-gray-700">
+                                    <i className="fi fi-rr-cross text-lg"></i>
+                                    </button>
+                                </div>
+
+
+                                {/* Where you like to go Filter */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-sm font-medium text-gray-700">Where you like to go?</label>
+                                    {filters.destination && (
+                                        <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                    )}
+                                    <Dropdown
+                                        key={`destination-${resetKey}`}
+                                        options={destinationOptions}
+                                        value={filters.destination}
+                                        onChange={(option) => updateFilter("destination", option)}
+                                        placeholder="Select destination"
+                                        className={filters.destination ? "border-b-1 border-primary-500" : ""}
+                                    />
+                                </div>
+
+                                {/* Tour Type Filter */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-sm font-medium text-gray-700">Tour Type</label>
+                                    {filters.tourType && (
+                                        <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                    )}
+                                    <Dropdown
+                                        key={`tourType-${resetKey}`}
+                                        options={tourTypeOptions}
+                                        value={filters.tourType}
+                                        onChange={(option) => updateFilter("tourType", option)}
+                                        placeholder="Select tour type"
+                                        className={filters.tourType ? "border-b-1 border-primary-500" : ""}
+                                    />
+                                </div>
+
+                                {/* Price Range Filter */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-sm font-medium text-gray-700">Price Range</label>
+                                    {filters.priceRange && (
+                                        <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                    )}
+                                    <RangeSlider
+                                        key={`price-${resetKey}`}
+                                        min={1000}
+                                        max={50000}
+                                        step={1000}
+                                        initialValue={filters.priceRange ? filters.priceRange.from : undefined}
+                                        onChange={handlePriceRangeChange}
+                                        formatDisplay={(val) => {
+                                            if (!val) return "Select price range";
+                                            return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
+                                        }}
+                                        className={filters.priceRange ? "border-b-2 border-primary-500" : ""}
+                                    />
+                                </div>
+
+                                {/* Suitable For Filter */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-sm font-medium text-gray-700">Suitable For</label>
+                                    {filters.suitableFor && (
+                                        <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                    )}
+                                    <Dropdown
+                                        key={`suitable-${resetKey}`}
+                                        options={suitableForOptions}
+                                        value={filters.suitableFor}
+                                        onChange={(option) => updateFilter("suitableFor", option)}
+                                        placeholder="Select group type"
+                                        isLoading={isSuitableForLoading}
+                                        className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
+                                    />
+                                </div>
+
+                                {/* Sort By */}
+                                <div className="space-y-2 relative">
+                                    <label className="text-sm font-medium text-gray-700">Sort By</label>
+                                    {filters.sortBy && (
+                                        <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                    )}
+                                    <Dropdown
+                                        key={`sort-${resetKey}`}
+                                        options={sortOptions}
+                                        value={filters.sortBy}
+                                        onChange={(option) => updateFilter("sortBy", option)}
+                                        placeholder="Select sorting"
+                                        className={filters.sortBy ? "border-b-1 border-primary-500" : ""}
+                                    />
+                                </div>
+                            </div>
+                            {/* Bottom Buttons */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t">
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleClearAllFilters}
+                                        className="flex-1 py-2.5 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                    <button
+                                        onClick={handleApplyFilters}
+                                        className="flex-1 py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
+                                    >
+                                        Apply Now
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Packages Grid */}
                     <div className="lg:w-3/4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            {packages.map((pkg) => (
-                                <PackageCard
-                                    key={pkg.id}
-                                    packageId={pkg.id}
-                                    imageSrc={pkg.images[0].image_url}
-                                    imageAlt={pkg.name}
-                                    title={pkg.name}
-                                    // startingFrom={}
-                                    duration={`${pkg.total_days}D ${pkg.total_nights}N`}
-                                    price={parseFloat(pkg.adult_price)}
-                                    slotsAvailable={null}
-                                    isCertified={false}
-                                    date={new Date().toISOString().split("T")[0]}
-                                />
-                            ))}
-                        </div>
+                        {packages && packages.length > 0 ? (
+                            <div className={`grid gap-4 ${
+                                mobileLayout === 'grid' 
+                                ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' 
+                                : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+                            }`}>
+                                {packages.map((pkg) => (
+                                    <PackageCard
+                                        key={pkg.id}
+                                        packageId={pkg.id}
+                                        imageSrc={pkg.images[0].image_url}
+                                        imageAlt={pkg.name}
+                                        title={pkg.name}
+                                        duration={`${pkg.total_days}D ${pkg.total_nights}N`}
+                                        price={parseFloat(pkg.final_adult_price)}
+                                        slotsAvailable={null}
+                                        isCertified={false}
+                                        date={new Date().toISOString().split("T")[0]}
+                                        mobileLayout={mobileLayout}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="w-16 h-16 mb-4 flex items-center justify-center rounded-full bg-gray-100">
+                                    <i className="fi fi-rr-search text-2xl text-gray-400"></i>
+                                </div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                    No Packages Found
+                                </h3>
+                                <p className="text-gray-500 max-w-md mb-6">
+                                    We couldn't find any packages matching your current filters. Try adjusting your filters or explore other destinations.
+                                </p>
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                >
+                                    Clear All Filters
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

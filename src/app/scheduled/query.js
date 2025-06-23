@@ -8,6 +8,12 @@ export const useScheduledTrips = (filters) => {
       filters.latitude,
       filters.longitude,
       filters.selectedDate,
+      filters.destination,
+      filters.budget_from,
+      filters.budget_to,
+      filters.sort_by_price,
+      filters.duration,
+      filters.pax
     ],
     queryFn: () => getScheduledTrips(filters),
     enabled:

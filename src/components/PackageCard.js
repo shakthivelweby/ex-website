@@ -12,45 +12,36 @@ const PackageCard = ({
   price,
   packageId,
   date,
-  mobileLayout = 'list' // 'list' or 'grid'
+  mobileLayout = 'list'
 }) => {
   // Slot availability configuration
   const slotConfig = {
     sold: {
-      bg: "bg-gray-50",
-      text: "text-gray-700",
+      bg: "bg-gray-900/90",
+      text: "text-gray-100",
       icon: "fi fi-rr-cross-circle",
-      label: "Sold Out",
-      dot: "bg-gray-400",
-      border: "border-gray-200"
+      label: "Sold Out"
     },
     critical: {
-      bg: "bg-red-50",
-      text: "text-red-700",
+      bg: "bg-red-600/90",
+      text: "text-white",
       icon: "fi fi-rr-flame",
-      label: `Only ${slotsAvailable} left`,
-      dot: "bg-red-500",
-      border: "border-red-200"
+      label: `${slotsAvailable} seats left`
     },
     limited: {
-      bg: "bg-yellow-50",
-      text: "text-yellow-700",
+      bg: "bg-yellow-500/90",
+      text: "text-white",
       icon: "fi fi-rr-time-quarter-past",
-      label: `${slotsAvailable} slots left`,
-      dot: "bg-yellow-500",
-      border: "border-yellow-200"
+      label: `${slotsAvailable} seats left`
     },
     available: {
-      bg: "bg-green-50",
-      text: "text-green-700",
-      icon: "fi fi-rr-check-circle",
-      label: "Available",
-      dot: "bg-green-500",
-      border: "border-green-200"
+      bg: "bg-emerald-600/90",
+      text: "text-white",
+      icon: "fi fi-rr-check",
+      label: "Booking Open"
     }
   };
 
-  // Determine slot status
   const getSlotStatus = () => {
     if (slotsAvailable === null) return null;
     if (slotsAvailable <= 0) return slotConfig.sold;
@@ -63,235 +54,173 @@ const PackageCard = ({
 
   return (
     <Link href={`/package/${packageId}?date=${date}`} className="block group">
-      <div className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1">
-        {/* Mobile Layout - List View */}
-        <div className={`${mobileLayout === 'list' ? 'flex' : 'hidden'} md:hidden`}>
-          {/* Image Container - Mobile List */}
-          <div className="relative overflow-hidden w-[100px] h-[120px] flex-shrink-0 m-3">
+      {/* Mobile List View */}
+      <div className={`${mobileLayout === 'list' ? 'block' : 'hidden'} md:hidden`}>
+        <div className="relative overflow-hidden rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)] p-2 ">
+          {isCertified && (
+            <div className="text-xs text-green-600 font-semibold flex-1 mb-4">
+              <i className="fi fi-rr-shield-check text-sm mr-1"></i>
+              Explore World Assured
+            </div>
+          )}
+          <div className="flex items-start">
+            {/* Image Section */}
+            <div className="relative w-[30%] overflow-hidden rounded-xl">
+              <Image
+                src={imageSrc}
+                alt={imageAlt}
+                width={400}
+                height={400}
+                className="h-[110px] w-full object-cover group-hover:scale-110 transition-transform duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+              
+              {/* Duration Tag */}
+              <div className="absolute top-2 left-2 bg-white font-semibold  text-gray-900 text-[12px] px-2 py-0.5 rounded-full">
+                {duration}
+              </div>
+
+            
+            </div>
+
+            {/* Content Section */}
+            <div className="flex-1 px-3 flex flex-col  ">
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-2 flex-col" >
+                  <h3 className="flex-1 text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+                    {title}
+                  </h3>
+                 
+                </div>
+
+              
+              </div>
+
+              <div className="mt-auto pt-2  border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Starting</div>
+                    <div className="text-lg font-semibold text-gray-900">₹{price.toLocaleString()}<span className="text-xs font-normal text-gray-500">/ per person</span></div>
+                  </div>
+                 
+                </div>
+              </div>
+              <button className=" mt-2 flex items-center gap-1 text-xs font-bold text-primary-600 hover:text-primary-700">
+                Explore
+                <i className="fi fi-rr-arrow-right text-[9px] group-hover:translate-x-1 transition-transform"></i>
+              </button>
+            </div>
+          </div>
+          
+          {(startingFrom || slotStatus) && (
+            <div className="   border-t border-gray-100 mt-2 bg-gray-100/50 p-2 py-1 rounded-lg">
+             
+              <div className="flex items-center justify-between">
+            {startingFrom && (
+              <div className="text-xs text-gray-900">
+                <div className="text-[10px]"> Trip Starts from</div>
+                <div className="flex items-center gap-1  font-semibold text-sm">
+               
+                 {startingFrom}
+                </div>
+              </div>
+            )}
+
+            {slotStatus && (
+              <div className={`inline-flex items-center gap-1 ${slotStatus.bg} ${slotStatus.text} text-xs px-2 py-1 rounded-full`}>
+                <i className={`${slotStatus.icon} text-[9px]`}></i>
+                {slotStatus.label}
+              </div>
+            )}
+              </div>
+              </div>
+            )}
+        </div>
+      </div>
+
+      {/* Mobile Grid & Desktop View */}
+      <div className={`${mobileLayout === 'grid' ? 'block' : 'hidden'} md:block`}>
+        <div className="relative bg-white overflow-hidden rounded-xl group shadow-[0_0_10px_rgba(0,0,0,0.1)]">
+          {/* Image Section */}
+          <div className="relative">
             <Image
               src={imageSrc}
               alt={imageAlt}
               width={400}
               height={400}
-              blurDataURL="/blur.webp"
-              placeholder="blur"
-              className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-700"
+              className="w-full aspect-[16/14] object-cover group-hover:scale-110 transition-transform duration-700 rounded-xl"
             />
-            
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/5 to-black/30 rounded-xl" />
-            
-            {/* Duration badge - Mobile */}
-            <div className="absolute top-2 left-2">
-              <div className="bg-white/95 text-gray-800 rounded-full py-0.5 px-2 text-[10px] font-medium shadow-sm backdrop-blur-sm">
-                {duration}
+            <div className="absolute w-full bg-gradient-to-t from-black/100 via-black/70 to-transparent rounded-xl h-[60%] bottom-0" ></div>
+
+            {/* {isCertified && (
+              <div className="flex-shrink-0 bg-white text-gray-900 p-2 rounded-full w-[30px] h-[30px] flex items-center justify-center absolute top-2 right-2">
+                <i className="fi fi-rr-shield-check text-sm"></i>
               </div>
+            )} */}
+
+            {slotStatus && (
+              <div className={`absolute top-2 left-2 flex items-center gap-1 ${slotStatus.bg} ${slotStatus.text} text-xs px-3 py-1 rounded-full backdrop-blur-md`}>
+                <i className={`${slotStatus.icon} text-xs`}></i>
+                {slotStatus.label}
+              </div>
+            )}
+
+            {/* Duration */}
+            <div className="absolute top-2 right-2 bg-white text-gray-900 text-xs px-3 py-1 rounded-full">
+              {duration}
             </div>
 
-            {/* Certified badge - Mobile */}
-            {isCertified && (
-              <div className="absolute bottom-2 left-2">
-                <div className="bg-primary-500 text-white rounded-full p-1.5 shadow-sm">
-                  <i className="fi fi-rr-shield-check text-[10px]"></i>
+            {/* Overlay Content */}
+            <div className="absolute inset-x-0 bottom-0 p-4">
+              {/* Title & Certified Badge */}
+
+              {/* Location */}
+              {startingFrom && (
+                <div className="flex items-center gap-1.5 text-white/90 text-sm mb-3">
+                  <i className="fi fi-rr-marker"></i>
+                  <span className="font-medium">From {startingFrom}</span>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Content - Mobile List */}
-          <div className="flex-1 py-3 pr-3 flex flex-col min-w-0">
-            {/* Title */}
-            <h3 className="font-medium text-gray-900 text-[15px] line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
-              {title}
-            </h3>
+              <div className="flex items-start gap-2 mb-2 flex-col">
+                <h3 className="flex-1 text-white text-[16px] font-semibold leading-snug line-clamp-2">
+                  {title}
+                </h3>
 
-            {/* Location */}
-            {startingFrom && (
-              <div className="flex items-center text-gray-500 text-xs mt-1">
-                <i className="fi fi-rr-marker text-primary-500 text-[10px] mr-1"></i>
-                <span className="truncate font-medium">From {startingFrom}</span>
-              </div>
-            )}
-
-            {/* Price */}
-            <div className="mt-auto">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-gray-500 font-medium">Starts at</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-base font-bold text-gray-900">₹{price.toLocaleString()}</span>
-                  <span className="text-[10px] text-gray-500 font-medium">/ Per pax</span>
-                </div>
-              </div>
-
-              {/* View Details Link - Mobile */}
-              <div className="flex items-center justify-between mt-1.5">
-                <div className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors flex items-center gap-1 group/btn">
-                  Explore
-                  <i className="fi fi-rr-arrow-small-right text-xs group-hover/btn:translate-x-0.5 transition-transform"></i>
-                </div>
-
-                {/* Availability Status - Mobile List */}
-                {slotStatus && (
-                  <div className={`${slotStatus.bg} ${slotStatus.text} px-2.5 py-1.5 rounded-full text-[10px] font-medium flex items-center gap-1.5 border ${slotStatus.border} shadow-sm`}>
-                    <i className={`${slotStatus.icon} text-[10px]`}></i>
-                    {slotStatus.label}
+                {isCertified && (
+                  <div className="text-xs text-green-500 font-medium">
+                    <i className="fi fi-rr-shield-check text-sm mr-1"></i>
+                    Explore World Assured
                   </div>
                 )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Layout - Grid View */}
-        <div className={`${mobileLayout === 'grid' ? 'block' : 'hidden'} md:hidden`}>
-          {/* Image Container - Mobile Grid */}
-          <div className="relative overflow-hidden aspect-[16/9]">
-            <Image
-              src={imageSrc}
-              alt={imageAlt}
-              width={400}
-              height={400}
-              blurDataURL="/blur.webp"
-              placeholder="blur"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            
-            {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-            
-            {/* Top badges */}
-            <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-              <div className="bg-white/95 text-gray-900 rounded-full py-1 px-3 text-sm font-medium shadow-lg backdrop-blur-sm">
-                {duration}
+               
               </div>
 
-              {isCertified && (
-                <div className="bg-primary-500 text-white rounded-full p-2 shadow-lg">
-                  <i className="fi fi-rr-shield-check text-sm"></i>
-                </div>
-              )}
-            </div>
-            
-            {startingFrom && (
-              <div className="absolute bottom-4 left-4 right-4">
-                <div className="flex items-center text-white">
-                  <i className="fi fi-rr-marker text-white text-sm mr-2"></i>
-                  <span className="truncate text-base font-medium">From {startingFrom}</span>
-                </div>
-              </div>
-            )}
-          </div>
+             
 
-          {/* Content - Mobile Grid */}
-          <div className="p-5">
-            <h3 className="font-medium text-gray-900 text-lg mb-3 line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
-              {title}
-            </h3>
-
-            <div className="space-y-3">
-              <div className="flex items-end justify-between">
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-500 font-medium -mb-0.5">Starts at</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-gray-900">₹{price.toLocaleString()}</span>
-                    <span className="text-sm text-gray-500 font-medium">/ Per pax</span>
+              {/* Bottom Row */}
+              <div className="flex items-center justify-between border-t border-white/20 pt-2">
+                <div className="flex items-center gap-2 justify-between w-full">
+                        
+                  <div className="text-left">
+                    {/* <div className="text-white/80 text-sm">Starting</div> */}
+                    <div className="text-white text-xl font-semibold">₹{price.toLocaleString()}<span className="text-xs font-normal text-white/80 relative -top-[2px] ml-1">/ per person</span></div>
                   </div>
+               
+                    <div className="flex items-center gap-1 text-sm px-3 py-1 rounded-full backdrop-blur-md bg-white/10 text-white backdrop-blur-md border border-white/10">
+                        Explore
+                        <i className="fi fi-rr-arrow-right text-sm"></i>
+                    </div>
+                
                 </div>
 
-                <div className="text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors flex items-center gap-1.5 group/btn">
-                  Explore
-                  <i className="fi fi-rr-arrow-small-right text-sm group-hover/btn:translate-x-0.5 transition-transform"></i>
-                </div>
+             
+
               </div>
-
-              {slotStatus && (
-                <div className={`${slotStatus.bg} ${slotStatus.text} px-3 py-2 rounded-full text-sm font-medium flex items-center gap-2 border ${slotStatus.border} shadow-sm`}>
-                  <i className={`${slotStatus.icon} text-sm`}></i>
-                  {slotStatus.label}
-                </div>
-              )}
             </div>
           </div>
-        </div>
 
-        {/* Desktop/Tablet Layout - Vertical */}
-        <div className="hidden md:block">
-          {/* Image Container - Desktop */}
-          <div className="relative overflow-hidden aspect-[4/3]">
-            <Image
-              src={imageSrc}
-              alt={imageAlt}
-              width={400}
-              height={400}
-              blurDataURL="/blur.webp"
-              placeholder="blur"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-            
-            {/* Modern gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-            
-            {/* Top badges */}
-            <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-              {/* Left side - Duration */}
-              <div className="bg-white/95 text-gray-900 rounded-full py-1 px-2.5 text-xs font-medium shadow-lg backdrop-blur-sm">
-                {duration}
-              </div>
-
-              {/* Right side - Certification */}
-              {isCertified && (
-                <div className="bg-primary-500 text-white rounded-full p-1.5 shadow-lg">
-                  <i className="fi fi-rr-shield-check text-[12px]"></i>
-                </div>
-              )}
-            </div>
-            
-            {/* Bottom location */}
-            {startingFrom && (
-              <div className="absolute bottom-3 left-3 right-3">
-                <div className="flex items-center text-white">
-                  <i className="fi fi-rr-marker text-white text-[12px] mr-1.5"></i>
-                  <span className="truncate text-sm font-medium">From {startingFrom}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Content Section - Desktop */}
-          <div className="p-4">
-            {/* Title */}
-            <h3 className="font-medium text-gray-900 text-lg mb-2 line-clamp-2 leading-snug group-hover:text-primary-600 transition-colors">
-              {title}
-            </h3>
-
-            <div className="space-y-2">
-              {/* Price and View Details Row */}
-              <div className="flex  items-end justify-between">
-                {/* Price Section */}
-                <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 font-medium -mb-0.5">Starts at</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-bold text-gray-900">₹{price.toLocaleString()}</span>
-                    <span className="text-xs text-gray-500 font-medium">/ Per pax</span>
-                  </div>
-                </div>
-
-                {/* View Details Link - Desktop */}
-                <div className="text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors flex items-center gap-1 group/btn">
-                  Explore
-                  <i className="fi fi-rr-arrow-small-right text-xs group-hover/btn:translate-x-0.5 transition-transform"></i>
-                </div>
-              </div>
-
-              {/* Status Row */}
-              {slotStatus && (
-                <div className={`${slotStatus.bg} ${slotStatus.text} px-2.5 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 border ${slotStatus.border} shadow-sm`}>
-                  <i className={`${slotStatus.icon} text-xs`}></i>
-                  {slotStatus.label}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* View Details Button */}
         </div>
       </div>
     </Link>

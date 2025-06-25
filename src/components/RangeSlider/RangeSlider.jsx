@@ -117,13 +117,13 @@ const RangeSlider = ({
                 value={value === null ? min : value}
                 onChange={handleSliderChange}
                 onChangeComplete={handleSliderAfterChange}
-                trackStyle={{ backgroundColor: '#FF004D', height: 2 }}
+                trackStyle={{ backgroundColor: '#069494', height: 2 }}
                 handleStyle={{
-                  borderColor: '#FF004D',
+                  borderColor: '#069494',
                   height: 20,
                   width: 20,
                   marginTop: -8,
-                  backgroundColor: '#FF004D',
+                  backgroundColor: '#069494',
                   boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
                 }}
                 railStyle={{ backgroundColor: '#E5E7EB', height: 2 }}

@@ -130,6 +130,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
               </div>
 
               {/* Meal Inclusion Display */}
+              {day.foods.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
                 {day.foods.map((fd) => {
                   const { name, icon_url } = fd.food;
@@ -146,9 +147,10 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </Accordion>
         );

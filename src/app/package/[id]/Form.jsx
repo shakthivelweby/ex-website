@@ -36,6 +36,8 @@ const Form = ({
   onDownload
 }) => {
 
+
+
   // Navigation and URL handling
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,7 +68,25 @@ const Form = ({
   });
 
   // Extract package details
-  const { total_days, total_nights } = packageData.data;
+  const { total_days, total_nights, tour_type } = packageData.data;
+
+
+  const tourTypeConfig = {
+    "fixed_departure": {
+      title: "Scheduled Trip",
+      color: "bg-green-200",
+      icon: "fi fi-rr-pending"
+    },
+    "private": {
+      title: "Private Package",
+      color: "bg-blue-200",
+      icon: "fi fi-rr-umbrella-beach"
+    }
+  }
+
+  console.log("tour_type", tour_type)
+
+ 
 
   // Refs for form fields
   const fullNameRef = useRef(null);
@@ -331,7 +351,7 @@ const Form = ({
       {/* Main form container */}
       <div
         className={`${!enquireOnly && !isMobilePopup ? "sticky top-6" : ""
-          } ${isMobilePopup ? "" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"}`}
+          } ${isMobilePopup ? "pb-24" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"}`}
       >
         {/* Enquiry Only Message */}
         {enquireOnly && (
@@ -353,9 +373,9 @@ const Form = ({
         )}
 
         {/* Package status badge */}
-        <span className="text-xs font-medium text-gray-800  bg-green-200 rounded-full px-2 py-1 mb-2">
-          <i className="fi fi-rr-pending mr-2 relative !top-0.5"></i>
-          Scheduled Trip
+        <span className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${tourTypeConfig[tour_type].color}`}>
+          <i className={`${tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}></i>
+          {tourTypeConfig[tour_type].title}
         </span>
 
         {/* Price and duration display */}
@@ -659,7 +679,7 @@ const Form = ({
 
         {/* Action buttons */}
         {isMobilePopup ? (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t z-10">
             <Button
               onClick={submitHandler}
               size="lg"

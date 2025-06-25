@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 
-const mobileIp = '172.20.10.2';
+const mobileIp = '192.168.1.38';
 const nextConfig = {
   allowedDevOrigins: [mobileIp, 'http://localhost:3000'],
   images: {

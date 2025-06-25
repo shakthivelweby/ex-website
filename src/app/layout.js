@@ -1,6 +1,6 @@
 "use client";
 
-import { DM_Sans } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -11,9 +11,11 @@ import Signup from "@/components/Login/Signup";
 import LoadingSpinner from './components/LoadingSpinner'
 import MobileNav from '@/components/MobileNav';
 
-const dmSans = DM_Sans({
+
+const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: ["300", "400", "500", "600", "700"],
+  display: 'swap',
 });
 
 export default function RootLayout({ children }) {
@@ -48,12 +50,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
-      <body className={`${dmSans.className} pt-20`}>
+      <body className={`${poppins.className} pt-12 pb-24`}>
         <Suspense>
           <LoadingSpinner />
         </Suspense>

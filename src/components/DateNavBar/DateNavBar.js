@@ -146,27 +146,39 @@ const DateNavBar = ({ onDateChange }) => {
   };
 
   // Go to previous day
-  const goToPrevDay = () => {
+  const goToPrevDay = (e) => {
+    // Prevent event from bubbling up
+    e.stopPropagation();
+    
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const prevDay = new Date(selectedDate);
     prevDay.setDate(prevDay.getDate() - 1);
     setSelectedDate(prevDay);
-    // Reset activity timer after user interaction
-    timeoutRef.current = setTimeout(() => {
-      setIsExpanded(false);
-    }, 3000);
+    
+    // Don't auto-collapse if calendar is open
+    if (!isCalendarOpen) {
+      timeoutRef.current = setTimeout(() => {
+        setIsExpanded(false);
+      }, 3000);
+    }
   };
 
   // Go to next day
-  const goToNextDay = () => {
+  const goToNextDay = (e) => {
+    // Prevent event from bubbling up
+    e.stopPropagation();
+    
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     const nextDay = new Date(selectedDate);
     nextDay.setDate(nextDay.getDate() + 1);
     setSelectedDate(nextDay);
-    // Reset activity timer after user interaction
-    timeoutRef.current = setTimeout(() => {
-      setIsExpanded(false);
-    }, 3000);
+    
+    // Don't auto-collapse if calendar is open
+    if (!isCalendarOpen) {
+      timeoutRef.current = setTimeout(() => {
+        setIsExpanded(false);
+      }, 3000);
+    }
   };
 
   // Go to today
@@ -185,28 +197,34 @@ const DateNavBar = ({ onDateChange }) => {
   };
 
   // Handle calendar click
-  const handleCalendarClick = () => {
+  const handleCalendarClick = (e) => {
+    // Prevent event from bubbling up
+    e.stopPropagation();
+    
     // Reset the inactivity timer
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-    // Always toggle calendar state when clicking the date button
-    setIsCalendarOpen(!isCalendarOpen);
-
-    // If not expanded, expand it first
+    // If not expanded, expand first
     if (!isExpanded) {
       setIsExpanded(true);
-    }
-
-    // Manage timeouts based on the new calendar state
-    if (isCalendarOpen) {
-      // Calendar is being closed
       timeoutRef.current = setTimeout(() => {
         setIsExpanded(false);
       }, 3000);
     } else {
-      // Calendar is being opened, clear timeout to prevent auto-collapse
+      // If expanded, toggle calendar
+      const newCalendarState = !isCalendarOpen;
+      setIsCalendarOpen(newCalendarState);
+      
+      // Clear any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+      }
+
+      // Only set collapse timeout if calendar is closed
+      if (!newCalendarState) {
+        timeoutRef.current = setTimeout(() => {
+          setIsExpanded(false);
+        }, 3000);
       }
     }
   };
@@ -230,21 +248,30 @@ const DateNavBar = ({ onDateChange }) => {
   };
 
   // Handle click for mobile
-  const handleClick = () => {
+  const handleClick = (e) => {
+    // Prevent event from bubbling up
+    e.stopPropagation();
+    
     if (isMobile) {
-      setIsExpanded(!isExpanded);
-      // Clear any existing timeout
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (!isExpanded) {
+        setIsExpanded(true);
+        // Clear any existing timeout
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        // Set new timeout
+        timeoutRef.current = setTimeout(() => {
+          setIsExpanded(false);
+        }, 3000);
+      }
     }
   };
 
   return (
     <div
       ref={navBarRef}
-      className={`fixed bottom-16 left-1/2 transform -translate-x-1/2 z-50 flex items-center px-1 py-1 rounded-full shadow-xl bg-primary-500/90 backdrop-blur-md transition-all duration-500 ease-in-out ${
+      className={`fixed bottom-[80px] left-1/2 transform -translate-x-1/2 z-50 flex items-center px-1 py-1 rounded-full shadow-xl bg-primary-500/90 backdrop-blur-md transition-all duration-500 ease-in-out ${
         isExpanded ? "w-[70%] sm:w-auto max-w-[400px]" : "w-auto"
       } justify-between`}
-      style={{ boxShadow: "0 4px 24px 0 #FF2D55" }}
+      style={{ boxShadow: "0 4px 24px 0 #069494" }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}

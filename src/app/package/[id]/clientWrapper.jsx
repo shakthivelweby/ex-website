@@ -9,7 +9,7 @@ import StayCategory from "./StayCategory";
 import { usePackageRate } from "./query";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import PackageDuration from "../packageDuration";
-
+import Popup from "@/components/Popup";
 
 export default function ClientWrapper({
   packageData,
@@ -19,6 +19,8 @@ export default function ClientWrapper({
   packageCombinations,
 }) {
 
+
+ 
 
 
 
@@ -138,36 +140,28 @@ export default function ClientWrapper({
       />
 
       {/* Mobile Form Popup */}
-      {showMobileForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[100] lg:hidden">
-          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl h-[75vh] flex flex-col">
-            <div className="flex-none px-4 py-3 border-b flex justify-between items-center z-10">
-              <h3 className="text-lg text-gray-800 font-semibold">Book Your Trip</h3>
-              <button 
-                onClick={() => setShowMobileForm(false)}
-                className="text-gray-500 hover:text-gray-700 p-1"
-              >
-                <i className="fi fi-rr-cross text-lg"></i>
-              </button>
-            </div>
-            <div 
-              ref={scrollContainerRef}
-              className="flex-1 overflow-y-auto px-4 pt-2 scroll-smooth"
-            >
-              <Form
-                date={date}
-                packageData={packageData}
-                selectedStayCategory={selectedStayCategory}
-                packagePrice={packagePrice}
-                enquireOnly={enquireOnly}
-                setEnquireOnly={setEnquireOnly}
-                packagePriceData={packagePriceData}
-                isMobilePopup={true}
-              />
-            </div>
-          </div>
+      <Popup
+        isOpen={showMobileForm}
+        onClose={() => setShowMobileForm(false)}
+        title="Book Your Trip"
+        pos="bottom"
+        draggable={true}
+        className="lg:hidden w-full rounded-t-3xl"
+        pannelStyle="h-[75vh]"
+      >
+        <div className="flex-1 overflow-y-auto p-4">
+          <Form
+            date={date}
+            packageData={packageData}
+            selectedStayCategory={selectedStayCategory}
+            packagePrice={packagePrice}
+            enquireOnly={enquireOnly}
+            setEnquireOnly={setEnquireOnly}
+            packagePriceData={packagePriceData}
+            isMobilePopup={true}
+          />
         </div>
-      )}
+      </Popup>
 
       <main className="bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-8 pb-24 md:pb-8">

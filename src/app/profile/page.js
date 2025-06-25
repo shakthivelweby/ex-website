@@ -143,19 +143,19 @@ const ProfilePage = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Profile Picture Section */}
-                  <div className="flex items-center text-center gap-4 pb-6 border-b border-gray-200">
+                  <div className="flex flex-col items-center text-center gap-4 pb-6 border-b border-gray-200">
                     <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden border-2 border-primary-100">
+                      <div className="w-32 h-32 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden border-2 border-primary-100">
                         {userData.profile_image ? (
                           <Image
                             src={userData.profile_image}
                             alt={userData.name}
-                            fill
-                            className="object-cover"
-                            sizes="96px"
+                            width={128}
+                            height={128}
+                            className="object-cover w-full h-full"
                           />
                         ) : (
-                          <i className="fi fi-rr-user text-primary-600 text-3xl"></i>
+                          <i className="fi fi-rr-user text-primary-600 text-4xl"></i>
                         )}
                       </div>
                       {isEditing && (
@@ -179,9 +179,9 @@ const ProfilePage = () => {
                         </div>
                       )}
                     </div>
-                    <div>
-                      <h4 className="text-base font-medium text-gray-900 text-left">{userData.name}</h4>
-                      <p className="text-sm text-gray-500 text-left">{userData.email}</p>
+                    <div className="text-center">
+                      <h4 className="text-xl font-semibold text-gray-900">{userData.name}</h4>
+                      <p className="text-sm text-gray-500">{userData.email}</p>
                       {isEditing && (
                         <p className="text-xs text-gray-500 mt-2">
                           Recommended: Square image, at least 400x400 pixels
@@ -190,15 +190,13 @@ const ProfilePage = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                        Full Name
+                  {/* Form Fields */}
+                  <div className="space-y-6">
+                    <div className="space-y-1">
+                      <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Full Name <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <i className="fi fi-rr-user text-gray-400 group-focus-within:text-primary-500"></i>
-                        </div>
+                      <div className="relative">
                         <input
                           type="text"
                           id="name"
@@ -206,21 +204,18 @@ const ProfilePage = () => {
                           value={formData.name}
                           onChange={handleChange}
                           disabled={!isEditing}
-                          className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:ring-none focus:outline-none focus:border-primary-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                           required
                           placeholder="Enter your full name"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email Address
+                    <div className="space-y-1">
+                      <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Email Address <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <i className="fi fi-rr-envelope text-gray-400 group-focus-within:text-primary-500"></i>
-                        </div>
+                      <div className="relative">
                         <input
                           type="email"
                           id="email"
@@ -228,21 +223,18 @@ const ProfilePage = () => {
                           value={formData.email}
                           onChange={handleChange}
                           disabled={!isEditing}
-                          className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:ring-none focus:outline-none focus:border-primary-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                           required
                           placeholder="Enter your email"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                        Phone Number
+                    <div className="space-y-1">
+                      <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
+                        Phone Number <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                          <i className="fi fi-rr-phone-call text-gray-400 group-focus-within:text-primary-500"></i>
-                        </div>
+                      <div className="relative">
                         <input
                           type="tel"
                           id="phone"
@@ -250,7 +242,7 @@ const ProfilePage = () => {
                           value={formData.phone}
                           onChange={handleChange}
                           disabled={!isEditing}
-                          className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:ring-none focus:outline-none focus:border-primary-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                           placeholder="Enter your phone number"
                         />
                       </div>

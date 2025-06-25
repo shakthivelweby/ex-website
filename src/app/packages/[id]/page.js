@@ -1,9 +1,10 @@
 import ClientWrapper from "./clientWrapper";
-import { getPackages, stateInfo, stateDestinations,  } from "./service";
+import { getPackages, stateInfo, stateDestinations, countryInfo, getStates } from "./service";
 
 const Packages = async ({ params, searchParams }) => {
   const { id } = await params;
   const { 
+    state,
     destination,
     tour_type,
     suitable_id,
@@ -12,31 +13,53 @@ const Packages = async ({ params, searchParams }) => {
     price_range_to
   } = await searchParams;
 
-  const isDestination = destination ? true : false;
-
-  const packages = await getPackages(id, destination, {
+  const packages = await getPackages({
+    country_id: id,
+    state_id: state,
+    destination_id: destination,
     tour_type,
     suitable_id,
     sort_by_price,
     price_range_from,
     price_range_to
   });
-  const stateInfoData = await stateInfo(id);
-  const stateDestinationsData = await stateDestinations(id);
 
+  const countryInfoData = await countryInfo(id);
+
+
+  let stateDestinationsData = { data: { destinations: [] } };
+  let statesData = { data: [] };
+  let stateInfoData = { data: {} };
+  // If we have a state parameter, fetch destinations
+  if (state) {
+    stateInfoData = await stateInfo(state);
+    stateDestinationsData = await stateDestinations(state);
+  } else {
+    // Only fetch states if we're at country level
+  }
+
+  statesData = await getStates(id);
+
+  
+
+
+  // Determine type based on URL parameters
+  const type = destination ? "destination" : state ? "state" : "country";
   
   return (
     <ClientWrapper 
       packages={packages.data} 
       stateInfo={stateInfoData.data} 
       stateDestinations={stateDestinationsData.data} 
-      isDestination={isDestination} 
+      type={type}
       destinationId={destination}
+      countryInfo={countryInfoData.data}
+      statesData={statesData.data}
       initialFilters={{
+        state: state || "",
         tourType: tour_type || "",
         suitableFor: suitable_id || "",
         sortBy: sort_by_price || "",
-        destination: destination || "",
         price_range_from: price_range_from || "",
         price_range_to: price_range_to || ""
       }}

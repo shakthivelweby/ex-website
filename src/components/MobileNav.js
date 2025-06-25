@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import Search from './Search/Search';
 
 const navLinks = [
   {
@@ -23,10 +26,10 @@ const navLinks = [
     matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
   },
   { 
-    name: "Bookings", 
-    href: "/my-bookings", 
-    icon: "fi fi-rr-ticket",
-    matchPath: (path) => path.startsWith("/my-bookings")
+    name: "Search", 
+    href: "#",
+    icon: "fi fi-rr-search",
+    matchPath: (path) => false
   },
   { 
     name: "Profile", 
@@ -38,25 +41,73 @@ const navLinks = [
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const handleClick = (href, name) => {
+    if (name === "Search") {
+      setIsSearchOpen(true);
+      return;
+    }
+  };
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50">
-      <div className="flex justify-between px-2 py-1">
-        {navLinks.map(({ name, href, icon, matchPath }) => {
-          const isActive = matchPath(pathname);
-          return (
-            <Link
-              key={name}
-              href={href}
-              className={`flex flex-col items-center py-1 px-2 min-w-[3.25rem] relative ${isActive ? "text-primary-600" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              {isActive && <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 bg-primary-500 rounded-full" />}
-              <i className={`${icon} text-base ${isActive ? "text-primary-600" : "text-gray-400 group-hover:text-gray-600"}`} />
-              <span className={`text-[9px] font-medium leading-none mt-0.5`}>{name}</span>
-            </Link>
-          );
-        })}
+    <>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+        <motion.nav
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="w-full bg-white shadow-lg border-t border-gray-100 pointer-events-auto"
+        >
+          <div className="flex items-center justify-around py-2">
+            {navLinks.map(({ name, href, icon, matchPath }) => {
+              const isActive = matchPath(pathname);
+              
+              return (
+                <Link
+                  key={name}
+                  href={href}
+                  onClick={(e) => {
+                    if (name === "Search") {
+                      e.preventDefault();
+                      handleClick(href, name);
+                    }
+                  }}
+                  className={`
+                    relative flex flex-col items-center justify-center
+                    ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
+                    h-[44px] rounded-full transition-all duration-300
+                    ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
+                  `}
+                >
+                  <div className="flex items-center justify-center">
+                    <i className={`${icon} text-lg`} />
+                    {isActive && (
+                      <motion.span
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: "auto" }}
+                        className="ml-2.5 text-xs font-medium whitespace-nowrap overflow-hidden"
+                      >
+                        {name}
+                      </motion.span>
+                    )}
+                  </div>
+                  {!isActive && (
+                    <span className="text-[9px] mt-0.5 text-gray-400 font-medium tracking-tight">
+                      {name}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        </motion.nav>
       </div>
-    </nav>
+
+      <Search 
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
+    </>
   );
 }

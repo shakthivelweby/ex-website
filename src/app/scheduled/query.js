@@ -8,7 +8,9 @@ export const useScheduledTrips = (filters) => {
       filters.latitude,
       filters.longitude,
       filters.selectedDate,
-      filters.destination,
+      filters.country_id,
+      filters.state_id,
+      filters.destination_id,
       filters.budget_from,
       filters.budget_to,
       filters.sort_by_price,
@@ -16,8 +18,15 @@ export const useScheduledTrips = (filters) => {
       filters.pax
     ],
     queryFn: () => getScheduledTrips(filters),
-    enabled:
-      !!filters.latitude && !!filters.longitude && !!filters.selectedDate,
+    enabled: Boolean(
+      filters?.latitude != null && 
+      filters?.longitude != null && 
+      filters?.selectedDate != null
+    ),
+    staleTime: 0,
+    cacheTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 };
 

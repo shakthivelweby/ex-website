@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, Fragment, useEffect } from "react";
 import { Listbox, Transition } from "@headlessui/react";
 
 const Dropdown = ({
@@ -12,6 +12,11 @@ const Dropdown = ({
 }) => {
   const [selected, setSelected] = useState(value);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Update local state when value prop changes
+  useEffect(() => {
+    setSelected(value);
+  }, [value]);
 
   const handleChange = (option) => {
     setSelected(option);

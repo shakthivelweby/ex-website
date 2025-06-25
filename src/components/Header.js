@@ -5,6 +5,11 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import Button from "./common/Button";
 import { usePathname } from 'next/navigation';
+import Search from './Search/Search';
+import { useRouter } from 'next/navigation';
+import Login from "./Login/Login";
+import Signup from "./Login/Signup";
+import Popup from "./Popup";
 
 const navLinks = [
   {
@@ -45,16 +50,24 @@ const navLinks = [
   // },
 ];
 
-export default function Header({setShowLogin}) {
+export default function Header() {
   const pathname = usePathname();
   const [activeIndex, setActiveIndex] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
+  const [loginFormData, setLoginFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef(null);
   const userMenuRef = useRef(null);
   const mobileNavRef = useRef(null);
+  const router = useRouter();
 
   // Set active index based on current path
   useEffect(() => {
@@ -98,6 +111,16 @@ export default function Header({setShowLogin}) {
     }, 300);
   };
 
+  const handleSignup = () => {
+    setShowLogin(false);
+    setShowSignup(true);
+  };
+
+  const handleLoginClick = () => {
+    setShowSignup(false);
+    setShowLogin(true);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -111,112 +134,85 @@ export default function Header({setShowLogin}) {
   };
 
   return (
-    <header className="w-full bg-white shadow-sm  z-50 fixed top-0 left-0 right-0">
-      <div className="container mx-auto flex items-center justify-between py-4 px-3">
-        {/* Logo */}
-        <div className="flex items-center">
-          <Link href="/" onClick={() => setShowMobileNav(false)}>
-            <Image
-              src="/exploreworld-logo.png"
-              alt="Logo"
-              width={100}
-              height={28}
-              className="w-[120px] md:w-[150px]"
-            />
-          </Link>
-        </div>
+    <>
+      <header className="w-full bg-white shadow-sm  z-50 fixed top-0 left-0 right-0">
+        <div className="container mx-auto flex items-center justify-between py-2 px-3">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link href="/" onClick={() => setShowMobileNav(false)}>
+              <Image
+                src="/exploreworld-logo.png"
+                alt="Logo"
+                width={100}
+                height={28}
+                className="w-[120px] md:w-[150px]"
+              />
+            </Link>
+          </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-5">
-          {navLinks.map((link, index) => {
-            const isActive = link.matchPath(pathname);
-            return (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`flex items-center text-sm font-medium mr-4 ${
-                  isActive
-                    ? "text-primary-600"
-                    : "text-gray-700 hover:text-gray-900"
-                }`}
-                onClick={() => handleLinkClick(index)}
-              >
-                <i
-                  className={`${link.icon} text-sm mr-2 ${
-                    isActive ? "text-primary-600" : "text-gray-500"
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-5">
+            {navLinks.map((link, index) => {
+              const isActive = link.matchPath(pathname);
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`flex items-center text-sm font-medium mr-4 ${
+                    isActive
+                      ? "text-primary-600"
+                      : "text-gray-700 hover:text-gray-900"
                   }`}
-                ></i>
-                {link.name}
-                {isActive && (
-                  <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+                  onClick={() => handleLinkClick(index)}
+                >
+                  <i
+                    className={`${link.icon} text-sm mr-2 ${
+                      isActive ? "text-primary-600" : "text-gray-500"
+                    }`}
+                  ></i>
+                  {link.name}
+                  {isActive && (
+                    <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {/* Mobile Menu and User Menu */}
-        <div className="flex items-center gap-3">
-          <button 
-            type="button"
-            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50"
-            onClick={() => setShowMobileNav(prev => !prev)}
-          >
-            <i className={`fi ${showMobileNav ? 'fi-rr-cross' : 'fi-rr-menu-burger'} text-gray-700`}></i>
-          </button>
+          {/* Mobile Menu and User Menu */}
+          <div className="flex items-center gap-3">
+            {/* Search Button - Desktop */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="hidden lg:flex items-center gap-2 h-9 px-4 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-full border border-gray-200 transition-all duration-200"
+            >
+              <i className="fi fi-rr-search text-gray-400"></i>
+              <span>Search</span>
+              <div className="hidden sm:flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+                <kbd className="text-[10px] font-medium bg-gray-100 px-1.5 py-0.5 rounded">⌘</kbd>
+                <kbd className="text-[10px] font-medium bg-gray-100 px-1.5 py-0.5 rounded">K</kbd>
+              </div>
+            </button>
 
-          {/* User Menu */}
-          <div className="relative" ref={userMenuRef}>
-            {user ? (
-              <button 
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center"
-              >
-                {/* Mobile Avatar Only */}
-                <div className="lg:hidden relative flex items-center justify-center">
-                  <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
-                    {user.avatar ? (
-                      <Image
-                        src={user.avatar}
-                        alt={user.name}
-                        width={36}
-                        height={36}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <i className="fi fi-rr-user text-primary-600 text-base"></i>
-                    )}
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                </div>
+            {/* Search Button - Mobile */}
+            <button
+              onClick={() => setShowSearch(true)}
+              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-50"
+            >
+              <i className="fi fi-rr-search text-gray-700"></i>
+            </button>
 
-                {/* Desktop Full Menu */}
-                <div className="hidden lg:flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group">
-                  <div className="relative">
-                    <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
-                      {user.avatar ? (
-                        <Image
-                          src={user.avatar}
-                          alt={user.name}
-                          width={32}
-                          height={32}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <i className="fi fi-rr-user text-primary-600 text-sm"></i>
-                      )}
-                    </div>
-                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
-                    </div>
-                    <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
-                  </div>
-                </div>
-              </button>
-            ) : (
+            {/* Mobile Menu Button */}
+            <button 
+              type="button"
+              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50"
+              onClick={() => setShowMobileNav(prev => !prev)}
+            >
+              <i className={`fi ${showMobileNav ? 'fi-rr-cross' : 'fi-rr-menu-burger'} text-gray-700`}></i>
+            </button>
+
+            {/* Sign In Button */}
+            {!user && (
               <Button
                 variant="outline"
                 size="sm"
@@ -229,105 +225,200 @@ export default function Header({setShowLogin}) {
               </Button>
             )}
 
-            {/* User Dropdown Menu */}
-            {showUserMenu && user && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right z-50">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
-                </div>
-                <div className="py-1">
-                  <Link 
-                    href="/profile" 
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                  >
-                    <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                    <div>
-                      <span className="font-medium">Profile</span>
-                      <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
+            {/* User Menu */}
+            <div className="relative" ref={userMenuRef}>
+              {user && (
+                <button 
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center"
+                >
+                  {/* Mobile Avatar Only */}
+                  <div className="lg:hidden relative flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                      {user.avatar ? (
+                        <Image
+                          src={user.avatar}
+                          alt={user.name}
+                          width={36}
+                          height={36}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <i className="fi fi-rr-user text-primary-600 text-base"></i>
+                      )}
                     </div>
-                  </Link>
-                  <Link 
-                    href="/bookings" 
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                  >
-                    <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                    <div>
-                      <span className="font-medium">My Bookings</span>
-                      <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+
+                  {/* Desktop Full Menu */}
+                  <div className="hidden lg:flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white hover:bg-gray-50 border border-gray-200 transition-all duration-200 group">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
+                        {user.avatar ? (
+                          <Image
+                            src={user.avatar}
+                            alt={user.name}
+                            width={32}
+                            height={32}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <i className="fi fi-rr-user text-primary-600 text-sm"></i>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                     </div>
-                  </Link>
-                </div>
-                <div className="border-t border-gray-100 mt-1 pt-1">
-                  <button 
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
-                  >
-                    <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
-                    <div>
-                      <span className="font-medium">Logout</span>
-                      <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
+                    <div className="flex items-center gap-2">
+                      <div className="text-left">
+                        <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
+                      </div>
+                      <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
                     </div>
-                  </button>
+                  </div>
+                </button>
+              )}
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && user && (
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right z-50">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
+                  </div>
+                  <div className="py-1">
+                    <Link 
+                      href="/profile" 
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                    >
+                      <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">Profile</span>
+                        <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
+                      </div>
+                    </Link>
+                    <Link 
+                      href="/bookings" 
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
+                    >
+                      <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">My Bookings</span>
+                        <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="border-t border-gray-100 mt-1 pt-1">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
+                    >
+                      <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
+                      <div>
+                        <span className="font-medium">Logout</span>
+                        <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Mobile Navigation Menu */}
-      <div 
-        ref={mobileNavRef}
-        className={`lg:hidden fixed inset-0 top-[72px] bg-white shadow-lg border-t border-gray-100 transition-all duration-300 ease-in-out transform ${
-          showMobileNav ? 'translate-y-0 opacity-100 visible' : 'translate-y-full opacity-0 invisible'
-        }`}
-      >
-        <div className="h-full overflow-y-auto">
-          <nav className="flex flex-col divide-y divide-gray-100">
-            {navLinks.map((link, index) => {
-              const isActive = link.matchPath(pathname);
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`flex items-center px-6 py-4 transition-all ${
-                    isActive
-                      ? "bg-primary-50/50 text-primary-600"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                  onClick={() => handleLinkClick(index)}
-                >
-                  <i
-                    className={`${link.icon} text-sm mr-4 ${
-                      isActive ? "text-primary-600" : "text-gray-500"
+        {/* Mobile Navigation Menu */}
+        <Popup
+          isOpen={showMobileNav}
+          onClose={() => setShowMobileNav(false)}
+          pos="right"
+          height="100vh"
+          className="lg:hidden w-full max-w-sm"
+          draggable={true}
+        >
+          <div className="flex-1 overflow-y-auto">
+            <nav className="flex flex-col divide-y divide-gray-100">
+              {navLinks.map((link, index) => {
+                const isActive = link.matchPath(pathname);
+                return (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    className={`flex items-center px-6 py-4 transition-all ${
+                      isActive
+                        ? "bg-primary-50/50 text-primary-600"
+                        : "text-gray-700 hover:bg-gray-50"
                     }`}
-                  ></i>
-                  <span className="font-medium text-base">{link.name}</span>
-                  {isActive && (
-                    <div className="ml-auto">
-                      <i className="fi fi-rr-check text-primary-600"></i>
-                    </div>
-                  )}
-                </Link>
-              );
-            })}
+                    onClick={() => handleLinkClick(index)}
+                  >
+                    <i
+                      className={`${link.icon} text-sm mr-4 ${
+                        isActive ? "text-primary-600" : "text-gray-500"
+                      }`}
+                    ></i>
+                    <span className="font-medium text-base">{link.name}</span>
+                    {isActive && (
+                      <div className="ml-auto">
+                        <i className="fi fi-rr-check text-primary-600"></i>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
 
-            {!user && (
-              <button
-                onClick={() => {
-                  handleLogin();
-                  setShowMobileNav(false);
-                }}
-                className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all lg:hidden"
-              >
-                <i className="fi fi-rr-user text-xl mr-4"></i>
-                <span className="font-medium text-base">Sign in</span>
-              </button>
-            )}
-          </nav>
-        </div>
-      </div>
-    </header>
+              {!user && (
+                <button
+                  onClick={() => {
+                    handleLogin();
+                    setShowMobileNav(false);
+                  }}
+                  className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all w-full text-left"
+                >
+                  <i className="fi fi-rr-user text-xl mr-4"></i>
+                  <span className="font-medium text-base">Sign in</span>
+                </button>
+              )}
+            </nav>
+          </div>
+        </Popup>
+
+        {/* Search Popup */}
+        <Search 
+          isOpen={showSearch}
+          onClose={() => setShowSearch(false)}
+        />
+
+        {/* Login Popup */}
+        <Login
+          show={showLogin}
+          onClose={() => setShowLogin(false)}
+          onSignupClick={handleSignup}
+          loginFormData={loginFormData}
+          setloginFormData={setLoginFormData}
+          onLoginSuccess={() => {
+            setShowLogin(false);
+            window.location.reload();
+          }}
+        />
+
+        {/* Signup Popup */}
+        <Signup
+          show={showSignup}
+          onClose={() => setShowSignup(false)}
+          onLoginClick={handleLoginClick}
+          setloginFormData={setLoginFormData}
+        />
+
+        {/* Add keyboard shortcut listener */}
+        {useEffect(() => {
+          const handleKeyDown = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+              e.preventDefault();
+              setShowSearch(true);
+            }
+          };
+          window.addEventListener('keydown', handleKeyDown);
+          return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [])}
+      </header>
+    </>
   );
 }

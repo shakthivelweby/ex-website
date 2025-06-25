@@ -1,6 +1,6 @@
 import apiServerMiddleware from "@/app/api/serverMiddleware";
 
-const getPackages = async (id, destination, filters = {}) => {
+const getPackages = async (filters = {}) => {
     const { 
         tour_type, 
         suitable_id, 
@@ -11,8 +11,9 @@ const getPackages = async (id, destination, filters = {}) => {
     
     const response = await apiServerMiddleware.get('/packages', {
         params: {
-            state_id: id,
-            destination_id: destination,
+            country_id: filters.country_id || undefined,
+            state_id: filters.state_id || undefined,
+            destination_id: filters.destination_id || undefined,
             tour_type: tour_type || undefined,
             suitable_id: suitable_id || undefined,
             sort_by_price: sort_by_price || undefined,
@@ -39,5 +40,15 @@ const suitableFor = async () => {
     return response.data;
 };
 
+const countryInfo = async (id) => {
+    const response = await apiServerMiddleware.get(`/country-info?id=${id}`);
+    return response.data;
+};
 
-export { getPackages, stateInfo, stateDestinations, suitableFor };
+const getStates = async (id) => {
+    const response = await apiServerMiddleware.get(`/states-under-country?id=${id}`);
+    return response.data;
+};
+
+
+export { getPackages, stateInfo, stateDestinations, suitableFor, countryInfo, getStates };

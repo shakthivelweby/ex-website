@@ -24,6 +24,8 @@ export default function Explore() {
 
   const featuredDestinations = featuredDestinationsData?.data || [];
 
+
+
   useEffect(() => {
     const fetchData = async () => {
       const response = await getExploreData();
@@ -33,12 +35,14 @@ export default function Explore() {
     fetchData();
   }, []);
 
+
+
   if (!mounted) return null;
 
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden">
+      <div className="relative h-[35vh] md:h-[75vh] w-full overflow-hidden">
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1437846972679-9e6e537be46e?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
@@ -62,7 +66,7 @@ export default function Explore() {
       </div>
 
       {/* Countries Navigation */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 overflow-x-auto py-3 scrollbar-hide">
             <button
@@ -101,16 +105,14 @@ export default function Explore() {
             <div className="container mx-auto">
               {/* Country Header */}
               <div className="flex flex-col items-start mb-10">
-                <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium mb-4">
-                  Featured Destinations
-                </span>
+              
                 <div className="flex items-end justify-between w-full">
-                  <div>
-                    <h2 className="text-3xl font-light text-gray-900 mb-3">
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-light text-gray-900">
                       Explore {country.name}
                     </h2>
-                    <p className="text-gray-600 max-w-2xl text-base">
-                      Discover the diverse landscapes and rich cultural heritage of {country.name}
+                    <p className="text-gray-600 max-w-2xl">
+                      {country.state.length} States • {country.state.reduce((total, state) => total + (state.package_count || 0), 0)} Packages Available
                     </p>
                   </div>
                 </div>
@@ -119,7 +121,7 @@ export default function Explore() {
               {/* States Carousel */}
               <Swiper
                 modules={[FreeMode]}
-                spaceBetween={20}
+                spaceBetween={24}
                 slidesPerView={1.2}
                 freeMode={true}
                 breakpoints={{
@@ -141,35 +143,64 @@ export default function Explore() {
                 {country.state.map((state) => (
                   <SwiperSlide key={`${country.id}-${state.id}`}>
                     <Link
-                      href={`/packages/${state.id}`}
+                      href={`/packages/${country.id}?state=${state.id}`}
                       className="group block h-full"
                     >
-                      <div className="relative w-full aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100">
+                      <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
+                        {/* Main Image */}
                         <div className="absolute inset-0">
                           <Image
                             src={state.cover_image_url}
                             alt={state.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                         </div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+                        {/* Overlay with split design */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90" />
                         
-                        <div className="absolute bottom-0 left-0 right-0 p-6">
-                          <div>
-                            <h3 className="text-2xl font-light text-white mb-2">
-                              {state.name}
-                            </h3>
-                            <div className="flex items-center gap-2 text-white/90">
-                              <i className="fi fi-rr-map-marker-alt text-sm"></i>
-                              <span className="text-sm font-medium">Explore {state.name}</span>
+                        {/* Content Wrapper */}
+                        <div className="relative h-full flex flex-col">
+                          {/* Top Content */}
+                          <div className="p-6">
+                            <div className="inline-block bg-black/30 backdrop-blur-md rounded-lg px-4 py-1.5 text-white/90">
+                              <span className="text-sm font-medium tracking-wide">
+                                {state.package_count || 0} Tour Packages
+                              </span>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="absolute top-4 right-4 w-9 h-9 bg-white/90 backdrop-blur-md rounded-full items-center justify-center hidden group-hover:flex transition-all duration-300 shadow-lg">
-                          <i className="fi fi-rr-arrow-right text-gray-800 text-sm"></i>
+                          {/* Bottom Content */}
+                          <div className="mt-auto p-6">
+                            <div className="relative">
+                              {/* Main Content */}
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <h3 className="text-2xl sm:text-3xl font-medium text-white">
+                                    {state.name}
+                                  </h3>
+                                  <p className="text-white/80 text-sm">
+                                    Discover amazing tour packages
+                                  </p>
+                                </div>
+
+                                {/* Action Button */}
+                                <button className="relative w-full group/btn">
+                                  <div className="absolute inset-0 bg-white/20 rounded-xl blur-xl group-hover/btn:bg-primary-500/40 transition-all duration-300"></div>
+                                  <div className="relative bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl px-6 py-3 group-hover/btn:bg-primary-500 transition-all duration-300">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-white font-medium">View Packages</span>
+                                      <span className="text-white transform group-hover/btn:translate-x-1 transition-transform duration-300">
+                                        →
+                                      </span>
+                                    </div>
+                                  </div>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </Link>
@@ -194,7 +225,7 @@ export default function Explore() {
                   Featured Destinations
                 </h2>
                 <p className="text-gray-600 max-w-2xl text-base">
-                  Discover our handpicked selection of India's most beloved travel destinations
+                  Discover our handpicked selection of India&apos;s most beloved travel destinations
                 </p>
               </div>
             </div>
@@ -232,32 +263,60 @@ export default function Explore() {
                     href={`/packages/${destination.state_id}?destination=${destination.id}`}
                     className="group block h-full"
                   >
-                    <div className="relative w-full aspect-[3/4] overflow-hidden rounded-2xl bg-gray-100">
+                    <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
+                      {/* Main Image */}
                       <div className="absolute inset-0">
                         <Image
                           src={destination.cover_image_url}
                           alt={destination.name}
                           fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          className="object-cover transition-transform duration-700 group-hover:scale-110"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-                      <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <div>
-                          <h3 className="text-2xl font-light text-white mb-2">
-                            {destination.name}
-                          </h3>
-                          <div className="flex items-center gap-2 text-white/90">
-                            <i className="fi fi-rr-map-marker-alt text-sm"></i>
-                            <span className="text-sm font-medium">Explore {destination.name}</span>
+                      {/* Gradient Overlays */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+
+                      {/* Content Container */}
+                      <div className="relative h-full flex flex-col">
+                        {/* Top Badge */}
+                        <div className="p-5">
+                          <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md rounded-full pl-2 pr-3 py-1">
+                            <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                              <span className="text-[10px] font-semibold text-white">{destination.package_count || 0}</span>
+                            </div>
+                            <span className="text-xs font-medium text-white">Tour Packages</span>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="absolute top-4 right-4 w-9 h-9 bg-white/90 backdrop-blur-md rounded-full items-center justify-center hidden group-hover:flex transition-all duration-300 shadow-lg">
-                        <i className="fi fi-rr-arrow-right text-gray-800 text-sm"></i>
+                        {/* Bottom Content */}
+                        <div className="mt-auto p-5 space-y-6">
+                          {/* Title */}
+                          <div>
+                            <h3 className="text-2xl font-medium text-white mb-1">
+                              {destination.name}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <div className="h-px w-5 bg-primary-500"></div>
+                              <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Featured Destination</span>
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <button className="w-full group/btn">
+                            <div className="relative overflow-hidden bg-white/10 hover:bg-primary-500 backdrop-blur-sm rounded-xl p-3.5 transition-all duration-300">
+                              <div className="relative z-10 flex items-center justify-between">
+                                <span className="text-sm font-medium text-white">View All Packages</span>
+                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                                  <span className="text-white transform group-hover/btn:translate-x-0.5 transition-transform duration-300">
+                                    →
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -274,3 +333,4 @@ export default function Explore() {
     </main>
   );
 }
+

@@ -4,25 +4,30 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
+import Search from "@/components/Search/Search";
 import { useRouter } from "next/navigation";
 
 
 export default function HomePage() {
-  const [selectedTrip, setSelectedTrip] = useState("Scheduled");
+  const [selectedTrip, setSelectedTrip] = useState("Packages");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
   const [locationCoordinates, setLocationCoordinates] = useState({
-    latitude: 10.1631526,
-    longitude: 76.64127119999999,
+    latitude: "",
+    longitude: "",
   });
+
+  // Add state for destination
+  const [destinationName, setDestinationName] = useState("");
+  
   const router = useRouter();
 
   // Google API Key
   const googleApiKey = "AIzaSyDaNPqSBObLDby0rpTvEUbQ8Ek9kxAABK0";
 
   const locationText = {
-    Packages: 'Where you want to start from?',
-    Scheduled: 'Where you want to start from?',
+    Packages: 'Where you want to explore?',
+    Scheduled: 'Where you want to explore?',
     Activities: 'Where you want to do activity?',
     Attractions: 'Where you want to visit?',
     Rentals: 'Where you want to rent a vehicle?',
@@ -37,6 +42,36 @@ export default function HomePage() {
     Rentals: "/rentals",
     Events: "/events"
   }
+
+  // Handle destination selection
+  const handleDestinationSelect = (destination) => {
+    // Set the destination name in state
+    setDestinationName(destination.name);
+    setSelectedLocation(destination.name);
+
+    // Create destination data object with proper structure
+    const destinationData = {
+      id: destination.id,
+      name: destination.name,
+      type: destination.type,
+      country_id: destination.type === 'country' ? destination.id : destination.country_id,
+      state_id: destination.type === 'state' ? destination.id : destination.state_id,
+      destination_id: destination.type === 'destination' ? destination.id : null
+    };
+
+    // Store in localStorage
+    localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
+
+    // Close the popup
+    setIsLocationPopupOpen(false);
+
+    // Navigate based on trip type
+    if(selectedTrip === "Packages") {
+      router.push(`/packages/${destinationData.country_id}?state=${destinationData.state_id}&destination=${destinationData.destination_id}`);
+    } else {
+      router.push('/scheduled');
+    }
+  };
 
   // Handle place selection from Google Autocomplete
   const handlePlaceSelect = (place) => {
@@ -67,26 +102,13 @@ export default function HomePage() {
     }
   };
 
-  // Load location from localStorage on mount
+  // Load destination from localStorage on mount
   useEffect(() => {
-    const savedLocation = localStorage.getItem("startLocation");
-    const savedCoordinates = localStorage.getItem("locationCoordinates");
-
-    if (savedLocation && savedCoordinates) {
-      setSelectedLocation(savedLocation);
-      setLocationCoordinates(JSON.parse(savedCoordinates));
-    } else {
-      // Set default location if none exists
-      setSelectedLocation("Kerala");
-      setLocationCoordinates({
-        latitude: 10.1631526,
-        longitude: 76.64127119999999,
-      });
-      localStorage.setItem("startLocation", "Kerala");
-      localStorage.setItem("locationCoordinates", JSON.stringify({
-        latitude: 10.1631526,
-        longitude: 76.64127119999999,
-      }));
+    const savedDestination = localStorage.getItem("choosedDestination");
+    if (savedDestination) {
+      const destination = JSON.parse(savedDestination);
+      setDestinationName(destination.name);
+      setSelectedLocation(destination.name);
     }
   }, []);
 
@@ -94,29 +116,53 @@ export default function HomePage() {
   const handleSearch = (e) => {
     e.preventDefault();
 
-    // Save current location and coordinates to localStorage
-    localStorage.setItem("startLocation", selectedLocation);
-    localStorage.setItem("locationCoordinates", JSON.stringify(locationCoordinates));
+    const savedDestination = localStorage.getItem("choosedDestination");
 
+    if (!savedDestination) {
+      // If no destination is selected, open the destination popup
+      setIsLocationPopupOpen(true);
+      return;
+    }
+
+    const destination = JSON.parse(savedDestination);
+    
     // Get the redirect URL for the selected trip type
-    const redirectUrl = redirects[selectedTrip.split(" ")[0]];
-
-    // Redirect to the appropriate page if URL exists
-    if (redirectUrl) {
-     router.push(redirectUrl);
+    const tripType = selectedTrip.split(" ")[0];
+    
+    if (tripType === "Packages") {
+      // For packages, include all necessary parameters
+      let url = `/packages/${destination.country_id}`;
+      if (destination.state_id) {
+        url += `?state=${destination.state_id}`;
+      }
+      if (destination.destination_id) {
+        url += `${destination.state_id ? '&' : '?'}destination=${destination.destination_id}`;
+      }
+      router.push(url);
+    } else {
+      // For scheduled trips, just go to the scheduled page
+      router.push('/scheduled');
     }
   };
 
   return (
     <div className="min-h-screen bg-white mx-auto">
       <div className="relative">
-        <LocationSearchPopup
-          title={locationText[selectedTrip.split(" ")[0]]}
-          isOpen={isLocationPopupOpen}
-          onClose={() => setIsLocationPopupOpen(false)}
-          onPlaceSelected={handlePlaceSelect}
-          googleApiKey={googleApiKey}
-        />
+        {selectedTrip === "Packages" || selectedTrip === "Scheduled" ? (
+          <Search
+            isOpen={isLocationPopupOpen}
+            onClose={() => setIsLocationPopupOpen(false)}
+            type={selectedTrip === "Packages" ? "package" : "schedule"}
+          />
+        ) : (
+          <LocationSearchPopup
+            title={locationText[selectedTrip.split(" ")[0]]}
+            isOpen={isLocationPopupOpen}
+            onClose={() => setIsLocationPopupOpen(false)}
+            onPlaceSelected={handlePlaceSelect}
+            googleApiKey={googleApiKey}
+          />
+        )}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
         <div className="bg-white relative z-10">
@@ -124,7 +170,7 @@ export default function HomePage() {
           <div className="md:h-[500px] h-[470px] rounded-[32px] relative">
             <div className="absolute inset-0 bg-black/0 rounded-[32px] z-[1]"></div>
             <Image
-                src="https://images.pexels.com/photos/210307/pexels-photo-210307.jpeg"
+                src="https://images.unsplash.com/photo-1511860810434-a92f84c6f01e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="banner image"
               className="w-full h-full object-cover rounded-[32px]"
               width={1920}
@@ -143,7 +189,7 @@ export default function HomePage() {
               </p>
 
               {/* Search Box */}
-              <form onSubmit={handleSearch} className="backdrop-blur-md bg-white/80 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20">
+              <form onSubmit={handleSearch} className="backdrop-blur-md bg-white/60 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20">
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* What you are looking for */}
                   <div className="flex-1 relative">
@@ -157,26 +203,19 @@ export default function HomePage() {
                         onChange={(e) => setSelectedTrip(e.target.value)}
                         value={selectedTrip}
                       >
-                        <option value="Scheduled">Scheduled Trips</option>
                         <option value="Packages">Packages</option>
-                        <option value="Activities">Activities</option>
-                        <option value="Attractions">Attractions</option>
-                        <option value="Rentals">Rentals</option>
-                        <option value="Events">Events</option>
+                        <option value="Scheduled" >Scheduled Trips</option>
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800"></i>
+                        <i className="fi fi-rr-angle-small-down text-gray-800 text-base"></i>
                       </div>
                     </div>
                   </div>
 
-                  {/* line */}
-                  {/* <div className="md:hidden h-[1px] bg-gray-100 w-full"></div> */}
-
                   {/* Where you want to start from */}
                   <div className="flex-1 relative">
                     <label className="absolute top-2 left-4 text-sm text-gray-600 z-10 flex items-center gap-1.5">
-                        <i className="fi fi-rr-marker text-[12px] top-[0px]"></i>
+                      <i className="fi fi-rr-marker text-[12px] top-[0px]"></i>
                       {locationText[selectedTrip.split(" ")[0]]}
                     </label>
                     <div className="relative">
@@ -189,9 +228,15 @@ export default function HomePage() {
                         placeholder="Enter location..."
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800"></i>
+                        <i className="fi fi-rr-angle-small-down text-gray-800 text-base"></i>
                       </div>
                     </div>
+                    {!selectedLocation && (
+                      <div className="absolute -bottom-6 left-4 text-xs text-primary-600">
+                        <i className="fi fi-rr-info mr-1"></i>
+                        Please select a destination to continue
+                      </div>
+                    )}
                   </div>
 
                   {/* Search Button */}

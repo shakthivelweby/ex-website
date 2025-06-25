@@ -11,6 +11,7 @@ function GeneralTab({ packageData, activeTab }) {
     dropoff_time,
     total_days,
     total_nights,
+    tour_type,
   } = packageData.data;
   return (
     <div
@@ -19,63 +20,90 @@ function GeneralTab({ packageData, activeTab }) {
       }`}
     >
       {/* Main description */}
-      {about && <div dangerouslySetInnerHTML={{ __html: about }} />}
+      {about && <div className="mb-4" dangerouslySetInnerHTML={{ __html: about }} />}
 
-      {/* Trip details in pill layout with fixed icons */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 py-6 border-t border-b border-gray-200 my-8">
-        <div className="flex items-start">
-          <i className="fi fi-rr-time-quarter-past text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Duration</p>
-            <p className="font-medium text-gray-800">
-              {total_days} Days {total_nights} Nights
-            </p>
-          </div>
-        </div>
+    
+          {/* Trip details in pill layout with fixed icons */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6 py-6 border-t border-b border-gray-200  mb-4">
+      
 
-        <div className="flex items-start">
-          <i className="fi fi-rr-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Starting Location</p>
-            <p className="font-medium text-gray-800">{starting_location}</p>
-          </div>
-        </div>
 
-        <div className="flex items-start">
-          <i className="fi fi-rr-car-side text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Pickup Point</p>
-            <p className="font-medium text-gray-800">{pickup_point}</p>
-          </div>
+        
+            <div className="flex items-start">
+              <i className="fi fi-rr-time-quarter-past text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Duration</p>
+                <p className="font-medium text-gray-800">
+                  {total_days} Days {total_nights} Nights
+                </p>
+              </div>
         </div>
+          {tour_type === "fixed_departure" && (
+            <>
+            <div className="flex items-start">
+              <i className="fi fi-rr-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Starting Location</p>
+                <p className="font-medium text-gray-800">{starting_location}</p>
+              </div>
+            </div>
+            </>
+          )}
 
-        <div className="flex items-start">
-          <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Pickup Time</p>
-            <p className="font-medium text-gray-800">{pickup_time}</p>
-          </div>
-        </div>
+         {pickup_point && (
+          <>
+            <div className="flex items-start">
+              <i className="fi fi-rr-car-side text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Pickup Point</p>
+                <p className="font-medium text-gray-800">{pickup_point}</p>
+              </div>
+            </div>
+            </>
+         )}
 
-        <div className="flex items-start">
-          <i className="fi fi-rr-map-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Drop Off Point</p>
-            <p className="font-medium text-gray-800">{dropoff_point}</p>
-          </div>
-        </div>
+         {pickup_time && (
+          <>
+            <div className="flex items-start">
+              <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Pickup Time</p>
+                <p className="font-medium text-gray-800">{pickup_time}</p>
+              </div>
+            </div>
+            </>
+         )}
 
-        <div className="flex items-start">
-          <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
-          <div>
-            <p className="text-sm text-gray-500">Drop Off Time</p>
-            <p className="font-medium text-gray-800">{dropoff_time}</p>
+         {dropoff_point && (
+          <>
+            <div className="flex items-start">
+              <i className="fi fi-rr-map-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Drop Off Point</p>
+                <p className="font-medium text-gray-800">{dropoff_point}</p>
+              </div>
+            </div>
+            </>
+         )}
+
+         {dropoff_time && (
+          <>
+            <div className="flex items-start">
+              <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <div>
+                <p className="text-sm text-gray-500">Drop Off Time</p>
+                <p className="font-medium text-gray-800">{dropoff_time}</p>
+              </div>
+            </div>
+            </>
+         )}
+      
+
           </div>
-        </div>
-      </div>
+      
 
       {/* Additional Information Section as Accordion */}
-      <Accordion title="Additional information" defaultOpen={false}>
+      <Accordion title="Additional information"  defaultOpen={false}>
         <div
           className="text-gray-800"
           dangerouslySetInnerHTML={{ __html: additional_info }}

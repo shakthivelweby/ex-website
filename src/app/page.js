@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
@@ -43,6 +43,26 @@ export default function HomePage() {
     Rentals: "/rentals",
     Events: "/events"
   }
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const tripOptions = [
+    { value: "Packages", label: "Packages", icon: "fi fi-rr-umbrella-beach" },
+    { value: "Scheduled", label: "Scheduled Trips", icon: "fi fi-rr-calendar" }
+  ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Handle destination selection
   const handleDestinationSelect = (destination) => {
@@ -146,6 +166,79 @@ export default function HomePage() {
     }
   };
 
+  // Inside the form, replace the existing dropdown with:
+  const CustomDropdown = () => (
+    <div className="flex-1 relative" ref={dropdownRef}>
+      <label className="absolute top-1.5 left-4 text-xs text-gray-600 flex items-center gap-1.5">
+        <i className="fi fi-rr-search text-[10px] relative top-[0px]"></i>
+        What you are looking for?
+      </label>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px] hover:bg-black/5 transition-colors text-left flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-2.5">
+            <i className={`${tripOptions.find(opt => opt.value === selectedTrip)?.icon} text-gray-600 text-base group-hover:text-primary-500 transition-colors`}></i>
+            <span className="text-base">{selectedTrip}</span>
+          </div>
+          <motion.i 
+            className="fi fi-rr-angle-small-down text-gray-800 text-sm group-hover:text-primary-500 transition-colors"
+            animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          />
+        </button>
+
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ 
+            opacity: isDropdownOpen ? 1 : 0,
+            y: isDropdownOpen ? 0 : -10,
+            pointerEvents: isDropdownOpen ? "auto" : "none"
+          }}
+          transition={{ duration: 0.2 }}
+          style={{ 
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            left: 0,
+            right: 0,
+            zIndex: 1000
+          }}
+          className="mt-1 md:mt-2 bg-white/80 rounded-2xl shadow-xl border border-gray-100/50 backdrop-blur-xl overflow-hidden"
+        >
+          <div className="py-1.5">
+            {tripOptions.map((option) => (
+              <motion.button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setSelectedTrip(option.value);
+                  setIsDropdownOpen(false);
+                }}
+                className={`w-full px-5 py-3.5 text-left text-[14px] hover:bg-gray-50/80 transition-all flex items-center gap-3 group ${
+                  selectedTrip === option.value ? 'text-primary-500 font-medium bg-primary-50/50' : 'text-gray-700'
+                }`}
+                whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
+                whileTap={{ backgroundColor: "rgba(0,0,0,0.05)" }}
+              >
+                <i className={`${option.icon} text-lg ${
+                  selectedTrip === option.value ? 'text-primary-500' : 'text-gray-500 group-hover:text-primary-500 transition-colors'
+                }`}></i>
+                <div>
+                  <div className="font-medium">{option.label}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {option.value === "Packages" ? "Explore curated travel packages" : "Join scheduled group trips"}
+                  </div>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white mx-auto">
       <div className="relative">
@@ -238,29 +331,10 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
                 onSubmit={handleSearch} 
-                className="backdrop-blur-md bg-white/60 rounded-[24px] md:rounded-full shadow-lg overflow-hidden p-3 md:p-1.5 max-w-[650px] mx-auto w-full border border-white/20"
+                className="backdrop-blur-md bg-white/60 rounded-[24px] md:rounded-full shadow-lg overflow-visible p-3 md:p-1.5 max-w-[650px] mx-auto w-full border border-white/20"
               >
                 <div className="flex flex-col md:flex-row gap-3">
-                  {/* What you are looking for */}
-                  <div className="flex-1 relative">
-                    <label className="absolute top-1.5 left-4 text-xs text-gray-600 flex items-center gap-1.5">
-                      <i className="fi fi-rr-search text-[10px] relative top-[0px]"></i>
-                      What you are looking for?
-                    </label>
-                    <div className="relative">
-                      <select
-                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px] hover:bg-black/5 transition-colors"
-                        onChange={(e) => setSelectedTrip(e.target.value)}
-                        value={selectedTrip}
-                      >
-                        <option value="Packages">Packages</option>
-                        <option value="Scheduled" >Scheduled Trips</option>
-                      </select>
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800 text-sm"></i>
-                      </div>
-                    </div>
-                  </div>
+                  <CustomDropdown />
 
                   {/* Where you want to start from */}
                   <div className="flex-1 relative">

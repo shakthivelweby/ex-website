@@ -115,6 +115,7 @@ export default function MobileNav() {
                       ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
                       h-[44px] rounded-full transition-all duration-300
                       ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/20
                     `}
                   >
                     <div className="flex items-center justify-center">
@@ -168,6 +169,7 @@ export default function MobileNav() {
                     ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
                     h-[44px] rounded-full transition-all duration-300
                     ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/20
                   `}
                 >
                   <div className="flex items-center justify-center">

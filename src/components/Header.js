@@ -10,6 +10,33 @@ import { useRouter } from 'next/navigation';
 import Login from "./Login/Login";
 import Signup from "./Login/Signup";
 import Popup from "./Popup";
+import { motion, AnimatePresence } from "framer-motion";
+
+const menuVariants = {
+  open: {
+    transition: { staggerChildren: 0.07, delayChildren: 0.2 }
+  },
+  closed: {
+    transition: { staggerChildren: 0.05, staggerDirection: -1 }
+  }
+};
+
+const itemVariants = {
+  open: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      y: { stiffness: 1000, velocity: -100 }
+    }
+  },
+  closed: {
+    y: 50,
+    opacity: 0,
+    transition: {
+      y: { stiffness: 1000 }
+    }
+  }
+};
 
 const navLinks = [
   {
@@ -335,48 +362,63 @@ export default function Header() {
           draggable={true}
         >
           <div className="flex-1 overflow-y-auto">
-            <nav className="flex flex-col divide-y divide-gray-100">
+            <motion.nav 
+              variants={menuVariants}
+              initial="closed"
+              animate={showMobileNav ? "open" : "closed"}
+              className="flex flex-col divide-y divide-gray-100"
+            >
               {navLinks.map((link, index) => {
                 const isActive = link.matchPath(pathname);
                 return (
-                  <Link
+                  <motion.div
                     key={link.name}
-                    href={link.href}
-                    className={`flex items-center px-6 py-4 transition-all ${
-                      isActive
-                        ? "bg-primary-50/50 text-primary-600"
-                        : "text-gray-700 hover:bg-gray-50"
-                    }`}
-                    onClick={() => handleLinkClick(index)}
+                    variants={itemVariants}
+                    className="w-full"
                   >
-                    <i
-                      className={`${link.icon} text-sm mr-4 ${
-                        isActive ? "text-primary-600" : "text-gray-500"
+                    <Link
+                      href={link.href}
+                      className={`flex items-center px-6 py-4 transition-all ${
+                        isActive
+                          ? "bg-primary-50/50 text-primary-600"
+                          : "text-gray-700 hover:bg-gray-50"
                       }`}
-                    ></i>
-                    <span className="font-medium text-base">{link.name}</span>
-                    {isActive && (
-                      <div className="ml-auto">
-                        <i className="fi fi-rr-check text-primary-600"></i>
-                      </div>
-                    )}
-                  </Link>
+                      onClick={() => handleLinkClick(index)}
+                    >
+                      <i
+                        className={`${link.icon} text-sm mr-4 ${
+                          isActive ? "text-primary-600" : "text-gray-500"
+                        }`}
+                      ></i>
+                      <span className="font-medium text-base">{link.name}</span>
+                      {isActive && (
+                        <div className="ml-auto">
+                          <i className="fi fi-rr-check text-primary-600"></i>
+                        </div>
+                      )}
+                    </Link>
+                  </motion.div>
                 );
               })}
 
               {!user && (
-                <button
-                  onClick={() => {
-                    handleLogin();
-                    setShowMobileNav(false);
-                  }}
-                  className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all w-full text-left"
+                <motion.div
+                  variants={itemVariants}
+                  className="w-full"
                 >
-                  <i className="fi fi-rr-user text-xl mr-4"></i>
-                  <span className="font-medium text-base">Sign in</span>
-                </button>
+                  <button
+                    onClick={() => {
+                      handleLogin();
+                      setShowMobileNav(false);
+                    }}
+                    className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all w-full text-left"
+                  >
+                    <i className="fi fi-rr-user text-xl mr-4"></i>
+                    <span className="font-medium text-base">Sign in</span>
+                  </button>
+                </motion.div>
               )}
-            </nav>
+            </motion.nav>
           </div>
         </Popup>
 

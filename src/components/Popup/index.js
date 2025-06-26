@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Dialog, Transition } from "@headlessui/react";
-import { useSpring, animated, config } from "@react-spring/web";
-import { useDrag } from "@use-gesture/react";
+"use client";
+
+import { Dialog } from "@headlessui/react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // PopupHeader component
-const PopupHeader = ({ title, onClose, showCloseButton, dragHandleProps = {}, isMobile, draggable }) => {
+const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable }) => {
   if (!title && !showCloseButton) return null;
   
   return (
@@ -12,7 +13,6 @@ const PopupHeader = ({ title, onClose, showCloseButton, dragHandleProps = {}, is
       {/* Drag Handle for Mobile */}
       {isMobile && draggable && (
         <div 
-          {...dragHandleProps}
           className="w-full flex justify-center items-center py-4 touch-none cursor-grab active:cursor-grabbing group"
         >
           <div className="w-12 h-1 rounded-full bg-gray-300 transition-colors duration-200 group-hover:bg-primary-400" />
@@ -20,19 +20,21 @@ const PopupHeader = ({ title, onClose, showCloseButton, dragHandleProps = {}, is
       )}
       <div className="flex items-center justify-between px-6 pb-4">
         {title && (
-          <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900">
-            {title}
-          </Dialog.Title>
+          <div className="flex-1">
+            {typeof title === "string" ? (
+              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            ) : (
+              title
+            )}
+          </div>
         )}
-       
         {showCloseButton && (!isMobile || !draggable) && (
-          
           <button
+            type="button"
+            className="rounded-full p-2 hover:bg-gray-100 transition-colors duration-200"
             onClick={onClose}
-            className="text-gray-900 hover:text-gray-500 w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center"
-            aria-label="Close"
           >
-            <i className="fi fi-rr-cross-small text-lg"></i>
+            <i className="fi fi-rr-cross text-lg text-gray-500"></i>
           </button>
         )}
       </div>
@@ -58,6 +60,54 @@ const PopupFooter = ({ children, className = "" }) => {
       {children}
     </div>
   );
+};
+
+const overlayVariants = {
+  hidden: { 
+    opacity: 0
+  },
+  visible: { 
+    opacity: 1,
+    transition: {
+      duration: 0.2
+    }
+  }
+};
+
+const panelVariants = {
+  hidden: (pos) => {
+    switch(pos) {
+      case "bottom":
+        return { y: "100%" };
+      case "right":
+        return { x: "100%" };
+      case "left":
+        return { x: "-100%" };
+      default:
+        return { y: 20, opacity: 0 };
+    }
+  },
+  visible: {
+    x: 0,
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.25,
+      ease: [0.16, 1, 0.3, 1]
+    }
+  },
+  exit: (pos) => {
+    switch(pos) {
+      case "bottom":
+        return { y: "100%" };
+      case "right":
+        return { x: "100%" };
+      case "left":
+        return { x: "-100%" };
+      default:
+        return { y: 20, opacity: 0 };
+    }
+  }
 };
 
 // Main Popup component
@@ -134,77 +184,6 @@ export default function Popup({
   // Get current position classes
   const positionClasses = getPositionClasses();
 
-  // Overlay animation
-  const overlayAnimation = useSpring({
-    opacity: isOpen ? 1 : 0,
-    config: { ...config.gentle, tension: 280, friction: 20 }
-  });
-
-  // Panel animation
-  const panelAnimation = useSpring({
-    transform: isOpen 
-      ? 'translate3d(0px, 0px, 0px)' 
-      : effectivePosition === 'bottom'
-        ? 'translate3d(0px, 100%, 0px)'
-        : effectivePosition === 'center'
-          ? 'translate3d(0px, 20px, 0px)'
-          : effectivePosition === 'right'
-            ? 'translate3d(100%, 0px, 0px)'
-            : 'translate3d(-100%, 0px, 0px)',
-    opacity: isOpen ? 1 : 0,
-    config: {
-      ...config.gentle,
-      tension: 280,
-      friction: 24,
-      clamp: true
-    }
-  });
-
-  // Drag gesture spring
-  const [{ y, opacity }, api] = useSpring(() => ({ y: 0, opacity: 1 }));
-
-  // Set up drag gesture
-  const bindDrag = useDrag(
-    ({ down, movement: [, my], velocity: [, vy], direction: [, dy] }) => {
-      if (!isMobile || !draggable) return;
-
-      const dragY = Math.max(0, my);
-      const currentOpacity = Math.max(0.2, 1 - (dragY / (window.innerHeight * 0.4)));
-      
-      if (!down) {
-        if (dragY > window.innerHeight * 0.2 || (vy > 0.5 && dy > 0)) {
-          api.start({ 
-            y: window.innerHeight,
-            opacity: 0,
-            immediate: false,
-            config: { ...config.gentle, velocity: vy * dy }
-          });
-          onClose();
-        } else {
-          api.start({ 
-            y: 0,
-            opacity: 1,
-            immediate: false,
-            config: config.gentle
-          });
-        }
-      } else {
-        api.start({ 
-          y: dragY,
-          opacity: currentOpacity,
-          immediate: true
-        });
-      }
-    },
-    {
-      from: () => [0, y.get()],
-      filterTaps: true,
-      bounds: { top: 0 },
-      rubberband: true,
-      enabled: isMobile && draggable
-    }
-  );
-
   // Handle body scroll locking
   useEffect(() => {
     if (!preventScroll) return;
@@ -229,41 +208,59 @@ export default function Popup({
       onClose={onClose} 
       open={isOpen}
     >
-      <animated.div 
-        style={overlayAnimation}
-        className={`fixed inset-0 ${overlayClassName}`}
-      />
-
-      <div className="fixed inset-0 overflow-y-auto">
-        <div className={`flex min-h-full ${effectivePosition === 'right' || effectivePosition === 'left' ? 'h-full' : ''} ${positionClasses.container}`}>
-          <animated.div
-            style={{
-              ...panelAnimation,
-              transform: (isMobile && draggable) 
-                ? y.to(value => `translate3d(0px, ${value}px, 0px)`)
-                : panelAnimation.transform,
-              opacity: (isMobile && draggable) ? opacity : panelAnimation.opacity
-            }}
-            className={`
-              ${positionClasses.panel}
-              ${pannelStyle}
-              bg-white text-left align-middle shadow-xl
-              flex flex-col
-              ${className}
-            `}
-          >
-            <PopupHeader 
-              title={title} 
-              onClose={onClose} 
-              showCloseButton={showCloseButton}
-              dragHandleProps={(isMobile && draggable) ? bindDrag() : {}}
-              isMobile={isMobile}
-              draggable={draggable}
+      <AnimatePresence mode="wait">
+        {isOpen && (
+          <>
+            <motion.div 
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={overlayVariants}
+              className={`fixed inset-0 ${overlayClassName}`}
             />
-            {children}
-          </animated.div>
-        </div>
-      </div>
+
+            <div className="fixed inset-0 overflow-y-auto">
+              <div className={`flex min-h-full ${effectivePosition === 'right' || effectivePosition === 'left' ? 'h-full' : ''} ${positionClasses.container}`}>
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={panelVariants}
+                  custom={effectivePosition}
+                  drag={draggable && isMobile ? "y" : false}
+                  dragConstraints={{ top: 0 }}
+                  dragElastic={0.2}
+                  onDragEnd={(e, { offset, velocity }) => {
+                    if (offset.y > 200 || velocity.y > 200) {
+                      onClose();
+                    }
+                  }}
+                  style={{
+                    willChange: "transform",
+                    translateZ: 0,
+                  }}
+                  className={`
+                    ${positionClasses.panel}
+                    ${pannelStyle}
+                    bg-white text-left align-middle shadow-xl
+                    flex flex-col transform-gpu
+                    ${className}
+                  `}
+                >
+                  <PopupHeader 
+                    title={title} 
+                    onClose={onClose} 
+                    showCloseButton={showCloseButton}
+                    isMobile={isMobile}
+                    draggable={draggable}
+                  />
+                  {children}
+                </motion.div>
+              </div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </Dialog>
   );
 }

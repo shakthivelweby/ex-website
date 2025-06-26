@@ -6,6 +6,7 @@ import Image from "next/image";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Search from "@/components/Search/Search";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 
 export default function HomePage() {
@@ -166,30 +167,52 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
         <div className="bg-white relative z-10">
-          {/* Background Image */}
+          {/* Background Image without Animation */}
           <div className="md:h-[500px] h-[470px] rounded-[32px] relative">
             <div className="absolute inset-0 bg-black/0 rounded-[32px] z-[1]"></div>
             <Image
-                src="https://images.unsplash.com/photo-1511860810434-a92f84c6f01e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              src="https://images.unsplash.com/photo-1511860810434-a92f84c6f01e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="banner image"
               className="w-full h-full object-cover rounded-[32px]"
               width={1920}
               height={1080}
+              priority
             />
           </div>
 
-          {/* Hero Content */}
+          {/* Hero Content with Animation */}
           <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32 z-[2]">
-            <div className="max-w-3xl mx-auto text-center">
-              <h1 className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="max-w-3xl mx-auto text-center"
+            >
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter"
+              >
                 Pay Less, Book Direct
-              </h1>
-              <p className="text-xl text-white/90 mb-6 md:mb-12">
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-xl text-white/90 mb-6 md:mb-12"
+              >
                 The new way to plan your trip!
-              </p>
+              </motion.p>
 
-              {/* Search Box */}
-              <form onSubmit={handleSearch} className="backdrop-blur-md bg-white/60 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20">
+              {/* Search Box with Animation */}
+              <motion.form 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                onSubmit={handleSearch} 
+                className="backdrop-blur-md bg-white/60 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20"
+              >
                 <div className="flex flex-col md:flex-row gap-4">
                   {/* What you are looking for */}
                   <div className="flex-1 relative">
@@ -231,12 +254,6 @@ export default function HomePage() {
                         <i className="fi fi-rr-angle-small-down text-gray-800 text-base"></i>
                       </div>
                     </div>
-                    {!selectedLocation && (
-                      <div className="absolute -bottom-6 left-4 text-xs text-primary-600">
-                        <i className="fi fi-rr-info mr-1"></i>
-                        Please select a destination to continue
-                      </div>
-                    )}
                   </div>
 
                   {/* Search Button */}
@@ -245,8 +262,8 @@ export default function HomePage() {
                     <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
                   </button>
                 </div>
-              </form>
-            </div>
+              </motion.form>
+            </motion.div>
           </div>
         </div>
         

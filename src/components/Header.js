@@ -369,7 +369,7 @@ export default function Header() {
           onClose={() => setShowMobileNav(false)}
           pos="right"
           height="100vh"
-          className="lg:hidden w-full max-w-sm"
+          className="lg:hidden w-full "
           draggable={true}
         >
           <div className="flex-1 overflow-y-auto">

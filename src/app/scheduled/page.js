@@ -23,7 +23,7 @@ export default function Scheduled() {
   const [isDestinationPopupOpen, setIsDestinationPopupOpen] = useState(false);
   const [destinationId, setDestinationId] = useState("");
   const [destinationName, setDestinationName] = useState("");
-  const [isMobile, setIsMobile] = useState(window.matchMedia("(max-width: 768px)").matches);
+  const [isMobile, setIsMobile] = useState(false);
 
   const [locationCoordinates, setLocationCoordinates] = useState({
     latitude: 10.1631526,
@@ -37,7 +37,7 @@ export default function Scheduled() {
     } else {
       setMobileLayout('grid');
     }
-  }, [setIsMobile]);
+  }, [isMobile, setMobileLayout]);
 
   // State for all filters
   const [filters, setFilters] = useState({
@@ -270,6 +270,17 @@ export default function Scheduled() {
     }
   }, [filters.destination, destinationOptions]);
 
+  // Handle mobile detection on client side
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.matchMedia("(max-width: 768px)").matches);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const openLocationPopup = () => {
     setIsLocationPopupOpen(true);

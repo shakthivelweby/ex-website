@@ -17,9 +17,8 @@ const DateNavBar = ({ onDateChange }) => {
 
   // Notify parent component when date changes
   useEffect(() => {
-    if (onDateChange) {
-      onDateChange(selectedDate);
-    }
+    if (!selectedDate || !onDateChange) return;
+    onDateChange(selectedDate);
   }, [selectedDate, onDateChange]);
 
   // Handle clicks outside the calendar to close it

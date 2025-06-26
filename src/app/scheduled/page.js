@@ -16,18 +16,28 @@ export default function Scheduled() {
   // State for selected date from DateNavBar - Initialize with null to prevent hydration mismatch
   const [selectedDate, setSelectedDate] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [mobileLayout, setMobileLayout] = useState('list'); // Changed from 'grid' to 'list'
+  const [mobileLayout, setMobileLayout] = useState('grid'); // Changed from 'grid' to 'list'
   // Add state for start location and location edit popup
   const [startLocation, setStartLocation] = useState("");
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
   const [isDestinationPopupOpen, setIsDestinationPopupOpen] = useState(false);
   const [destinationId, setDestinationId] = useState("");
   const [destinationName, setDestinationName] = useState("");
+  const [isMobile, setIsMobile] = useState(window.matchMedia("(max-width: 768px)").matches);
 
   const [locationCoordinates, setLocationCoordinates] = useState({
     latitude: 10.1631526,
     longitude: 76.64127119999999,
   });
+
+  // is mobile check
+  useEffect(() => {
+    if (isMobile) {
+      setMobileLayout('list');
+    } else {
+      setMobileLayout('grid');
+    }
+  }, [setIsMobile]);
 
   // State for all filters
   const [filters, setFilters] = useState({
@@ -113,29 +123,28 @@ export default function Scheduled() {
       setDestinationId(destination.id);
       setDestinationName(destination.name);
       
-      // Update filters based on type
-      const updatedFilters = {
-        ...filters
-      };
+      // Update filters based on type using functional update
+      setFilters(prev => {
+        const updatedFilters = { ...prev };
+        // Clear existing IDs first
+        delete updatedFilters.country_id;
+        delete updatedFilters.state_id;
+        delete updatedFilters.destination_id;
 
-      // Clear existing IDs first
-      delete updatedFilters.country_id;
-      delete updatedFilters.state_id;
-      delete updatedFilters.destination_id;
-
-      // Set the appropriate ID based on type
-      switch (destination.type) {
-        case 'country':
-          updatedFilters.country_id = destination.id;
-          break;
-        case 'state':
-          updatedFilters.state_id = destination.id;
-          break;
-        case 'destination':
-          updatedFilters.destination_id = destination.id;
-          break;
-      }
-      setFilters(updatedFilters);
+        // Set the appropriate ID based on type
+        switch (destination.type) {
+          case 'country':
+            updatedFilters.country_id = destination.id;
+            break;
+          case 'state':
+            updatedFilters.state_id = destination.id;
+            break;
+          case 'destination':
+            updatedFilters.destination_id = destination.id;
+            break;
+        }
+        return updatedFilters;
+      });
     }
 
     // Handle starting location and coordinates separately
@@ -155,7 +164,7 @@ export default function Scheduled() {
       localStorage.setItem("locationCoordinates", JSON.stringify(defaultCoordinates));
       localStorage.setItem("startLocation", "Kerala");
     }
-  }, [isMounted, filters]);
+  }, [isMounted]); // Removed filters dependency
 
   
 
@@ -183,29 +192,28 @@ export default function Scheduled() {
       setDestinationId(destination.id);
       setDestinationName(destination.name);
 
-      // Update filters based on type
-      const updatedFilters = {
-        ...filters
-      };
+      // Update filters based on type using functional update
+      setFilters(prev => {
+        const updatedFilters = { ...prev };
+        // Clear existing IDs first
+        delete updatedFilters.country_id;
+        delete updatedFilters.state_id;
+        delete updatedFilters.destination_id;
 
-      // Clear existing IDs first
-      delete updatedFilters.country_id;
-      delete updatedFilters.state_id;
-      delete updatedFilters.destination_id;
-
-      // Set the appropriate ID based on type
-      switch (destination.type) {
-        case 'country':
-          updatedFilters.country_id = destination.id;
-          break;
-        case 'state':
-          updatedFilters.state_id = destination.id;
-          break;
-        case 'destination':
-          updatedFilters.destination_id = destination.id;
-          break;
-      }
-      setFilters(updatedFilters);
+        // Set the appropriate ID based on type
+        switch (destination.type) {
+          case 'country':
+            updatedFilters.country_id = destination.id;
+            break;
+          case 'state':
+            updatedFilters.state_id = destination.id;
+            break;
+          case 'destination':
+            updatedFilters.destination_id = destination.id;
+            break;
+        }
+        return updatedFilters;
+      });
     } else {
       const destination = {
         id: 1,
@@ -222,13 +230,13 @@ export default function Scheduled() {
       localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
       setDestinationId(destination.id);
       setDestinationName(destination.name);
-      // Update filters with destination details
+      // Update filters with destination details using functional update
       setFilters(prev => ({
         ...prev,
         country_id: destination.country_id
       }));
     }
-  }, [isDestinationPopupOpen, filters]); // Added filters as dependency
+  }, [isDestinationPopupOpen]); // Removed filters dependency
 
   // Add a storage event listener to handle updates from other components
   useEffect(() => {
@@ -296,10 +304,11 @@ export default function Scheduled() {
 
   // use effect to update selected date, and longitude and latitude in filters
   useEffect(() => {
+    if (!selectedDate) return; // Add this check to prevent unnecessary updates
+    
     setFilters((prev) => ({
       ...prev,
-      selectedDate: selectedDate?.toISOString().split("T")[0] || "",
-      // Only include starting location coordinates
+      selectedDate: selectedDate.toISOString().split("T")[0],
       longitude: locationCoordinates.longitude,
       latitude: locationCoordinates.latitude,
     }));

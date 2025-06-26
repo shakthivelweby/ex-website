@@ -97,7 +97,7 @@ const Login = ({show, onClose, onSignupClick, loginFormData, setloginFormData, o
       height="80%"
       className="w-full max-w-md"
       draggable={true}
-      showCloseButton={false}
+      showCloseButton={true}
       closeTrigger={true}
     >
       <div className="flex-1 flex flex-col overflow-hidden">

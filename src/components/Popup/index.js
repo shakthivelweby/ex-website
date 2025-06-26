@@ -24,7 +24,9 @@ const PopupHeader = ({ title, onClose, showCloseButton, dragHandleProps = {}, is
             {title}
           </Dialog.Title>
         )}
+       
         {showCloseButton && (!isMobile || !draggable) && (
+          
           <button
             onClick={onClose}
             className="text-gray-900 hover:text-gray-500 w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center"

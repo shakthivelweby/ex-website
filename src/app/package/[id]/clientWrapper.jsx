@@ -10,6 +10,7 @@ import { usePackageRate } from "./query";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import PackageDuration from "../packageDuration";
 import Popup from "@/components/Popup";
+import ShareOptions from "@/components/ShareOptions/ShareOptions";
 
 export default function ClientWrapper({
   packageData,
@@ -170,78 +171,85 @@ export default function ClientWrapper({
             <div className="w-full lg:w-2/3">
               {/* Image Gallery */}
               <div className="mb-3 overflow-hidden">
-                <div className="hidden md:grid grid-cols-4 gap-4">
-                  <div className="col-span-4 md:col-span-2 lg:col-span-2 relative rounded-tl-2xl rounded-bl-2xl overflow-hidden">
-                    <div className="relative aspect-[3/2] h-full w-full">
-                      <Image
-                        src={images[0].image_url}
-                        alt={images[0].image_name}
-                        fill
-                        className="object-cover"
-                        blurDataURL="/blur.webp"
-                        placeholder="blur"
-                        priority
-                      />
+                {/* Mobile View */}
+                <div className="block md:hidden relative">
+                  <MobileCarousel 
+                    packageData={packageData} 
+                    onViewAllClick={() => setIsImageViewerOpen(true)} 
+                  />
+                </div>
+
+                {/* Desktop View */}
+                <div className="relative">
+                  <div className="hidden md:grid grid-cols-4 gap-4">
+                    <div className="col-span-4 md:col-span-2 lg:col-span-2 relative rounded-tl-2xl rounded-bl-2xl overflow-hidden">
+                      <div className="relative aspect-[3/2] h-full w-full">
+                        <Image
+                          src={images[0].image_url}
+                          alt={images[0].image_name}
+                          fill
+                          className="object-cover"
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          priority
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
-                    <div className="relative overflow-hidden aspect-square">
-                      <Image
-                        src={images[1].image_url}
-                        alt={images[1].image_name}
-                        fill
-                        blurDataURL="/blur.webp"
-                        placeholder="blur"
-                        className="object-cover"
-                      />
+                    <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
+                      <div className="relative overflow-hidden aspect-square">
+                        <Image
+                          src={images[1].image_url}
+                          alt={images[1].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="relative overflow-hidden aspect-square">
+                        <Image
+                          src={images[2].image_url}
+                          alt={images[2].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
                     </div>
-                    <div className="relative overflow-hidden aspect-square">
-                      <Image
-                        src={images[2].image_url}
-                        alt={images[2].image_name}
-                        fill
-                        blurDataURL="/blur.webp"
-                        placeholder="blur"
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
-                    <div className="relative rounded-tr-2xl overflow-hidden aspect-square">
-                      <Image
-                        src={images[3].image_url}
-                        alt={images[3].image_name}
-                        fill
-                        blurDataURL="/blur.webp"
-                        placeholder="blur"
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="relative rounded-br-2xl overflow-hidden aspect-square">
-                      <Image
-                        src={images[4].image_url}
-                        alt={images[4].image_name}
-                        fill
-                        blurDataURL="/blur.webp"
-                        placeholder="blur"
-                        className="object-cover"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                      />
-                      <div className="absolute bottom-4 left-0 right-3 flex justify-end">
-                        <button
-                          onClick={() => setIsImageViewerOpen(true)}
-                          className="bg-black bg-opacity-50 w-[85%] h-8 rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer"
-                        >
-                          <span>See all photos ({images.length})</span>
-                        </button>
+                    <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
+                      <div className="relative rounded-tr-2xl overflow-hidden aspect-square">
+                        <Image
+                          src={images[3].image_url}
+                          alt={images[3].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="relative rounded-br-2xl overflow-hidden aspect-square">
+                        <Image
+                          src={images[4].image_url}
+                          alt={images[4].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                        <div className="absolute bottom-4 left-0 right-3 flex justify-end">
+                          <button
+                            onClick={() => setIsImageViewerOpen(true)}
+                            className="bg-black bg-opacity-50 w-[85%] h-8 rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer"
+                          >
+                            <span>See all photos ({images.length})</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                <MobileCarousel 
-                  packageData={packageData} 
-                  onViewAllClick={() => setIsImageViewerOpen(true)} 
-                />
               </div>
               {/* provided by supplier */}
               <div className="flex   mb-2">

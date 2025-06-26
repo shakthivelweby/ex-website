@@ -2,11 +2,15 @@
 
 import { Dialog } from "@headlessui/react";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useDragControls } from "framer-motion";
 
 // PopupHeader component
-const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable }) => {
+const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dragControls }) => {
   if (!title && !showCloseButton) return null;
+  
+  const startDragging = (event) => {
+    dragControls.start(event);
+  };
   
   return (
     <div className="sticky top-0 bg-white border-b border-gray-100 z-10">
@@ -14,6 +18,7 @@ const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable }) =
       {isMobile && draggable && (
         <div 
           className="w-full flex justify-center items-center py-4 touch-none cursor-grab active:cursor-grabbing group"
+          onPointerDown={startDragging}
         >
           <div className="w-12 h-1 rounded-full bg-gray-300 transition-colors duration-200 group-hover:bg-primary-400" />
         </div>
@@ -22,7 +27,7 @@ const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable }) =
         {title && (
           <div className="flex-1">
             {typeof title === "string" ? (
-              <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+              <h3 className="text-lg font-medium text-gray-800">{title}</h3>
             ) : (
               title
             )}
@@ -119,13 +124,14 @@ export default function Popup({
   showCloseButton = true,
   pos = "center",
   height = "auto",
-  overlayClassName = "bg-black/25",
+  overlayClassName = "bg-black/20 backdrop-blur-xs",
   className = "",
   preventScroll = true,
   pannelStyle = "",
   draggable = false,
 }) {
   const [isMobile, setIsMobile] = useState(false);
+  const dragControls = useDragControls();
 
   // Check if device is mobile
   useEffect(() => {
@@ -216,7 +222,7 @@ export default function Popup({
               animate="visible"
               exit="hidden"
               variants={overlayVariants}
-              className={`fixed inset-0 ${overlayClassName}`}
+              className={`fixed inset-0 backdrop-blur-sm ${overlayClassName}`}
             />
 
             <div className="fixed inset-0 overflow-y-auto">
@@ -228,10 +234,14 @@ export default function Popup({
                   variants={panelVariants}
                   custom={effectivePosition}
                   drag={draggable && isMobile ? "y" : false}
+                  dragControls={dragControls}
+                  dragListener={false}
                   dragConstraints={{ top: 0 }}
-                  dragElastic={0.2}
+                  dragElastic={0.4}
+                  dragTransition={{ bounceStiffness: 300, bounceDamping: 20 }}
                   onDragEnd={(e, { offset, velocity }) => {
-                    if (offset.y > 200 || velocity.y > 200) {
+                    const swipeThreshold = 100;
+                    if (offset.y > swipeThreshold || velocity.y > 50) {
                       onClose();
                     }
                   }}
@@ -253,8 +263,11 @@ export default function Popup({
                     showCloseButton={showCloseButton}
                     isMobile={isMobile}
                     draggable={draggable}
+                    dragControls={dragControls}
                   />
-                  {children}
+                  <div className="flex-1 overflow-y-auto overscroll-contain">
+                    {children}
+                  </div>
                 </motion.div>
               </div>
             </div>

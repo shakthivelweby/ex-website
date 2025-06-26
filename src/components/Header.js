@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Login from "./Login/Login";
 import Signup from "./Login/Signup";
 import Popup from "./Popup";
+import ShareOptions from "./ShareOptions/ShareOptions";
 import { motion, AnimatePresence } from "framer-motion";
 
 const menuVariants = {
@@ -95,6 +96,9 @@ export default function Header() {
   const userMenuRef = useRef(null);
   const mobileNavRef = useRef(null);
   const router = useRouter();
+
+  // Check if current page is a package detail page
+  const isPackageDetailPage = pathname.startsWith('/package/');
 
   // Set active index based on current path
   useEffect(() => {
@@ -208,23 +212,37 @@ export default function Header() {
 
           {/* Mobile Menu and User Menu */}
           <div className="flex items-center gap-3">
+            {/* Share Button - Only show on package detail pages */}
+            {isPackageDetailPage && (
+              <div className="hidden lg:block">
+                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+              </div>
+            )}
+
             {/* Search Button - Desktop */}
             <button
               onClick={() => setShowSearch(true)}
-              className="hidden lg:flex items-center gap-2 h-9 px-4 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-full border border-gray-200 transition-all duration-200"
+              className="hidden lg:flex items-center gap-2 px-4 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200 group h-9"
             >
-              <i className="fi fi-rr-search text-gray-400"></i>
+              <i className="fi fi-rr-search text-gray-700 group-hover:text-gray-900 transition-colors"></i>
               <span>Search</span>
-              <div className="hidden sm:flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
-                <kbd className="text-[10px] font-medium bg-gray-100 px-1.5 py-0.5 rounded">⌘</kbd>
-                <kbd className="text-[10px] font-medium bg-gray-100 px-1.5 py-0.5 rounded">K</kbd>
+              <div className="hidden sm:flex items-center gap-1 ml-1 pl-2 border-l border-gray-200">
+                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">⌘</kbd>
+                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">K</kbd>
               </div>
             </button>
+
+            {/* Share Button - Mobile (Only show on package detail pages) */}
+            {isPackageDetailPage && (
+              <div className="lg:hidden">
+                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+              </div>
+            )}
 
             {/* Search Button - Mobile */}
             <button
               onClick={() => setShowSearch(true)}
-              className="lg:hidden flex items-center justify-center w-9 h-9 rounded-full hover:bg-gray-50"
+              className="lg:hidden flex items-center justify-center w-9 h-9 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200"
             >
               <i className="fi fi-rr-search text-gray-700"></i>
             </button>
@@ -232,7 +250,7 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button 
               type="button"
-              className="lg:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-50"
+              className="lg:hidden flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200"
               onClick={() => setShowMobileNav(prev => !prev)}
             >
               <i className={`fi ${showMobileNav ? 'fi-rr-cross' : 'fi-rr-menu-burger'} text-gray-700`}></i>

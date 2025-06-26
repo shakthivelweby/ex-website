@@ -99,9 +99,9 @@ export default function Explore() {
       </div>
 
       {/* Countries and their states */}
-      <div className="py-16 space-y-24" id="destinations">
+      <div className="py-0 " id="destinations">
         {countries.map((country, countryIndex) => (
-          <section key={country.id} className="px-4">
+          <section key={country.id} className="px-4 my-16">
             <div className="container mx-auto">
               {/* Country Header */}
               <div className="flex flex-col items-start mb-10">

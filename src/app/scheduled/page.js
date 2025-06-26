@@ -750,10 +750,10 @@ export default function Scheduled() {
             : 'flex flex-col gap-4'
             }`}>
             
-            {/* Rajasthan Package */}
+           
             {packages?.length === 0 && (
-              <div className="col-span-full text-center py-16">
-                <div className="max-w-md mx-auto">
+              <div className="col-span-full text-center py-16 ">
+                <div className="max-w-md mx-auto px-8">
                   <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>
 
                   <p className="text-gray-600 mb-8">

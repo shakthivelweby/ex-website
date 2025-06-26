@@ -24,8 +24,6 @@ export const getScheduledTrips = async (filters) => {
   //   delete cleanFilters.destination_id;
   // }
 
-
-
   // Convert all values to strings and remove any [object Object]
   const queryParams = new URLSearchParams();
   Object.entries(cleanFilters).forEach(([key, value]) => {

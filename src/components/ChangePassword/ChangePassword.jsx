@@ -1,34 +1,18 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { changePassword } from "@/app/profile/service";
+import axios from "axios";
 import Button from "../common/Button";
+import Popup from "../Popup";
 
 const ChangePassword = ({ show, onClose }) => {
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
-    old_password: "",
+    current_password: "",
     new_password: "",
     confirm_password: "",
   });
-
-  const changePasswordMutation = useMutation({
-    mutationFn: changePassword,
-    onSuccess: () => {
-      alert("Password changed successfully!");
-      onClose();
-      // Reset form
-      setFormData({
-        old_password: "",
-        new_password: "",
-        confirm_password: "",
-      });
-    },
-    onError: (error) => {
-      alert(error.response?.data?.message || "Failed to change password. Please try again.");
-    },
-  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,147 +21,169 @@ const ChangePassword = ({ show, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (formData.new_password !== formData.confirm_password) {
-      alert("New passwords don't match!");
+      alert("New passwords do not match!");
       return;
     }
 
-    if (formData.new_password.length < 8) {
-      alert("Password must be at least 8 characters long");
-      return;
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        process.env.NEXT_PUBLIC_API_URL + "/api/auth/change-password",
+        {
+          current_password: formData.current_password,
+          new_password: formData.new_password,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (response.data) {
+        alert("Password changed successfully!");
+        onClose();
+        setFormData({
+          current_password: "",
+          new_password: "",
+          confirm_password: "",
+        });
+      }
+    } catch (error) {
+      console.error("Change password failed:", error);
+      alert(
+        error.response?.data?.message || "Failed to change password. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
     }
-
-    // Submit only old_password and new_password
-    const payload = {
-      old_password: formData.old_password,
-      new_password: formData.new_password,
-    };
-
-    changePasswordMutation.mutate(payload);
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose}></div>
+    <Popup
+      isOpen={show}
+      onClose={onClose}
+      title="Change Password"
+      pos="right"
+      className="!max-w-md"
+      draggable={true}
+    >
+      <div className="p-6">
+        <p className="text-gray-600 mb-8">
+          Please enter your current password and choose a new password to update your credentials.
+        </p>
 
-        <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl">
-          <div className="p-6 sm:p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-800">Change Password</h1>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <label htmlFor="current_password" className="block text-sm font-medium text-gray-700">
+              Current Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i className="fi fi-rr-lock text-gray-400"></i>
+              </div>
+              <input
+                type={showCurrentPassword ? "text" : "password"}
+                id="current_password"
+                name="current_password"
+                value={formData.current_password}
+                onChange={handleChange}
+                className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                required
+                placeholder="Enter current password"
+              />
               <button
-                onClick={onClose}
-                className="p-2  hover:bg-gray-100 rounded-full transition-colors !flex !items-center !justify-center w-10 h-10"
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <i className="fi fi-rr-cross-small text-gray-600 text-xl"></i>
+                <i className={`fi ${showCurrentPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
               </button>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label htmlFor="old_password" className="block text-sm font-medium text-gray-700">
-                  Current Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i className="fi fi-rr-lock text-gray-400"></i>
-                  </div>
-                  <input
-                    type={showCurrentPassword ? "text" : "password"}
-                    id="old_password"
-                    name="old_password"
-                    value={formData.old_password}
-                    onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
-                    required
-                    placeholder="Enter your current password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <i className={`fi ${showCurrentPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">
-                  New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i className="fi fi-rr-lock text-gray-400"></i>
-                  </div>
-                  <input
-                    type={showNewPassword ? "text" : "password"}
-                    id="new_password"
-                    name="new_password"
-                    value={formData.new_password}
-                    onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
-                    required
-                    placeholder="Create a new password"
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <i className={`fi ${showNewPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500">Must be at least 8 characters</p>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i className="fi fi-rr-lock text-gray-400"></i>
-                  </div>
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    id="confirm_password"
-                    name="confirm_password"
-                    value={formData.confirm_password}
-                    onChange={handleChange}
-                    className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-none outline-none transition-colors"
-                    required
-                    placeholder="Confirm your new password"
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <i className={`fi ${showConfirmPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  isLoading={changePasswordMutation.isPending}
-                  className="w-full !rounded-full"
-                >
-                  Change Password
-                </Button>
-              </div>
-            </form>
           </div>
-        </div>
+
+          <div className="space-y-2">
+            <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">
+              New Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i className="fi fi-rr-lock text-gray-400"></i>
+              </div>
+              <input
+                type={showNewPassword ? "text" : "password"}
+                id="new_password"
+                name="new_password"
+                value={formData.new_password}
+                onChange={handleChange}
+                className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                required
+                placeholder="Enter new password"
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <i className={`fi ${showNewPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">Must be at least 6 characters long</p>
+          </div>
+
+          <div className="space-y-2">
+            <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
+              Confirm New Password
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i className="fi fi-rr-lock text-gray-400"></i>
+              </div>
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirm_password"
+                name="confirm_password"
+                value={formData.confirm_password}
+                onChange={handleChange}
+                className="pl-10 w-full h-11 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:border-primary-500 focus:ring-0 transition-colors"
+                required
+                placeholder="Confirm new password"
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <i className={`fi ${showConfirmPassword ? "fi-rr-eye" : "fi-rr-eye-crossed"}`}></i>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end space-x-4 pt-6">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={onClose}
+              className="!rounded-lg"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              className="!rounded-lg"
+            >
+              Update Password
+            </Button>
+          </div>
+        </form>
       </div>
-    </div>
+    </Popup>
   );
 };
 

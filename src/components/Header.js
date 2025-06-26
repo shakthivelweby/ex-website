@@ -12,30 +12,37 @@ import Signup from "./Login/Signup";
 import Popup from "./Popup";
 import ShareOptions from "./ShareOptions/ShareOptions";
 import { motion, AnimatePresence } from "framer-motion";
+import UserMenu from './UserMenu/UserMenu';
 
 const menuVariants = {
-  open: {
-    transition: { staggerChildren: 0.07, delayChildren: 0.2 }
+  initial: {
+    opacity: 0,
+    y: -5,
   },
-  closed: {
-    transition: { staggerChildren: 0.05, staggerDirection: -1 }
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.2,
+      ease: "easeOut",
+      staggerChildren: 0.05,
+    }
+  },
+  exit: {
+    opacity: 0,
+    y: -5,
+    transition: {
+      duration: 0.2,
+      ease: "easeIn",
+    }
   }
 };
 
 const itemVariants = {
-  open: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      y: { stiffness: 1000, velocity: -100 }
-    }
-  },
-  closed: {
-    y: 50,
-    opacity: 0,
-    transition: {
-      y: { stiffness: 1000 }
-    }
+  initial: { opacity: 0, x: -5 },
+  animate: { 
+    opacity: 1, 
+    x: 0,
   }
 };
 
@@ -96,6 +103,7 @@ export default function Header() {
   const userMenuRef = useRef(null);
   const mobileNavRef = useRef(null);
   const router = useRouter();
+  const menuRef = useRef(null);
 
   // Check if current page is a package detail page
   const isPackageDetailPage = pathname.startsWith('/package/');
@@ -127,6 +135,19 @@ export default function Header() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMobileNav]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleLinkClick = (index) => {
     setActiveIndex(index);
@@ -271,7 +292,7 @@ export default function Header() {
             )}
 
             {/* User Menu */}
-            <div className="relative" ref={userMenuRef}>
+            <div className="relative" ref={menuRef}>
               {user && (
                 <button 
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -317,55 +338,27 @@ export default function Header() {
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
                       </div>
-                      <i className={`fi fi-rr-angle-small-down text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}></i>
+                      <motion.i 
+                        animate={{ rotate: showUserMenu ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className={`fi fi-rr-angle-small-down text-gray-400`}
+                      />
                     </div>
                   </div>
                 </button>
               )}
 
-              {/* User Dropdown Menu */}
-              {showUserMenu && user && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 py-2 transform opacity-100 scale-100 transition-all duration-200 origin-top-right z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
-                  </div>
-                  <div className="py-1">
-                    <Link 
-                      href="/profile" 
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                    >
-                      <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">Profile</span>
-                        <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
-                      </div>
-                    </Link>
-                    <Link 
-                      href="/bookings" 
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
-                    >
-                      <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">My Bookings</span>
-                        <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
-                      </div>
-                    </Link>
-                  </div>
-                  <div className="border-t border-gray-100 mt-1 pt-1">
-                    <button 
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left transition-colors group"
-                    >
-                      <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
-                      <div>
-                        <span className="font-medium">Logout</span>
-                        <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
+              <AnimatePresence mode="wait">
+                {showUserMenu && user && (
+                  <UserMenu
+                    user={user}
+                    onClose={() => setShowUserMenu(false)}
+                    handleLogout={handleLogout}
+                    isMobileNav={false}
+                    menuRef={menuRef}
+                  />
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import Search from './Search/Search';
 import Login from './Login/Login';
 import Signup from './Login/Signup';
 import Image from "next/image";
+import UserMenu from './UserMenu/UserMenu';
 
 const navLinks = [
   {
@@ -48,6 +49,7 @@ export default function MobileNav() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [loginFormData, setLoginFormData] = useState({
     email: '',
     password: ''
@@ -73,7 +75,11 @@ export default function MobileNav() {
         setShowLogin(true);
         return;
       }
-      router.push('/profile');
+      if (user) {
+        setShowUserMenu(true);
+      } else {
+        router.push('/profile');
+      }
     }
   };
 
@@ -92,6 +98,13 @@ export default function MobileNav() {
     window.location.reload();
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    window.location.reload();
+  };
+
   return (
     <>
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
@@ -99,7 +112,7 @@ export default function MobileNav() {
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="w-full bg-white shadow-lg border-t border-gray-100 pointer-events-auto"
+          className="w-full bg-white border-t border-gray-100 pointer-events-auto"
         >
           <div className="flex items-center justify-around py-2">
             {navLinks.map(({ name, href, icon, matchPath }) => {
@@ -107,9 +120,9 @@ export default function MobileNav() {
               
               if (name === "Profile" && user) {
                 return (
-                  <Link
+                  <button
                     key={name}
-                    href={href}
+                    onClick={() => setShowUserMenu(true)}
                     className={`
                       relative flex flex-col items-center justify-center
                       ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
@@ -150,7 +163,7 @@ export default function MobileNav() {
                         {name}
                       </span>
                     )}
-                  </Link>
+                  </button>
                 );
               }
 
@@ -216,6 +229,17 @@ export default function MobileNav() {
         onLoginClick={handleLoginClick}
         setloginFormData={setLoginFormData}
       />
+
+      <AnimatePresence>
+        {showUserMenu && user && (
+          <UserMenu
+            user={user}
+            onClose={() => setShowUserMenu(false)}
+            handleLogout={handleLogout}
+            isMobileNav={true}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

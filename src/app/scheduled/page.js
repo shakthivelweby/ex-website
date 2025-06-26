@@ -749,13 +749,10 @@ export default function Scheduled() {
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
             : 'flex flex-col gap-4'
             }`}>
-            
-           
             {packages?.length === 0 && (
               <div className="col-span-full text-center py-16 ">
                 <div className="max-w-md mx-auto px-8">
                   <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>
-
                   <p className="text-gray-600 mb-8">
                     Sorry, we couldn&apos;t find any packages starting from{" "}
                     <span className="font-medium text-gray-900">
@@ -763,7 +760,6 @@ export default function Scheduled() {
                     </span>{" "}
                     right now
                   </p>
-               
                 </div>
               </div>
             )}

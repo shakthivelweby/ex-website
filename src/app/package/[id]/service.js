@@ -49,3 +49,9 @@ export const getPackageCalendarRates = async (
   );
   return response.data;
 };
+
+
+export const getSupplierInfo = async (id) => {
+  const response = await apiServerMiddleware.get(`/supplier-info/${id}`);
+  return response.data;
+};

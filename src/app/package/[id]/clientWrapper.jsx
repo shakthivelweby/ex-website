@@ -10,7 +10,7 @@ import { usePackageRate } from "./query";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import PackageDuration from "../packageDuration";
 import Popup from "@/components/Popup";
-import ShareOptions from "@/components/ShareOptions/ShareOptions";
+
 
 export default function ClientWrapper({
   packageData,
@@ -18,6 +18,7 @@ export default function ClientWrapper({
   packagePriceData,
   packageStayCategory,
   packageCombinations,
+  supplierInfo
 }) {
 
 
@@ -252,13 +253,15 @@ export default function ClientWrapper({
                 </div>
               </div>
               {/* provided by supplier */}
-              <div className="flex   mb-2">
+              <div className="flex items-center mb-2">
                 <span className="text-sm font-medium text-gray-500">
                   Package provided by
                 </span>
                 <h4 className="text-sm font-semibold text-gray-800 ml-2 underline">
-                  GT Holidays
+                  {supplierInfo?.supplier_details?.company_name || 'Unknown Supplier'}
+                 
                 </h4>
+               
               </div>
               <h1 className="text-2xl md:text-3xl tracking-tight font-semibold text-gray-800 mb-6 mt-2">
                 {name}

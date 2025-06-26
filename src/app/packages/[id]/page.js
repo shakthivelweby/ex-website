@@ -1,6 +1,14 @@
 import ClientWrapper from "./clientWrapper";
 import { getPackages, stateInfo, stateDestinations, countryInfo, getStates } from "./service";
 
+// Add default export metadata to specify fallback image
+export const metadata = {
+  images: {
+    fallbackL: '/fallback-cover.webp',
+    fallbackS: '/fallback-cover.webp',
+  }
+};
+
 const Packages = async ({ params, searchParams }) => {
   const { id } = await params;
   const { 
@@ -26,7 +34,6 @@ const Packages = async ({ params, searchParams }) => {
 
   const countryInfoData = await countryInfo(id);
 
-
   let stateDestinationsData = { data: { destinations: [] } };
   let statesData = { data: [] };
   let stateInfoData = { data: {} };
@@ -40,7 +47,7 @@ const Packages = async ({ params, searchParams }) => {
 
   statesData = await getStates(id);
 
-  
+  console.log(statesData)
 
 
   // Determine type based on URL parameters
@@ -63,6 +70,8 @@ const Packages = async ({ params, searchParams }) => {
         price_range_from: price_range_from || "",
         price_range_to: price_range_to || ""
       }}
+      fallbackImage={metadata.images}
+     
     />
   );
 };

@@ -11,13 +11,17 @@ import { suitableFor } from "./service";
 import { useQuery } from "@tanstack/react-query";
 import PropTypes from 'prop-types';
 
-const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinationId, initialFilters, featuredDestinations, countryInfo, statesData }) => {
+const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinationId, initialFilters, featuredDestinations, countryInfo, statesData, fallbackImage }) => {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [mobileLayout, setMobileLayout] = useState('list'); // 'list' or 'grid'
-    const [coverImage, setCoverImage] = useState('/blur.webp'); // Set default fallback image
+    const [coverImage, setCoverImage] = useState(
+        type === "destination" ? stateDestinations?.destinations?.find(d => d.id === parseInt(destinationId))?.cover_image_url :
+        type === "state" ? stateInfo?.cover_image_url :
+        countryInfo?.image_url || fallbackImage.fallbackL
+    );
     const [coverName, setCoverName] = useState('');
     const [selectedDestination, setSelectedDestination] = useState('all');
 
@@ -373,6 +377,11 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
+    const handleImageError = () => {
+        setCoverImage(fallbackImage.fallbackL);
+    };
+
+   
 
     const stateSuggestions = (options = { all: true, type: 'suggestions', restrictedId : null }) => {
         const { all = true, type = 'suggestions', restrictedId = null } = options;
@@ -423,6 +432,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                                                 alt={state.name}
                                                 fill
                                                 className="object-cover"
+                                              
                                             />
                                         </div>
                                         <span className="text-sm font-medium whitespace-nowrap text-gray-700 group-hover:text-primary-600">
@@ -523,13 +533,22 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
     return (
         <main className="min-h-screen bg-white">
             {/* Modern Minimalist Banner */}
-            <div className="relative h-[50vh] md:h-[75vh] w-full overflow-hidden">
+            <div className="relative h-[50vh] md:h-[65vh] w-full overflow-hidden">
                 {/* Background Image with Modern Overlay */}
                 <div className="absolute inset-0">
-                    {coverImage && (
+                    {coverImage ? (
                         <Image
                             src={coverImage}
                             alt={coverName || 'Cover Image'}
+                            fill
+                            className="object-cover"
+                            priority
+                            onError={handleImageError}
+                        />
+                    ) : (
+                        <Image
+                            src={fallbackImage.fallbackL}
+                            alt="Cover Image"
                             fill
                             className="object-cover"
                             priority
@@ -931,14 +950,13 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                                 </h3>
                                 <p className="text-gray-500 max-w-md mb-6">
                                     We couldn't find any packages matching your current filters.
-                                    {Object.keys(filters).some(key => filters[key]) ? (
+                                    {Object.keys(filters).some(key => filters[key]) ? 
                                         "Try adjusting your filters or explore other destinations."
-                                    ) : (
-                                        <>
-                                            {type === "country" ? "" : type === "state" ? stateSuggestions({ all: false, type: 'suggestions', restrictedId : stateInfo?.id }) : ""}
-                                        </>
-                                    )}
+                                     : null}
                                 </p>
+                                {!Object.keys(filters).some(key => filters[key]) && (
+                                    type === "country" ? null : type === "state" ? stateSuggestions({ all: false, type: 'suggestions', restrictedId : stateInfo?.id }) : null
+                                )}
                                 {Object.keys(filters).some(key => filters[key]) ? (
                                     <button
                                         onClick={clearAllFilters}
@@ -971,7 +989,8 @@ ClientWrapper.propTypes = {
     initialFilters: PropTypes.object,
     featuredDestinations: PropTypes.array,
     countryInfo: PropTypes.object,
-    statesData: PropTypes.array
+    statesData: PropTypes.array,
+    fallbackImage: PropTypes.string
 };
 
 export default ClientWrapper;

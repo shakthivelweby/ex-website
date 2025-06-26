@@ -167,32 +167,59 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
         <div className="bg-white relative z-10">
-          {/* Background Image without Animation */}
-          <div className="md:h-[500px] h-[470px] rounded-[32px] relative">
-            <div className="absolute inset-0 bg-black/0 rounded-[32px] z-[1]"></div>
-            <Image
-              src="https://images.unsplash.com/photo-1511860810434-a92f84c6f01e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              alt="banner image"
-              className="w-full h-full object-cover rounded-[32px]"
-              width={1920}
-              height={1080}
-              priority
-            />
+          {/* Background Image with Zoom Animation */}
+          <div className="md:h-[500px] h-[470px] rounded-[32px] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-transparent z-[1] rounded-[32px]"></div>
+            <motion.div 
+              animate={{
+                scale: [1.3, 1],
+                opacity: [0.8, 1]
+              }}
+              transition={{
+                scale: {
+                  duration: 10,
+                  ease: "easeOut"
+                },
+                opacity: {
+                  duration: 1,
+                  ease: "linear"
+                }
+              }}
+              style={{
+                width: '100%',
+                height: '100%',
+                position: 'relative'
+              }}
+            >
+              <Image
+                  src="https://images.pexels.com/photos/2155749/pexels-photo-2155749.jpeg"
+                alt="banner image"
+                fill
+                className="object-cover rounded-[32px]"
+                priority
+                sizes="100vw"
+                style={{
+                  objectFit: 'cover',
+                  width: '100%',
+                  height: '100%'
+                }}
+              />
+            </motion.div>
           </div>
 
           {/* Hero Content with Animation */}
-          <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 md:pt-32 z-[2]">
+          <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center z-[2]">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="max-w-3xl mx-auto text-center"
+              className="max-w-3xl mx-auto text-center w-full"
             >
               <motion.h1 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-4xl lg:text-7xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter"
+                className="text-4xl lg:text-5xl font-bold md:font-semibold text-white mb-2 leading-tight tracking-tighter"
               >
                 Pay Less, Book Direct
               </motion.h1>
@@ -211,18 +238,18 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
                 onSubmit={handleSearch} 
-                className="backdrop-blur-md bg-white/60 rounded-[32px] md:rounded-full shadow-lg overflow-hidden p-4 md:p-2 max-w-[800px] mx-auto w-full border border-white/20"
+                className="backdrop-blur-md bg-white/60 rounded-[24px] md:rounded-full shadow-lg overflow-hidden p-3 md:p-1.5 max-w-[650px] mx-auto w-full border border-white/20"
               >
-                <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex flex-col md:flex-row gap-3">
                   {/* What you are looking for */}
                   <div className="flex-1 relative">
-                    <label className="absolute top-2 left-4 text-sm text-gray-600 flex items-center gap-1.5">
-                      <i className="fi fi-rr-search text-[12px] relative top-[0px]"></i>
+                    <label className="absolute top-1.5 left-4 text-xs text-gray-600 flex items-center gap-1.5">
+                      <i className="fi fi-rr-search text-[10px] relative top-[0px]"></i>
                       What you are looking for?
                     </label>
                     <div className="relative">
                       <select
-                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px] hover:bg-black/5 transition-colors"
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px] hover:bg-black/5 transition-colors"
                         onChange={(e) => setSelectedTrip(e.target.value)}
                         value={selectedTrip}
                       >
@@ -230,15 +257,15 @@ export default function HomePage() {
                         <option value="Scheduled" >Scheduled Trips</option>
                       </select>
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800 text-base"></i>
+                        <i className="fi fi-rr-angle-small-down text-gray-800 text-sm"></i>
                       </div>
                     </div>
                   </div>
 
                   {/* Where you want to start from */}
                   <div className="flex-1 relative">
-                    <label className="absolute top-2 left-4 text-sm text-gray-600 z-10 flex items-center gap-1.5">
-                      <i className="fi fi-rr-marker text-[12px] top-[0px]"></i>
+                    <label className="absolute top-1.5 left-4 text-xs text-gray-600 z-10 flex items-center gap-1.5">
+                      <i className="fi fi-rr-marker text-[10px] top-[0px]"></i>
                       {locationText[selectedTrip.split(" ")[0]]}
                     </label>
                     <div className="relative">
@@ -247,19 +274,19 @@ export default function HomePage() {
                         value={selectedLocation}
                         onClick={() => setIsLocationPopupOpen(true)}
                         readOnly
-                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-8 pb-2 text-[15px] text-gray-800 font-medium cursor-pointer h-[60px]"
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px]"
                         placeholder="Enter location..."
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800 text-base"></i>
+                        <i className="fi fi-rr-angle-small-down text-gray-800 text-sm"></i>
                       </div>
                     </div>
                   </div>
 
                   {/* Search Button */}
-                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-6 py-3 md:px-4 md:py-4 search-pulse lg:!search-pulse-none">
-                    <span className="text-base font-semibold md:hidden">Search</span>
-                    <Image src="/home/search-icon.svg" alt="search icon" width={20} height={20} className="md:w-7 md:h-7" />
+                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-5 py-2.5 md:px-3.5 md:py-3.5 search-pulse lg:!search-pulse-none">
+                    <span className="text-sm font-semibold md:hidden">Search</span>
+                    <Image src="/home/search-icon.svg" alt="search icon" width={18} height={18} className="md:w-6 md:h-6" />
                   </button>
                 </div>
               </motion.form>
@@ -723,97 +750,103 @@ export default function HomePage() {
             {/* Blog Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
               {/* Blog Card 1 */}
-              <a href="#" className="overflow-hidden group">
-                <div className="relative">
-                  <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                    <Image
-                      src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                      alt="Beach"
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover  rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                    />
+              <div className="overflow-hidden group">
+                <a href="#" className="block">
+                  <div className="relative">
+                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
+                      <Image
+                        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop&ixlib=rb-4.0.3"
+                        alt="Beach"
+                        width={400}
+                        height={300}
+                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
+                      <i className="fi fi-rr-calendar mr-2"></i>
+                      Aug 20, 2025
+                    </div>
                   </div>
-                  <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                  <i className="fi fi-rr-calendar mr-2"></i>
-                    Aug 20, 2025
+                  <div className="mt-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
+                      Top 10 Hidden Beaches to Visit in Southeast Asia
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-2">
+                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
+                    </p>
+                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
+                      Read More
+                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                    Top 10 Hidden Beaches to Visit in Southeast Asia
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-2">
-                    Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                  </p>
-                  <a href="#" className="text-sm text-gray-800 font-medium flex items-center gap-2 hover:text-primary-500">
-                    Read More
-                    <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                  </a>
-                </div>
-              </a>
-              {/* Blog Card 2 */}
-              <a href="#" className="overflow-hidden group">
-                <div className="relative">
-                  <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                    <Image
-                      src="https://images.unsplash.com/photo-1569668443977-367a489241ef?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                      alt="Beach"
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover  rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                  <i className="fi fi-rr-calendar mr-2"></i>
-                    Aug 14, 2025
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                    Experience the Real Dubai with Hidden Gems and Local Life
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-2">
-                    Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                  </p>
-                  <a href="#" className="text-sm text-gray-800 font-medium flex items-center gap-2 hover:text-primary-500">
-                    Read More
-                    <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                  </a>
-                </div>
-              </a>
-              {/* Blog Card 3 */}
-              <a href="#" className="overflow-hidden group">
-                <div className="relative">
-                  <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                    <Image
-                      src="https://images.unsplash.com/photo-1502301197179-65228ab57f78?q=80&w=1970&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                      alt="Beach"
-                      width={400}
-                      height={300}
-                      className="w-full h-full object-cover  rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                  <i className="fi fi-rr-calendar mr-2"></i>
-                    Aug 5, 2025
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                    Packing Smart Essentials for Every Type of Traveler
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-2">
-                    Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                  </p>
-                  <a href="#" className="text-sm text-gray-800 font-medium flex items-center gap-2 hover:text-primary-500">
-                    Read More
-                    <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                  </a>
-                </div>
-              </a>
+                </a>
+              </div>
 
-          
+              {/* Blog Card 2 */}
+              <div className="overflow-hidden group">
+                <a href="#" className="block">
+                  <div className="relative">
+                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
+                      <Image
+                        src="https://images.unsplash.com/photo-1569668443977-367a489241ef?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3"
+                        alt="Beach"
+                        width={400}
+                        height={300}
+                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
+                      <i className="fi fi-rr-calendar mr-2"></i>
+                      Aug 14, 2025
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
+                      Experience the Real Dubai with Hidden Gems and Local Life
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-2">
+                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
+                    </p>
+                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
+                      Read More
+                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
+                    </div>
+                  </div>
+                </a>
+              </div>
+
+              {/* Blog Card 3 */}
+              <div className="overflow-hidden group">
+                <a href="#" className="block">
+                  <div className="relative">
+                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
+                      <Image
+                        src="https://images.unsplash.com/photo-1502301197179-65228ab57f78?q=80&w=1970&auto=format&fit=crop&ixlib=rb-4.0.3"
+                        alt="Beach"
+                        width={400}
+                        height={300}
+                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
+                      <i className="fi fi-rr-calendar mr-2"></i>
+                      Aug 5, 2025
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
+                      Packing Smart Essentials for Every Type of Traveler
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-2">
+                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
+                    </p>
+                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
+                      Read More
+                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
+                    </div>
+                  </div>
+                </a>
+              </div>
             </div>
 
             {/* View All Button */}

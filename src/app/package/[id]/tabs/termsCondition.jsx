@@ -9,7 +9,7 @@ const TermsConditionTab = ({ packageData, activeTab }) => {
       <h3 className="text-base font-semibold text-gray-800 mb-6">
         Terms and Conditions
       </h3>
-      <div>
+      <div className="render-html">
         {terms_and_conditions && (
           <div dangerouslySetInnerHTML={{ __html: terms_and_conditions }} />
         )}

@@ -111,7 +111,7 @@ function GeneralTab({ packageData, activeTab }) {
       {/* Additional Information Section as Accordion */}
       <Accordion title="Additional information" defaultOpen={false}>
         <div
-          className="text-gray-800"
+          className="text-gray-800 render-html"
           dangerouslySetInnerHTML={{ __html: additional_info }}
         />
       </Accordion>

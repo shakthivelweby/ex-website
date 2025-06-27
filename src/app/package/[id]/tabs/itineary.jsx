@@ -43,10 +43,10 @@ const ItinearyTab = ({ packageData, activeTab }) => {
 
               {/* Meal Inclusion Display */}
               {day.foods.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
                 {/* Breakfast Check */}
                 {day.foods.some(fd => fd.food.name === 'Breakfast') ? (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200 mb-2">
                     <div className="flex">
                       <img 
                         src={day.foods.find(fd => fd.food.name === 'Breakfast').food.icon_url} 
@@ -60,7 +60,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200 mb-2">
                     <div className="flex">
                       <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
                       <div className="ml-2">
@@ -73,7 +73,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
 
                 {/* Lunch Check */}
                 {day.foods.some(fd => fd.food.name === 'Lunch') ? (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200 mb-2">
                     <div className="flex">
                       <img 
                         src={day.foods.find(fd => fd.food.name === 'Lunch').food.icon_url} 
@@ -87,7 +87,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200 mb-2">
                     <div className="flex">
                       <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
                       <div className="ml-2">
@@ -100,7 +100,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
 
                 {/* Dinner Check */}
                 {day.foods.some(fd => fd.food.name === 'Dinner') ? (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mb-2">
                     <div className="flex">
                       <img 
                         src={day.foods.find(fd => fd.food.name === 'Dinner').food.icon_url} 
@@ -114,7 +114,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center">
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center mb-2">
                     <div className="flex">
                       <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
                       <div className="ml-2">

@@ -22,7 +22,7 @@ const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
           />
         </div>
         <div className="flex-1">
-          <h4 className="text-base font-medium text-gray-800 mb-2">
+          <h4 className="text-base font-medium text-gray-800 mb-2 truncate">
             {hotel_name}
           </h4>
           <div className="mb-2">
@@ -33,7 +33,7 @@ const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
                   Location
                 </p>
               </div>
-              <p className="text-gray-800 text-sm font-medium">{location}</p>
+              <p className="text-gray-800 text-sm font-medium truncate">{location}</p>
             </div>
           </div>
           <div className="mt-2">
@@ -45,7 +45,7 @@ const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
               href={website}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-gray-800 flex items-center text-sm font-medium"
+              className="text-gray-800 flex items-center text-sm font-medium truncate"
             >
               {website}
               <i className="fi fi-rr-arrow-up-right-from-square text-gray-800 ml-1 text-xs"></i>

@@ -36,10 +36,10 @@ const ImageViewer = ({ images, isOpen, onClose }) => {
           <span className="text-sm font-normal text-gray-500">({images.length} photos)</span>
         </motion.div>
       }
-      pos="bottom"
+      pos="right"
       draggable={true}
-      className="w-full lg:w-[55%] h-[80vh] lg:h-screen rounded-t-3xl lg:rounded-l-2xl"
-      pannelStyle="bg-white/95 backdrop-blur-md lg:ml-auto"
+      className="w-full lg:w-[55%] h-[80vh] lg:h-screen "
+      pannelStyle="bg-white/95 backdrop-blur-md lg:ml-auto "
     >
       <motion.div 
         initial={{ opacity: 0 }}

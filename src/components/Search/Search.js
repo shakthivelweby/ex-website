@@ -224,7 +224,7 @@ export default function Search({
                   variants={containerVariants}
                   initial="hidden"
                   animate="show"
-                  className="space-y-2 pb-4"
+                  className="space-y-0 pb-4"
                 >
                   {searchResults.data.data.map((item) => (
                     <motion.button
@@ -276,7 +276,7 @@ export default function Search({
                 <motion.div variants={itemVariants} className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900">Featured Destinations</h3>
                 </motion.div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 ">
                   {featuredData?.data?.map((destination) => (
                     <motion.button
                       key={destination.id}

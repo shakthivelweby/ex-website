@@ -20,7 +20,7 @@ function GeneralTab({ packageData, activeTab }) {
       }`}
     >
       {/* Main description */}
-      {about && <div className="mb-4" dangerouslySetInnerHTML={{ __html: about }} />}
+      {about && <div className="mb-4 render-html" dangerouslySetInnerHTML={{ __html: about }} />}
 
     
           {/* Trip details in pill layout with fixed icons */}

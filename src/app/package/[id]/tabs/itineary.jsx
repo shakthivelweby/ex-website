@@ -32,19 +32,114 @@ const ItinearyTab = ({ packageData, activeTab }) => {
             defaultOpen={index === 0 ? true : false}
           >
             <div className="">
+            
+
+              <div>
+                <div
+                  className="itineary-description render-html"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
+              </div>
+
+              {/* Meal Inclusion Display */}
+              {day.foods.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
+                {/* Breakfast Check */}
+                {day.foods.some(fd => fd.food.name === 'Breakfast') ? (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                    <div className="flex">
+                      <img 
+                        src={day.foods.find(fd => fd.food.name === 'Breakfast').food.icon_url} 
+                        alt="Breakfast" 
+                        className="w-5 h-5" 
+                      />
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Breakfast</div>
+                        <div className="text-sm text-gray-600">Included</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                    <div className="flex">
+                      <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Breakfast</div>
+                        <div className="text-sm text-gray-600">Not Included</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Lunch Check */}
+                {day.foods.some(fd => fd.food.name === 'Lunch') ? (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                    <div className="flex">
+                      <img 
+                        src={day.foods.find(fd => fd.food.name === 'Lunch').food.icon_url} 
+                        alt="Lunch" 
+                        className="w-5 h-5" 
+                      />
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Lunch</div>
+                        <div className="text-sm text-gray-600">Included</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200">
+                    <div className="flex">
+                      <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Lunch</div>
+                        <div className="text-sm text-gray-600">Not Included</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Dinner Check */}
+                {day.foods.some(fd => fd.food.name === 'Dinner') ? (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center">
+                    <div className="flex">
+                      <img 
+                        src={day.foods.find(fd => fd.food.name === 'Dinner').food.icon_url} 
+                        alt="Dinner" 
+                        className="w-5 h-5" 
+                      />
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Dinner</div>
+                        <div className="text-sm text-gray-600">Included</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center">
+                    <div className="flex">
+                      <i className="fi fi-rr-cross-circle text-red-500 text-xl"></i>
+                      <div className="ml-2">
+                        <div className="font-medium text-sm">Dinner</div>
+                        <div className="text-sm text-gray-600">Not Included</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
+
               {day.attractions?.length > 0 ? (
                 <>
-                  <h4 className="text-[15px] font-medium text-gray-800 mb-3">
+                  <h4 className="text-[15px] font-medium text-gray-800 mt-6 mb-6">
                     <i className="fi fi-br-map-marker-check text-primary-500 mr-2"></i>
                     Attraction / Activity
                   </h4>
-                  <div className="mb-8 w-full">
+                  <div className=" w-full">
                     {isClient ? (
                       <Swiper
                         modules={[Navigation, Pagination, Autoplay]}
                         spaceBetween={12}
-                        slidesPerView={'auto'}
-                        centeredSlides={true}
+                        slidesPerView={1.2}
+                        centeredSlides={false}
                         navigation={true}
                         pagination={{ clickable: true }}
                         autoplay={{
@@ -55,14 +150,14 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                         speed={500}
                         breakpoints={{
                           640: {
-                            slidesPerView: 'auto',
+                            slidesPerView: 2,
                             spaceBetween: 16,
-                            centeredSlides: true,
+                            centeredSlides: false,
                           },
                           1024: {
-                            slidesPerView: 'auto',
+                            slidesPerView: 3,
                             spaceBetween: 20,
-                            centeredSlides: true,
+                            centeredSlides: false,
                           },
                         }}
                         className="attraction-swiper"
@@ -121,36 +216,6 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                   </div>
                 </>
               ) : null}
-
-              <div>
-                <div
-                  className="itineary-description"
-                  dangerouslySetInnerHTML={{ __html: description }}
-                />
-              </div>
-
-              {/* Meal Inclusion Display */}
-              {day.foods.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 rounded-lg overflow-hidden mt-6 bg-[#f7f7f7] p-2">
-                {day.foods.map((fd) => {
-                  const { name, icon_url } = fd.food;
-                  return (
-                    <div
-                      key={fd.id}
-                      className="py-0 px-0 md:py-3 md:px-4 md:flex items-center justify-center md:border-r border-gray-200"
-                    >
-                      <div className="flex ">
-                        <img src={icon_url} alt={name} className="w-5 h-5" />
-                        <div className="ml-2">
-                          <div className="font-medium text-sm">{name}</div>
-                          <div className="text-sm text-gray-600">Included</div>
-                        </div>
-                      </div>
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </Accordion>
         );
@@ -179,11 +244,8 @@ const ItinearyTab = ({ packageData, activeTab }) => {
           background: #000;
         }
         .attraction-swiper .swiper-slide {
+          height: auto;
           transition: all 0.3s ease;
-          opacity: 0.5;
-        }
-        .attraction-swiper .swiper-slide-active {
-          opacity: 1;
         }
       `}</style>
     </div>

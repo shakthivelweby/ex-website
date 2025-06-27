@@ -319,7 +319,7 @@ export default function ClientWrapper({
                 <h3 className="text-sm  text-gray-800 mb-4 font-meidum">
                   Including
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 ">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ">
                   {inclusions.map((item) => {
                     const { icon_url, name, id } = item.inclusion_master;
                     return (
@@ -329,7 +329,7 @@ export default function ClientWrapper({
                           alt={name}
                           className="w-6 h-6 mr-2"
                         />
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-medium text-gray-700 truncate">
                           {name}
                         </p>
                       </div>

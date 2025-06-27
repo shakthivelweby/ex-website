@@ -389,3 +389,101 @@ textarea,
 select {
   font-size: 16px!important;
 }
+
+/* prefixes */
+
+/* TinyMCE Content Formatting */
+.render-html {
+  color: #333;
+  line-height: 1.6;
+}
+
+.render-html p {
+  margin-bottom: 1rem;
+  
+}
+
+.render-html h1,
+.render-html h2,
+.render-html h3,
+.render-html h4,
+.render-html h5,
+.render-html h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.render-html ul,
+.render-html ol {
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+}
+
+.render-html ul li {
+  list-style-type: disc;
+}
+
+.render-html ol li {
+  list-style-type: decimal;
+}
+
+.render-html a {
+  color: #069494;
+  text-decoration: underline;
+}
+
+.render-html a:hover {
+  text-decoration: none;
+}
+
+.render-html blockquote {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-left: 4px solid #069494;
+  background-color: #f8f9fa;
+  font-style: italic;
+}
+
+.render-html strong {
+  font-weight: 600;
+}
+
+
+.render-html img {
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+}
+
+.render-html table {
+  width: 100%;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
+}
+
+.render-html table th,
+.render-html table td {
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+}
+
+.render-html table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.render-html pre,
+.render-html code {
+  background-color: #f8f9fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.render-html pre {
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+}

@@ -50,6 +50,9 @@ const Form = ({
   const [currentMonth, setCurrentMonth] = useState(new Date(date));
   const [isLoading, setIsLoading] = useState(false);
 
+
+ 
+
   // Enquiry form fields
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,7 +88,7 @@ const Form = ({
     }
   }
 
-  console.log("tour_type", tour_type)
+
 
  
 
@@ -393,7 +396,7 @@ const Form = ({
             </span>
           </div>
           <div className="bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
-            {total_nights} N &nbsp; {total_days} D
+            {total_days} D  &nbsp; {total_nights} N 
           </div>
         </div>
 
@@ -403,8 +406,10 @@ const Form = ({
             Starting Date
           </label>
           <div className="relative">
+        
             {isMobilePopup ? (
               // Inline calendar for mobile
+             
               <div className="border-t border-gray-200 pt-3">
                 <DatePicker
                   selected={selectedDate}
@@ -412,6 +417,7 @@ const Form = ({
                   onMonthChange={(date) => {
                     setCurrentMonth(date);
                   }}
+                  dateFormat="dd/MM/yyyy"
                   inline
                   minDate={new Date()}
                   filterDate={date => !isDateDisabled(date)}
@@ -470,6 +476,7 @@ const Form = ({
                   onMonthChange={(date) => {
                     setCurrentMonth(date);
                   }}
+                  dateFormat="dd/MM/yyyy"
                   filterDate={date => !isDateDisabled(date)}
                   popperPlacement="bottom-start"
                   renderDayContents={(day, date) => {

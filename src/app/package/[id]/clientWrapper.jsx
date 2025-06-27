@@ -267,6 +267,7 @@ export default function ClientWrapper({
                 {name}
               </h1>
 
+              {packageCombinations.data.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-sm font-medium text-gray-800 mb-4 ">
                   Choose Trip Duration
@@ -275,6 +276,7 @@ export default function ClientWrapper({
                   <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
                 </div>
               </div>
+              )}
 
               <div className="mb-4">
                 <h3 className="text-sm  text-gray-800 mb-4 font-meidum">

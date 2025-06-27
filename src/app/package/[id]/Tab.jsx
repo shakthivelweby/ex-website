@@ -12,12 +12,22 @@ const Tab = ({ packageData, selectedStayCategory }) => {
   const [activeTab, setActiveTab] = useState("details");
   const handleTabClick = (tab) => {
     setActiveTab(tab);
+    // Scroll to content accounting for sticky header
+    const tabContent = document.querySelector('.tab-content');
+    const stickyHeaderHeight = 108; // Header (60px) + Tab nav height
+    if (tabContent) {
+      const targetScrollPosition = tabContent.offsetTop - stickyHeaderHeight;
+      window.scrollTo({
+        top: targetScrollPosition,
+        behavior: 'smooth'
+      });
+    }
   };
 
   return (
     <>
       {/* tab header */}
-      <div className="sticky top-[48px] bg-white z-30 border-b border-gray-200 mb-0">
+      <div className="sticky  top-[48px] md:top-[60px] bg-white z-30 border-b border-gray-200 mb-0">
         <div className="relative">
           <nav className="flex overflow-x-auto -mb-px space-x-4 py-4 scrollbar-hide no-scrollbar pr-12">
             <button

@@ -258,9 +258,10 @@ export default function Explore() {
               className="w-full"
             >
               {featuredDestinations.map((destination) => (
+            
                 <SwiperSlide key={destination.id}>
                   <Link
-                    href={`/packages/${destination.state_id}?destination=${destination.id}`}
+                    href={`/packages/${destination.state.country_id}?destination=${destination.id}`}
                     className="group block h-full"
                   >
                     <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">

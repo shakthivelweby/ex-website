@@ -12,6 +12,9 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
         <ul className="space-y-3 m-0">
           {detailed_inclusions &&
             detailed_inclusions.map((inclusion) => {
+              if (inclusion.description === "") {
+                return null;
+              }
               return (
                 <li className="flex items-center" key={inclusion.id}>
                   <i className="fi fi-rr-check-circle text-green-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
@@ -26,6 +29,9 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
         <ul className="space-y-3 m-0">
           {exclusions &&
             exclusions.map((exclusion) => {
+              if (exclusion.description === "") {
+                return null;
+              }
               return (
                 <li className="flex items-center" key={exclusion.id}>
                   <i className="fi fi-rr-cross-circle text-red-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
@@ -40,6 +46,9 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
         <ul className="space-y-3 m-0">
           {things_to_carry &&
             things_to_carry.map((thing) => {
+              if (thing.description === "") {
+                return null;
+              }
               return (
                 <li className="flex items-center" key={thing.id}>
                   <i className="fi fi-rr-check-circle text-green-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>

@@ -54,6 +54,7 @@ const Form = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
   
   // Error and success state management
   const [error, setError] = useState({
@@ -92,6 +93,7 @@ const Form = ({
   const fullNameRef = useRef(null);
   const emailRef = useRef(null);
   const phoneRef = useRef(null);
+  const notesRef = useRef(null);
 
   /**
    * Helper function to get date range for a given month
@@ -276,6 +278,7 @@ const Form = ({
       data.name = fullName.trim();
       data.email = email.trim();
       data.phone = phone.trim();
+      data.notes = notes.trim();
     }
 
     try {
@@ -332,6 +335,7 @@ const Form = ({
         setFullName("");
         setEmail("");
         setPhone("");
+        setNotes("");
       }
     } catch (error) {
       console.error(error);
@@ -673,6 +677,21 @@ const Form = ({
                   {error.phone}
                 </p>
               )}
+            </div>
+
+            {/* Notes/Comments field */}
+            <div className="mb-2">
+              <label className="block text-sm font-medium text-gray-800 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                ref={notesRef}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full p-3 border text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 rounded-lg resize-none"
+                placeholder="Any specific requirements or questions?"
+                rows={4}
+              />
             </div>
           </div>
         )}

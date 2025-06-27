@@ -10,6 +10,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { suitableFor } from "./service";
 import { useQuery } from "@tanstack/react-query";
 import PropTypes from 'prop-types';
+import Popup from "@/components/Popup";
 
 const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinationId, initialFilters, featuredDestinations, countryInfo, statesData, fallbackImage }) => {
     const router = useRouter();
@@ -178,10 +179,10 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
 
         // Preserve type parameters
         if (type === "state") {
-            params.set('state', 'true');
+            params.set('state', stateInfo?.id.toString());
         }
         if (type === "destination" && destinationId) {
-            params.set('state', 'true');
+            params.set('state', stateInfo?.id.toString());
             params.set('destination', destinationId);
         }
 
@@ -226,39 +227,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    // Function to generate URLs for navigation
-    const generateURL = (params = {}) => {
-        const urlParams = new URLSearchParams();
-
-        // Add type-specific parameters
-        if (params.state) {
-            urlParams.set('state', 'true');
-        }
-        if (params.destination) {
-            urlParams.set('state', 'true');
-            urlParams.set('destination', params.destination);
-        }
-
-        // Preserve current filters if keepFilters is true
-        if (params.keepFilters) {
-            if (filters.tourType?.value) {
-                urlParams.set('tour_type', filters.tourType.value);
-            }
-            if (filters.suitableFor?.value) {
-                urlParams.set('suitable_id', filters.suitableFor.value);
-            }
-            if (filters.sortBy?.value) {
-                urlParams.set('sort_by_price', filters.sortBy.value);
-            }
-            if (filters.priceRange) {
-                urlParams.set('price_range_from', filters.priceRange.from.toString());
-                urlParams.set('price_range_to', filters.priceRange.to.toString());
-            }
-        }
-
-        return `${params.baseUrl || pathname}?${urlParams.toString()}`;
-    };
-
+    
     // Reset key for filter components
     const [resetKey, setResetKey] = useState(0);
 
@@ -661,7 +630,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
             {/* Filters Section */}
             <div className="container mx-auto px-4 pt-6">
                 {/* Heading Section */}
-                {packages && packages.length > 0 ? (
+             
                     <div className="mb-2">
                         <div className="flex items-center justify-between">
                             {/* Package Count */}
@@ -712,15 +681,13 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
 
                         </div>
                     </div>
-                ) : (
-                    ""
-                )}
+               
 
                 {/* Main Content Layout */}
                 <div className="flex flex-col lg:flex-row gap-8">
 
-                    {packages && packages.length > 0 ? (
-                        <>
+              
+                        
                             {/* Filters Sidebar - Desktop */}
                             <div className="hidden lg:block lg:w-1/4">
                                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6 sticky top-4">
@@ -815,113 +782,104 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                             </div>
 
                             {/* Filter Popup - Mobile */}
-                            <div className={`lg:hidden fixed inset-0 bg-black/50 z-[100] transition-opacity ${isFilterOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                <div className={`absolute left-0 top-0 h-full w-full  bg-white transform transition-transform ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-                                    <div className="p-6 space-y-6 overflow-y-auto" style={{ height: 'calc(100vh - 80px)' }}>
-
-
-                                        {/* Filter Content */}
-                                        <div className="flex items-center justify-between  ">
-                                            <span className="text-gray-900 font-medium text-lg">Filters</span>
-                                            <button onClick={toggleFilter} className="p-2 hover:bg-gray-100 rounded-full text-gray-700">
-                                                <i className="fi fi-rr-cross text-lg"></i>
-                                            </button>
-                                        </div>
-
-
-                                        {/* Tour Type Filter */}
-                                        <div className="space-y-2 relative">
-                                            <label className="text-sm font-medium text-gray-700">Tour Type</label>
-                                            {filters.tourType && (
-                                                <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                            )}
-                                            <Dropdown
-                                                key={`tourType-${resetKey}`}
-                                                options={tourTypeOptions}
-                                                value={filters.tourType}
-                                                onChange={(option) => updateFilter("tourType", option)}
-                                                placeholder="Select tour type"
-                                                className={filters.tourType ? "border-b-1 border-primary-500" : ""}
-                                            />
-                                        </div>
-
-                                        {/* Price Range Filter */}
-                                        <div className="space-y-2 relative">
-                                            <label className="text-sm font-medium text-gray-700">Price Range</label>
-                                            {filters.priceRange && (
-                                                <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                            )}
-                                            <RangeSlider
-                                                key={`price-${resetKey}`}
-                                                min={1000}
-                                                max={50000}
-                                                step={1000}
-                                                initialValue={filters.priceRange ? filters.priceRange.from : undefined}
-                                                onChange={handlePriceRangeChange}
-                                                formatDisplay={(val) => {
-                                                    if (!val) return "Select price range";
-                                                    return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
-                                                }}
-                                                className={filters.priceRange ? "border-b-2 border-primary-500" : ""}
-                                            />
-                                        </div>
-
-                                        {/* Suitable For Filter */}
-                                        <div className="space-y-2 relative">
-                                            <label className="text-sm font-medium text-gray-700">Suitable For</label>
-                                            {filters.suitableFor && (
-                                                <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                            )}
-                                            <Dropdown
-                                                key={`suitable-${resetKey}`}
-                                                options={suitableForOptions}
-                                                value={filters.suitableFor}
-                                                onChange={(option) => updateFilter("suitableFor", option)}
-                                                placeholder="Select group type"
-                                                isLoading={isSuitableForLoading}
-                                                className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
-                                            />
-                                        </div>
-
-                                        {/* Sort By */}
-                                        <div className="space-y-2 relative">
-                                            <label className="text-sm font-medium text-gray-700">Sort By</label>
-                                            {filters.sortBy && (
-                                                <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                            )}
-                                            <Dropdown
-                                                key={`sort-${resetKey}`}
-                                                options={sortOptions}
-                                                value={filters.sortBy}
-                                                onChange={(option) => updateFilter("sortBy", option)}
-                                                placeholder="Select sorting"
-                                                className={filters.sortBy ? "border-b-1 border-primary-500" : ""}
-                                            />
-                                        </div>
+                            <Popup
+                                isOpen={isFilterOpen}
+                                onClose={toggleFilter}
+                                title="Filters"
+                                pos="right"
+                                className="lg:hidden"
+                                draggable={true}
+                            >
+                                <div className="p-6 space-y-6">
+                                    {/* Tour Type Filter */}
+                                    <div className="space-y-2 relative">
+                                        <label className="text-sm font-medium text-gray-700">Tour Type</label>
+                                        {filters.tourType && (
+                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                        )}
+                                        <Dropdown
+                                            key={`tourType-${resetKey}`}
+                                            options={tourTypeOptions}
+                                            value={filters.tourType}
+                                            onChange={(option) => updateFilter("tourType", option)}
+                                            placeholder="Select tour type"
+                                            className={filters.tourType ? "border-b-1 border-primary-500" : ""}
+                                        />
                                     </div>
+
+                                    {/* Price Range Filter */}
+                                    <div className="space-y-2 relative">
+                                        <label className="text-sm font-medium text-gray-700">Price Range</label>
+                                        {filters.priceRange && (
+                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                        )}
+                                        <RangeSlider
+                                            key={`price-${resetKey}`}
+                                            min={1000}
+                                            max={50000}
+                                            step={1000}
+                                            initialValue={filters.priceRange ? filters.priceRange.from : undefined}
+                                            onChange={handlePriceRangeChange}
+                                            formatDisplay={(val) => {
+                                                if (!val) return "Select price range";
+                                                return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
+                                            }}
+                                            className={filters.priceRange ? "border-b-2 border-primary-500" : ""}
+                                        />
+                                    </div>
+
+                                    {/* Suitable For Filter */}
+                                    <div className="space-y-2 relative">
+                                        <label className="text-sm font-medium text-gray-700">Suitable For</label>
+                                        {filters.suitableFor && (
+                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                        )}
+                                        <Dropdown
+                                            key={`suitable-${resetKey}`}
+                                            options={suitableForOptions}
+                                            value={filters.suitableFor}
+                                            onChange={(option) => updateFilter("suitableFor", option)}
+                                            placeholder="Select group type"
+                                            isLoading={isSuitableForLoading}
+                                            className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
+                                        />
+                                    </div>
+
+                                    {/* Sort By */}
+                                    <div className="space-y-2 relative">
+                                        <label className="text-sm font-medium text-gray-700">Sort By</label>
+                                        {filters.sortBy && (
+                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
+                                        )}
+                                        <Dropdown
+                                            key={`sort-${resetKey}`}
+                                            options={sortOptions}
+                                            value={filters.sortBy}
+                                            onChange={(option) => updateFilter("sortBy", option)}
+                                            placeholder="Select sorting"
+                                            className={filters.sortBy ? "border-b-1 border-primary-500" : ""}
+                                        />
+                                    </div>
+
                                     {/* Bottom Buttons */}
-                                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t">
-                                        <div className="flex gap-3">
-                                            <button
-                                                onClick={handleClearAllFilters}
-                                                className="flex-1 py-2.5 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-                                            >
-                                                Clear Filters
-                                            </button>
-                                            <button
-                                                onClick={handleApplyFilters}
-                                                className="flex-1 py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-                                            >
-                                                Apply Now
-                                            </button>
-                                        </div>
+                                    <div className="flex gap-3 mt-8">
+                                        <button
+                                            onClick={handleClearAllFilters}
+                                            className="flex-1 py-2.5 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                                        >
+                                            Clear Filters
+                                        </button>
+                                        <button
+                                            onClick={handleApplyFilters}
+                                            className="flex-1 py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
+                                        >
+                                            Apply Now
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        </>
-                    ) : (
-                        ""
-                    )}
+                            </Popup>
+                    
+                  
 
                     {/* Packages Grid */}
                     <div className={` ${packages && packages.length > 0 ? 'lg:w-3/4' : 'w-full'}`}>

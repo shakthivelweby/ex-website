@@ -576,18 +576,24 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
             {/* Breadcrumb Navigation */}
             <div className="container mx-auto px-4 py-4 border-b border-gray-100 ">
                 <nav className="flex items-center space-x-2 text-sm">
+                    {type !== "destination" && (
+                        <>
                     <Link
                         href="/"
                         className="text-gray-600 hover:text-primary-600 transition-colors flex items-center"
                     >
                       
                         Home
-                    </Link>
+                        </Link>
 
-                    {/* Separator */}
+                         {/* Separator */}
                     <span className="text-gray-400">
                         <i className="fi fi-rr-angle-right text-xs"></i>
-                    </span>
+                            </span>
+                        </>
+                        )}
+
+                   
 
                     {/* Country Link */}
                     {type === "country" ? (

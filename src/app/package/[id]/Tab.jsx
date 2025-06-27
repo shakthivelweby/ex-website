@@ -17,7 +17,7 @@ const Tab = ({ packageData, selectedStayCategory }) => {
   return (
     <>
       {/* tab header */}
-      <div className="sticky top-0 bg-white z-20 border-b border-gray-200 mb-0">
+      <div className="sticky top-[48px] bg-white z-30 border-b border-gray-200 mb-0">
         <div className="relative">
           <nav className="flex overflow-x-auto -mb-px space-x-4 py-4 scrollbar-hide no-scrollbar pr-12">
             <button

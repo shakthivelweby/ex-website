@@ -184,23 +184,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                                 </p>
                               </div>
                             </SwiperSlide >
-                              <SwiperSlide key={attr.id + `2`} className="w-[85%] sm:w-[45%] lg:w-[30%]">
-                              <div className="flex flex-col h-full">
-                                <div className="relative h-40 rounded-lg overflow-hidden mb-2">
-                                  <Image
-                                    src={image_url}
-                                    alt={name}
-                                    fill
-                                    blurDataURL="/blur.webp"
-                                    placeholder="blur"
-                                    className="object-cover"
-                                  />
-                                </div>
-                                <p className="font-medium text-gray-800">
-                                  {name}
-                                </p>
-                              </div>
-                            </SwiperSlide>
+                           
                             </>
                           );
                         })}

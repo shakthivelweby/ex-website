@@ -1,6 +1,5 @@
 "use client";
 
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,13 +9,6 @@ import Login from "@/components/Login/Login";
 import Signup from "@/components/Login/Signup";
 import LoadingSpinner from './components/LoadingSpinner'
 import MobileNav from '@/components/MobileNav';
-
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  display: 'swap',
-});
 
 export default function RootLayout({ children }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -52,7 +44,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
-      <body className={`${poppins.className} pt-12 pb-24`}>
+      <body className="pt-12 pb-24">
         <Suspense>
           <LoadingSpinner />
         </Suspense>

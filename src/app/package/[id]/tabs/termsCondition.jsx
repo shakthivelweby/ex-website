@@ -6,7 +6,7 @@ const TermsConditionTab = ({ packageData, activeTab }) => {
         activeTab === "terms" ? "block" : "hidden"
       }`}
     >
-      <h3 className="text-base font-semibold text-gray-800 mb-6">
+      <h3 className="text-lg font-medium text-gray-800 mb-6">
         Terms and Conditions
       </h3>
       <div className="render-html">

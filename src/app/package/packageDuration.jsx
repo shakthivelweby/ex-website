@@ -21,7 +21,7 @@ const PackageDuration = ({ combinationData, date, packageId }) => {
               ) : (
                 <div className="w-6 h-6 mr-2 rounded-full bg-gray-200"></div>
               )}
-              <p className="text-sm font-medium text-gray-700">
+              <p className="text-sm font-medium text-gray-800">
                 {days} days, {night} nights
               </p>
             </div>

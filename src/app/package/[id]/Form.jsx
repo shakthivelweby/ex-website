@@ -490,7 +490,7 @@ const Form = ({
                           <div
                             style={{
                               fontSize: "0.65em",
-                              color: "#EF4444",
+                              color: "#057676",
                               position: "absolute",
                               left: 0,
                               top: "23px",
@@ -505,7 +505,7 @@ const Form = ({
                           <div
                             style={{
                               fontSize: "0.7em",
-                              color: "#FF385C",
+                              color: "#057676",
                               position: "absolute",
                               left: 0,
                               top: "23px",
@@ -630,7 +630,7 @@ const Form = ({
                 value={fullName}
                 onChange={handleFullNameChange}
                 type="text"
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.fullName ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.fullName ? "border-red-500" : ""}`}
                 placeholder="Enter your full name"
               />
               {error.fullName && (
@@ -651,7 +651,7 @@ const Form = ({
                 value={email}
                 onChange={handleEmailChange}
                 type="email"
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.email ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.email ? "border-red-500" : ""}`}
                 placeholder="Enter your email"
               />
               {error.email && (
@@ -675,7 +675,7 @@ const Form = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={10}
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.phone ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.phone ? "border-red-500" : ""}`}
                 placeholder="Enter your phone number"
               />
               {error.phone && (
@@ -695,7 +695,7 @@ const Form = ({
                 ref={notesRef}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full p-3 border text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[16px] focus:outline-none focus:ring-none focus:border-primary-500 rounded-lg resize-none"
+                className="w-full p-3 border text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 rounded-lg resize-none"
                 placeholder="Any specific requirements or questions?"
                 rows={4}
               />
@@ -729,7 +729,7 @@ const Form = ({
             </Button>
 
             {/* Download Itinerary Section */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+            <div className="bg-white rounded-xl p-4">
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                   <i className="fi fi-rr-document-signed text-gray-600 text-xl"></i>

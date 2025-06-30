@@ -17,18 +17,22 @@ const navLinks = [
     icon: "fi fi-rr-home",
     matchPath: (path) => path === "/"
   },
-  { 
-    name: "Scheduled", 
-    href: "/scheduled", 
-    icon: "fi fi-rr-calendar",
-    matchPath: (path) => path.startsWith("/scheduled")
-  },
+
   { 
     name: "Packages", 
     href: "/explore", 
     icon: "fi fi-rr-umbrella-beach",
     matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
   },
+
+  {
+    name: "Scheduled",
+    href: "/scheduled",
+    icon: "fi fi-rr-calendar",
+    matchPath: (path) => path.startsWith("/scheduled")
+  },
+
+  
   { 
     name: "Search", 
     href: "#",

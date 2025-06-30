@@ -48,17 +48,18 @@ const itemVariants = {
 
 const navLinks = [
   {
+    name: "Packages",
+    href: "/explore",
+    icon: "fi fi-rr-umbrella-beach",
+    matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
+  },
+  {
     name: "Scheduled Trips",
     href: "/scheduled",
     icon: "fi fi-rr-pending",
     matchPath: (path) => path === "/scheduled"
   },
-  { 
-    name: "Packages", 
-    href: "/explore", 
-    icon: "fi fi-rr-umbrella-beach",
-    matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
-  },
+ 
   // { 
   //   name: "Activities", 
   //   href: "#", 

@@ -36,10 +36,10 @@ function GeneralTab({ packageData, activeTab }) {
         {pickup_point && (
           <>
             <div className="flex items-start">
-              <i className="fi fi-rr-car-side text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-car-side text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Pickup Point</p>
-                <p className="font-medium text-gray-800">{pickup_point}</p>
+                <p className="font-medium text-gray-700">{pickup_point}</p>
               </div>
             </div>
           </>
@@ -48,10 +48,10 @@ function GeneralTab({ packageData, activeTab }) {
         {pickup_time && (
           <>
             <div className="flex items-start">
-              <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-alarm-clock text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Pickup Time</p>
-                <p className="font-medium text-gray-800">{pickup_time}</p>
+                <p className="font-medium text-gray-700">{pickup_time}</p>
               </div>
             </div>
           </>
@@ -60,10 +60,10 @@ function GeneralTab({ packageData, activeTab }) {
         {dropoff_point && (
           <>
             <div className="flex items-start">
-              <i className="fi fi-rr-map-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-map-marker text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Drop Off Point</p>
-                <p className="font-medium text-gray-800">{dropoff_point}</p>
+                <p className="font-medium text-gray-700">{dropoff_point}</p>
               </div>
             </div>
           </>
@@ -72,10 +72,10 @@ function GeneralTab({ packageData, activeTab }) {
         {dropoff_time && (
           <>
             <div className="flex items-start">
-              <i className="fi fi-rr-alarm-clock text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-alarm-clock text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Drop Off Time</p>
-                <p className="font-medium text-gray-800">{dropoff_time}</p>
+                <p className="font-medium text-gray-700">{dropoff_time}</p>
               </div>
             </div>
           </>
@@ -84,7 +84,7 @@ function GeneralTab({ packageData, activeTab }) {
         {tour_type === "fixed_departure" && (
           <>
             <div className="flex items-start">
-              <i className="fi fi-rr-marker text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-marker text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Starting Location</p>
                 <p className="font-medium text-gray-800">{starting_location}</p>
@@ -92,7 +92,7 @@ function GeneralTab({ packageData, activeTab }) {
             </div>
 
             <div className="flex items-start">
-              <i className="fi fi-rr-time-quarter-past text-primary-500 text-lg mt-0.5 mr-3 flex-shrink-0"></i>
+              <i className="fi fi-rr-time-quarter-past text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
               <div>
                 <p className="text-sm text-gray-500">Duration</p>
                 <p className="font-medium text-gray-800">
@@ -117,7 +117,7 @@ function GeneralTab({ packageData, activeTab }) {
       </Accordion>
 
       {/* Frequently Asked Questions */}
-      <h3 className="text-base font-semibold text-gray-800 mt-8 mb-4">
+      <h3 className="text-lg font-medium text-gray-800 mt-8 mb-4">
         Frequently Asked Questions
       </h3>
 

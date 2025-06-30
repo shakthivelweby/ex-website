@@ -254,22 +254,22 @@ export default function ClientWrapper({
               </div>
               {/* provided by supplier */}
               <div className="flex items-center mb-2">
-                <span className="text-sm font-medium text-gray-500">
+                <span className="text-xs font-normal text-gray-500">
                   Package provided by
                 </span>
-                <h4 className="text-sm font-semibold text-gray-800 ml-2 underline">
+                <h4 className="text-xs font-normal text-gray-800 ml-2 underline">
                   {supplierInfo?.supplier_details?.company_name || 'Unknown Supplier'}
                  
                 </h4>
                
               </div>
-              <h1 className="text-2xl md:text-3xl tracking-tight font-semibold text-gray-800 mb-6 mt-2">
+              <h1 className="text-2xl md:text-3xl tracking-tight font-medium text-gray-800 mb-6 mt-2">
                 {name}
               </h1>
 
               {packageCombinations.data.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-sm font-medium text-gray-800 mb-4 ">
+                  <h3 className="text-base font-normal text-gray-800 mb-4 ">
                   Choose Trip Duration
                 </h3>
                 <div className="flex flex-wrap gap-4">
@@ -279,7 +279,7 @@ export default function ClientWrapper({
               )}
 
               <div className="mb-4">
-                <h3 className="text-sm  text-gray-800 mb-4 font-meidum">
+                <h3 className="text-base font-normal text-gray-800 mb-4">
                   Choose Stay Category
                 </h3>
                 <div className="flex flex-wrap gap-4">
@@ -318,7 +318,7 @@ export default function ClientWrapper({
               </div>
 
               <div className="py-6 border-t border-gray-200 my-7 mb-0">
-                <h3 className="text-sm  text-gray-800 mb-4 font-meidum">
+                <h3 className="text-base font-normal text-gray-800 mb-4">
                   Including
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ">
@@ -329,7 +329,7 @@ export default function ClientWrapper({
                         <img
                           src={icon_url}
                           alt={name}
-                          className="w-6 h-6 mr-2"
+                          className="w-5 h-5 mr-2"
                         />
                         <p className="text-sm font-medium text-gray-700 truncate">
                           {name}

@@ -17,7 +17,7 @@ export default function Accordion({
         className="px-3 py-3 flex items-center justify-between cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <h3 className="text-base font-medium text-gray-900 m-0">{title}</h3>
+        <h3 className="text-sm font-medium tracking-wide text-gray-800 m-0">{title}</h3>
         <i
           className={`bg-white p-2 rounded-full flex items-center justify-center fi fi-rr-angle-small-${
             isOpen ? "up" : "down"

@@ -80,7 +80,9 @@ export default function Explore() {
               <span>All</span>
               <span className="text-xs opacity-80">({countries.length})</span>
             </button>
+            {console.log(countries)}
             {countries.map((country, index) => (
+            
               <button
                 key={country.id}
                 onClick={() => setActiveCountry(index + 1)}

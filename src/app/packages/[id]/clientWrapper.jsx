@@ -502,7 +502,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
     return (
         <main className="min-h-screen bg-white">
             {/* Modern Minimalist Banner */}
-            <div className="relative h-[50vh] md:h-[65vh] w-full overflow-hidden">
+            <div className="relative h-[50vh] md:h-[58vh] w-full overflow-hidden">
                 {/* Background Image with Modern Overlay */}
                 <div className="absolute inset-0">
                     {coverImage ? (

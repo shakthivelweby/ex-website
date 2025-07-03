@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import GeneralTab from "./tabs/general";
 import ItinearyTab from "./tabs/itineary";
 import TermsConditionTab from "./tabs/termsCondition";
@@ -10,6 +10,9 @@ import ReviewTab from "./tabs/review";
 
 const Tab = ({ packageData, selectedStayCategory }) => {
   const [activeTab, setActiveTab] = useState("details");
+  const navRef = useRef(null);
+  const [showLeftButton, setShowLeftButton] = useState(false);
+
   const handleTabClick = (tab) => {
     setActiveTab(tab);
     // Scroll to content accounting for sticky header
@@ -24,12 +27,42 @@ const Tab = ({ packageData, selectedStayCategory }) => {
     }
   };
 
+  const scrollRight = () => {
+    if (navRef.current) {
+      navRef.current.scrollBy({
+        left: 200,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollLeft = () => {
+    if (navRef.current) {
+      navRef.current.scrollBy({
+        left: -200,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    const handleScroll = () => {
+      setShowLeftButton(nav.scrollLeft > 0);
+    };
+
+    nav.addEventListener('scroll', handleScroll);
+    return () => nav.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <>
       {/* tab header */}
-      <div className="sticky  top-[48px] md:top-[60px] bg-white z-30 border-b border-gray-200 mb-0">
+      <div className="sticky top-[48px] md:top-[60px] bg-white z-30 border-b border-gray-200 mb-0">
         <div className="relative">
-          <nav className="flex overflow-x-auto -mb-px space-x-4 py-4 scrollbar-hide no-scrollbar pr-12">
+          <nav ref={navRef} className="flex overflow-x-auto -mb-px space-x-4 py-4 scrollbar-hide no-scrollbar px-6">
             <button
               className={`whitespace-nowrap text-sm font-medium cursor-pointer ${
                 activeTab === "details"
@@ -102,7 +135,19 @@ const Tab = ({ packageData, selectedStayCategory }) => {
             </button> */}
           </nav>
 
-          <button className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 bg-white text-gray-800 border border-gray-200 rounded-full flex items-center justify-center shadow-md z-10">
+          {showLeftButton && (
+            <button 
+              onClick={scrollLeft}
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 bg-white text-gray-800 border border-gray-200 rounded-full flex items-center justify-center shadow-md z-10 hover:bg-gray-50 active:bg-gray-100"
+            >
+              <i className="fi fi-rr-angle-small-left relative top-[2px]"></i>
+            </button>
+          )}
+
+          <button 
+            onClick={scrollRight}
+            className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 bg-white text-gray-800 border border-gray-200 rounded-full flex items-center justify-center shadow-md z-10 hover:bg-gray-50 active:bg-gray-100"
+          >
             <i className="fi fi-rr-angle-small-right relative top-[2px]"></i>
           </button>
         </div>

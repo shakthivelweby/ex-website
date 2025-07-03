@@ -51,7 +51,7 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
               }
               return (
                 <li className="flex items-center" key={thing.id}>
-                  <i className="fi fi-rr-check-circle text-green-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
+                  <i className="fi fi-rr-check-circle text-sky-500 text-base mt-0.5 mr-3 flex-shrink-0"></i>
                   <span className="text-gray-800">{thing.description}</span>
                 </li>
               );

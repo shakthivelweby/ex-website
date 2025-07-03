@@ -54,7 +54,7 @@ const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
         activeTab === "stay" ? "block" : "hidden"
       }`}
     >
-      <div className="text-xs sm:text-sm py-2 mb-4 text-center font-medium text-gray-500 bg-yellow-100 flex items-center justify-center gap-2">
+      <div className="text-xs sm:text-sm py-2 mb-4 text-center font-normal text-yellow-700 bg-yellow-100 flex items-center justify-center gap-2">
         <i className="fi fi-rr-info"></i> All Stays will be subject to
         availability or similar category hotels will be provided
       </div>

@@ -42,13 +42,13 @@ export default function Explore() {
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Section */}
-      <div className="relative h-[35vh] md:h-[70vh] w-full overflow-hidden">
+      <div className="relative h-[35vh] md:h-[58vh] w-full overflow-hidden">
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1437846972679-9e6e537be46e?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
             alt="Explore Destinations"
             fill
-            className="object-cover"
+            className="object-cover"    
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />

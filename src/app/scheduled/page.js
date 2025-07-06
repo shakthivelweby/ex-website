@@ -515,7 +515,7 @@ export default function Scheduled() {
             title={
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-settings-sliders text-lg text-primary-500"></i>
-                <span>Trip Filters</span>
+                <span className="text-gray-700">Trip Filters</span>
                 {hasActiveFilters() && (
                   <span className="text-sm font-normal text-gray-500">
                     ({getActiveFilterCount()} active)

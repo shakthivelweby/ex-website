@@ -6,7 +6,7 @@ export const useSearch = (searchQuery) => {
   return useQuery({
     queryKey: ["search", searchQuery],
     queryFn: () => searchService.search(searchQuery),
-    enabled: !!searchQuery && searchQuery.length > 2,
+    enabled: !!searchQuery,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };

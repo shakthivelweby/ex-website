@@ -47,7 +47,7 @@ const Packages = async ({ params, searchParams }) => {
 
   statesData = await getStates(id);
 
-  console.log(statesData)
+  console.log("packages", packages)
 
 
   // Determine type based on URL parameters

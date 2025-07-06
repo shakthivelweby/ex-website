@@ -883,6 +883,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
 
                     {/* Packages Grid */}
                     <div className={` ${packages && packages.length > 0 ? 'lg:w-3/4' : 'w-full'}`}>
+           
                         {packages && packages.length > 0 ? (
                             <div className={`grid gap-4 ${mobileLayout === 'grid'
                                     ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'

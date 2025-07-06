@@ -142,6 +142,7 @@ export default function Explore() {
                 }}
                 className="w-full"
               >
+          
                 {country.state.map((state) => (
                   <SwiperSlide key={`${country.id}-${state.id}`}>
                     <Link
@@ -152,7 +153,7 @@ export default function Explore() {
                         {/* Main Image */}
                         <div className="absolute inset-0">
                           <Image
-                            src={state.cover_image_url}
+                            src={state.thumb_image_url}
                             alt={state.name}
                             fill
                             className="object-cover transition-transform duration-700 group-hover:scale-110"

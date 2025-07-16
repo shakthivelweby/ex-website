@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -34,19 +34,42 @@ const Form = ({
   packagePriceData,
   isMobilePopup = false,
   downloadHandler,
-  isDownloading
+  isDownloading,
+  loadingTexts,
+  downloadProgress
 }) => {
 
+  // Add new state for loading text
+  const [currentLoadingText, setCurrentLoadingText] = useState(0);
+
+  // Add effect for loading text animation
+  useEffect(() => {
+    let interval;
+    if (isDownloading) {
+      interval = setInterval(() => {
+        setCurrentLoadingText((prev) => (prev + 1) % loadingTexts.length);
+      }, 2000);
+    } else {
+      setCurrentLoadingText(0);
+    }
+    return () => clearInterval(interval);
+  }, [isDownloading, loadingTexts.length]);
+
   // Add handler for download click
-  const handleDownloadClick = (e) => {
+  const handleDownloadClick = async (e) => {
     e.preventDefault();
     if (!isLogin()) {
-      // Show login modal
       const event = new CustomEvent('showLogin');
       window.dispatchEvent(event);
       return;
     }
-    downloadHandler(e);
+
+    try {
+      downloadHandler(e);
+    } catch (error) {
+      console.error('Error downloading itinerary:', error);
+      alert('Failed to download itinerary. Please try again later.');
+    }
   };
 
 
@@ -749,18 +772,41 @@ const Form = ({
                   <p className="text-xs text-gray-500 mb-3">
                     Download the complete day-by-day travel plan and inclusions
                   </p>
-                  <button
-                    onClick={handleDownloadClick}
-                    className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
-                    disabled={isDownloading}
-                  >
-                    {isDownloading ? (
-                      <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                    ) : (
-                      <i className="fi fi-rr-download mr-2"></i>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleDownloadClick}
+                      className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-70"
+                      disabled={isDownloading}
+                    >
+                      {isDownloading ? (
+                        <div className="flex items-center">
+                          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                          <span>{loadingTexts[currentLoadingText]}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <i className="fi fi-rr-download mr-2"></i>
+                          <span>Download PDF</span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Progress bar - only show when downloading */}
+                    {isDownloading && (
+                      <div className="w-full max-w-xs">
+                        <div className="w-full h-1 bg-gray-100 rounded-full">
+                          <div
+                            className="h-full bg-primary-600 rounded-full "
+                            style={{ width: `${downloadProgress}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
+                          <span>{downloadProgress > 0 ? `Downloading...` : 'Starting download...'}</span>
+                          {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
+                        </div>
+                      </div>
                     )}
-                    Download PDF
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>

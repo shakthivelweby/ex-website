@@ -22,12 +22,16 @@ export default function ClientWrapper({
   packageCombinations,
   supplierInfo
 }) {
-
-
-
-
-
-
+  const loadingTexts = [
+    "Crafting your perfect itinerary...",
+    "Mapping out your adventure...",
+    "Gathering exciting experiences...",
+    "Curating the best moments...",
+    "Planning your dream journey...",
+    "Designing your travel story...",
+    "Preparing your travel guide...",
+    "Creating unforgettable memories..."
+  ];
 
   /* all states */
   const [selectedStayCategory, setSelectedStayCategory] = useState({
@@ -38,6 +42,7 @@ export default function ClientWrapper({
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
@@ -128,10 +133,9 @@ export default function ClientWrapper({
 
   // Handle itinerary download
   const downloadHandler = async (e) => {
-    e.preventDefault(); // Prevent default button behavior
+    e.preventDefault();
 
     if (!isLogin()) {
-      // Show login modal
       const event = new CustomEvent('showLogin');
       window.dispatchEvent(event);
       return;
@@ -139,10 +143,11 @@ export default function ClientWrapper({
 
     try {
       setIsDownloading(true);
+      setDownloadProgress(0);
+
       const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
       const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?stay_category_id=${selectedStayCategory.stay_category_id}`;
 
-      // Fetch the PDF as blob
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -154,27 +159,62 @@ export default function ClientWrapper({
         throw new Error('Network response was not ok');
       }
 
-      // Get the blob from response
-      const blob = await response.blob();
+      const contentLength = +response.headers.get('Content-Length');
+      const reader = response.body.getReader();
+      let receivedLength = 0;
+      const chunks = [];
 
-      // Create blob URL
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          // When download is complete, ensure smooth animation to 100%
+          const finalProgress = Math.round((receivedLength / contentLength) * 100);
+          if (finalProgress < 100) {
+            // Animate remaining progress smoothly
+            const remainingSteps = Math.floor((100 - finalProgress) / 5);
+            for (let i = 0; i < remainingSteps; i++) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+              setDownloadProgress(prev => Math.min(prev + 5, 99));
+            }
+          }
+          break;
+        }
+
+        chunks.push(value);
+        receivedLength += value.length;
+
+        const progress = (receivedLength / contentLength) * 100;
+        setDownloadProgress(Math.min(Math.round(progress), 99)); // Cap at 99% during download
+      }
+
+      // Create and download the blob
+      const blob = new Blob(chunks, { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
 
-      // Create temporary link and trigger download
       const link = document.createElement('a');
       link.href = blobUrl;
       link.download = `${packageData.data.name}-itinerary.pdf`;
+
+      // Add final animation to 100% before triggering download
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setDownloadProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       document.body.appendChild(link);
       link.click();
-
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
+
     } catch (error) {
       console.error('Error downloading itinerary:', error);
       alert('Failed to download itinerary. Please try again later.');
     } finally {
-      setIsDownloading(false);
+      // Add small delay before resetting
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+      }, 500);
     }
   };
 
@@ -212,6 +252,8 @@ export default function ClientWrapper({
             isMobilePopup={true}
             downloadHandler={downloadHandler}
             isDownloading={isDownloading}
+            loadingTexts={loadingTexts}
+            downloadProgress={downloadProgress}
           />
         </div>
       </Popup>
@@ -356,18 +398,41 @@ export default function ClientWrapper({
                       <p className="text-xs text-gray-500 mb-3">
                         Download the complete day-by-day travel plan and inclusions
                       </p>
-                      <button
-                        onClick={downloadHandler}
-                        className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
-                        disabled={isDownloading}
-                      >
-                        {isDownloading ? (
-                          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                        ) : (
-                          <i className="fi fi-rr-download mr-2"></i>
+                      <div className="space-y-2">
+                        <button
+                          onClick={downloadHandler}
+                          className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-70"
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? (
+                            <div className="flex items-center">
+                              <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              <span>{loadingTexts[0]}</span>
+                            </div>
+                          ) : (
+                            <>
+                              <i className="fi fi-rr-download mr-2"></i>
+                              <span>Download PDF</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* Progress bar - only show when downloading */}
+                        {isDownloading && (
+                          <div className="w-full max-w-xs">
+                            <div className="w-full h-1 bg-gray-100 rounded-full">
+                              <div
+                                className="h-full bg-primary-600 rounded-full"
+                                style={{ width: `${downloadProgress}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
+                              <span>{downloadProgress > 0 ? `Downloading...` : 'Starting download...'}</span>
+                              {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
+                            </div>
+                          </div>
                         )}
-                        Download PDF
-                      </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -413,6 +478,8 @@ export default function ClientWrapper({
                 packagePriceData={packagePriceData}
                 downloadHandler={downloadHandler}
                 isDownloading={isDownloading}
+                loadingTexts={loadingTexts}
+                downloadProgress={downloadProgress}
               />
             </div>
           </div>

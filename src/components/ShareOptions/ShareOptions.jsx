@@ -31,7 +31,7 @@ const menuVariants = {
 };
 
 const buttonVariants = {
-  hidden: { 
+  hidden: {
     opacity: 1,
     y: 0
   },
@@ -56,7 +56,7 @@ const buttonVariants = {
 };
 
 const iconVariants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
     y: 15,
     scale: 0.8
@@ -73,7 +73,7 @@ const iconVariants = {
 };
 
 const textVariants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
     y: 8
   },
@@ -92,6 +92,14 @@ export default function ShareOptions({ url, title }) {
   const [menuPosition, setMenuPosition] = useState({ horizontal: 'right-0' });
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [currentUrl, setCurrentUrl] = useState(url);
+
+  // Update currentUrl when url prop changes
+  useEffect(() => {
+    setCurrentUrl(url);
+    // Close menu when URL changes
+    setShowMenu(false);
+  }, [url]);
 
   useEffect(() => {
     if (showMenu) {
@@ -103,7 +111,7 @@ export default function ShareOptions({ url, title }) {
           const spaceOnLeft = rect.left;
           const menuWidth = 260;
           const isMobile = window.innerWidth <= 640;
-          
+
           let horizontal;
           if (isMobile) {
             // On mobile, position relative to screen edges
@@ -147,16 +155,17 @@ export default function ShareOptions({ url, title }) {
   };
 
   const handleShare = async (platform) => {
+    const shareUrl = currentUrl; // Use the current URL
     switch (platform) {
       case 'whatsapp':
-        window.open(`https://wa.me/?text=${encodeURIComponent(`${title}\n${url}`)}`, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${title}\n${shareUrl}`)}`, '_blank');
         break;
       case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank');
         break;
       case 'instagram':
         try {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(shareUrl);
           showToastMessage('Link copied! You can now paste it in your Instagram story or post');
           window.open('https://instagram.com', '_blank');
         } catch (err) {
@@ -165,7 +174,7 @@ export default function ShareOptions({ url, title }) {
         break;
       case 'copy':
         try {
-          await navigator.clipboard.writeText(url);
+          await navigator.clipboard.writeText(shareUrl);
           showToastMessage('Link copied to clipboard!');
         } catch (err) {
           showToastMessage('Failed to copy link. Please try again.');
@@ -176,7 +185,7 @@ export default function ShareOptions({ url, title }) {
           try {
             await navigator.share({
               title: title,
-              url: url
+              url: shareUrl
             });
           } catch (err) {
             console.error('Share failed:', err);
@@ -213,23 +222,23 @@ export default function ShareOptions({ url, title }) {
         {showMenu && (
           <>
             {/* Mobile overlay */}
-            <motion.div 
+            <motion.div
               className="lg:hidden fixed inset-0 bg-black/20 z-40"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMenu(false)}
             />
-            
+
             {/* Share menu */}
-            <motion.div 
+            <motion.div
               className={`fixed w-[260px] bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.15)] z-50 p-2
                 lg:absolute lg:mt-2
                 ${menuPosition.horizontal}
                 top-[52px] sm:top-[60px]
                 mx-auto left-0 right-0 lg:mx-0 lg:left-auto lg:right-auto
               `}
-              style={{ 
+              style={{
                 maxWidth: 'min(calc(100vw - 2rem), 260px)',
                 transformOrigin: 'top center'
               }}
@@ -246,13 +255,13 @@ export default function ShareOptions({ url, title }) {
                   onClick={() => handleShare('whatsapp')}
                   className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300"
                 >
-                  <motion.div 
+                  <motion.div
                     variants={iconVariants}
                     className="w-8 h-8 flex items-center justify-center bg-[#25D366]/10 rounded-full"
                   >
                     <i className="fi fi-brands-whatsapp text-lg text-[#25D366]"></i>
                   </motion.div>
-                  <motion.span 
+                  <motion.span
                     variants={textVariants}
                     className="text-[10px] font-medium text-gray-700"
                   >
@@ -267,13 +276,13 @@ export default function ShareOptions({ url, title }) {
                   onClick={() => handleShare('facebook')}
                   className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300"
                 >
-                  <motion.div 
+                  <motion.div
                     variants={iconVariants}
                     className="w-8 h-8 flex items-center justify-center bg-[#1877F2]/10 rounded-full"
                   >
                     <i className="fi fi-brands-facebook text-lg text-[#1877F2]"></i>
                   </motion.div>
-                  <motion.span 
+                  <motion.span
                     variants={textVariants}
                     className="text-[10px] font-medium text-gray-700"
                   >
@@ -288,13 +297,13 @@ export default function ShareOptions({ url, title }) {
                   onClick={() => handleShare('instagram')}
                   className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300"
                 >
-                  <motion.div 
+                  <motion.div
                     variants={iconVariants}
                     className="w-8 h-8 flex items-center justify-center bg-[#E4405F]/10 rounded-full"
                   >
                     <i className="fi fi-brands-instagram text-lg text-[#E4405F]"></i>
                   </motion.div>
-                  <motion.span 
+                  <motion.span
                     variants={textVariants}
                     className="text-[10px] font-medium text-gray-700"
                   >
@@ -309,13 +318,13 @@ export default function ShareOptions({ url, title }) {
                   onClick={() => handleShare('copy')}
                   className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-50 transition-all duration-300"
                 >
-                  <motion.div 
+                  <motion.div
                     variants={iconVariants}
                     className="w-8 h-8 flex items-center justify-center bg-gray-100 rounded-full"
                   >
                     <i className="fi fi-rr-copy text-lg text-gray-600"></i>
                   </motion.div>
-                  <motion.span 
+                  <motion.span
                     variants={textVariants}
                     className="text-[10px] font-medium text-gray-700"
                   >
@@ -330,7 +339,7 @@ export default function ShareOptions({ url, title }) {
 
       <AnimatePresence>
         {showToast && (
-          <Toast 
+          <Toast
             message={toastMessage}
             onClose={() => setShowToast(false)}
           />

@@ -33,9 +33,21 @@ const Form = ({
   enquireOnly,
   packagePriceData,
   isMobilePopup = false,
-  onDownload
+  downloadHandler,
+  isDownloading
 }) => {
 
+  // Add handler for download click
+  const handleDownloadClick = (e) => {
+    e.preventDefault();
+    if (!isLogin()) {
+      // Show login modal
+      const event = new CustomEvent('showLogin');
+      window.dispatchEvent(event);
+      return;
+    }
+    downloadHandler(e);
+  };
 
 
   // Navigation and URL handling
@@ -51,14 +63,14 @@ const Form = ({
   const [isLoading, setIsLoading] = useState(false);
 
 
- 
+
 
   // Enquiry form fields
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
-  
+
   // Error and success state management
   const [error, setError] = useState({
     fullName: "",
@@ -90,7 +102,7 @@ const Form = ({
 
 
 
- 
+
 
   // Refs for form fields
   const fullNameRef = useRef(null);
@@ -210,9 +222,9 @@ const Form = ({
       const element = elementRef.current;
       const container = isMobilePopup ? element.closest('.overflow-y-auto') : window;
       const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      
+
       container.scrollTo({ top: y, behavior: 'smooth' });
-      
+
       // Add focus effect
       element.focus();
       element.classList.add('border-red-500', 'bg-red-50');
@@ -294,7 +306,7 @@ const Form = ({
         });
         setShowSuccess(true);
       } else {
-   
+
         // Handle booking submission
         if (!isLogin()) {
           // Store checkout URL using the utility function
@@ -332,7 +344,7 @@ const Form = ({
       }
 
       // 
-      
+
       // Reset form for enquiry
       if (enquireOnly) {
         setFullName("");
@@ -348,10 +360,6 @@ const Form = ({
     }
   }
 
-  // Handle itinerary download
-  function downloadHandler() {
-    console.log("downloadHandler");
-  }
 
   return (
     <>
@@ -396,7 +404,7 @@ const Form = ({
             </span>
           </div>
           <div className="bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
-            {total_days} D  &nbsp; {total_nights} N 
+            {total_days} D  &nbsp; {total_nights} N
           </div>
         </div>
 
@@ -406,10 +414,10 @@ const Form = ({
             Starting Date
           </label>
           <div className="relative">
-        
+
             {isMobilePopup ? (
               // Inline calendar for mobile
-             
+
               <div className="border-t border-gray-200 pt-3">
                 <DatePicker
                   selected={selectedDate}
@@ -742,10 +750,15 @@ const Form = ({
                     Download the complete day-by-day travel plan and inclusions
                   </p>
                   <button
-                    onClick={downloadHandler}
+                    onClick={handleDownloadClick}
                     className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                    disabled={isDownloading}
                   >
-                    <i className="fi fi-rr-download mr-2"></i>
+                    {isDownloading ? (
+                      <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                    ) : (
+                      <i className="fi fi-rr-download mr-2"></i>
+                    )}
                     Download PDF
                   </button>
                 </div>

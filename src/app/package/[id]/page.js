@@ -14,7 +14,7 @@ export default async function PackageDetailPage({ params, searchParams }) {
   const supplierInfo = await getSupplierInfo(id);
 
 
- console.log(packageCombinations);
+  console.log(packageCombinations);
 
 
   const packageRate = await getPackageRateServer(
@@ -22,6 +22,8 @@ export default async function PackageDetailPage({ params, searchParams }) {
     packageStayCategory.id,
     date
   );
+
+
 
 
 

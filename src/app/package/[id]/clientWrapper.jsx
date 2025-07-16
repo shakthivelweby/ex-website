@@ -10,6 +10,8 @@ import { usePackageRate } from "./query";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import PackageDuration from "../packageDuration";
 import Popup from "@/components/Popup";
+import { downloadItinerary } from "./service";
+import isLogin from "@/utils/isLogin";
 
 
 export default function ClientWrapper({
@@ -22,7 +24,7 @@ export default function ClientWrapper({
 }) {
 
 
- 
+
 
 
 
@@ -35,6 +37,7 @@ export default function ClientWrapper({
   const [packagePrice, setPackagePrice] = useState(packagePriceData.adultPrice);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [showMobileForm, setShowMobileForm] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
@@ -43,7 +46,7 @@ export default function ClientWrapper({
 
 
 
-   
+
   const [enquireOnly, setEnquireOnly] = useState(false);
 
   const [isClient, setIsClient] = useState(false);
@@ -55,7 +58,7 @@ export default function ClientWrapper({
   useEffect(() => {
     if (showMobileForm && scrollContainerRef.current) {
       const container = scrollContainerRef.current;
-      
+
       // Initial scroll down after a short delay
       const timeoutId = setTimeout(() => {
         container.scrollTo({
@@ -82,11 +85,11 @@ export default function ClientWrapper({
 
   useEffect(() => {
     if (isClient) {
-      
+
       setEnquireOnly(!packagePriceData.rateAvailable);
     }
   }, [isClient, packagePriceData.rateAvailable]);
-  
+
   /* end all states */
 
   // Handle body scroll lock
@@ -119,14 +122,60 @@ export default function ClientWrapper({
     if (packageRate?.data) {
       console.log(packageRate)
       setPackagePrice(packageRate.data.adultPrice);
-       setEnquireOnly(!packageRate.data.rateAvailable);
+      setEnquireOnly(!packageRate.data.rateAvailable);
     }
   }, [packageRate, selectedStayCategory]);
 
   // Handle itinerary download
-  const downloadHandler = () => {
-    console.log("Downloading itinerary for package:", packageData.data.id);
-    // Implement your download logic here
+  const downloadHandler = async (e) => {
+    e.preventDefault(); // Prevent default button behavior
+
+    if (!isLogin()) {
+      // Show login modal
+      const event = new CustomEvent('showLogin');
+      window.dispatchEvent(event);
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
+      const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?stay_category_id=${selectedStayCategory.stay_category_id}`;
+
+      // Fetch the PDF as blob
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      // Get the blob from response
+      const blob = await response.blob();
+
+      // Create blob URL
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${packageData.data.name}-itinerary.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading itinerary:', error);
+      alert('Failed to download itinerary. Please try again later.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const { images, name, inclusions, package_stay_categories } =
@@ -161,6 +210,8 @@ export default function ClientWrapper({
             setEnquireOnly={setEnquireOnly}
             packagePriceData={packagePriceData}
             isMobilePopup={true}
+            downloadHandler={downloadHandler}
+            isDownloading={isDownloading}
           />
         </div>
       </Popup>
@@ -174,9 +225,9 @@ export default function ClientWrapper({
               <div className="mb-3 overflow-hidden">
                 {/* Mobile View */}
                 <div className="block md:hidden relative">
-                  <MobileCarousel 
-                    packageData={packageData} 
-                    onViewAllClick={() => setIsImageViewerOpen(true)} 
+                  <MobileCarousel
+                    packageData={packageData}
+                    onViewAllClick={() => setIsImageViewerOpen(true)}
                   />
                 </div>
 
@@ -259,23 +310,23 @@ export default function ClientWrapper({
                 </span>
                 <h4 className="text-xs font-normal text-gray-800 ml-2 underline">
                   {supplierInfo?.supplier_details?.company_name || 'Unknown Supplier'}
-                 
+
                 </h4>
-               
+
               </div>
               <h1 className="text-2xl md:text-3xl tracking-tight font-medium text-gray-800 mb-6 mt-2">
                 {name}
               </h1>
 
               {packageCombinations.data.length > 0 && (
-              <div className="mb-8">
+                <div className="mb-8">
                   <h3 className="text-base font-normal text-gray-800 mb-4 ">
-                  Choose Trip Duration
-                </h3>
-                <div className="flex flex-wrap gap-4">
-                  <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
+                    Choose Trip Duration
+                  </h3>
+                  <div className="flex flex-wrap gap-4">
+                    <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
+                  </div>
                 </div>
-              </div>
               )}
 
               <div className="mb-4">
@@ -308,8 +359,13 @@ export default function ClientWrapper({
                       <button
                         onClick={downloadHandler}
                         className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700"
+                        disabled={isDownloading}
                       >
-                        <i className="fi fi-rr-download mr-2"></i>
+                        {isDownloading ? (
+                          <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        ) : (
+                          <i className="fi fi-rr-download mr-2"></i>
+                        )}
                         Download PDF
                       </button>
                     </div>
@@ -355,6 +411,8 @@ export default function ClientWrapper({
                 enquireOnly={enquireOnly}
                 setEnquireOnly={setEnquireOnly}
                 packagePriceData={packagePriceData}
+                downloadHandler={downloadHandler}
+                isDownloading={isDownloading}
               />
             </div>
           </div>

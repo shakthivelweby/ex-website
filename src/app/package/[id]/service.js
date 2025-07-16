@@ -55,3 +55,9 @@ export const getSupplierInfo = async (id) => {
   const response = await apiServerMiddleware.get(`/supplier-info/${id}`);
   return response.data;
 };
+
+
+export const downloadItinerary = async (id, stay_category_id) => {
+  const response = await apiMiddleware.get(`/package-download-itinerary/${id}?stay_category_id=${stay_category_id}`);
+  return response.data;
+};

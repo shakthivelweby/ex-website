@@ -40,8 +40,8 @@ const menuVariants = {
 
 const itemVariants = {
   initial: { opacity: 0, x: -5 },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     x: 0,
   }
 };
@@ -59,7 +59,7 @@ const navLinks = [
     icon: "fi fi-rr-pending",
     matchPath: (path) => path === "/scheduled"
   },
- 
+
   // { 
   //   name: "Activities", 
   //   href: "#", 
@@ -105,6 +105,7 @@ export default function Header() {
   const mobileNavRef = useRef(null);
   const router = useRouter();
   const menuRef = useRef(null);
+  const [currentUrl, setCurrentUrl] = useState('');
 
   // Check if current page is a package detail page
   const isPackageDetailPage = pathname.startsWith('/package/');
@@ -149,6 +150,13 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    // Update URL whenever pathname changes
+    if (typeof window !== 'undefined') {
+      setCurrentUrl(window.location.href);
+    }
+  }, [pathname]);
 
   const handleLinkClick = (index) => {
     setActiveIndex(index);
@@ -211,17 +219,15 @@ export default function Header() {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`flex items-center text-sm font-medium mr-4 ${
-                    isActive
-                      ? "text-primary-600"
-                      : "text-gray-700 hover:text-gray-900"
-                  }`}
+                  className={`flex items-center text-sm font-medium mr-4 ${isActive
+                    ? "text-primary-600"
+                    : "text-gray-700 hover:text-gray-900"
+                    }`}
                   onClick={() => handleLinkClick(index)}
                 >
                   <i
-                    className={`${link.icon} text-sm mr-2 ${
-                      isActive ? "text-primary-600" : "text-gray-500"
-                    }`}
+                    className={`${link.icon} text-sm mr-2 ${isActive ? "text-primary-600" : "text-gray-500"
+                      }`}
                   ></i>
                   {link.name}
                   {isActive && (
@@ -237,7 +243,7 @@ export default function Header() {
             {/* Share Button - Only show on package detail pages */}
             {isPackageDetailPage && (
               <div className="hidden lg:block">
-                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+                <ShareOptions url={currentUrl} title="Check out this amazing package!" />
               </div>
             )}
 
@@ -257,7 +263,7 @@ export default function Header() {
             {/* Share Button - Mobile (Only show on package detail pages) */}
             {isPackageDetailPage && (
               <div className="lg:hidden">
-                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+                <ShareOptions url={currentUrl} title="Check out this amazing package!" />
               </div>
             )}
 
@@ -270,7 +276,7 @@ export default function Header() {
             </button>
 
             {/* Mobile Menu Button */}
-            <button 
+            <button
               type="button"
               className="lg:hidden flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200"
               onClick={() => setShowMobileNav(prev => !prev)}
@@ -295,7 +301,7 @@ export default function Header() {
             {/* User Menu */}
             <div className="relative" ref={menuRef}>
               {user && (
-                <button 
+                <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center"
                 >
@@ -339,7 +345,7 @@ export default function Header() {
                       <div className="text-left">
                         <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors line-clamp-1">{user.name}</p>
                       </div>
-                      <motion.i 
+                      <motion.i
                         animate={{ rotate: showUserMenu ? 180 : 0 }}
                         transition={{ duration: 0.2 }}
                         className={`fi fi-rr-angle-small-down text-gray-400`}
@@ -374,7 +380,7 @@ export default function Header() {
           draggable={true}
         >
           <div className="flex-1 overflow-y-auto">
-            <motion.nav 
+            <motion.nav
               variants={menuVariants}
               initial="closed"
               animate={showMobileNav ? "open" : "closed"}
@@ -390,17 +396,15 @@ export default function Header() {
                   >
                     <Link
                       href={link.href}
-                      className={`flex items-center px-6 py-4 transition-all ${
-                        isActive
-                          ? "bg-primary-50/50 text-primary-600"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
+                      className={`flex items-center px-6 py-4 transition-all ${isActive
+                        ? "bg-primary-50/50 text-primary-600"
+                        : "text-gray-700 hover:bg-gray-50"
+                        }`}
                       onClick={() => handleLinkClick(index)}
                     >
                       <i
-                        className={`${link.icon} text-sm mr-4 ${
-                          isActive ? "text-primary-600" : "text-gray-500"
-                        }`}
+                        className={`${link.icon} text-sm mr-4 ${isActive ? "text-primary-600" : "text-gray-500"
+                          }`}
                       ></i>
                       <span className="font-medium text-base">{link.name}</span>
                       {isActive && (
@@ -435,7 +439,7 @@ export default function Header() {
         </Popup>
 
         {/* Search Popup */}
-        <Search 
+        <Search
           isOpen={showSearch}
           onClose={() => setShowSearch(false)}
         />

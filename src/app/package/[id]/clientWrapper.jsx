@@ -29,8 +29,7 @@ export default function ClientWrapper({
     "Curating the best moments...",
     "Planning your dream journey...",
     "Designing your travel story...",
-    "Preparing your travel guide...",
-
+    "Preparing your travel guide..."
   ];
 
   /* all states */
@@ -43,6 +42,7 @@ export default function ClientWrapper({
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [currentLoadingText, setCurrentLoadingText] = useState(0);
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
@@ -94,6 +94,19 @@ export default function ClientWrapper({
       setEnquireOnly(!packagePriceData.rateAvailable);
     }
   }, [isClient, packagePriceData.rateAvailable]);
+
+  // Add effect for loading text animation
+  useEffect(() => {
+    let interval;
+    if (isDownloading) {
+      interval = setInterval(() => {
+        setCurrentLoadingText((prev) => (prev + 1) % loadingTexts.length);
+      }, 2000);
+    } else {
+      setCurrentLoadingText(0);
+    }
+    return () => clearInterval(interval);
+  }, [isDownloading, loadingTexts.length]);
 
   /* end all states */
 
@@ -407,7 +420,7 @@ export default function ClientWrapper({
                           {isDownloading ? (
                             <div className="flex items-center">
                               <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                              <span>{loadingTexts[0]}</span>
+                              <span>{loadingTexts[currentLoadingText]}</span>
                             </div>
                           ) : (
                             <>

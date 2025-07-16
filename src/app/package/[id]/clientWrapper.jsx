@@ -30,7 +30,7 @@ export default function ClientWrapper({
     "Planning your dream journey...",
     "Designing your travel story...",
     "Preparing your travel guide...",
-    "Creating unforgettable memories..."
+
   ];
 
   /* all states */

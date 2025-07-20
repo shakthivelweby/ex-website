@@ -43,6 +43,14 @@ export default function ClientWrapper({
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [currentLoadingText, setCurrentLoadingText] = useState(0);
+  const [downloadSize, setDownloadSize] = useState({ total: 0, downloaded: 0 });
+
+  // Helper function to format bytes to MB
+  const formatBytes = (bytes) => {
+    const mb = (bytes / (1024 * 1024)).toFixed(1);
+    return `${mb} MB`;
+  };
+
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
@@ -157,6 +165,7 @@ export default function ClientWrapper({
     try {
       setIsDownloading(true);
       setDownloadProgress(0);
+      setDownloadSize({ total: 0, downloaded: 0 });
 
       const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
       const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?stay_category_id=${selectedStayCategory.stay_category_id}`;
@@ -173,6 +182,8 @@ export default function ClientWrapper({
       }
 
       const contentLength = +response.headers.get('Content-Length');
+      setDownloadSize(prev => ({ ...prev, total: contentLength }));
+
       const reader = response.body.getReader();
       let receivedLength = 0;
       const chunks = [];
@@ -181,14 +192,15 @@ export default function ClientWrapper({
         const { done, value } = await reader.read();
 
         if (done) {
-          // When download is complete, ensure smooth animation to 100%
           const finalProgress = Math.round((receivedLength / contentLength) * 100);
           if (finalProgress < 100) {
-            // Animate remaining progress smoothly
             const remainingSteps = Math.floor((100 - finalProgress) / 5);
             for (let i = 0; i < remainingSteps; i++) {
               await new Promise(resolve => setTimeout(resolve, 50));
               setDownloadProgress(prev => Math.min(prev + 5, 99));
+              // Update downloaded size proportionally
+              const newDownloaded = (contentLength * Math.min(prev + 5, 99)) / 100;
+              setDownloadSize(prev => ({ ...prev, downloaded: newDownloaded }));
             }
           }
           break;
@@ -196,9 +208,10 @@ export default function ClientWrapper({
 
         chunks.push(value);
         receivedLength += value.length;
+        setDownloadSize(prev => ({ ...prev, downloaded: receivedLength }));
 
         const progress = (receivedLength / contentLength) * 100;
-        setDownloadProgress(Math.min(Math.round(progress), 99)); // Cap at 99% during download
+        setDownloadProgress(Math.min(Math.round(progress), 99));
       }
 
       // Create and download the blob
@@ -209,9 +222,9 @@ export default function ClientWrapper({
       link.href = blobUrl;
       link.download = `${packageData.data.name}-itinerary.pdf`;
 
-      // Add final animation to 100% before triggering download
       await new Promise(resolve => setTimeout(resolve, 200));
       setDownloadProgress(100);
+      setDownloadSize(prev => ({ ...prev, downloaded: prev.total }));
       await new Promise(resolve => setTimeout(resolve, 300));
 
       document.body.appendChild(link);
@@ -223,10 +236,10 @@ export default function ClientWrapper({
       console.error('Error downloading itinerary:', error);
       alert('Failed to download itinerary. Please try again later.');
     } finally {
-      // Add small delay before resetting
       setTimeout(() => {
         setIsDownloading(false);
         setDownloadProgress(0);
+        setDownloadSize({ total: 0, downloaded: 0 });
       }, 500);
     }
   };
@@ -262,11 +275,12 @@ export default function ClientWrapper({
             enquireOnly={enquireOnly}
             setEnquireOnly={setEnquireOnly}
             packagePriceData={packagePriceData}
-            isMobilePopup={true}
             downloadHandler={downloadHandler}
             isDownloading={isDownloading}
             loadingTexts={loadingTexts}
             downloadProgress={downloadProgress}
+            downloadSize={downloadSize}
+            formatBytes={formatBytes}
           />
         </div>
       </Popup>
@@ -433,14 +447,18 @@ export default function ClientWrapper({
                         {/* Progress bar - only show when downloading */}
                         {isDownloading && (
                           <div className="w-full max-w-xs">
-                            <div className="w-full h-1 bg-gray-100 rounded-full">
+                            <div className="w-full h-1.5 bg-gray-100 rounded-full">
                               <div
-                                className="h-full bg-primary-600 rounded-full"
+                                className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
                                 style={{ width: `${downloadProgress}%` }}
                               ></div>
                             </div>
                             <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
-                              <span>{downloadProgress > 0 ? `Downloading...` : 'Starting download...'}</span>
+                              <span>
+                                {downloadProgress > 0
+                                  ? `${formatBytes(downloadSize.downloaded)} of ${formatBytes(downloadSize.total)}`
+                                  : 'Starting download...'}
+                              </span>
                               {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
                             </div>
                           </div>
@@ -493,6 +511,8 @@ export default function ClientWrapper({
                 isDownloading={isDownloading}
                 loadingTexts={loadingTexts}
                 downloadProgress={downloadProgress}
+                downloadSize={downloadSize}
+                formatBytes={formatBytes}
               />
             </div>
           </div>

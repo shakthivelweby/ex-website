@@ -36,7 +36,9 @@ const Form = ({
   downloadHandler,
   isDownloading,
   loadingTexts,
-  downloadProgress
+  downloadProgress,
+  downloadSize,
+  formatBytes
 }) => {
 
   // Add new state for loading text
@@ -796,12 +798,16 @@ const Form = ({
                       <div className="w-full max-w-xs">
                         <div className="w-full h-1 bg-gray-100 rounded-full">
                           <div
-                            className="h-full bg-primary-600 rounded-full "
+                            className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
                             style={{ width: `${downloadProgress}%` }}
                           ></div>
                         </div>
                         <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
-                          <span>{downloadProgress > 0 ? `Downloading...` : 'Starting download...'}</span>
+                          <span>
+                            {downloadProgress > 0
+                              ? `${formatBytes(downloadSize.downloaded)} of ${formatBytes(downloadSize.total)}`
+                              : 'Starting download...'}
+                          </span>
                           {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
                         </div>
                       </div>

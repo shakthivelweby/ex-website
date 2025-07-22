@@ -7,7 +7,7 @@ import { useState, useEffect, Suspense } from "react";
 import { handleLoginRedirect } from "@/utils/isLogin";
 import Login from "@/components/Login/Login";
 import Signup from "@/components/Login/Signup";
-import LoadingSpinner from './components/LoadingSpinner'
+import LoadingSpinner from '../components/spinLoader/LoadingSpinner'
 import MobileNav from '@/components/MobileNav';
 
 export default function RootLayout({ children }) {

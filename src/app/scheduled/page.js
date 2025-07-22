@@ -468,7 +468,7 @@ export default function Scheduled() {
 
         <div className="container mx-auto px-4  ">
           {/* Title with edit button */}
-          <h1 className="text-2xl  text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto" style={{lineHeight: '1.3'}}>
+          <h1 className="text-2xl text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto" style={{lineHeight: '1.3'}}>
             Schedule trips to explore {" "}
             <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
               {destinationName}

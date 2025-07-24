@@ -22,7 +22,7 @@ const Events = () => {
   const events = [
     {
       id: 1,
-      title: 'Raagas of Rafi by Javed Ali with 30 musicians',
+      title: 'Enrique Iglesias Live in Concert',
       date: 'Thu, 31 Jul',
       venue: 'MMRDA Grounds, Mumbai',
       type: 'Concerts',

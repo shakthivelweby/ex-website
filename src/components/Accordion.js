@@ -19,7 +19,7 @@ export default function Accordion({
       >
         <h3 className="text-sm font-medium tracking-wide text-gray-800 m-0">{title}</h3>
         <i
-          className={`bg-white p-2 rounded-full flex items-center justify-center fi fi-rr-angle-small-${
+          className={`bg-white p-2 text-gray-700 rounded-full flex items-center justify-center fi fi-rr-angle-small-${
             isOpen ? "up" : "down"
           } transition-transform`}
         ></i>

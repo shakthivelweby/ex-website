@@ -72,22 +72,13 @@ const Form = ({
                 <p className="text-gray-700 font-medium">{eventDetails.date}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
                 <i className="fi fi-rr-clock text-base text-primary-500"></i>
               </div>
               <div>
                 <p className="text-gray-500 text-xs">Time</p>
                 <p className="text-gray-700 font-medium">{eventDetails.time}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
-                <i className="fi fi-rr-marker text-base text-primary-500"></i>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs">Venue</p>
-                <p className="text-gray-700 font-medium">{eventDetails.venue}</p>
               </div>
             </div>
           </div>
@@ -97,14 +88,13 @@ const Form = ({
         <div className="bg-white rounded-xl p-4 mb-4">
           <h2 className="text-base font-medium text-gray-800 mb-2">Venue</h2>
           <div className="flex flex-col">
-            <h3 className="text-sm font-medium text-gray-800 mb-1">Blue Tokai Coffee Roasters | Maker Maxity</h3>
+            <h3 className="text-sm font-medium text-gray-800 mb-1">{eventDetails.venue}</h3>
             <p className="text-sm text-gray-600 mb-3">
-              Premises no, Ground floor, G-1C, North Ave, Bandra Kurla Complex, Bandra East, Mumbai, Maharashtra 400051, India
+            {eventDetails.venueAddress}
             </p>
             <button
               onClick={handleGetDirections}
-              className="flex items-center gap-2 text-primary-600 text-sm font-medium"
-            >
+              className="flex items-center gap-2 text-primary-600 text-sm font-medium">
               <i className="fi fi-rr-map-marker text-base"></i>
               Get Directions
             </button>

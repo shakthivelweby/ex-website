@@ -12,6 +12,9 @@ import PackageDuration from "../packageDuration";
 import Popup from "@/components/Popup";
 import { downloadItinerary } from "./service";
 import isLogin from "@/utils/isLogin";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { formatDate } from "@/utils/formatDate";
 
 
 export default function ClientWrapper({
@@ -44,6 +47,10 @@ export default function ClientWrapper({
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [currentLoadingText, setCurrentLoadingText] = useState(0);
   const [downloadSize, setDownloadSize] = useState({ total: 0, downloaded: 0 });
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [itineraryFormat, setItineraryFormat] = useState('daywise');
+  const [startDate, setStartDate] = useState(null);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
 
   // Helper function to format bytes to MB
   const formatBytes = (bytes) => {
@@ -162,13 +169,32 @@ export default function ClientWrapper({
       return;
     }
 
+    setShowFormatModal(true);
+  };
+
+  const handleFormatSubmit = async () => {
+    if (!itineraryFormat || (itineraryFormat === 'datewise' && !startDate)) {
+      return;
+    }
+
+    // Hide the modal first
+    setShowFormatModal(false);
+    setItineraryFormat('daywise');
+    setStartDate(null);
+    setShowStartDatePicker(false);
+
     try {
       setIsDownloading(true);
       setDownloadProgress(0);
       setDownloadSize({ total: 0, downloaded: 0 });
 
       const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
-      const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?stay_category_id=${selectedStayCategory.stay_category_id}`;
+      const params = new URLSearchParams({
+        stay_category_id: selectedStayCategory.stay_category_id,
+        daywise: itineraryFormat === 'daywise',
+        ...(itineraryFormat === 'datewise' && { start_date: formatDate(startDate) })
+      });
+      const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?${params.toString()}`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -255,6 +281,106 @@ export default function ClientWrapper({
         isOpen={isImageViewerOpen}
         onClose={() => setIsImageViewerOpen(false)}
       />
+
+      {/* Add Format Selection Modal */}
+      <Popup
+        isOpen={showFormatModal}
+        onClose={() => {
+          setShowFormatModal(false);
+          setItineraryFormat('daywise');
+          setStartDate(null);
+          setShowStartDatePicker(false);
+        }}
+        title="Choose Itinerary Format"
+        pos="right"
+        className="w-full max-w-md rounded-2xl"
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-4">
+                  Select Format
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      setItineraryFormat('daywise');
+                      setShowStartDatePicker(false);
+                    }}
+                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'daywise'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <i className="fi fi-rr-calendar-lines text-2xl mb-2"></i>
+                    <p className="text-sm font-medium">Day-wise</p>
+                    <p className="text-xs text-gray-500 mt-1">Day 1, Day 2, etc.</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setItineraryFormat('datewise');
+                      setShowStartDatePicker(true);
+                    }}
+                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'datewise'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <i className="fi fi-rr-calendar-clock text-2xl mb-2"></i>
+                    <p className="text-sm font-medium">Date-wise</p>
+                    <p className="text-xs text-gray-500 mt-1">Actual dates</p>
+                  </button>
+                </div>
+              </div>
+
+              {showStartDatePicker && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-2">
+                    Select Start Date
+                  </label>
+                  <div className="relative">
+                    <DatePicker
+                      selected={startDate}
+                      onChange={setStartDate}
+                      minDate={new Date()}
+                      placeholderText="Choose start date"
+                      className="w-full h-12 px-4 border text-gray-800 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      dateFormat="dd/MM/yyyy"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 bg-white p-4 border-t border-gray-100 mt-auto">
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowFormatModal(false);
+                  setItineraryFormat('daywise');
+                  setStartDate(null);
+                  setShowStartDatePicker(false);
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFormatSubmit}
+                disabled={itineraryFormat === 'datewise' && !startDate}
+                className={`flex-1 px-6 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${itineraryFormat === 'datewise' && !startDate
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700'
+                  }`}
+              >
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      </Popup>
 
       {/* Mobile Form Popup */}
       <Popup

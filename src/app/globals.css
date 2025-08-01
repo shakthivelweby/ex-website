@@ -5,56 +5,54 @@
 
 /* Airbnb Cereal Font Declarations */
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_Lt.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Lt.otf") format("opentype");
   font-weight: 300;
   font-style: normal;
   font-display: swap;
-
 }
 
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_Bk.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Bk.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_Md.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Md.otf") format("opentype");
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_Bd.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Bd.otf") format("opentype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_XBd.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_XBd.otf") format("opentype");
   font-weight: 800;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Airbnb Cereal';
-  src: url('/fonts/AirbnbCereal_W_Blk.otf') format('opentype');
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Blk.otf") format("opentype");
   font-weight: 900;
   font-style: normal;
   font-display: swap;
 }
 
 /* Next.js Debugger Icon Position */
-
 
 :root {
   --background: #ffffff;
@@ -78,7 +76,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Airbnb Cereal', Arial, Helvetica, sans-serif;
+  font-family: "Airbnb Cereal", Arial, Helvetica, sans-serif;
   letter-spacing: 0.02em;
 }
 
@@ -431,14 +429,19 @@ i {
   animation-delay: 150ms;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   letter-spacing: 0.02em;
 }
 
 input,
 textarea,
 select {
-  font-size: 16px!important;
+  font-size: 16px !important;
 }
 
 /* prefixes */
@@ -451,7 +454,6 @@ select {
 
 .render-html p {
   margin-bottom: 1rem;
-  
 }
 
 .render-html h1,
@@ -500,7 +502,6 @@ select {
 .render-html strong {
   font-weight: 600;
 }
-
 
 .render-html img {
   max-width: 100%;

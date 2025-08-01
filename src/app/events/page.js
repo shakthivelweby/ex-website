@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import ClientWrapper from "./clientWrapper";
 
 const Events = () => {
@@ -158,10 +160,10 @@ const Events = () => {
           {/* Filters Section - Desktop */}
           <div className="hidden lg:block lg:w-1/4 xl:w-1/5 shrink-0">
             <div className="sticky top-24">
-              <EventFilters
+              {/* <EventFilters
                 initialFilters={initialFilters}
                 onFilterChange={updateURL}
-              />
+              /> */}
             </div>
           </div>
 
@@ -200,8 +202,8 @@ const Events = () => {
                   <button
                     key={index}
                     className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm border whitespace-nowrap transition-all ${initialFilters.category === category
-                        ? 'border-primary-600 bg-primary-50 text-primary-700'
-                        : 'border-primary-100 text-primary-600 hover:bg-primary-50'
+                      ? 'border-primary-600 bg-primary-50 text-primary-700'
+                      : 'border-primary-100 text-primary-600 hover:bg-primary-50'
                       }`}
                     onClick={() => updateURL({ ...initialFilters, category })}
                   >
@@ -213,21 +215,21 @@ const Events = () => {
 
             {/* Events Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
-              {events.map((event) => (
+              {/* {events.map((event) => (
                 <EventCard key={event.id} event={event} />
-              ))}
+              ))} */}
             </div>
           </div>
         </div>
 
         {/* Mobile Filters */}
-        <EventFilters
+        {/* <EventFilters
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
           isMobile
           initialFilters={initialFilters}
           onFilterChange={updateURL}
-        />
+        /> */}
       </div>
 
       <style jsx global>{`

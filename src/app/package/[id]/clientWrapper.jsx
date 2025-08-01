@@ -339,11 +339,12 @@ export default function ClientWrapper({
                   <label className="block text-sm font-medium text-gray-800 mb-2">
                     Select Start Date
                   </label>
-                  <div className="relative">
+                  <div className="relative flex justify-center">
                     <DatePicker
                       selected={startDate}
                       onChange={setStartDate}
                       minDate={new Date()}
+                      inline={true}
                       placeholderText="Choose start date"
                       className="w-full h-12 px-4 border text-gray-800 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       dateFormat="dd/MM/yyyy"

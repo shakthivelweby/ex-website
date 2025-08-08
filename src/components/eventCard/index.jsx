@@ -2,7 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 const EventCard = ({ event }) => {
-  const { title, date, venue, type, image, price, promoted } = event;
+  const { title, date, venue, type, image, price, promoted, interest_count } = event;
 
   return (
     <Link href="#" className="block group">
@@ -10,8 +10,9 @@ const EventCard = ({ event }) => {
         {/* Promoted Tag */}
         {promoted && (
           <div className="absolute top-4 left-4 z-10">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-600 text-white">
-              Promoted
+            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
+              <span>🔥</span>
+              <span>Featured</span>
             </span>
           </div>
         )}
@@ -26,6 +27,16 @@ const EventCard = ({ event }) => {
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+          {/* Interest Count Overlay */}
+          {interest_count > 50 && (
+            <div className="absolute bottom-4 left-4 z-10">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-black/50 text-white backdrop-blur-sm">
+                <span>👍</span>
+                <span>{interest_count}+ people interested</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Content */}

@@ -86,7 +86,7 @@ export default function Scheduled() {
   });
 
   // Google API Key - you can move this to environment variables
-  const googleApiKey = "AIzaSyDaNPqSBObLDby0rpTvEUbQ8Ek9kxAABK0";
+
 
   // Handle mounting and initialize date
   useEffect(() => {
@@ -94,10 +94,10 @@ export default function Scheduled() {
     setSelectedDate(new Date());
   }, []);
 
-  
+
   useEffect(() => {
     if (!isMounted) return;
-   
+
     if (locationCoordinates.latitude && locationCoordinates.longitude) {
       localStorage.setItem(
         "locationCoordinates",
@@ -107,13 +107,13 @@ export default function Scheduled() {
     if (startLocation) {
       localStorage.setItem("startLocation", startLocation);
     }
-    
+
   }, [locationCoordinates, startLocation, isMounted]);
 
   // get from local storage - only after mounting
   useEffect(() => {
     if (!isMounted) return;
-    
+
     const storedLocationCoordinates = localStorage.getItem("locationCoordinates");
     const storedStartLocation = localStorage.getItem("startLocation");
     const storedDestination = localStorage.getItem("choosedDestination");
@@ -122,7 +122,7 @@ export default function Scheduled() {
       const destination = JSON.parse(storedDestination);
       setDestinationId(destination.id);
       setDestinationName(destination.name);
-      
+
       // Update filters based on type using functional update
       setFilters(prev => {
         const updatedFilters = { ...prev };
@@ -159,21 +159,21 @@ export default function Scheduled() {
       };
       setLocationCoordinates(defaultCoordinates);
       setStartLocation("Kerala");
-      
+
       // Store default values in localStorage
       localStorage.setItem("locationCoordinates", JSON.stringify(defaultCoordinates));
       localStorage.setItem("startLocation", "Kerala");
     }
   }, [isMounted]); // Removed filters dependency
 
-  
+
 
   const { data: scheduledTrips } = useScheduledTrips(filters);
   const { data: destinationsData } = useDestinations();
   const packages = scheduledTrips?.data || [];
 
   // Format destinations for dropdown - wrapped in useMemo to prevent recalculation on every render
-  const destinationOptions = useMemo(() => 
+  const destinationOptions = useMemo(() =>
     destinationsData?.data?.map(dest => ({
       value: dest.id.toString(),
       label: dest.name,
@@ -182,7 +182,7 @@ export default function Scheduled() {
         longitude: dest.longitude
       }
     })) || []
-  , [destinationsData?.data]);
+    , [destinationsData?.data]);
 
   // set default destination id
   useEffect(() => {
@@ -245,7 +245,7 @@ export default function Scheduled() {
         const destination = JSON.parse(e.newValue);
         setDestinationId(destination.id);
         setDestinationName(destination.name);
-        
+
         setFilters(prev => ({
           ...prev,
           country_id: destination.country_id || null,
@@ -275,10 +275,10 @@ export default function Scheduled() {
     const checkIsMobile = () => {
       setIsMobile(window.matchMedia("(max-width: 768px)").matches);
     };
-    
+
     checkIsMobile();
     window.addEventListener('resize', checkIsMobile);
-    
+
     return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
@@ -316,7 +316,7 @@ export default function Scheduled() {
   // use effect to update selected date, and longitude and latitude in filters
   useEffect(() => {
     if (!selectedDate) return; // Add this check to prevent unnecessary updates
-    
+
     setFilters((prev) => ({
       ...prev,
       selectedDate: selectedDate.toISOString().split("T")[0],
@@ -370,7 +370,7 @@ export default function Scheduled() {
       pax: null,
       duration: null,
     }));
-    
+
     // Clear the temporary filters but preserve destination-related fields
     setTempFilters({
       destination: null,
@@ -387,10 +387,10 @@ export default function Scheduled() {
       state_id: filters.state_id,
       destination_id: filters.destination_id,
     });
-    
+
     // Increment reset key to force re-render of components
     setResetKey((prev) => prev + 1);
-    
+
     // Close the filter popup
     setIsFilterPopupOpen(false);
   };
@@ -446,7 +446,7 @@ export default function Scheduled() {
 
     // Update main filters state with clean values
     setFilters(cleanFilters);
-    
+
     // Close popup after applying filters
     setIsFilterPopupOpen(false);
   };
@@ -468,7 +468,7 @@ export default function Scheduled() {
 
         <div className="container mx-auto px-4  ">
           {/* Title with edit button */}
-          <h1 className="text-2xl text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto" style={{lineHeight: '1.3'}}>
+          <h1 className="text-2xl text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto" style={{ lineHeight: '1.3' }}>
             Schedule trips to explore {" "}
             <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
               {destinationName}
@@ -476,8 +476,8 @@ export default function Scheduled() {
             <i
               className="inline-flex items-center justify-center fi fi-rr-pencil text-gray-900 text-xs text-white relative top-0 left-2 cursor-pointer mr-4 w-6 h-6  bg-primary-700 rounded-full p-1"
               onClick={openDestinationPopup}
-            ></i> 
-            which start from {}
+            ></i>
+            which start from { }
             <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
               {startLocation}
             </span>
@@ -488,7 +488,7 @@ export default function Scheduled() {
           </h1>
 
           {/* destination list popup */}
-          
+
           <Search
             isOpen={isDestinationPopupOpen}
             onClose={() => setIsDestinationPopupOpen(false)}
@@ -500,7 +500,7 @@ export default function Scheduled() {
             isOpen={isLocationPopupOpen}
             onClose={() => setIsLocationPopupOpen(false)}
             onPlaceSelected={handlePlaceSelect}
-            googleApiKey={googleApiKey}
+            googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
             title="Change Starting Location"
           />
 
@@ -679,52 +679,48 @@ export default function Scheduled() {
                   <span className="text-xs text-gray-500 font-medium">Trips Available</span>
                   <span className="text-sm md:text-lg font-bold text-gray-900">
                     <span className="md:hidden">
-                      {selectedDate && new Intl.DateTimeFormat('en-US', { 
-                        weekday: 'short', 
-                        month: 'short', 
-                        day: 'numeric' 
+                      {selectedDate && new Intl.DateTimeFormat('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
                       }).format(selectedDate)}
                     </span>
                     <span className="hidden md:inline">
-                      {selectedDate && new Intl.DateTimeFormat('en-US', { 
-                        weekday: 'long', 
-                        month: 'long', 
-                        day: 'numeric' 
+                      {selectedDate && new Intl.DateTimeFormat('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric'
                       }).format(selectedDate)}
                     </span>
                   </span>
                 </div>
               </div>
-              
+
               {/* Layout Toggle Controls */}
               <div className="flex items-center gap-4">
                 {/* View Toggle */}
                 <div className="flex items-center bg-white rounded-full p-0.5 border border-gray-100 shadow-sm lg:hidden">
                   <button
                     onClick={() => setMobileLayout('list')}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
-                      mobileLayout === 'list'
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${mobileLayout === 'list'
                       ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
                       : 'text-gray-400 hover:text-gray-600'
-                    }`}
+                      }`}
                     aria-label="List view"
                   >
-                    <i className={`fi fi-rr-list text-[13px] transition-transform ${
-                      mobileLayout === 'list' ? 'scale-110' : ''
-                    }`}></i>
+                    <i className={`fi fi-rr-list text-[13px] transition-transform ${mobileLayout === 'list' ? 'scale-110' : ''
+                      }`}></i>
                   </button>
                   <button
                     onClick={() => setMobileLayout('grid')}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
-                      mobileLayout === 'grid'
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${mobileLayout === 'grid'
                       ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
                       : 'text-gray-400 hover:text-gray-600'
-                    }`}
+                      }`}
                     aria-label="Grid view"
                   >
-                    <i className={`fi fi-rr-apps text-[13px] transition-transform ${
-                      mobileLayout === 'grid' ? 'scale-110' : ''
-                    }`}></i>
+                    <i className={`fi fi-rr-apps text-[13px] transition-transform ${mobileLayout === 'grid' ? 'scale-110' : ''
+                      }`}></i>
                   </button>
                 </div>
                 <div className="">
@@ -744,8 +740,7 @@ export default function Scheduled() {
           </div>
 
           {/* Trip Cards - Grid/List View */}
-          <div className={`${
-            mobileLayout === 'grid'
+          <div className={`${mobileLayout === 'grid'
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
             : 'flex flex-col gap-4'
             }`}>

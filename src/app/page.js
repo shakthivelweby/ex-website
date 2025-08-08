@@ -1093,7 +1093,7 @@ export default function HomePage() {
 
                 {/* Review Text */}
                 <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                  "{testimonial.review}"
+                  &ldquo;{testimonial.review}&rdquo;
                 </p>
 
                 {/* Tour Type Tag */}
@@ -1123,7 +1123,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </div>
+            ))}
           </div>
 
         </section>

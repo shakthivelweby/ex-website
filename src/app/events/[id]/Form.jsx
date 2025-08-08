@@ -94,7 +94,7 @@ const Form = ({
             </p>
             <button
               onClick={handleGetDirections}
-              className="flex items-center gap-2 text-primary-600 text-sm font-medium">
+              className="flex items-center gap-2 text-primary-500 text-sm font-medium">
               <i className="fi fi-rr-map-marker text-base"></i>
               Get Directions
             </button>
@@ -105,7 +105,7 @@ const Form = ({
         <div className="bg-white rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">Starts from</span>
-            <span className="text-xl font-semibold text-gray-800">
+            <span className="text-xl lg:text-2xl font-semibold text-gray-800">
               {eventDetails.price} <span className="text-sm text-gray-500 font-normal">onwards</span>
             </span>
           </div>

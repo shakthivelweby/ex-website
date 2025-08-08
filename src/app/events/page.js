@@ -151,7 +151,7 @@ const Events = () => {
           <h1 className="text-2xl text-gray-900 md:text-4xl font-medium text-left tracking-tight mb-2 sm:mb-3">
             Events That Inspire & Excite
           </h1>
-          <p className="text-sm sm:text-base text-gray-600 text-left text-left">
+          <p className="text-sm sm:text-base text-gray-600 text-left">
             Discover and book amazing events happening around you
           </p>
         </div>
@@ -216,7 +216,7 @@ const Events = () => {
             </div>
 
             {/* Events Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {events.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}

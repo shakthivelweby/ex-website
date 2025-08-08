@@ -7,6 +7,7 @@ import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Search from "@/components/Search/Search";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import EventCard from "@/components/eventCard";
 
 
 export default function HomePage() {
@@ -169,7 +170,7 @@ export default function HomePage() {
   // Inside the form, replace the existing dropdown with:
   const CustomDropdown = () => (
     <div className="flex-1 relative" ref={dropdownRef}>
-      <label className="absolute top-1.5 left-4 text-xs text-gray-600 flex items-center gap-1.5">
+      <label className="absolute top-1.5 left-4 text-xs text-white/80 flex items-center gap-1.5">
         <i className="fi fi-rr-search text-[10px] relative top-[0px]"></i>
         What you are looking for?
       </label>
@@ -177,14 +178,14 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-          className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px] hover:bg-black/5 transition-colors text-left flex items-center justify-between group"
+          className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-white font-medium cursor-pointer h-[50px] hover:bg-black/5 transition-colors text-left flex items-center justify-between group"
         >
           <div className="flex items-center gap-2.5">
-            <i className={`${tripOptions.find(opt => opt.value === selectedTrip)?.icon} text-gray-600 text-base group-hover:text-primary-500 transition-colors`}></i>
+            <i className={`${tripOptions.find(opt => opt.value === selectedTrip)?.icon} text-white text-base transition-colors`}></i>
             <span className="text-base">{selectedTrip}</span>
           </div>
           <motion.i 
-            className="fi fi-rr-angle-small-down text-gray-800 text-sm group-hover:text-primary-500 transition-colors"
+            className="fi fi-rr-angle-small-down text-white text-sm transition-colors"
             animate={{ rotate: isDropdownOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
           />
@@ -240,7 +241,7 @@ export default function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-white mx-auto">
+    <div className="min-h-screen bg-white">
       <div className="relative">
         {selectedTrip === "Packages" || selectedTrip === "Scheduled" ? (
           <Search
@@ -257,7 +258,7 @@ export default function HomePage() {
             googleApiKey={googleApiKey}
           />
         )}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
         <div className="bg-white relative z-10">
           {/* Background Image with Zoom Animation */}
@@ -331,14 +332,14 @@ export default function HomePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
                 onSubmit={handleSearch} 
-                className="backdrop-blur-md bg-white/60 rounded-[24px] md:rounded-full shadow-lg overflow-visible p-3 md:p-1.5 max-w-[650px] mx-auto w-full border border-white/20"
+                className="relative backdrop-blur-lg bg-white/10 rounded-[24px] md:rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-visible p-3 md:p-1.5 max-w-[650px] mx-auto w-full border border-white/20"
               >
                 <div className="flex flex-col md:flex-row gap-3">
                   <CustomDropdown />
 
                   {/* Where you want to start from */}
                   <div className="flex-1 relative">
-                    <label className="absolute top-1.5 left-4 text-xs text-gray-600 z-10 flex items-center gap-1.5">
+                    <label className="absolute top-1.5 left-4 text-xs text-white/80 z-10 flex items-center gap-1.5">
                       <i className="fi fi-rr-marker text-[10px] top-[0px]"></i>
                       {locationText[selectedTrip.split(" ")[0]]}
                     </label>
@@ -348,17 +349,20 @@ export default function HomePage() {
                         value={selectedLocation}
                         onClick={() => setIsLocationPopupOpen(true)}
                         readOnly
-                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-gray-800 font-medium cursor-pointer h-[50px]"
+                        className="w-full appearance-none bg-transparent rounded-3xl border-0 outline-none px-4 pt-6 pb-1.5 text-[14px] text-white font-medium cursor-pointer h-[50px] hover:bg-white/5 transition-colors"
                         placeholder="Enter location..."
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                        <i className="fi fi-rr-angle-small-down text-gray-800 text-sm"></i>
+                        <i className="fi fi-rr-angle-small-down text-white text-sm"></i>
                       </div>
                     </div>
                   </div>
 
                   {/* Search Button */}
-                  <button type="submit" className="w-full md:w-auto bg-primary-500 text-white rounded-full transition-colors hover:bg-primary-600 flex items-center justify-center gap-2 px-5 py-2.5 md:px-3.5 md:py-3.5 search-pulse lg:!search-pulse-none">
+                  <button 
+                    type="submit" 
+                    className="w-full md:w-auto bg-primary-500 hover:bg-primary-600 text-white rounded-full transition-all flex items-center justify-center gap-2 px-5 py-2.5 md:px-3.5 md:py-3.5 search-pulse lg:!search-pulse-none backdrop-blur-sm"
+                  >
                     <span className="text-sm font-semibold md:hidden">Search</span>
                     <Image src="/home/search-icon.svg" alt="search icon" width={18} height={18} className="md:w-6 md:h-6" />
                   </button>
@@ -369,685 +373,556 @@ export default function HomePage() {
         </div>
         
 
-        {/* Book without agency section */}
-        <div className="relative overflow-hidden hidden">
-        {/* Decorative blurred circle background at the top */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 !z-0"></div>
-           {/* Heading */}
-           <div className="text-center flex flex-col items-center justify-center lg:max-w-2xl mx-auto pt-20 md:pb-20 pb-10  relative">
-             <div className="inline-block relative">
-               <Image
-                 src="/home/star-light.png"
-                 alt=""
-                 width={100}
-                 height={100}
-                 className="absolute left-0 lg:-left-8 -top-6 w-6 h-6"
-               />
-               <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-6 ">
-                 Book your trip without<br />agency fee
-               </h2>
-               <Image
-                 src="/home/star-dark.png"
-                 alt=""
-                 width={100}
-                 height={100}
-                 className="absolute right-0 lg:-right-10 bottom-0 lg:-bottom-4 w-10 h-10"
-               />
-             </div>
-             <p className="text-gray-600 text-base">
-               we build the perfect solutions for travellers life easy
-             </p>
-             <div className="w-44 mt-6">
-              <Image src="/home/line.png" alt="" width={1000} height={1000} className="w-full h-full" />
-             </div>
-           </div>
-           {/* Cards */}
-           <div className="grid grid-cols-1 lg:grid-cols-3 items-center gap-6">
-            {/* left card */}
-              <div className="z-10">
-                <div className="flex flex-col gap-6">
-                  {/* image */}
-                    <div className="w-full h-[250px]">
-                      <Image src="/home/left-img.webp" alt="" width={1000} height={1000} className="w-full h-full rounded-3xl border-[3px] border-gray-800" />
+
+
+        </section>
+
+        {/* Featured Destinations Section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            {/* Section Header */}
+            <div className="mb-8">
+             <div className="flex items-center gap-2 mb-4 justify-start">
+                  <div className="w-12 h-[2px] bg-primary-500"></div>
+                  <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                    Popular Choices
+                  </span>
+              </div>
+              <h2 className="text-3xl text-gray-900 font-normal tracking-tight mt-4">
+                Featured Destinations
+              </h2>
+              <p className="text-gray-600 text-base mt-2">
+                Discover our handpicked selection of India&apos;s most beloved travel destinations
+              </p>
+            </div>
+
+            {/* Destinations Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {
+                  id: 1,
+                  name: "Manali",
+                  image: "https://images.unsplash.com/photo-1609920658906-8223bd289001?q=80&w=601&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                  packageCount: 3,
+                  type: "FEATURED DESTINATION"
+                },
+                {
+                  id: 2,
+                  name: "Jaisalmer",
+                  image: "https://images.unsplash.com/photo-1741759223244-9c0456c12eb7?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                  packageCount: 12,
+                  type: "FEATURED DESTINATION"
+                },
+                {
+                  id: 3,
+                  name: "Srinagar",
+                  image: "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                  packageCount: 8,
+                  type: "FEATURED DESTINATION"
+                },
+                {
+                  id: 4,
+                  name: "Amritsar",
+                  image: "https://images.unsplash.com/photo-1588096344356-9b497caeeb64?q=80&w=784&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                  packageCount: 10,
+                  type: "FEATURED DESTINATION"
+                }
+              ].map((destination) => (
+                <div key={destination.id} className="group relative rounded-[20px] overflow-hidden">
+                  {/* Background Image */}
+                  <div className="relative aspect-[3/4] w-full">
+                    <Image
+                      src={destination.image}
+                      alt={destination.name}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
+                  </div>
+
+                  {/* Package Count Badge */}
+                  <div className="absolute top-4 left-4 z-10">
+                    <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md rounded-full pl-2 pr-3 py-1">
+                      <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
+                        <span className="text-[10px] font-semibold text-white">{destination.packageCount}</span>
+                      </div>
+                      <span className="text-xs font-medium text-white">Tour Packages</span>
                     </div>
-                    {/* content */}
-                    <div className="bg-gray-100 rounded-3xl">
-                      {/* content */}
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug p-4">
-                          Save 20% on all <br/> bookings!
-                        </h3>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-gray-600 text-sm mt-6 pl-4">
-                            We offer the best deals on  all  bookings, so you can save more and travel more.
-                          </p>
-                          {/* icon */}
-                          <div className="bg-white p-2 w-16 h-16 !mt-12 flex justify-center items-center rounded-tl-2xl">
-                            <div className="w-10 h-10 bg-primary-50 border-[1px] border-primary-200 p-2 rounded-full flex items-center justify-center m-2">
-                              <i className="fi fi-rr-megaphone text-primary-500 text-xl"></i>
-                            </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    {/* Title and Type */}
+                    <div className="mb-6">
+                      <h3 className="text-2xl font-medium text-white mb-2">
+                        {destination.name}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <div className="h-px w-5 bg-primary-500"></div>
+                        <span className="text-xs font-medium text-white/70 uppercase tracking-wider">
+                          {destination.type}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* View All Button */}
+                    <button className="w-full group/btn">
+                      <div className="relative overflow-hidden bg-white/10 hover:bg-primary-500 backdrop-blur-sm rounded-xl p-3.5 transition-all duration-300">
+                        <div className="relative z-10 flex items-center justify-between">
+                          <span className="text-sm font-medium text-white">View All Packages</span>
+                          <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                            <span className="text-white transform group-hover/btn:translate-x-0.5 transition-transform duration-300">
+                              →
+                            </span>
                           </div>
                         </div>
                       </div>
-                     
-                    </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {/* center card */}
-              <div className="">
-                  {/* image */}
-                  <div>
-                    <Image src="/home/center-img.webp" alt="" width={1000} height={1000} className="w-full h-full rounded-3xl border-[3px] border-gray-800" />
-                  </div>
-              </div>
-              {/* right card */}
-              <div className="">
-                <div className="flex flex-col gap-6">
-                    {/* content */}
-                    <div className="bg-gray-100 rounded-3xl">
-                      {/* content */}
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug p-4">
-                          Book direclty to <br/> local suppliers
-                        </h3> 
-                        <div className="flex items-center justify-between gap-2">
-                            <p className="text-gray-600 text-sm mt-6 pl-4">
-                            We offer the best deals on  all  bookings, so you can save more and travel more.
-                            </p>
-                            {/* icon */}
-                            <div className="bg-white p-2 w-16 h-16 !mt-12 flex justify-center items-center rounded-tl-2xl">
-                              <div className="w-10 h-10 bg-primary-50 border-[1px] border-primary-200 p-2 rounded-full flex items-center justify-center">
-                                <i className="fi fi-rr-check-circle text-primary-500 text-xl"></i>
-                              </div>
-                            </div>
-                        </div>
-                       
-                      </div>
-                     
-                    </div>
-                  {/* image */}
-                    <div className="w-full h-[250px]">
-                      <Image src="/home/right-img.webp" alt="" width={1000} height={1000} className="w-full h-full rounded-3xl border-[3px] border-gray-800" />
-                    </div>
-                  
-                </div>
-              </div>
-           </div>
-         </div>
-
-
-         {/* Popular Destinations */}
-         <div className="container mx-auto py-20 relative hidden">
-            {/* Decorative blurred circle background at the top */}
-            <div className="absolute left-0 bottom-22 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
-
-          {/* Heading */}
-          <div className="text-center flex flex-col items-center justify-center max-w-2xl mx-auto pt-20 md:pb-20 pb-10 px-4 relative">
-             <div className="inline-block relative">
-               <Image
-                 src="/home/star-light.png"
-                 alt=""
-                 width={100}
-                 height={100}
-                 className="absolute -left-8 -top-6 w-6 h-6"
-               />
-               <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-6 ">
-               Discover Amazing Places <br /> to Visit
-               </h2>
-               <Image
-                 src="/home/star-dark.png"
-                 alt=""
-                 width={100}
-                 height={100}
-                 className="absolute -right-7 lg:-right-10 -bottom-4 w-10 h-10"
-               />
-             </div>
-             <p className="text-gray-600 text-base">
-               we build the perfect solutions for travellers life easy
-             </p>
-             <div className="w-44 mt-6">
-              <Image src="/home/line.png" alt="" width={1000} height={1000} className="w-full h-full" />
-             </div>
-            
-           </div>
-           {/* Grid of destination cards */}
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-             {/* Destination Card */}
-             <a href="#" className="relative group overflow-hidden rounded-3xl h-[350px] z-10">
-               <Image
-                 src="/home/destination-1.webp"
-                 alt="Rajasthan"
-                 width={400}
-                 height={350}
-                 className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800"
-               />
-               {/* Gradient Overlay - only at bottom */}
-               <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
-               {/* Arrow Button */}
-               <div className="absolute top-4 right-4 w-8 h-8 bg-white/90 rounded-full !flex !items-center !justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                 <i className="fi fi-bs-arrow-up-right text-gray-800 text-sm"></i>
-               </div>
-               {/* Location Name */}
-               <div className="absolute bottom-6 left-6">
-                 <h3 className="text-white text-xl font-medium">Rajasthan</h3>
-               </div>
-             </a>
-
-             {/* Destination Card */}
-             <a href="#" className="relative group overflow-hidden rounded-3xl h-[350px] z-10">
-               <Image
-                 src="/home/destination-2.webp"
-                 alt="Kerala"
-                 width={400}
-                 height={350}
-                 className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800"
-               />
-               {/* Gradient Overlay - only at bottom */}
-               <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
-               {/* arrow Button */}
-               <div className="absolute top-4 right-4 w-8 h-8 bg-white/90 rounded-full !flex !items-center !justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                 <i className="fi fi-bs-arrow-up-right text-gray-800 text-sm"></i>
-               </div>
-               {/* Location Name */}
-               <div className="absolute bottom-6 left-6">
-                 <h3 className="text-white text-xl font-medium">Kerala</h3>
-               </div>
-             </a>
-
-             {/* Destination Card */}
-             <a href="#" className="relative group overflow-hidden rounded-3xl h-[350px] z-10">
-               <Image
-                 src="/home/destination-3.webp"
-                 alt="Agra"
-                 width={400}
-                 height={350}
-                 className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800"
-               />
-               {/* Gradient Overlay - only at bottom */}
-               <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
-               {/* Arrow Button */}
-               <div className="absolute top-4 right-4 w-8 h-8 bg-white/90 rounded-full !flex !items-center !justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                 <i className="fi fi-bs-arrow-up-right text-gray-800 text-sm"></i>
-               </div>
-               {/* Location Name */}
-               <div className="absolute bottom-6 left-6">
-                 <h3 className="text-white text-xl font-medium">Agra</h3>
-               </div>
-             </a>
-
-             {/* Destination Card */}
-             <a href="#" className="relative group overflow-hidden rounded-3xl h-[350px] z-10">
-               <Image
-                 src="/home/destination-4.webp"
-                 alt="Dubai"
-                 width={400}
-                 height={350}
-                 className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800"
-               />
-               {/* Gradient Overlay - only at bottom */}
-               <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
-               {/* Arrow Button */}
-               <div className="absolute top-4 right-4 w-8 h-8 bg-white/90 rounded-full !flex !items-center !justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                 <i className="fi fi-bs-arrow-up-right text-gray-800 text-sm"></i>
-               </div>
-               {/* Location Name */}
-               <div className="absolute bottom-6 left-6">
-                 <h3 className="text-white text-xl font-medium">Kashmir</h3>
-               </div>
-             </a>
-    
-           </div>
-
-           {/* Explore All Button */}
-           <div className="flex justify-center mt-12">
-             <button className="bg-gray-900 text-white px-6 py-3 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-colors z-10">
-               Explore All
-               <i className="fi fi-rr-arrow-right"></i>
-             </button>
-           </div>
-         </div>
-         
-
-         {/* What you can do section */}
-         <div className="container mx-auto py-20 relative hidden">
-          
-
-           {/* Content Grid */}
-           <div className="flex flex-col lg:flex-row justify-between gap-6">
-             {/* Left Side Image */}
-             <div className="lg:w-[45%] z-10">
-               {/* Heading */}
-              <div className="max-w-lg relative mb-10 md:mb-20">
-                <div className="relative">
-                  <Image
-                    src="/home/star-light.png"
-                    alt=""
-                    width={100}
-                    height={100}
-                    className="absolute left-0 lg:-left-6 -top-6 w-6 h-6"
-                  />
-                  <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter leading-tight">
-                    What you can do<br />with Exploreworld
-                  </h2>
-                  <Image
-                    src="/home/star-dark.png"
-                    alt=""
-                    width={100}
-                    height={100}
-                    className="absolute right-0 lg:-right-6 bottom-0 w-8 h-8"
-                  />
-                </div>
-                <p className="text-gray-600 text-base mt-4">
-                  we build the perfect solutions for travellers life easy
-                </p>
-                <div className="w-44 mt-4">
-                  <Image src="/home/line.png" alt="" width={1000} height={1000} className="w-full h-full" />
-                </div>
-              </div>
-               <div className="h-fit rounded-3xl overflow-hidden">
-                 <Image
-                   src="/home/what-we-do.webp"
-                   alt="Happy traveler"
-                   width={1000}
-                   height={1000}
-                   className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800"
-                 />
-               </div>
-             </div>
-
-             {/* Right Services Grid */}
-             <div className="lg:w-[55%] grid grid-cols-1 md:grid-cols-2 gap-6 z-10">
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-pending text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Scheduled Tours</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight">Fixed-date tours by trusted local suppliers. Just book and join!</p>
-                           
-                    </div>
-                    {/* view all button */}
-                    <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>
-                  </div>
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-umbrella-beach text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Packages</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight"> All-in-one travel deals with stay, transport, and activities.</p>
-                    </div>
-                   {/* view all button */}
-                   <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>
-                      
-              
-                  
-                  </div>
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-snowboarding text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Activity</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight">Exciting things to do adventures, workshops, and more.</p>       
-                    </div>
-                    {/* view all button */}
-                    <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>
-               
-                  
-                  </div>
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-binoculars text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Attraction</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight">Must-see places and landmarks worth exploring.</p>
-                    </div>
-                     {/* view all button */}
-                     <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>
-                  
-                  </div>
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-biking text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Rentals</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight">Convenient rentals for vehicles and travel gear.</p>
-                      
-                    </div>
-                    {/* view all button */}
-                    <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>  
-                
-                  
-                  </div>
-               
-                  {/* card */}
-                  <div className="bg-gray-100 lg:bg-white rounded-3xl h-fit">
-                    {/* content */}
-                    <div className="relative z-10 p-4">
-                      <div className="mb-4">
-                        <i className="fi fi-rr-glass-cheers text-primary-500 text-3xl"></i>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">Events</h3>
-                      <p className="text-gray-600 text-sm mb-4 leading-tight">Join local festivals, shows, and cultural happenings.</p>
-                    </div>
-                    {/* view all button */}
-                    <div className="bg-white lg:bg-[#ffd9e5] p-2 w-fit rounded-tr-2xl">
-                      <a href="#" className="text-sm text-gray-800 bg-gray-100 lg:bg-white rounded-full px-4 py-2 flex items-center gap-2  hover:bg-primary-500 hover:text-white transition-all duration-300 w-fit">View all
-                            <i className="fi fi-bs-arrow-up-right ml-1 text-[10px]"></i>
-                      </a>
-                    </div>  
-                  
-                  
-                      
-                           
-                  
-                  </div>
-
-             </div>
-           </div>
-            {/* Decorative blurred circle background at the top */}
-            <div className="absolute right-0 top-0 bottom-0 w-[300px] h-[300px] md:w-[700px] md:h-[700px] lg:w-[1000px] lg:h-[1000px] bg-primary-200 lg:rounded-full blur-3xl opacity-40 lg:opacity-30 z-0"></div>
-         </div>
-         
-         {/* blog section */}
-         <div className="container mx-auto  relative hidden">
-            {/* Decorative blurred circle background at the top */}
-            <div className="absolute left-0 bottom-0 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
-
-            {/* Heading */}
-            <div className="text-center flex flex-col items-center justify-center max-w-2xl mx-auto pt-20 md:pb-20 pb-10 px-4 relative">
-              <div className="inline-block relative">
-                <Image
-                  src="/home/star-light.png"
-                  alt=""
-                  width={100}
-                  height={100}
-                  className="absolute left-0 lg:-left-8 -top-6 w-6 h-6"
-                />
-                <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-6">
-                  From Our Travel Journal
-                </h2>
-                <Image
-                  src="/home/star-dark.png"
-                  alt=""
-                  width={100}
-                  height={100}
-                  className="absolute -right-3 -bottom-2 lg:-right-10 lg:bottom-0 md:-bottom-4 w-10 h-10"
-                /> 
-              </div>
-              <p className="text-gray-600 text-base">
-                Inspiration, guides, and insider tips - all in one place
-              </p>
-              <div className="w-44 mt-6">
-                <Image src="/home/line.png" alt="" width={1000} height={1000} className="w-full h-full" />
-              </div>
+              ))}
             </div>
-
-            {/* Blog Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-              {/* Blog Card 1 */}
-              <div className="overflow-hidden group">
-                <a href="#" className="block">
-                  <div className="relative">
-                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                      <Image
-                        src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop&ixlib=rb-4.0.3"
-                        alt="Beach"
-                        width={400}
-                        height={300}
-                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                      <i className="fi fi-rr-calendar mr-2"></i>
-                      Aug 20, 2025
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                      Top 10 Hidden Beaches to Visit in Southeast Asia
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-2">
-                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                    </p>
-                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
-                      Read More
-                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                    </div>
-                  </div>
-                </a>
-              </div>
-
-              {/* Blog Card 2 */}
-              <div className="overflow-hidden group">
-                <a href="#" className="block">
-                  <div className="relative">
-                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                      <Image
-                        src="https://images.unsplash.com/photo-1569668443977-367a489241ef?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3"
-                        alt="Beach"
-                        width={400}
-                        height={300}
-                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                      <i className="fi fi-rr-calendar mr-2"></i>
-                      Aug 14, 2025
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                      Experience the Real Dubai with Hidden Gems and Local Life
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-2">
-                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                    </p>
-                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
-                      Read More
-                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                    </div>
-                  </div>
-                </a>
-              </div>
-
-              {/* Blog Card 3 */}
-              <div className="overflow-hidden group">
-                <a href="#" className="block">
-                  <div className="relative">
-                    <div className="aspect-[4/3] overflow-hidden rounded-3xl">
-                      <Image
-                        src="https://images.unsplash.com/photo-1502301197179-65228ab57f78?q=80&w=1970&auto=format&fit=crop&ixlib=rb-4.0.3"
-                        alt="Beach"
-                        width={400}
-                        height={300}
-                        className="w-full h-full object-cover rounded-3xl border-[3px] border-gray-800 group-hover:scale-110 transition-transform duration-300"
-                      />
-                    </div>
-                    <div className="absolute top-4 right-4 bg-white rounded-full px-2 py-1 text-sm text-gray-800">
-                      <i className="fi fi-rr-calendar mr-2"></i>
-                      Aug 5, 2025
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2 tracking-tighter leading-snug">
-                      Packing Smart Essentials for Every Type of Traveler
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-2">
-                      Discover serene, crowd-free beaches with our top offbeat coastal picks.
-                    </p>
-                    <div className="text-sm text-gray-800 font-medium flex items-center gap-2 group-hover:text-primary-500">
-                      Read More
-                      <i className="fi fi-bs-arrow-up-right text-xs"></i>
-                    </div>
-                  </div>
-                </a>
-              </div>
-            </div>
-
-            {/* View All Button */}
-            <div className="flex justify-center mt-12">
-              <button className="bg-gray-900 text-white px-6 py-3 rounded-full flex items-center gap-2 hover:bg-gray-800 transition-colors z-10">
-                View All Posts
-                <i className="fi fi-rr-arrow-right"></i>
-              </button>
-            </div>
-         </div>
-
-         {/* testimonials */}
-         <div className="container mx-auto py-20 relative hidden">
-            {/* Decorative blurred circle background */}
-            <div className="absolute right-0 top-0 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-primary-200 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
-
-            {/* Heading */}
-            <div className="text-center flex flex-col items-center justify-center max-w-2xl mx-auto pt-20 md:pb-20 pb-10 px-4 relative">
-              <div className="inline-block relative">
-                <Image
-                  src="/home/star-light.png"
-                  alt=""
-                  width={100}
-                  height={100}
-                  className="absolute -left-8 -top-6 w-6 h-6"
-                />
-                <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-6">
-                  Voices from the Journey
-                </h2>
-                <Image
-                  src="/home/star-dark.png"
-                  alt=""
-                  width={100}
-                  height={100}
-                  className="absolute right-0 lg:-right-10 bottom-0 md:-bottom-4 w-10 h-10"
-                />
-              </div>
-              <p className="text-gray-600 text-base">
-                See what real explorers have to say
-              </p>
-              <div className="w-44 mt-6">
-                <Image src="/home/line.png" alt="" width={1000} height={1000} className="w-full h-full" />
-              </div>
-            </div>
-
-            {/* Testimonials Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-              {/* Testimonial Card 1 */}
-              <div className="bg-white rounded-3xl p-8 border border-gray-300 lg:border-gray-100 transition-all duration-300 h-full flex flex-col">
-                <div className="flex gap-1 mb-6">
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                </div>
-                <div className="flex-grow">
-                  <p className="text-gray-800 text-sm leading-relaxed">
-                    Website design did exactly what you said it does. Just what I was looking for. Nice work on your website design.
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-gray-100">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                    <i className="fi fi-sr-user text-primary-500"></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800 text-sm">Kyle Roberts DVM</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">Customer Care Consultant</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial Card 2 */}
-              <div className="bg-white rounded-3xl p-8 border border-gray-300 lg:border-gray-100 transition-all duration-300 h-full flex flex-col">
-                <div className="flex gap-1 mb-6">
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                </div>
-                <div className="flex-grow">
-                  <p className="text-gray-800 text-sm leading-relaxed">
-                    Very easy to use and intuitive interface. Since I started using this platform, my travel planning has become so much more efficient. I&apos;m really impressed with the quality of service!
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-gray-100">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                    <i className="fi fi-sr-user text-primary-500"></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800 text-sm">Sophia Anderson</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">Internal Implementation Officer</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Testimonial Card 3 */}
-              <div className="bg-white rounded-3xl p-8 border border-gray-300 lg:border-gray-100 transition-all duration-300 h-full flex flex-col">
-                <div className="flex gap-1 mb-6">
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                  <i className="fi fi-ss-star text-primary-500 text-lg"></i>
-                </div>
-                <div className="flex-grow">
-                  <p className="text-gray-800 text-sm leading-relaxed">
-                    If you want real marketing that works and effective implementation, this platform has got you covered. The results speak for themselves.
-                  </p>
-                </div>
-                <div className="flex items-center gap-4 mt-8 pt-6 border-t border-gray-100">
-                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                    <i className="fi fi-sr-user text-primary-500"></i>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-800 text-sm">Stephen Brekke</h4>
-                    <p className="text-gray-500 text-xs mt-0.5">Global Integration Producer</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-         </div>
-
+          </div>
         </section>
-        </div>
-    
+
+        {/* Events Section */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gradient-to-br from-white to-primary-50 lg:rounded-3xl mt-10">
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="flex items-center gap-2 mb-4 justify-center">
+              <div className="w-12 h-[2px] bg-primary-500"></div>
+              <span className="text-sm tracking-[0.2em] uppercase text-primary-600 font-medium">
+                Upcoming Events
+              </span>
+            </div>
+            <h2 className="text-3xl font-normal text-gray-900 mb-4 tracking-tight">
+              Events That Inspire & Excite
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Join amazing events and create memories that last a lifetime
+            </p>
+          </div>
+
+          {/* Category Pills */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="flex overflow-x-auto pb-4 mb-12 gap-3 hide-scrollbar"
+          >
+            {[
+              'All Events', 'Music', 'Comedy', 'Theatre', 'Food', 'Sports', 'Arts'
+            ].map((category, index) => (
+              <button
+                key={category}
+                className={`px-6 py-3 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  index === 0 
+                  ? 'bg-gray-900 text-white shadow-lg shadow-gray-900/20' 
+                  : 'bg-white text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </motion.div>
+
+          {/* Events Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                id: 1,
+                title: 'Enrique Iglesias Live in Concert',
+                date: 'Thu, 31 Jul',
+                venue: 'MMRDA Grounds, Mumbai',
+                type: 'Concerts',
+                image: '/images/events/card-1.jpg',
+                price: '₹ 800 onwards',
+                promoted: true
+              },
+              {
+                id: 2,
+                title: 'Poetry Painting (DIY workshop)',
+                date: 'Thu, 24 Jul onwards',
+                venue: 'Multiple Venues',
+                type: 'Workshops',
+                image: '/images/events/card-2.jpg',
+                price: '₹ 450 onwards',
+                promoted: true
+              },
+              {
+                id: 3,
+                title: 'Kisi Ko Batana Mat Ft. Anubhav Singh Bassi',
+                date: 'Fri, 25 Jul onwards',
+                venue: 'Sri Shanmukhananda Fine Arts',
+                type: 'Stand up Comedy',
+                image: '/images/events/card-3.jpg',
+                price: '₹ 999 onwards',
+                promoted: false
+              },
+              {
+                id: 4,
+                title: 'Sunburn Arena ft. DJ Snake',
+                date: 'Sat, 26 Jul',
+                venue: 'Mahalaxmi Race Course, Mumbai',
+                type: 'Music Festival',
+                image: '/images/events/card-1.jpg',
+                price: '₹ 1499 onwards',
+                promoted: true
+              }
+            ].map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+
+          {/* View All Button */}
+          <div className="flex justify-center mt-12">
+            <Link 
+              href="/events"
+              className="bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-medium hover:bg-primary-500 transition-colors duration-300 flex items-center gap-2"
+            >
+              View All Events
+              <i className="fi fi-rr-arrow-right text-sm"></i>
+            </Link>
+          </div>
+        </section>
+
+        {/* Blog Section */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 mt-10">
+          {/* Section Header */}
+          <div className="mb-16">
+            <div className="flex items-center gap-2 mb-4 justify-start">
+              <div className="w-12 h-[2px] bg-primary-500"></div>
+              <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                Travel Stories
+              </span>
+            </div>
+            <h2 className="text-3xl font-normal text-gray-900 mb-4 tracking-tight">
+              Latest From Our Blog
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Get inspired with travel guides and stories from fellow travelers
+            </p>
+          </div>
+
+          {/* Blog Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                id: 1,
+                title: "10 Hidden Gems in Kerala's Backwaters",
+                excerpt: "Discover secret spots and authentic experiences in God's own country",
+                image: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944",
+                category: "Travel Guide",
+                readTime: "5 min read",
+                date: "June 15, 2024",
+                author: {
+                  name: "Sarah Johnson",
+                  avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330"
+                }
+              },
+              {
+                id: 2,
+                title: "A Complete Guide to Ladakh's Monasteries",
+                excerpt: "Exploring the spiritual and cultural heritage of the Himalayan kingdom",
+                image: "https://images.unsplash.com/photo-1619837374214-f5b9eb80876d?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                category: "Culture",
+                readTime: "8 min read",
+                date: "June 12, 2024",
+                author: {
+                  name: "Mike Chen",
+                  avatar: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944"
+                }
+              },
+              {
+                id: 3,
+                title: "Best Street Food Tours in Delhi",
+                excerpt: "A culinary journey through the vibrant streets of Old Delhi",
+                image: "https://images.unsplash.com/photo-1624858020896-4a558c5d7042?q=80&w=736&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                category: "Food & Travel",
+                readTime: "6 min read",
+                date: "June 10, 2024",
+                author: {
+                  name: "Priya Sharma",
+                  avatar: "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944"
+                }
+              }
+            ].map((post) => (
+              <Link
+                key={post.id}
+                href={`/blog/${post.id}`}
+                className="group block bg-white rounded-[24px] overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 border border-gray-100"
+              >
+                {/* Image Container */}
+                <div className="relative aspect-video overflow-hidden">
+                  <Image
+                    src={post.image}
+                    alt={post.title}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  <div className="absolute top-4 left-4">
+                    <span className="inline-block px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-primary-500">
+                      {post.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-primary-500 transition-colors line-clamp-2">
+                    {post.title}
+                  </h3>
+                  
+                  <p className="text-gray-600 text-sm mb-6 line-clamp-2">
+                    {post.excerpt}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    {/* Author Info */}
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-8 h-8 rounded-full overflow-hidden">
+                        <Image
+                          src={post.author.avatar}
+                          alt={post.author.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{post.author.name}</p>
+                        <p className="text-xs text-gray-500">{post.date}</p>
+                      </div>
+                    </div>
+
+                    {/* Read Time */}
+                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                      <i className="fi fi-rr-clock text-[10px]"></i>
+                      {post.readTime}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* View All Button */}
+          <div className="flex justify-center mt-12">
+            <Link 
+              href="/blog"
+              className="group bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-medium hover:bg-primary-500 transition-all duration-300 flex items-center gap-3 hover:gap-4"
+            >
+              View All Posts
+              <i className="fi fi-rr-arrow-right text-sm"></i>
+            </Link>
+          </div>
+        </section>
+
+        {/* What you can do Section */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gradient-to-br from-white to-primary-50 lg:rounded-3xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Left Column */}
+            <div>
+              <div className="relative">
+                <h2 className="text-3xl font-normal text-gray-900 mb-4 tracking-tight">
+                  What you can do 
+                  with Exploreworld
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  We build the perfect solutions for travellers like easy
+                </p>
+              </div>
+              <div className="mt-8 relative rounded-3xl overflow-hidden">
+                <Image
+                  src="/home/what-we-do.webp"
+                  alt="Traveler enjoying view"
+                  width={500}
+                  height={400}
+                  className="w-full object-cover rounded-3xl"
+                />
+              </div>
+            </div>
+
+            {/* Right Column - Services Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {[
+                {
+                  icon: "fi fi-rr-calendar-clock",
+                  title: "Scheduled Tours",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/scheduled"
+                },
+                {
+                  icon: "fi fi-rr-briefcase",
+                  title: "Packages",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/packages"
+                },
+                {
+                  icon: "fi fi-rr-hiking",
+                  title: "Activity",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/activities"
+                },
+                {
+                  icon: "fi fi-rr-building",
+                  title: "Attractions",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/attractions"
+                },
+                {
+                  icon: "fi fi-rr-car-side",
+                  title: "Rentals",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/rentals"
+                },
+                {
+                  icon: "fi fi-rr-ticket",
+                  title: "Events",
+                  description: "Fixed-date tours planned by trusted local suppliers. Just book and join no planning needed!",
+                  link: "/events"
+                }
+              ].map((service) => (
+                <Link
+                  key={service.title}
+                  href={service.link}
+                  className="group p-6 bg-white rounded-3xl border border-gray-100 hover:border-primary-100 hover:shadow-lg hover:shadow-primary-500/5 transition-all duration-300"
+                >
+                  <div className="flex flex-col h-full">
+                    <div className="mb-4">
+                      <i className={`${service.icon} text-2xl text-primary-500`}></i>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {service.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 flex-grow">
+                      {service.description}
+                    </p>
+                    <div className="flex items-center text-primary-500 text-sm font-medium group-hover:gap-2 transition-all">
+                      View all
+                      <i className="fi fi-rr-arrow-right text-xs ml-1"></i>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-gradient-to-br from-white to-primary-50 lg:rounded-3xl">
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="flex items-center gap-2 mb-4 justify-center">
+              <div className="w-12 h-[2px] bg-primary-500"></div>
+              <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                Testimonials
+              </span>
+              <div className="w-12 h-[2px] bg-primary-500"></div>
+            </div>
+            <h2 className="text-3xl font-normal text-gray-900 mb-4 tracking-tight">
+              What Our Travelers Say
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Real stories from real travelers who experienced the magic of India with us
+            </p>
+          </div>
+
+          {/* Testimonials Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Sarah Mitchell",
+                location: "London, UK",
+                image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
+                rating: 5,
+                review: "The Rajasthan tour was absolutely magical! Every detail was perfectly planned, from the palace stays to the desert safari. Our guide was incredibly knowledgeable and made the experience unforgettable.",
+                tourType: "Heritage Tour",
+                destination: "Rajasthan"
+              },
+              {
+                name: "David Chen",
+                location: "Singapore",
+                image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e",
+                rating: 5,
+                review: "Kerala's backwaters exceeded all expectations. The houseboat experience was serene, and the local food was amazing. Exploreworld made everything seamless and stress-free.",
+                tourType: "Nature Retreat",
+                destination: "Kerala"
+              },
+              {
+                name: "Emma Thompson",
+                location: "Sydney, Australia",
+                image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80",
+                rating: 5,
+                review: "Trekking in Ladakh was a life-changing experience. The team's attention to safety and comfort, while maintaining the adventure aspect, was impressive. Will definitely book again!",
+                tourType: "Adventure Trek",
+                destination: "Ladakh"
+              }
+            ].map((testimonial, index) => (
+              <div 
+                key={testimonial.name}
+                className="bg-white rounded-3xl p-8 border border-gray-100 hover:shadow-lg transition-all duration-300"
+              >
+                {/* Rating */}
+                <div className="flex items-center gap-1 mb-6">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <i key={i} className="fi fi-ss-star text-yellow-400 text-sm"></i>
+                  ))}
+                </div>
+
+                {/* Review Text */}
+                <p className="text-gray-600 mb-8 text-lg leading-relaxed">
+                  "{testimonial.review}"
+                </p>
+
+                {/* Tour Type Tag */}
+                <div className="flex items-center gap-2 mb-6">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 text-primary-600 text-sm">
+                    <i className="fi fi-rr-map-marker text-xs"></i>
+                    {testimonial.destination}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-50 text-gray-600 text-sm">
+                    {testimonial.tourType}
+                  </span>
+                </div>
+
+                {/* Author Info */}
+                <div className="flex items-center gap-4">
+                  <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                    <Image
+                      src={testimonial.image}
+                      alt={testimonial.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h4 className="text-gray-900 font-medium">{testimonial.name}</h4>
+                    <p className="text-gray-500 text-sm">{testimonial.location}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Button */}
+          <div className="flex justify-center mt-12">
+            <Link 
+              href="/reviews"
+              className="group bg-gray-900 text-white px-8 py-4 rounded-full text-sm font-medium hover:bg-primary-500 transition-all duration-300 flex items-center gap-3 hover:gap-4"
+            >
+              Read More Reviews
+              <i className="fi fi-rr-arrow-right text-sm"></i>
+            </Link>
+          </div>
+        </section>
+
+
+      </div>
     </div>
   );
 }

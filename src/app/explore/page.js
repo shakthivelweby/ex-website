@@ -58,7 +58,7 @@ export default function Explore() {
             <span className="inline-block text-xs tracking-[0.2em] uppercase text-white/90 font-medium">
               Start Your Journey
             </span>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-light text-white leading-[1.1]">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-light text-white leading-[1.1] tracking-tight">
               Explore Amazing Destinations
             </h1>
           </div>
@@ -110,7 +110,7 @@ export default function Explore() {
               
                 <div className="flex items-end justify-between w-full">
                   <div className="space-y-3">
-                    <h2 className="text-3xl font-light text-gray-900">
+                    <h2 className="text-3xl font-light text-gray-900 tracking-tight">
                       Explore {country.name}
                     </h2>
                     <p className="text-gray-600 max-w-2xl">
@@ -181,7 +181,7 @@ export default function Explore() {
                               {/* Main Content */}
                               <div className="space-y-4">
                                 <div className="space-y-2">
-                                  <h3 className="text-2xl sm:text-3xl font-medium text-white">
+                                  <h3 className="text-2xl sm:text-3xl font-medium text-white tracking-tight">
                                     {state.name}
                                   </h3>
                                   <p className="text-white/80 text-sm">
@@ -219,12 +219,15 @@ export default function Explore() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-start mb-10">
-            <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium mb-4">
-              Popular Choices
-            </span>
+              <div className="flex items-center gap-2 mb-4 justify-start">
+                  <div className="w-12 h-[2px] bg-primary-500"></div>
+                  <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                    Popular Choices
+                  </span>
+              </div>
             <div className="flex items-end justify-between w-full">
               <div>
-                <h2 className="text-3xl font-light text-gray-900 mb-3">
+                <h2 className="text-3xl font-light text-gray-900 mb-3 tracking-tight">
                   Featured Destinations
                 </h2>
                 <p className="text-gray-600 max-w-2xl text-base">

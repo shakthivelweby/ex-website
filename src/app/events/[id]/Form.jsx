@@ -1,14 +1,10 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 
-const Form = ({
-  eventDetails,
-  isMobilePopup = false,
-  enquireOnly = false
-}) => {
+const Form = ({ eventDetails, isMobilePopup = false, enquireOnly = false }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const submitHandler = async () => {
@@ -16,7 +12,7 @@ const Form = ({
       setIsLoading(true);
 
       if (!isLogin()) {
-        const event = new CustomEvent('showLogin');
+        const event = new CustomEvent("showLogin");
         window.dispatchEvent(event);
         setIsLoading(false);
         return;
@@ -24,11 +20,13 @@ const Form = ({
 
       // Add your booking logic here
       // For now, just show an alert
-      alert('Booking functionality will be implemented here');
-      
+      alert("Booking functionality will be implemented here");
     } catch (error) {
-      console.error('Error:', error);
-      alert(error.response?.data?.message || "Something went wrong. Please try again.");
+      console.error("Error:", error);
+      alert(
+        error.response?.data?.message ||
+          "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -37,7 +35,10 @@ const Form = ({
   const handleGetDirections = () => {
     // Open Google Maps with the venue location
     const address = encodeURIComponent(eventDetails.venue);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${address}`,
+      "_blank"
+    );
   };
 
   return (
@@ -88,13 +89,16 @@ const Form = ({
         <div className="bg-white rounded-xl p-4 mb-4">
           <h2 className="text-base font-medium text-gray-800 mb-2">Venue</h2>
           <div className="flex flex-col">
-            <h3 className="text-sm font-medium text-gray-800 mb-1">{eventDetails.venue}</h3>
+            <h3 className="text-sm font-medium text-gray-800 mb-1">
+              {eventDetails.venue}
+            </h3>
             <p className="text-sm text-gray-600 mb-3">
-            {eventDetails.venueAddress}
+              {eventDetails.venueAddress}
             </p>
             <button
               onClick={handleGetDirections}
-              className="flex items-center gap-2 text-primary-500 text-sm font-medium">
+              className="flex items-center gap-2 text-primary-500 text-sm font-medium"
+            >
               <i className="fi fi-rr-map-marker text-base"></i>
               Get Directions
             </button>
@@ -106,7 +110,8 @@ const Form = ({
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">Starts from</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">
-              {eventDetails.price} <span className="text-sm text-gray-500 font-normal">onwards</span>
+              {eventDetails.price}{" "}
+              <span className="text-sm text-gray-500 font-normal">onwards</span>
             </span>
           </div>
           {eventDetails.offer && (
@@ -149,4 +154,4 @@ const Form = ({
   );
 };
 
-export default Form; 
+export default Form;

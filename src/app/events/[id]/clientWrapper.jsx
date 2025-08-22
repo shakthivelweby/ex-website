@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
@@ -10,6 +10,7 @@ import Form from "./Form";
 
 const EventDetailPage = ({ eventDetails }) => {
   const { id } = useParams();
+  const router = useRouter();
   const [showMobileForm, setShowMobileForm] = useState(false);
   const enquireOnly = false;
   const scrollContainerRef = useRef(null);
@@ -64,7 +65,14 @@ const EventDetailPage = ({ eventDetails }) => {
     };
   }, [showMobileForm]);
 
-  // Mock data for design purposes
+  const handleMobileBooking = () => {
+    if (!enquireOnly) {
+      // Redirect to booking page instead of opening popup
+      router.push(`/events/${id}/booking`);
+    } else {
+      setShowMobileForm(true);
+    }
+  };
 
   return (
     <main className="min-h-screen">
@@ -168,11 +176,38 @@ const EventDetailPage = ({ eventDetails }) => {
                       </div>
                     </div>
                     <div className="flex items-start gap-4">
-                      <i className="fi fi-rr-theater-masks text-xl text-primary-500"></i>
+                      <i className="fi fi-rr-map text-xl text-primary-500"></i>
                       <div>
-                        <p className="text-sm text-gray-500">Genres</p>
+                        <p className="text-sm text-gray-500">Layout</p>
                         <p className="font-medium text-sm text-gray-700">
-                          {eventDetails.eventGuide.genres}
+                          {eventDetails.eventGuide.layout}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <i className="fi fi-rr-chair text-xl text-primary-500"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Seating</p>
+                        <p className="font-medium text-sm text-gray-700">
+                          {eventDetails.eventGuide.seatingArrangement}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <i className="fi fi-rr-baby text-xl text-primary-500"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Kids Friendly</p>
+                        <p className="font-medium text-sm text-gray-700">
+                          {eventDetails.eventGuide.kidsFriendly}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <i className="fi fi-rr-paw text-xl text-primary-500"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Pets Friendly</p>
+                        <p className="font-medium text-sm text-gray-700">
+                          {eventDetails.eventGuide.petsFriendly}
                         </p>
                       </div>
                     </div>
@@ -249,7 +284,7 @@ const EventDetailPage = ({ eventDetails }) => {
       {/* Fixed Mobile Booking Button */}
       <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
         <button
-          onClick={() => setShowMobileForm(true)}
+          onClick={handleMobileBooking}
           className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg"
         >
           <div className="flex items-center">
@@ -259,11 +294,7 @@ const EventDetailPage = ({ eventDetails }) => {
           </div>
           <div className="flex items-center">
             <span className="text-sm font-bold">{eventDetails.price}</span>
-            <i
-              className={`${
-                enquireOnly ? "fi fi-rr-envelope" : ""
-              } ml-2 text-sm`}
-            ></i>
+            <i className="fi fi-rr-ticket ml-2 text-sm"></i>
           </div>
         </button>
       </div>

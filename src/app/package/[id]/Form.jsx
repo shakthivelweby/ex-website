@@ -15,7 +15,7 @@ import { formatDate } from "@/utils/formatDate";
 /**
  * Form Component for Package Booking/Enquiry
  * Handles both direct booking and enquiry functionality for travel packages
- * 
+ *
  * @param {Object} props Component props
  * @param {Object} props.packageData - Contains package details including days and nights
  * @param {Object} props.selectedStayCategory - Selected accommodation category
@@ -38,9 +38,8 @@ const Form = ({
   loadingTexts,
   downloadProgress,
   downloadSize,
-  formatBytes
+  formatBytes,
 }) => {
-
   // Add new state for loading text
   const [currentLoadingText, setCurrentLoadingText] = useState(0);
 
@@ -61,7 +60,7 @@ const Form = ({
   const handleDownloadClick = async (e) => {
     e.preventDefault();
     if (!isLogin()) {
-      const event = new CustomEvent('showLogin');
+      const event = new CustomEvent("showLogin");
       window.dispatchEvent(event);
       return;
     }
@@ -69,11 +68,10 @@ const Form = ({
     try {
       downloadHandler(e);
     } catch (error) {
-      console.error('Error downloading itinerary:', error);
-      alert('Failed to download itinerary. Please try again later.');
+      console.error("Error downloading itinerary:", error);
+      alert("Failed to download itinerary. Please try again later.");
     }
   };
-
 
   // Navigation and URL handling
   const router = useRouter();
@@ -86,9 +84,6 @@ const Form = ({
   const [selectedDate, setSelectedDate] = useState(new Date(date));
   const [currentMonth, setCurrentMonth] = useState(new Date(date));
   const [isLoading, setIsLoading] = useState(false);
-
-
-
 
   // Enquiry form fields
   const [fullName, setFullName] = useState("");
@@ -111,23 +106,18 @@ const Form = ({
   // Extract package details
   const { total_days, total_nights, tour_type } = packageData.data;
 
-
   const tourTypeConfig = {
-    "fixed_departure": {
+    fixed_departure: {
       title: "Scheduled Trip",
       color: "bg-green-200",
-      icon: "fi fi-rr-pending"
+      icon: "fi fi-rr-pending",
     },
-    "private": {
+    private: {
       title: "Private Package",
       color: "bg-blue-200",
-      icon: "fi fi-rr-umbrella-beach"
-    }
-  }
-
-
-
-
+      icon: "fi fi-rr-umbrella-beach",
+    },
+  };
 
   // Refs for form fields
   const fullNameRef = useRef(null);
@@ -149,21 +139,31 @@ const Form = ({
 
     return {
       start: formatDate(start),
-      end: formatDate(end)
+      end: formatDate(end),
     };
   };
 
   // Fetch calendar rates using React Query
   const { data: calendarRates, isLoading: calendarRatesLoading } = useQuery({
-    queryKey: ["package-calendar-rates", packageData.data.id, formatDate(currentMonth), selectedStayCategory.stay_category_id],
+    queryKey: [
+      "package-calendar-rates",
+      packageData.data.id,
+      formatDate(currentMonth),
+      selectedStayCategory.stay_category_id,
+    ],
     queryFn: () => {
       const { start, end } = getMonthDateRange(currentMonth);
-      return getPackageCalendarRates(packageData.data.id, start, end, selectedStayCategory.stay_category_id);
+      return getPackageCalendarRates(
+        packageData.data.id,
+        start,
+        end,
+        selectedStayCategory.stay_category_id
+      );
     },
     enabled: !!selectedDate,
   });
 
-  console.log(calendarRates)
+  console.log(calendarRates);
 
   // Process calendar rates for display
   const ratesByDate = useMemo(() => {
@@ -179,7 +179,9 @@ const Form = ({
   // Function to check if a date should be disabled
   const isDateDisabled = (date) => {
     const formattedDate = formatDate(date);
-    const rateData = calendarRates?.data?.find(rate => rate.date === formattedDate);
+    const rateData = calendarRates?.data?.find(
+      (rate) => rate.date === formattedDate
+    );
     return rateData?.stopSale === true;
   };
 
@@ -211,9 +213,9 @@ const Form = ({
     const value = e.target.value;
     setFullName(value);
     if (error.fullName) {
-      setError(prev => ({
+      setError((prev) => ({
         ...prev,
-        fullName: value.trim() ? "" : "Full Name is required"
+        fullName: value.trim() ? "" : "Full Name is required",
       }));
     }
   };
@@ -222,9 +224,13 @@ const Form = ({
     const value = e.target.value;
     setEmail(value);
     if (error.email) {
-      setError(prev => ({
+      setError((prev) => ({
         ...prev,
-        email: value ? (validateEmail(value) ? "" : "Please enter a valid email") : "Email is required"
+        email: value
+          ? validateEmail(value)
+            ? ""
+            : "Please enter a valid email"
+          : "Email is required",
       }));
     }
   };
@@ -233,9 +239,13 @@ const Form = ({
     const value = e.target.value;
     setPhone(value);
     if (error.phone) {
-      setError(prev => ({
+      setError((prev) => ({
         ...prev,
-        phone: value ? (validatePhone(value) ? "" : "Please enter a valid 10-digit phone number") : "Phone is required"
+        phone: value
+          ? validatePhone(value)
+            ? ""
+            : "Please enter a valid 10-digit phone number"
+          : "Phone is required",
       }));
     }
   };
@@ -245,16 +255,19 @@ const Form = ({
     if (elementRef.current) {
       const yOffset = -100; // Offset to account for header
       const element = elementRef.current;
-      const container = isMobilePopup ? element.closest('.overflow-y-auto') : window;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      const container = isMobilePopup
+        ? element.closest(".overflow-y-auto")
+        : window;
+      const y =
+        element.getBoundingClientRect().top + window.pageYOffset + yOffset;
 
-      container.scrollTo({ top: y, behavior: 'smooth' });
+      container.scrollTo({ top: y, behavior: "smooth" });
 
       // Add focus effect
       element.focus();
-      element.classList.add('border-red-500', 'bg-red-50');
+      element.classList.add("border-red-500", "bg-red-50");
       setTimeout(() => {
-        element.classList.remove('bg-red-50');
+        element.classList.remove("bg-red-50");
       }, 2000);
     }
   };
@@ -263,8 +276,16 @@ const Form = ({
   const validateAndScroll = () => {
     const newErrors = {
       fullName: fullName.trim() ? "" : "Full Name is required",
-      email: email ? (validateEmail(email) ? "" : "Please enter a valid email") : "Email is required",
-      phone: phone ? (validatePhone(phone) ? "" : "Please enter a valid 10-digit phone number") : "Phone is required"
+      email: email
+        ? validateEmail(email)
+          ? ""
+          : "Please enter a valid email"
+        : "Email is required",
+      phone: phone
+        ? validatePhone(phone)
+          ? ""
+          : "Please enter a valid 10-digit phone number"
+        : "Phone is required",
     };
 
     setError(newErrors);
@@ -331,25 +352,38 @@ const Form = ({
         });
         setShowSuccess(true);
       } else {
-
         // Handle booking submission
         if (!isLogin()) {
           // Store checkout URL using the utility function
-          const checkoutUrl = `/checkout?package_id=${packageData.data.id}&stay_category_id=${selectedStayCategory.stay_category_id}&booking_date=${formatDate(selectedDate)}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${packagePriceData.packagePriceRateId}`;
+          const checkoutUrl = `/checkout/package?package_id=${
+            packageData.data.id
+          }&stay_category_id=${
+            selectedStayCategory.stay_category_id
+          }&booking_date=${formatDate(
+            selectedDate
+          )}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${
+            packagePriceData.packagePriceRateId
+          }`;
           setRedirectAfterLogin(checkoutUrl);
           // Show login modal
-          const event = new CustomEvent('showLogin');
+          const event = new CustomEvent("showLogin");
           window.dispatchEvent(event);
           setIsLoading(false);
           return;
         }
 
         // If already logged in, redirect directly to checkout
-        router.push(`/checkout?package_id=${packageData.data.id}&stay_category_id=${selectedStayCategory.stay_category_id}&booking_date=${formatDate(selectedDate)}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${packagePriceData.packagePriceRateId}`);
-
-
-
-
+        router.push(
+          `/checkout/package?package_id=${
+            packageData.data.id
+          }&stay_category_id=${
+            selectedStayCategory.stay_category_id
+          }&booking_date=${formatDate(
+            selectedDate
+          )}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${
+            packagePriceData.packagePriceRateId
+          }`
+        );
 
         // const formattedData = {
         //   package_id: packageData.data.id,
@@ -368,7 +402,7 @@ const Form = ({
         // });
       }
 
-      // 
+      //
 
       // Reset form for enquiry
       if (enquireOnly) {
@@ -379,19 +413,22 @@ const Form = ({
       }
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Something went wrong. Please try again.");
+      alert(
+        error.response?.data?.message ||
+          "Something went wrong. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   }
 
-
   return (
     <>
       {/* Main form container */}
       <div
-        className={`${!enquireOnly && !isMobilePopup ? "sticky top-6" : ""
-          } ${isMobilePopup ? "pb-24" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"}`}
+        className={`${!enquireOnly && !isMobilePopup ? "sticky top-6" : ""} ${
+          isMobilePopup ? "pb-24" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"
+        }`}
       >
         {/* Enquiry Only Message */}
         {enquireOnly && (
@@ -405,7 +442,9 @@ const Form = ({
                   Enquiry Only
                 </h3>
                 <div className="mt-1 text-sm text-yellow-700">
-                  Online booking is not available for your selected dates. Please submit an enquiry and our team will get back to you with availability.
+                  Online booking is not available for your selected dates.
+                  Please submit an enquiry and our team will get back to you
+                  with availability.
                 </div>
               </div>
             </div>
@@ -413,8 +452,12 @@ const Form = ({
         )}
 
         {/* Package status badge */}
-        <span className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${tourTypeConfig[tour_type].color}`}>
-          <i className={`${tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}></i>
+        <span
+          className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${tourTypeConfig[tour_type].color}`}
+        >
+          <i
+            className={`${tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}
+          ></i>
           {tourTypeConfig[tour_type].title}
         </span>
 
@@ -429,7 +472,7 @@ const Form = ({
             </span>
           </div>
           <div className="bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
-            {total_days} D  &nbsp; {total_nights} N
+            {total_days} D &nbsp; {total_nights} N
           </div>
         </div>
 
@@ -439,7 +482,6 @@ const Form = ({
             Starting Date
           </label>
           <div className="relative">
-
             {isMobilePopup ? (
               // Inline calendar for mobile
 
@@ -453,13 +495,17 @@ const Form = ({
                   dateFormat="dd/MM/yyyy"
                   inline
                   minDate={new Date()}
-                  filterDate={date => !isDateDisabled(date)}
+                  filterDate={(date) => !isDateDisabled(date)}
                   renderDayContents={(day, date) => {
                     const dateStr = formatDate(date);
-                    const rateData = calendarRates?.data?.find(rate => rate.date === dateStr);
+                    const rateData = calendarRates?.data?.find(
+                      (rate) => rate.date === dateStr
+                    );
                     const rate = ratesByDate[dateStr];
                     return (
-                      <div style={{ textAlign: "center", position: "relative" }}>
+                      <div
+                        style={{ textAlign: "center", position: "relative" }}
+                      >
                         <div>{day}</div>
                         {rateData?.stopSale ? (
                           <div
@@ -471,26 +517,28 @@ const Form = ({
                               top: "23px",
                               textAlign: "center",
                               width: "100%",
-                              fontWeight: "500"
+                              fontWeight: "500",
                             }}
                           >
                             N/A
                           </div>
-                        ) : rate && (
-                          <div
-                            style={{
-                              fontSize: "0.7em",
-                              color: "#FF385C",
-                              position: "absolute",
-                              left: 0,
-                              top: "23px",
-                              textAlign: "center",
-                              width: "100%",
-                              fontWeight: "500"
-                            }}
-                          >
-                            ₹{rate}
-                          </div>
+                        ) : (
+                          rate && (
+                            <div
+                              style={{
+                                fontSize: "0.7em",
+                                color: "#FF385C",
+                                position: "absolute",
+                                left: 0,
+                                top: "23px",
+                                textAlign: "center",
+                                width: "100%",
+                                fontWeight: "500",
+                              }}
+                            >
+                              ₹{rate}
+                            </div>
+                          )
                         )}
                       </div>
                     );
@@ -510,14 +558,18 @@ const Form = ({
                     setCurrentMonth(date);
                   }}
                   dateFormat="dd/MM/yyyy"
-                  filterDate={date => !isDateDisabled(date)}
+                  filterDate={(date) => !isDateDisabled(date)}
                   popperPlacement="bottom-start"
                   renderDayContents={(day, date) => {
                     const dateStr = formatDate(date);
-                    const rateData = calendarRates?.data?.find(rate => rate.date === dateStr);
+                    const rateData = calendarRates?.data?.find(
+                      (rate) => rate.date === dateStr
+                    );
                     const rate = ratesByDate[dateStr];
                     return (
-                      <div style={{ textAlign: "center", position: "relative" }}>
+                      <div
+                        style={{ textAlign: "center", position: "relative" }}
+                      >
                         <div>{day}</div>
                         {rateData?.stopSale ? (
                           <div
@@ -529,26 +581,28 @@ const Form = ({
                               top: "23px",
                               textAlign: "center",
                               width: "100%",
-                              fontWeight: "500"
+                              fontWeight: "500",
                             }}
                           >
                             N/A
                           </div>
-                        ) : rate && (
-                          <div
-                            style={{
-                              fontSize: "0.7em",
-                              color: "#057676",
-                              position: "absolute",
-                              left: 0,
-                              top: "23px",
-                              textAlign: "center",
-                              width: "100%",
-                              fontWeight: "500"
-                            }}
-                          >
-                            ₹{rate}
-                          </div>
+                        ) : (
+                          rate && (
+                            <div
+                              style={{
+                                fontSize: "0.7em",
+                                color: "#057676",
+                                position: "absolute",
+                                left: 0,
+                                top: "23px",
+                                textAlign: "center",
+                                width: "100%",
+                                fontWeight: "500",
+                              }}
+                            >
+                              ₹{rate}
+                            </div>
+                          )
                         )}
                       </div>
                     );
@@ -563,7 +617,8 @@ const Form = ({
           {isMobilePopup && (
             <div className="mt-3 text-sm text-gray-500 flex items-center">
               <i className="fi fi-rr-info mr-2"></i>
-              Selected date: {selectedDate ? selectedDate.toLocaleDateString() : 'None'}
+              Selected date:{" "}
+              {selectedDate ? selectedDate.toLocaleDateString() : "None"}
             </div>
           )}
         </div>
@@ -663,7 +718,9 @@ const Form = ({
                 value={fullName}
                 onChange={handleFullNameChange}
                 type="text"
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.fullName ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${
+                  error.fullName ? "border-red-500" : ""
+                }`}
                 placeholder="Enter your full name"
               />
               {error.fullName && (
@@ -684,7 +741,9 @@ const Form = ({
                 value={email}
                 onChange={handleEmailChange}
                 type="email"
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.email ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${
+                  error.email ? "border-red-500" : ""
+                }`}
                 placeholder="Enter your email"
               />
               {error.email && (
@@ -708,7 +767,9 @@ const Form = ({
                 inputMode="numeric"
                 pattern="[0-9]*"
                 maxLength={10}
-                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${error.phone ? "border-red-500" : ""}`}
+                className={`w-full h-12 px-0 pr-10 border-b text-[16px] text-gray-800 border-gray-300 bg-white placeholder:text-[14px] placeholder:font-normal placeholder:text-gray-400 placeholder:tracking-wide focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium tracking-tight transition-colors ${
+                  error.phone ? "border-red-500" : ""
+                }`}
                 placeholder="Enter your phone number"
               />
               {error.phone && (
@@ -805,10 +866,16 @@ const Form = ({
                         <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
                           <span>
                             {downloadProgress > 0
-                              ? `${formatBytes(downloadSize.downloaded)} of ${formatBytes(downloadSize.total)}`
-                              : 'Starting download...'}
+                              ? `${formatBytes(
+                                  downloadSize.downloaded
+                                )} of ${formatBytes(downloadSize.total)}`
+                              : "Starting download..."}
                           </span>
-                          {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
+                          {downloadProgress > 0 && (
+                            <span className="font-medium">
+                              {downloadProgress}%
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}

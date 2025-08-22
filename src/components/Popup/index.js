@@ -222,7 +222,7 @@ export default function Popup({
               animate="visible"
               exit="hidden"
               variants={overlayVariants}
-              onClick={() => alert()}
+              onClick={onClose}
               className={`fixed inset-0 backdrop-blur-sm ${overlayClassName}`}
             />
 
@@ -232,7 +232,7 @@ export default function Popup({
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  variants={panelVariants}l
+                  variants={panelVariants}
                   custom={effectivePosition}
                   drag={draggable && isMobile ? "y" : false}
                   dragControls={dragControls}

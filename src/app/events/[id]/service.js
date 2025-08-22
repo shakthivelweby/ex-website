@@ -6,3 +6,9 @@ export const eventInfo = async (event_id) => {
   return response.data;
 };
 
+export const getDetailsForBooking = async (event_id) => {
+  const response = await apiServerMiddleware.get(`/event-booking-details/${event_id}`);
+  console.log("response.data", JSON.stringify(response.data, null, 2))
+  return response.data;
+};
+

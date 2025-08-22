@@ -9,7 +9,7 @@ export const getEventCategories = async () => {
 //  get all languages
 export const getLanguages = async () => {
     const response = await apiServerMiddleware.get("/event-language");
-    console.log("languages", response.data);
+    // console.log("languages", response.data);
     return response.data;
 }
 
@@ -79,5 +79,7 @@ export const list = async (filters = {}) => {
     console.log('Final parameters:', Object.fromEntries(params));
     
     const response = await apiServerMiddleware.get(url);
+    console.log("response.data", JSON.stringify(response.data, null, 2))
+
     return response.data; 
 }

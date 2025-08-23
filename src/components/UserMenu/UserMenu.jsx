@@ -1,6 +1,6 @@
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
+import { motion } from "framer-motion";
+import Link from "next/link";
+import Image from "next/image";
 
 const menuVariants = {
   initial: (isMobileNav) => ({
@@ -14,7 +14,7 @@ const menuVariants = {
       duration: 0.2,
       ease: "easeOut",
       staggerChildren: 0.05,
-    }
+    },
   },
   exit: (isMobileNav) => ({
     opacity: 0,
@@ -22,30 +22,30 @@ const menuVariants = {
     transition: {
       duration: 0.2,
       ease: "easeIn",
-    }
-  })
+    },
+  }),
 };
 
 const itemVariants = {
   initial: { opacity: 0, x: -5 },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     x: 0,
-  }
+  },
 };
 
 const overlayVariants = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
-  exit: { opacity: 0 }
+  exit: { opacity: 0 },
 };
 
-export default function UserMenu({ 
-  user, 
-  onClose, 
+export default function UserMenu({
+  user,
+  onClose,
   handleLogout,
   isMobileNav = false,
-  menuRef = null
+  menuRef = null,
 }) {
   const menuClassName = isMobileNav
     ? "fixed left-0 right-0 bottom-[60px] w-full bg-white border-t border-gray-100 py-2 z-50 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
@@ -59,7 +59,7 @@ export default function UserMenu({
     <>
       {/* Overlay - only show on mobile or non-desktop view */}
       {(isMobileNav || window.innerWidth < 1024) && (
-        <motion.div 
+        <motion.div
           key="overlay"
           className={overlayClassName}
           variants={overlayVariants}
@@ -69,8 +69,8 @@ export default function UserMenu({
           onClick={onClose}
         />
       )}
-      
-      <motion.div 
+
+      <motion.div
         key="menu"
         className={menuClassName}
         custom={isMobileNav}
@@ -79,7 +79,7 @@ export default function UserMenu({
         animate="animate"
         exit="exit"
       >
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           className="px-4 py-3 border-b border-gray-100"
         >
@@ -109,39 +109,43 @@ export default function UserMenu({
 
         <div className="py-1">
           <motion.div variants={itemVariants}>
-            <Link 
-              href="/profile" 
+            <Link
+              href="/profile"
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
               onClick={onClose}
             >
               <i className="fi fi-rr-user text-gray-400 group-hover:text-primary-600 transition-colors"></i>
               <div>
                 <span className="font-medium">Profile</span>
-                <p className="text-xs text-gray-500 mt-0.5">Manage your account settings</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Manage your account settings
+                </p>
               </div>
             </Link>
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <Link 
-              href="/my-bookings" 
+            <Link
+              href="/my-bookings"
               className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors group"
               onClick={onClose}
             >
               <i className="fi fi-rr-ticket text-gray-400 group-hover:text-primary-600 transition-colors"></i>
               <div>
                 <span className="font-medium">My Bookings</span>
-                <p className="text-xs text-gray-500 mt-0.5">View your trip history</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  View your trip history
+                </p>
               </div>
             </Link>
           </motion.div>
         </div>
 
-        <motion.div 
+        <motion.div
           variants={itemVariants}
           className="border-t border-gray-100 mt-1 pt-1"
         >
-          <button 
+          <button
             onClick={() => {
               handleLogout();
               onClose();
@@ -151,11 +155,13 @@ export default function UserMenu({
             <i className="fi fi-rr-sign-out text-red-400 group-hover:text-red-600 transition-colors"></i>
             <div>
               <span className="font-medium">Logout</span>
-              <p className="text-xs text-red-400 mt-0.5">Sign out of your account</p>
+              <p className="text-xs text-red-400 mt-0.5">
+                Sign out of your account
+              </p>
             </div>
           </button>
         </motion.div>
       </motion.div>
     </>
   );
-} 
+}

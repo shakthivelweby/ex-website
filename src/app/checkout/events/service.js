@@ -1,6 +1,6 @@
 import apiMiddleware from "../../api/apiMiddleware"
 
-const createEventBooking = async (data) => {
+const book = async (data) => {
     try {
         const response = await apiMiddleware.post("/create-event-booking", data);
         return response.data;
@@ -30,14 +30,16 @@ const verifyPayment = async (data) => {
     }
 };
 
-const failedBooking = async (data) => {
+const paymentFailure = async (event_payment_id) => {
     try {
-        const response = await apiMiddleware.post("/event-payment-failed", data);
+        const response = await apiMiddleware.post("/event-payment-failed", {
+            event_payment_id: event_payment_id
+        });
         return response.data;
     } catch (error) {
         throw error;
     }
 };
-export { createEventBooking, createOrder, verifyPayment, failedBooking };
+export { book, createOrder, verifyPayment, paymentFailure };
 
     

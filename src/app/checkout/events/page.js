@@ -8,7 +8,7 @@ import { eventInfo } from "../../events/[id]/service";
 import { getDetailsForBooking } from "../../events/[id]/service";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
-import { createEventBooking, createOrder, verifyPayment } from "./service";
+import { book, createOrder, verifyPayment, paymentFailure } from "./service";
 
 export default function EventCheckoutPage() {
   const router = useRouter();
@@ -89,12 +89,18 @@ export default function EventCheckoutPage() {
     }
   }, []);
 
+
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const cancelBooking = () => {
+    router.push("/events");
   };
 
   const formatDate = (dateString) => {
@@ -237,13 +243,12 @@ export default function EventCheckoutPage() {
         bookingTickets: selectedTickets.bookingTickets
       };
 
-      // Create the event booking first
-      const response = await createEventBooking(apiBookingData);
-      
+      // First create booking to get order ID
+      const response = await book(apiBookingData);
+     
       if (response.status) {
-        // Calculate payment amount based on payment option
         const paymentAmount = selectedTickets.total_amount; // Full payment
-
+        
         // Create order for payment
         const orderRes = await createOrder({
           event_id: apiBookingData.event_id,
@@ -266,9 +271,9 @@ export default function EventCheckoutPage() {
           if (paymentResponse.status) {
             // Verify payment
             const verificationResponse = await verifyPayment({
-              razorpay_order_id: paymentResponse.data.razorpay_order_id,
-              razorpay_signature: paymentResponse.data.razorpay_signature,
+              order_id: orderRes.data.order_id,
               payment_id: paymentResponse.data.razorpay_payment_id,
+              signature: paymentResponse.data.razorpay_signature,
             });
 
             if (verificationResponse.status) {
@@ -278,9 +283,17 @@ export default function EventCheckoutPage() {
               });
               setShowSuccess(true);
             } else {
+              // Payment verification failed - mark payment as failed
+              const failRes = await paymentFailure(orderRes.data.event_payment_id);
+              console.log(failRes);
+              
               setError("Payment verification failed. Please contact support.");
             }
           } else {
+            // Payment initialization failed - mark payment as failed
+            const failRes = await paymentFailure(orderRes.data.event_payment_id);
+            console.log(failRes);
+            
             setError("Payment initialization failed. Please try again.");
           }
         } else {
@@ -292,7 +305,7 @@ export default function EventCheckoutPage() {
 
     } catch (error) {
       console.error("Booking error:", error);
-      setError(error.message || "Failed to complete booking. Please try again.");
+      setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -533,6 +546,17 @@ export default function EventCheckoutPage() {
                 </span>
               )}
             </button>
+            
+            {isLoading && (
+              <button
+                type="button"
+                onClick={cancelBooking}
+                className="w-full h-10 mt-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg flex items-center justify-center transition-all shadow-sm hover:shadow-md"
+              >
+                <i className="fi fi-rr-cross mr-2 text-sm"></i>
+                Cancel Booking
+              </button>
+            )}
           </form>
         </div>
 
@@ -633,6 +657,17 @@ export default function EventCheckoutPage() {
                   </span>
                 )}
               </button>
+              
+              {isLoading && (
+                <button
+                  type="button"
+                  onClick={cancelBooking}
+                  className="w-full h-12 mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-base font-medium rounded-xl flex items-center justify-center transition-all shadow-sm hover:shadow-md"
+                >
+                  <i className="fi fi-rr-cross mr-2.5 text-base"></i>
+                  Cancel Booking
+                </button>
+              )}
             </form>
           </div>
 

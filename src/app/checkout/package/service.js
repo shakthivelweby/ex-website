@@ -1,4 +1,4 @@
-import apiMiddleware from "../api/apiMiddleware"
+import apiMiddleware from "@/app/api/apiMiddleware"
 
 const checkoutData = async (params) => {
     const queryString = new URLSearchParams({

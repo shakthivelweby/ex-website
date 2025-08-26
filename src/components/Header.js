@@ -78,12 +78,12 @@ const navLinks = [
   //   icon: "fi fi-rr-biking",
   //   matchPath: (path) => path === "/rentals"
   // },
-  // { 
-  //   name: "Events", 
-  //   href: "#", 
-  //   icon: "fi fi-rr-glass-cheers",
-  //   matchPath: (path) => path === "/events"
-  // },
+  { 
+    name: "Events", 
+    href: "/events", 
+    icon: "fi fi-rr-glass-cheers",
+    matchPath: (path) => path === "/events" || path.startsWith("/events")
+  },
 ];
 
 export default function Header() {

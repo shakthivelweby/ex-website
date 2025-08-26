@@ -9,7 +9,6 @@ export const getEventCategories = async () => {
 //  get all languages
 export const getLanguages = async () => {
     const response = await apiServerMiddleware.get("/event-language");
-    // console.log("languages", response.data);
     return response.data;
 }
 
@@ -22,13 +21,11 @@ const parseDateParameter = (dateParam) => {
     switch (dateParam) {
         case "today":
             const todayDate = today.toISOString().split('T')[0];
-            console.log('Parsing "today" to:', todayDate);
             return todayDate;
         case "tomorrow":
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
             const tomorrowDate = tomorrow.toISOString().split('T')[0];
-            console.log('Parsing "tomorrow" to:', tomorrowDate);
             return tomorrowDate;
         case "weekend":
             // Find next Saturday
@@ -36,23 +33,18 @@ const parseDateParameter = (dateParam) => {
             const weekend = new Date(today);
             weekend.setDate(today.getDate() + daysUntilSaturday);
             const weekendDate = weekend.toISOString().split('T')[0];
-            console.log('Parsing "weekend" to:', weekendDate);
             return weekendDate;
         default:
             // If it's a custom date (YYYY-MM-DD format), return as is
             if (/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-                console.log('Using custom date:', dateParam);
                 return dateParam;
             }
-            console.log('Invalid date parameter:', dateParam);
             return null;
     }
 };
 
 // get events with filters
 export const list = async (filters = {}) => {
-    console.log('Received filters:', filters);
-    
     const params = new URLSearchParams();
     
     // Add filters to query parameters
@@ -75,11 +67,6 @@ export const list = async (filters = {}) => {
     const queryString = params.toString();
     const url = queryString ? `/events?${queryString}` : "/events";
     
-    console.log('API URL:', url);
-    console.log('Final parameters:', Object.fromEntries(params));
-    
     const response = await apiServerMiddleware.get(url);
-    console.log("response.data", JSON.stringify(response.data, null, 2))
-
     return response.data; 
 }

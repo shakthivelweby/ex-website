@@ -1,8 +1,20 @@
-import Image from 'next/image';
-import Link from 'next/link';
+import Image from "next/image";
+import Link from "next/link";
 
 const EventCard = ({ event }) => {
-  const { title, date, venue, type, image, price, promoted, interest_count } = event;
+  const {
+    title,
+    date,
+    venue,
+    type,
+    image,
+    price,
+    promoted,
+    interest_count,
+    totalShows,
+    availableSlots,
+    dateRange,
+  } = event;
 
   return (
     <Link href="#" className="block group">
@@ -19,13 +31,22 @@ const EventCard = ({ event }) => {
 
         {/* Background Image */}
         <div className="relative w-full h-[350px] overflow-hidden shrink-0">
-          <Image
-            src={image}
-            alt={title}
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-110"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          />
+          {image ? (
+            <Image
+              src={image}
+              alt={title}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-110"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <i className="fi fi-rr-picture text-4xl mb-2 block"></i>
+                <p className="text-sm">No Image</p>
+              </div>
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
           {/* Interest Count Overlay */}
@@ -42,23 +63,49 @@ const EventCard = ({ event }) => {
         {/* Content */}
         <div className="p-4 flex flex-col flex-grow">
           {/* Date and Time */}
-          <p className="text-primary-600 font-medium text-sm mb-2">{date}</p>
+          <p className="text-primary-600 font-medium text-sm mb-2">
+            {dateRange || date}
+          </p>
 
           {/* Title */}
           <h3 className="font-medium text-base text-gray-800 line-clamp-2 mb-2 transition-colors">
             {title}
           </h3>
 
+          {/* Event Type/Category */}
+          {type && (
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fi fi-rr-tag text-gray-400 text-sm"></i>
+              <p className="text-gray-500 text-sm">{type}</p>
+            </div>
+          )}
+
           {/* Venue */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <i className="fi fi-rr-marker text-gray-400 text-sm"></i>
             <p className="text-gray-600 text-sm line-clamp-1">{venue}</p>
+          </div>
+
+          {/* Event Details */}
+          <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
+            {totalShows > 0 && (
+              <div className="flex items-center gap-1">
+                <i className="fi fi-rr-play text-gray-400"></i>
+                <span>{totalShows} shows</span>
+              </div>
+            )}
+            {availableSlots > 0 && (
+              <div className="flex items-center gap-1">
+                <i className="fi fi-rr-ticket text-gray-400"></i>
+                <span>{availableSlots} slots</span>
+              </div>
+            )}
           </div>
 
           {/* Price */}
           <div className="flex items-center justify-between">
             <p className="text-gray-600 font-medium text-sm">
-              {typeof price === 'string' ? price : `₹${price} onwards`}
+              {typeof price === "string" ? price : `₹${price} onwards`}
             </p>
             <button className="text-sm text-primary-600 font-medium hover:text-primary-700">
               Book Now <i className="fi fi-rr-arrow-right ml-1"></i>
@@ -70,4 +117,4 @@ const EventCard = ({ event }) => {
   );
 };
 
-export default EventCard; 
+export default EventCard;

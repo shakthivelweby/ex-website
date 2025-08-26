@@ -424,17 +424,17 @@ const ClientWrapper = ({ searchParams: initialSearchParams }) => {
                         category: category.slug,
                       })
                     }
-                    className={`flex flex-col items-center gap-2 group transition-all duration-200 ${
+                    className={`flex flex-col items-center gap-2 group ${
                       initialFilters.category === category.slug
-                        ? "text-primary-600 scale-105"
-                        : "text-gray-600 hover:text-primary-600 hover:scale-105"
+                        ? "text-primary-600"
+                        : "text-gray-600 hover:text-primary-600"
                     }`}
                   >
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200 overflow-hidden shadow-sm ${
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
                         initialFilters.category === category.slug
-                          ? "bg-primary-50 ring-2 ring-primary-200 shadow-md"
-                          : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-md"
+                          ? "bg-primary-50"
+                          : "bg-gray-50 group-hover:bg-primary-50"
                       }`}
                     >
                       {category.image ? (
@@ -506,7 +506,13 @@ const ClientWrapper = ({ searchParams: initialSearchParams }) => {
             ) : events.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
                 {events.map((event) => (
-                  <EventCard key={event.id} event={event} />
+                  <EventCard
+                    key={event.id}
+                    event={{
+                      ...event,
+                      image: event.thumImage, // Use thumbnail image, fallback to cover image, then default
+                    }}
+                  />
                 ))}
               </div>
             ) : (

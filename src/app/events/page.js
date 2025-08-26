@@ -1,4 +1,5 @@
 import ClientWrapper from "./clientWrapper";
+import { getEventCategories, getLanguages, list } from "./service";
 
 export default async function Events({ searchParams }) {
   const allCategories = await getEventCategories();

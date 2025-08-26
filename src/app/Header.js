@@ -21,7 +21,7 @@ export default function Header() {
   return (
     <>
       <header className="w-full bg-white z-50 fixed top-0 left-0 right-0">
-        <div className="container mx-auto flex items-center justify-between py-2 px-3">
+        <div className="container mx-auto flex items-center justify-between py-2 px-4">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" onClick={() => setShowMobileNav(false)}>

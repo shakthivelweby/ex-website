@@ -59,6 +59,12 @@ const navLinks = [
     icon: "fi fi-rr-pending",
     matchPath: (path) => path === "/scheduled"
   },
+  {
+    name: "Events",
+    href: "/events",
+    icon: "fi fi-rr-calendar",
+    matchPath: (path) => path === "/events"
+  },
 
   // { 
   //   name: "Activities", 

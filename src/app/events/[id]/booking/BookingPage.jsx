@@ -631,7 +631,7 @@ const BookingPage = ({ eventId }) => {
               <div className="bg-white rounded-lg shadow border p-4">
                 <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3">
                   <Image
-                    src={eventData.images[0]?.image}
+                    src={eventData.cover_image}
                     alt={eventData.name}
                     fill
                     className="object-cover"

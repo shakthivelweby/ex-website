@@ -392,7 +392,7 @@ export default function EventCheckoutPage() {
                 <div className="flex items-center gap-2.5">
                   <div className="relative w-10 h-10 rounded-lg overflow-hidden border-2 border-white shadow-sm flex-shrink-0">
                     <Image
-                      src={eventData.images[0]?.image}
+                      src={eventData.cover_image}
                       alt={eventData.name}
                       className="object-cover"
                       fill
@@ -686,7 +686,7 @@ export default function EventCheckoutPage() {
                   <div className="flex items-start gap-3">
                     <div className="relative w-14 h-14 rounded-xl overflow-hidden border-2 border-white shadow-lg flex-shrink-0">
                       <Image
-                        src={eventData.images[0]?.image}
+                        src={eventData.cover_image}
                         alt={eventData.name}
                         className="object-cover"
                         fill

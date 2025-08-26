@@ -358,7 +358,7 @@ const EventFilters = ({
       </div>
 
       {/* Price Range Section */}
-      <div className="py-3">
+      {/* <div className="py-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-indian-rupee-sign text-gray-400"></i>
@@ -403,7 +403,7 @@ const EventFilters = ({
             <span>₹5000+</span>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 

@@ -5,12 +5,13 @@ import EventFilters from "@/components/EventFilters/EventFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { getEventCategories, getLanguages, list } from "./service";
 
 const ClientWrapper = ({
-  allCategories,
-  allLanguages,
-  list,
-  transformedEvents,
+  searchParams: initialSearchParams,
+  initialEvents,
+  initialCategories,
+  initialLanguages,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -18,19 +19,10 @@ const ClientWrapper = ({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [events, setEvents] = useState(transformedEvents);
+  const [events, setEvents] = useState(initialEvents || []);
   const [loading, setLoading] = useState(false);
-
-  const [categories, setCategories] = useState(allCategories.data);
-  const [languages, setLanguages] = useState(allLanguages.data);
-
-  // Remove the useEffect that was transforming data client-side
-  // The data is now pre-transformed server-side
-
-  // Update events when transformedEvents prop changes (e.g., when filters are applied)
-  useEffect(() => {
-    setEvents(transformedEvents);
-  }, [transformedEvents]);
+  const [categories, setCategories] = useState(initialCategories || []);
+  const [languages, setLanguages] = useState(initialLanguages || []);
 
   // Get initial filters from URL
   const initialFilters = {
@@ -45,7 +37,6 @@ const ClientWrapper = ({
 
   useEffect(() => {
     if (initialFilters.longitude && initialFilters.latitude) {
-      // You might want to reverse geocode to get location name for display
       setSelectedLocation("Selected Location");
     }
   }, [initialFilters.longitude, initialFilters.latitude]);
@@ -117,8 +108,85 @@ const ClientWrapper = ({
   };
 
   // Function to handle filter changes immediately
-  const handleFilterChange = (newFilters) => {
+  const handleFilterChange = async (newFilters) => {
     updateURL(newFilters);
+
+    // Refetch events with new filters
+    try {
+      setLoading(true);
+      const eventsResponse = await list(newFilters);
+
+      // Transform events data
+      if (eventsResponse?.data) {
+        const transformedEvents = eventsResponse.data.map((event) => ({
+          id: event.id,
+          title: event.name,
+          date: event.starting_date,
+          venue: event.location,
+          type: event.event_category_master?.name || "",
+          image: event.thumb_image || event.cover_image,
+          price: (() => {
+            if (event.event_days && event.event_days.length > 0) {
+              const prices = event.event_days
+                .flatMap((day) => day.event_ticket_prices)
+                .map((price) => parseFloat(price.price))
+                .filter((price) => !isNaN(price));
+
+              if (prices.length > 0) {
+                return Math.min(...prices);
+              }
+            }
+            return 100;
+          })(),
+          eventDays: event.event_days || [],
+          totalShows: (() => {
+            if (event.event_days && event.event_days.length > 0) {
+              return event.event_days.reduce(
+                (total, day) => total + (day.event_shows?.length || 0),
+                0
+              );
+            }
+            return 0;
+          })(),
+          availableSlots: (() => {
+            if (event.event_days && event.event_days.length > 0) {
+              return event.event_days.reduce((total, day) => {
+                const daySlots =
+                  day.event_ticket_prices?.reduce(
+                    (dayTotal, price) =>
+                      dayTotal + (price.available_slots || 0),
+                    0
+                  ) || 0;
+                return total + daySlots;
+              }, 0);
+            }
+            return 0;
+          })(),
+          dateRange: (() => {
+            if (event.event_days && event.event_days.length > 0) {
+              const dates = event.event_days.map((day) => day.date).sort();
+              if (dates.length === 1) {
+                return dates[0];
+              } else {
+                return `${dates[0]} to ${dates[dates.length - 1]}`;
+              }
+            }
+            return event.starting_date || "";
+          })(),
+          promoted: true,
+          interest_count: 245,
+        }));
+
+        setEvents(transformedEvents);
+      } else {
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching filtered events:", error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -191,15 +259,23 @@ const ClientWrapper = ({
                     }`}
                   >
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
+                      className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
                         initialFilters.category === category.slug
                           ? "bg-primary-50"
                           : "bg-gray-50 group-hover:bg-primary-50"
                       }`}
                     >
-                      {/* <i className={`${category.icon} text-xl`}></i> */}
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                        />
+                      ) : (
+                        <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                      )}
                     </div>
-                    <span className="text-xs font-medium text-center">
+                    <span className="text-xs font-medium text-center leading-tight">
                       {category.name}
                     </span>
                   </button>
@@ -208,7 +284,35 @@ const ClientWrapper = ({
             </div>
 
             {/* Events Grid */}
-            {events.length > 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="flex items-center justify-center gap-3">
+                  <svg
+                    className="animate-spin h-8 w-8 text-primary"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span className="text-primary font-medium">
+                    Loading events...
+                  </span>
+                </div>
+              </div>
+            ) : events.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
                 {events.map((event) => (
                   <EventCard key={event.id} event={event} />

@@ -5,15 +5,18 @@ export default async function Events({ searchParams }) {
   const allCategories = await getEventCategories();
   const allLanguages = await getLanguages();
 
+  // Await searchParams before accessing its properties
+  const resolvedSearchParams = await searchParams;
+
   // Extract filters from search params
   const filters = {
-    date: searchParams.date || "",
-    language: searchParams.language || "",
-    category: searchParams.category || "",
-    price_from: searchParams.price_from || "",
-    price_to: searchParams.price_to || "",
-    longitude: searchParams.longitude || "",
-    latitude: searchParams.latitude || "",
+    date: resolvedSearchParams.date || "",
+    language: resolvedSearchParams.language || "",
+    category: resolvedSearchParams.category || "",
+    price_from: resolvedSearchParams.price_from || "",
+    price_to: resolvedSearchParams.price_to || "",
+    longitude: resolvedSearchParams.longitude || "",
+    latitude: resolvedSearchParams.latitude || "",
   };
 
   const eventsList = await list(filters);
@@ -80,7 +83,7 @@ export default async function Events({ searchParams }) {
 
   return (
     <ClientWrapper
-      searchParams={searchParams}
+      searchParams={resolvedSearchParams}
       initialEvents={transformedEvents}
       initialCategories={allCategories?.data || []}
       initialLanguages={allLanguages?.data || []}

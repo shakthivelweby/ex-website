@@ -1,29 +1,43 @@
 "use client";
 
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
 import Form from "./Form";
+import ImageViewer from "@/components/ImageViewer/ImageViewer";
 
 const EventDetailPage = ({ eventDetails }) => {
-  const { id } = useParams();
   const router = useRouter();
   const [showMobileForm, setShowMobileForm] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const enquireOnly = false;
 
   const handleMobileBooking = () => {
     if (!enquireOnly) {
-      router.push(`/events/${id}/booking`);
+      router.push(`/events/${eventDetails.id}/booking`);
     } else {
       setShowMobileForm(true);
     }
   };
 
+  console.log("Gallery Data clientWrapper :", eventDetails);
+
   return (
     <main className="min-h-screen">
+      <ImageViewer
+        images={
+          eventDetails.gallery?.map((img) => ({
+            image_url: img.image,
+            image_name: `Event gallery image`,
+          })) || []
+        }
+        isOpen={isImageViewerOpen}
+        onClose={() => setIsImageViewerOpen(false)}
+      />
+
       {/* Mobile Form Popup */}
       <Popup
         isOpen={showMobileForm}
@@ -82,6 +96,59 @@ const EventDetailPage = ({ eventDetails }) => {
                     />
                   </div>
                 </div>
+
+                {/* Gallery Section */}
+                {eventDetails.gallery && eventDetails.gallery.length > 0 && (
+                  <div className="bg-white rounded-xl mb-14">
+                    <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
+                      Event Gallery
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {eventDetails.gallery.map((image, index) => {
+                        // Create a dynamic layout with fixed heights for better object-cover
+                        const getImageClass = () => {
+                          if (index === 0) return "col-span-2 row-span-2"; // Large featured image
+                          if (index === 1) return "col-span-1 row-span-1"; // Regular size
+                          if (index === 2) return "col-span-1 row-span-1"; // Regular size
+                          if (index === 3) return "col-span-2 row-span-1"; // Wide image
+                          if (index === 4) return "col-span-1 row-span-1"; // Regular size
+                          if (index === 5) return "col-span-1 row-span-2"; // Tall image
+                          if (index === 6) return "col-span-1 row-span-1"; // Regular size
+                          return "col-span-1 row-span-1"; // Default for remaining images
+                        };
+
+                        const getHeight = () => {
+                          if (index === 0) return "h-[300px] md:h-[400px]"; // Large featured
+                          if (index === 3) return "h-[150px] md:h-[200px]"; // Wide
+                          if (index === 5) return "h-[300px] md:h-[400px]"; // Tall
+                          return "h-[150px] md:h-[200px]"; // Default regular
+                        };
+
+                        return (
+                          <div
+                            key={index}
+                            className={`relative ${getImageClass()} ${getHeight()} rounded-xl overflow-hidden group cursor-pointer`}
+                            onClick={() => setIsImageViewerOpen(true)}
+                          >
+                            <Image
+                              src={image.image}
+                              alt={`Event gallery image ${index + 1}`}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-all duration-500 ease-out"
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            />
+                            {/* Overlay on hover */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <i className="fi fi-rr-zoom-in text-white text-2xl"></i>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Event Guide */}
                 <div className="bg-white rounded-xl mb-14">

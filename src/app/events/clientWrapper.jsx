@@ -4,7 +4,7 @@ import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+// Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
 
 const ClientWrapper = ({
@@ -13,9 +13,6 @@ const ClientWrapper = ({
   initialCategories,
   initialLanguages,
 }) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -23,17 +20,23 @@ const ClientWrapper = ({
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState(initialCategories || []);
   const [languages, setLanguages] = useState(initialLanguages || []);
+  const [isClient, setIsClient] = useState(false);
 
-  // Get initial filters from URL
+  // Get initial filters from server-side search params
   const initialFilters = {
-    date: searchParams.get("date") || "",
-    language: searchParams.get("language") || "",
-    category: searchParams.get("category") || "",
-    price_from: searchParams.get("price_from") || "",
-    price_to: searchParams.get("price_to") || "",
-    longitude: searchParams.get("longitude") || "",
-    latitude: searchParams.get("latitude") || "",
+    date: initialSearchParams.date || "",
+    language: initialSearchParams.language || "",
+    category: initialSearchParams.category || "",
+    price_from: initialSearchParams.price_from || "",
+    price_to: initialSearchParams.price_to || "",
+    longitude: initialSearchParams.longitude || "",
+    latitude: initialSearchParams.latitude || "",
   };
+
+  // Mark component as client-side after mount
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (initialFilters.longitude && initialFilters.latitude) {
@@ -48,7 +51,9 @@ const ClientWrapper = ({
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
-    const params = new URLSearchParams(searchParams);
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
 
     // Update or remove date parameter
     if (newFilters.date) {
@@ -90,7 +95,8 @@ const ClientWrapper = ({
     }
 
     // Update the URL without refreshing the page
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.pushState({}, "", newUrl);
   };
 
   // Handle location selection

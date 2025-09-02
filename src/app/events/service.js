@@ -67,9 +67,6 @@ export const list = async (filters = {}) => {
     
     const queryString = params.toString();
     const url = queryString ? `/events?${queryString}` : "/events";
-
-    console.log("Events list url :", url);
-    const response = await apiServerMiddleware.get(url);
-    console.log("Events list :", response.data);
+    const response = await apiServerMiddleware.get(url);   
     return response.data; 
 }

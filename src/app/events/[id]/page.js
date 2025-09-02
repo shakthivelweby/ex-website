@@ -21,6 +21,8 @@ const EventDetailPage = async ({ params }) => {
   const event = eventResponse.data;
 
   // Calculate lowest price from event days
+
+
   const lowestPrice = event.event_days?.reduce((lowestPrice, day) => {
     const dayPrices = day.event_ticket_prices?.map(ticket => parseFloat(ticket.price)) || [];
     if (dayPrices.length > 0) {
@@ -29,6 +31,9 @@ const EventDetailPage = async ({ params }) => {
     }
     return lowestPrice;
   }, Infinity) || 0;
+
+
+
 
   // Format dates
   const formatDate = (dateString) => {

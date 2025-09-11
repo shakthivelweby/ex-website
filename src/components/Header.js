@@ -59,24 +59,18 @@ const navLinks = [
     icon: "fi fi-rr-pending",
     matchPath: (path) => path === "/scheduled"
   },
-  {
-    name: "Events",
-    href: "/events",
-    icon: "fi fi-rr-calendar",
-    matchPath: (path) => path === "/events"
-  },
 
+  { 
+    name: "Attractions", 
+    href: "/attractions", 
+    icon: "fi fi-rr-ferris-wheel",
+    matchPath: (path) => path === "/attractions" || path.startsWith("/attraction")
+  },
   // { 
   //   name: "Activities", 
   //   href: "#", 
   //   icon: "fi fi-rr-hiking",
   //   matchPath: (path) => path === "/activities"
-  // },
-  // { 
-  //   name: "Attractions", 
-  //   href: "#", 
-  //   icon: "fi fi-rr-binoculars",
-  //   matchPath: (path) => path === "/attractions"
   // },
   // { 
   //   name: "Rentals", 

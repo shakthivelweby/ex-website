@@ -331,7 +331,7 @@ const BookingPage = ({ eventId }) => {
                               }`}
                             >
                               <i
-                                className={`fi fi-rr-chevron-down transition-transform duration-200 ${
+                                className={`fi fi-br-angle-down flex items-center justify-center transition-transform duration-200 ${
                                   expandedDate === date.id ? "rotate-180" : ""
                                 }`}
                               ></i>
@@ -391,7 +391,7 @@ const BookingPage = ({ eventId }) => {
                                       }`}
                                     >
                                       <i
-                                        className={`fi fi-rr-chevron-down text-xs transition-transform duration-200 ${
+                                        className={`ffi fi-br-angle-down flex items-center justify-center text-xs transition-transform duration-200 ${
                                           expandedShow ===
                                           `${date.id}-${show.id}`
                                             ? "rotate-180"

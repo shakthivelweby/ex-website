@@ -1,9 +1,18 @@
-import ClientWrapper from "@/app/events/[id]/clientWrapper";
-import { eventInfo } from "./service";
+import EventDetailClient from "./clientWrapper";
+import { eventInfo, getEventGallery } from "./service";
 
 const EventDetailPage = async ({ params }) => {
   const { id } = await params;
   const eventResponse = await eventInfo(id);
+  const galleryResponse = await getEventGallery(id);
+
+  const getGalleryData = galleryResponse?.data?.event_images 
+
+
+
+  //console.log('Gallery Data new :', getGalleryData);
+
+
 
   if (!eventResponse?.data) {
     return <div>Event not found</div>;
@@ -12,6 +21,8 @@ const EventDetailPage = async ({ params }) => {
   const event = eventResponse.data;
 
   // Calculate lowest price from event days
+
+
   const lowestPrice = event.event_days?.reduce((lowestPrice, day) => {
     const dayPrices = day.event_ticket_prices?.map(ticket => parseFloat(ticket.price)) || [];
     if (dayPrices.length > 0) {
@@ -20,6 +31,9 @@ const EventDetailPage = async ({ params }) => {
     }
     return lowestPrice;
   }, Infinity) || 0;
+
+
+
 
   // Format dates
   const formatDate = (dateString) => {
@@ -67,10 +81,11 @@ const EventDetailPage = async ({ params }) => {
     refundable: event.refundable,
     mapLink: event.map_link,
     latitude: event.latitude,
-    longitude: event.longitude
+    longitude: event.longitude,
+    gallery: getGalleryData || []
   };
 
-  return <ClientWrapper eventDetails={eventDetails} />;
+  return <EventDetailClient eventDetails={eventDetails} />;
 };
 
 export default EventDetailPage;

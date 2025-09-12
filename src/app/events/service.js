@@ -3,6 +3,7 @@ import apiServerMiddleware from "../api/serverMiddleware";
 // get all categories
 export const getEventCategories = async () => {
     const response = await apiServerMiddleware.get("/event-categories");
+    console.log("Event categories :", response.data);
     return response.data;
 }
 
@@ -66,7 +67,6 @@ export const list = async (filters = {}) => {
     
     const queryString = params.toString();
     const url = queryString ? `/events?${queryString}` : "/events";
-    
-    const response = await apiServerMiddleware.get(url);
+    const response = await apiServerMiddleware.get(url);   
     return response.data; 
 }

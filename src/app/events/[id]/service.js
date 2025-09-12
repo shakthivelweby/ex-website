@@ -11,3 +11,8 @@ export const getDetailsForBooking = async (event_id) => {
   return response.data;
 };
 
+export const getEventGallery = async (event_id) => {
+  const response = await apiServerMiddleware.get(`/event-details/${event_id}`);
+  return response.data;
+};
+

@@ -1,0 +1,666 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
+import Tab from "./Tab";
+import Form from "./Form";
+import MobileCarousel from "./mobileCarousel";
+import StayCategory from "./StayCategory";
+import { usePackageRate } from "./query";
+import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import PackageDuration from "../packageDuration";
+import Popup from "@/components/Popup";
+import { downloadItinerary } from "./service";
+import isLogin from "@/utils/isLogin";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { formatDate } from "@/utils/formatDate";
+
+
+export default function ClientWrapper({
+  packageData,
+  date,
+  packagePriceData,
+  packageStayCategory,
+  packageCombinations,
+  supplierInfo
+}) {
+  const loadingTexts = [
+    "Crafting your perfect itinerary...",
+    "Mapping out your adventure...",
+    "Gathering exciting experiences...",
+    "Curating the best moments...",
+    "Planning your dream journey...",
+    "Designing your travel story...",
+    "Preparing your travel guide..."
+  ];
+
+  /* all states */
+  const [selectedStayCategory, setSelectedStayCategory] = useState({
+    stay_category_id: packageStayCategory.stay_category_id,
+    package_stay_category_id: packageStayCategory.id,
+  });
+  const [packagePrice, setPackagePrice] = useState(packagePriceData.adultPrice);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
+  const [showMobileForm, setShowMobileForm] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [currentLoadingText, setCurrentLoadingText] = useState(0);
+  const [downloadSize, setDownloadSize] = useState({ total: 0, downloaded: 0 });
+  const [showFormatModal, setShowFormatModal] = useState(false);
+  const [itineraryFormat, setItineraryFormat] = useState('daywise');
+  const [startDate, setStartDate] = useState(null);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+
+  // Helper function to format bytes to MB
+  const formatBytes = (bytes) => {
+    const mb = (bytes / (1024 * 1024)).toFixed(1);
+    return `${mb} MB`;
+  };
+
+  const { data: packageRate } = usePackageRate(
+    packageData.data.id,
+    selectedStayCategory.package_stay_category_id,
+    date
+  );
+
+
+
+
+  const [enquireOnly, setEnquireOnly] = useState(false);
+
+  const [isClient, setIsClient] = useState(false);
+
+  // Add ref for scroll container
+  const scrollContainerRef = useRef(null);
+
+  // Handle scroll animation when popup opens
+  useEffect(() => {
+    if (showMobileForm && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+
+      // Initial scroll down after a short delay
+      const timeoutId = setTimeout(() => {
+        container.scrollTo({
+          top: 300,
+          behavior: 'smooth'
+        });
+
+        // Scroll back up after another delay
+        setTimeout(() => {
+          container.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        }, 600);
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [showMobileForm]);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+
+      setEnquireOnly(!packagePriceData.rateAvailable);
+    }
+  }, [isClient, packagePriceData.rateAvailable]);
+
+  // Add effect for loading text animation
+  useEffect(() => {
+    let interval;
+    if (isDownloading) {
+      interval = setInterval(() => {
+        setCurrentLoadingText((prev) => (prev + 1) % loadingTexts.length);
+      }, 2000);
+    } else {
+      setCurrentLoadingText(0);
+    }
+    return () => clearInterval(interval);
+  }, [isDownloading, loadingTexts.length]);
+
+  /* end all states */
+
+  // Handle body scroll lock
+  useEffect(() => {
+    if (showMobileForm) {
+      // Save current scroll position and add styles
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.top = `-${scrollY}px`;
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+      window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+    }
+
+    // Cleanup function
+    return () => {
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.top = '';
+    };
+  }, [showMobileForm]);
+
+  // update rate
+  useEffect(() => {
+    if (packageRate?.data) {
+      console.log(packageRate)
+      setPackagePrice(packageRate.data.adultPrice);
+      setEnquireOnly(!packageRate.data.rateAvailable);
+    }
+  }, [packageRate, selectedStayCategory]);
+
+  // Handle itinerary download
+  const downloadHandler = async (e) => {
+    e.preventDefault();
+
+    if (!isLogin()) {
+      const event = new CustomEvent('showLogin');
+      window.dispatchEvent(event);
+      return;
+    }
+
+    setShowFormatModal(true);
+  };
+
+  const handleFormatSubmit = async () => {
+    if (!itineraryFormat || (itineraryFormat === 'datewise' && !startDate)) {
+      return;
+    }
+
+    // Hide the modal first
+    setShowFormatModal(false);
+    setItineraryFormat('daywise');
+    setStartDate(null);
+    setShowStartDatePicker(false);
+
+    try {
+      setIsDownloading(true);
+      setDownloadProgress(0);
+      setDownloadSize({ total: 0, downloaded: 0 });
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
+      const params = new URLSearchParams({
+        stay_category_id: selectedStayCategory.stay_category_id,
+        daywise: itineraryFormat === 'daywise',
+        ...(itineraryFormat === 'datewise' && { start_date: formatDate(startDate) })
+      });
+      const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?${params.toString()}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/pdf'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const contentLength = +response.headers.get('Content-Length');
+      setDownloadSize(prev => ({ ...prev, total: contentLength }));
+
+      const reader = response.body.getReader();
+      let receivedLength = 0;
+      const chunks = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          const finalProgress = Math.round((receivedLength / contentLength) * 100);
+          if (finalProgress < 100) {
+            const remainingSteps = Math.floor((100 - finalProgress) / 5);
+            for (let i = 0; i < remainingSteps; i++) {
+              await new Promise(resolve => setTimeout(resolve, 50));
+              setDownloadProgress(prev => Math.min(prev + 5, 99));
+              // Update downloaded size proportionally
+              const newDownloaded = (contentLength * Math.min(prev + 5, 99)) / 100;
+              setDownloadSize(prev => ({ ...prev, downloaded: newDownloaded }));
+            }
+          }
+          break;
+        }
+
+        chunks.push(value);
+        receivedLength += value.length;
+        setDownloadSize(prev => ({ ...prev, downloaded: receivedLength }));
+
+        const progress = (receivedLength / contentLength) * 100;
+        setDownloadProgress(Math.min(Math.round(progress), 99));
+      }
+
+      // Create and download the blob
+      const blob = new Blob(chunks, { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `${packageData.data.name}-itinerary.pdf`;
+
+      await new Promise(resolve => setTimeout(resolve, 200));
+      setDownloadProgress(100);
+      setDownloadSize(prev => ({ ...prev, downloaded: prev.total }));
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+    } catch (error) {
+      console.error('Error downloading itinerary:', error);
+      alert('Failed to download itinerary. Please try again later.');
+    } finally {
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        setDownloadSize({ total: 0, downloaded: 0 });
+      }, 500);
+    }
+  };
+
+  const { images, name, inclusions, package_stay_categories } =
+    packageData.data;
+
+  return (
+    <div>
+
+      <ImageViewer
+        images={images}
+        isOpen={isImageViewerOpen}
+        onClose={() => setIsImageViewerOpen(false)}
+      />
+
+      {/* Add Format Selection Modal */}
+      <Popup
+        isOpen={showFormatModal}
+        onClose={() => {
+          setShowFormatModal(false);
+          setItineraryFormat('daywise');
+          setStartDate(null);
+          setShowStartDatePicker(false);
+        }}
+        title="Choose Itinerary Format"
+        pos="right"
+        className="w-full max-w-md rounded-2xl"
+      >
+        <div className="flex flex-col h-full">
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-800 mb-4">
+                  Select Format
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => {
+                      setItineraryFormat('daywise');
+                      setShowStartDatePicker(false);
+                    }}
+                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'daywise'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <i className="fi fi-rr-calendar-lines text-2xl mb-2"></i>
+                    <p className="text-sm font-medium">Day-wise</p>
+                    <p className="text-xs text-gray-500 mt-1">Day 1, Day 2, etc.</p>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setItineraryFormat('datewise');
+                      setShowStartDatePicker(true);
+                    }}
+                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'datewise'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                  >
+                    <i className="fi fi-rr-calendar-clock text-2xl mb-2"></i>
+                    <p className="text-sm font-medium">Date-wise</p>
+                    <p className="text-xs text-gray-500 mt-1">Actual dates</p>
+                  </button>
+                </div>
+              </div>
+
+              {showStartDatePicker && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-800 mb-2">
+                    Select Start Date
+                  </label>
+                  <div className="relative flex justify-center">
+                    <DatePicker
+                      selected={startDate}
+                      onChange={setStartDate}
+                      minDate={new Date()}
+                      inline={true}
+                      placeholderText="Choose start date"
+                      className="w-full h-12 px-4 border text-gray-800 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      dateFormat="dd/MM/yyyy"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="sticky bottom-0 bg-white p-4 border-t border-gray-100 mt-auto">
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowFormatModal(false);
+                  setItineraryFormat('daywise');
+                  setStartDate(null);
+                  setShowStartDatePicker(false);
+                }}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleFormatSubmit}
+                disabled={itineraryFormat === 'datewise' && !startDate}
+                className={`flex-1 px-6 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${itineraryFormat === 'datewise' && !startDate
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700'
+                  }`}
+              >
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      </Popup>
+
+      {/* Mobile Form Popup */}
+      <Popup
+        isOpen={showMobileForm}
+        onClose={() => setShowMobileForm(false)}
+        title="Book Your Trip"
+        pos="bottom"
+        draggable={true}
+        className="lg:hidden w-full rounded-t-3xl"
+        pannelStyle="h-[75vh]"
+      >
+        <div className="flex-1 overflow-y-auto p-4">
+          <Form
+            date={date}
+            packageData={packageData}
+            selectedStayCategory={selectedStayCategory}
+            packagePrice={packagePrice}
+            enquireOnly={enquireOnly}
+            setEnquireOnly={setEnquireOnly}
+            packagePriceData={packagePriceData}
+            downloadHandler={downloadHandler}
+            isDownloading={isDownloading}
+            loadingTexts={loadingTexts}
+            downloadProgress={downloadProgress}
+            downloadSize={downloadSize}
+            formatBytes={formatBytes}
+          />
+        </div>
+      </Popup>
+
+      <main className="bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-8 pb-24 md:pb-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Left content */}
+            <div className="w-full lg:w-2/3">
+              {/* Image Gallery */}
+              <div className="mb-3 overflow-hidden">
+                {/* Mobile View */}
+                <div className="block md:hidden relative">
+                  <MobileCarousel
+                    packageData={packageData}
+                    onViewAllClick={() => setIsImageViewerOpen(true)}
+                  />
+                </div>
+
+                {/* Desktop View */}
+                <div className="relative">
+                  <div className="hidden md:grid grid-cols-4 gap-4">
+                    <div className="col-span-4 md:col-span-2 lg:col-span-2 relative rounded-tl-2xl rounded-bl-2xl overflow-hidden">
+                      <div className="relative aspect-[3/2] h-full w-full">
+                        <Image
+                          src={images[0].image_url}
+                          alt={images[0].image_name}
+                          fill
+                          className="object-cover"
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          priority
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
+                      <div className="relative overflow-hidden aspect-square">
+                        <Image
+                          src={images[1].image_url}
+                          alt={images[1].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="relative overflow-hidden aspect-square">
+                        <Image
+                          src={images[2].image_url}
+                          alt={images[2].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
+                    </div>
+                    <div className="col-span-2 md:col-span-1 lg:col-span-1 grid grid-rows-2 gap-4">
+                      <div className="relative rounded-tr-2xl overflow-hidden aspect-square">
+                        <Image
+                          src={images[3].image_url}
+                          alt={images[3].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="relative rounded-br-2xl overflow-hidden aspect-square">
+                        <Image
+                          src={images[4].image_url}
+                          alt={images[4].image_name}
+                          fill
+                          blurDataURL="/blur.webp"
+                          placeholder="blur"
+                          className="object-cover"
+                          sizes="(max-width: 768px) 50vw, 25vw"
+                        />
+                        <div className="absolute bottom-4 left-0 right-3 flex justify-end">
+                          <button
+                            onClick={() => setIsImageViewerOpen(true)}
+                            className="bg-black bg-opacity-50 w-[85%] h-8 rounded-full flex items-center justify-center text-white text-sm font-medium cursor-pointer"
+                          >
+                            <span>See all photos ({images.length})</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* provided by supplier */}
+              <div className="flex items-center mb-2">
+                <span className="text-xs font-normal text-gray-500">
+                  Package provided by
+                </span>
+                <h4 className="text-xs font-normal text-gray-800 ml-2 underline">
+                  {supplierInfo?.supplier_details?.company_name || 'Unknown Supplier'}
+
+                </h4>
+
+              </div>
+              <h1 className="text-2xl md:text-3xl tracking-tight font-medium text-gray-800 mb-6 mt-2">
+                {name}
+              </h1>
+
+              {packageCombinations.data.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-base font-normal text-gray-800 mb-4 ">
+                    Choose Trip Duration
+                  </h3>
+                  <div className="flex flex-wrap gap-4">
+                    <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <h3 className="text-base font-normal text-gray-800 mb-4">
+                  Choose Stay Category
+                </h3>
+                <div className="flex flex-wrap gap-4">
+                  <StayCategory
+                    stays={package_stay_categories}
+                    selectedStayCategory={selectedStayCategory}
+                    setSelectedStayCategory={setSelectedStayCategory}
+                  />
+                </div>
+              </div>
+
+              {/* Download Itinerary Button - Mobile Only */}
+              <div className="lg:hidden">
+                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                      <i className="fi fi-rr-document-signed text-gray-600 text-xl"></i>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-gray-800 mb-1">
+                        Detailed Itinerary
+                      </h3>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Download the complete day-by-day travel plan and inclusions
+                      </p>
+                      <div className="space-y-2">
+                        <button
+                          onClick={downloadHandler}
+                          className="inline-flex items-center text-sm font-medium text-primary-600 hover:text-primary-700 disabled:opacity-70"
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? (
+                            <div className="flex items-center">
+                              <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              <span>{loadingTexts[currentLoadingText]}</span>
+                            </div>
+                          ) : (
+                            <>
+                              <i className="fi fi-rr-download mr-2"></i>
+                              <span>Download PDF</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* Progress bar - only show when downloading */}
+                        {isDownloading && (
+                          <div className="w-full max-w-xs">
+                            <div className="w-full h-1.5 bg-gray-100 rounded-full">
+                              <div
+                                className="h-full bg-primary-600 rounded-full transition-all duration-300 ease-out"
+                                style={{ width: `${downloadProgress}%` }}
+                              ></div>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
+                              <span>
+                                {downloadProgress > 0
+                                  ? `${formatBytes(downloadSize.downloaded)} of ${formatBytes(downloadSize.total)}`
+                                  : 'Starting download...'}
+                              </span>
+                              {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="py-6 border-t border-gray-200 my-7 mb-0">
+                <h3 className="text-base font-normal text-gray-800 mb-4">
+                  Including
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ">
+                  {inclusions.map((item) => {
+                    const { icon_url, name, id } = item.inclusion_master;
+                    return (
+                      <div key={id} className="flex items-center">
+                        <img
+                          src={icon_url}
+                          alt={name}
+                          className="w-5 h-5 mr-2"
+                        />
+                        <p className="text-sm font-medium text-gray-700 truncate">
+                          {name}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <Tab
+                packageData={packageData}
+                selectedStayCategory={selectedStayCategory}
+              />
+            </div>
+
+            {/* Right side booking form */}
+            <div className="w-full lg:w-1/3 hidden lg:block">
+              <Form
+                date={date}
+                packageData={packageData}
+                selectedStayCategory={selectedStayCategory}
+                packagePrice={packagePrice}
+                enquireOnly={enquireOnly}
+                setEnquireOnly={setEnquireOnly}
+                packagePriceData={packagePriceData}
+                downloadHandler={downloadHandler}
+                isDownloading={isDownloading}
+                loadingTexts={loadingTexts}
+                downloadProgress={downloadProgress}
+                downloadSize={downloadSize}
+                formatBytes={formatBytes}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Fixed Mobile Booking Button */}
+      <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
+        <button
+          onClick={() => setShowMobileForm(true)}
+          className={`w-full ${enquireOnly ? 'bg-yellow-500' : 'bg-primary-500'} text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg`}
+        >
+          <div className="flex items-center">
+            <span className="text-sm">{enquireOnly ? 'Send Enquiry' : 'Check Availability'}</span>
+          </div>
+          <div className="flex items-center">
+            <span className="text-sm font-bold">₹{packagePrice}</span>
+            <i className={`${enquireOnly ? 'fi fi-rr-envelope' : 'fi fi-rr-calendar-clock'} ml-2 text-sm`}></i>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}

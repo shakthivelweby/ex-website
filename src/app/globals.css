@@ -1,0 +1,541 @@
+@import "@flaticon/flaticon-uicons/css/all/all.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Airbnb Cereal Font Declarations */
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Lt.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Bk.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Md.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Bd.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_XBd.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Airbnb Cereal";
+  src: url("/fonts/AirbnbCereal_W_Blk.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Next.js Debugger Icon Position */
+
+:root {
+  --background: #ffffff;
+  --foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ffffff;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Airbnb Cereal", Arial, Helvetica, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* Custom DatePicker Styles */
+.react-datepicker {
+  border: none !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+
+.react-datepicker__header {
+  background-color: white !important;
+  border-bottom: none !important;
+  padding-top: 16px !important;
+}
+
+.react-datepicker__month {
+  margin: 0.4rem !important;
+}
+
+.react-datepicker__day-name {
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+  margin: 0.4rem !important;
+}
+
+.react-datepicker__day {
+  margin: 0.4rem !important;
+  color: #1f2937 !important;
+  border-radius: 9999px !important;
+  width: 2rem !important;
+  height: 2rem !important;
+  line-height: 2rem !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: #fecdd3 !important;
+  border-radius: 9999px !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-range,
+.react-datepicker__day--keyboard-selected {
+  background-color: #069494 !important;
+  color: white !important;
+  font-weight: 500 !important;
+}
+
+.react-datepicker__day--in-selecting-range {
+  background-color: #069494 !important;
+  color: #1f2937 !important;
+}
+
+.react-datepicker__day--disabled {
+  color: #d1d5db !important;
+}
+
+.react-datepicker__day--outside-month {
+  color: #9ca3af !important;
+}
+
+.react-datepicker__navigation {
+  top: 14px !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #6b7280 !important;
+}
+
+.react-datepicker__navigation:hover *::before {
+  border-color: #171717 !important;
+}
+
+.react-datepicker__current-month {
+  font-weight: 600 !important;
+  color: #171717 !important;
+  font-size: 1rem !important;
+  margin-bottom: 10px !important;
+}
+
+.react-datepicker__triangle {
+  display: none !important;
+}
+
+/* Add these styles for react-date-range */
+.custom-date-range .rdrMonth {
+  width: 100% !important;
+}
+
+.rdrCalendarWrapper {
+  color: #1f2937 !important;
+  font-size: 14px !important;
+  background-color: #fff !important;
+}
+
+.rdrDateDisplayWrapper {
+  background-color: #fff !important;
+}
+
+.rdrDateDisplay {
+  margin: 0.5rem !important;
+}
+
+.rdrDateDisplayItem {
+  border-radius: 0.375rem !important;
+  background-color: #f3f4f6 !important;
+  box-shadow: none !important;
+}
+
+.rdrDateDisplayItem input {
+  color: #1f2937 !important;
+}
+
+.rdrDateDisplayItemActive {
+  border-color: #069494 !important;
+}
+
+.rdrMonthAndYearWrapper {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+  height: auto !important;
+}
+
+.rdrMonthAndYearPickers select {
+  color: #1f2937 !important;
+  font-weight: 500 !important;
+}
+
+.rdrMonthPicker select,
+.rdrYearPicker select {
+  padding: 0.25rem 1.5rem 0.25rem 0.5rem !important;
+  border-radius: 0.375rem !important;
+  background-color: #f9fafb !important;
+}
+
+.rdrNextPrevButton {
+  background-color: #f9fafb !important;
+  border-radius: 9999px !important;
+}
+
+.rdrNextPrevButton:hover {
+  background-color: #f3f4f6 !important;
+}
+
+.rdrPprevButton i {
+  border-color: transparent #6b7280 transparent transparent !important;
+}
+
+.rdrNextButton i {
+  border-color: transparent transparent transparent #6b7280 !important;
+}
+
+.rdrMonthName {
+  color: #4b5563 !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 0 !important;
+}
+
+.rdrWeekDay {
+  color: #6b7280 !important;
+  font-weight: 500 !important;
+}
+
+.rdrDay {
+  color: #1f2937 !important;
+}
+
+.rdrDayNumber span {
+  color: #1f2937 !important;
+}
+
+.rdrDayDisabled .rdrDayNumber span {
+  color: #d1d5db !important;
+}
+
+.rdrDayToday .rdrDayNumber span:after {
+  background: #069494 !important;
+}
+
+.rdrStartEdge,
+.rdrEndEdge,
+.rdrInRange {
+  color: #fff !important;
+}
+
+.rdrDayStartPreview,
+.rdrDayEndPreview,
+.rdrDayInPreview {
+  border-color: #069494 !important;
+}
+
+.rdrDayStartPreview .rdrDayNumber span,
+.rdrDayEndPreview .rdrDayNumber span,
+.rdrDayInPreview .rdrDayNumber span {
+  color: #1f2937 !important;
+}
+
+.rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrStartEdge ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrEndEdge ~ .rdrDayNumber span {
+  color: white !important;
+}
+
+.rdrDayHovered .rdrDayNumber:after {
+  display: none;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 640px) {
+  .custom-date-range {
+    width: 100% !important;
+  }
+
+  .rdrCalendarWrapper,
+  .rdrMonth {
+    width: 100% !important;
+  }
+
+  .rdrDay {
+    height: 3rem !important;
+  }
+
+  .rdrMonthName {
+    text-align: center !important;
+    font-size: 1rem !important;
+  }
+}
+
+/* Ensure the calendar is not too large on tablets */
+@media (min-width: 641px) and (max-width: 1023px) {
+  .rdrMonth {
+    width: 320px !important;
+  }
+}
+
+/* Prevent body scrolling when modal is open */
+body.datepicker-open {
+  overflow: hidden;
+}
+
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+i {
+  position: relative;
+  top: 3px;
+}
+
+.react-datepicker__week {
+  margin-bottom: 8px;
+}
+
+/* Success Popup Animations */
+@keyframes modal-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes success-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.5;
+  }
+}
+
+@keyframes success-check {
+  0% {
+    transform: scale(0.5) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  75% {
+    transform: scale(0.95) rotate(0deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal-pop {
+  animation: modal-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-success-ring {
+  animation: success-ring 2.5s ease-in-out infinite;
+}
+
+.animate-success-check {
+  animation: success-check 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in-delay {
+  animation: fadeInUp 0.6s ease-out forwards 0.1s;
+  opacity: 0;
+}
+
+.animate-fade-in-delay-2 {
+  animation: fadeInUp 0.6s ease-out forwards 0.2s;
+  opacity: 0;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animation-delay-150 {
+  animation-delay: 150ms;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  letter-spacing: 0.02em;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+
+/* prefixes */
+
+/* TinyMCE Content Formatting */
+.render-html {
+  color: #333;
+  line-height: 1.6;
+}
+
+.render-html p {
+  margin-bottom: 1rem;
+}
+
+.render-html h1,
+.render-html h2,
+.render-html h3,
+.render-html h4,
+.render-html h5,
+.render-html h6 {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.render-html ul,
+.render-html ol {
+  margin-bottom: 1rem;
+  padding-left: 2rem;
+}
+
+.render-html ul li {
+  list-style-type: disc;
+}
+
+.render-html ol li {
+  list-style-type: decimal;
+}
+
+.render-html a {
+  color: #069494;
+  text-decoration: underline;
+}
+
+.render-html a:hover {
+  text-decoration: none;
+}
+
+.render-html blockquote {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-left: 4px solid #069494;
+  background-color: #f8f9fa;
+  font-style: italic;
+}
+
+.render-html strong {
+  font-weight: 600;
+}
+
+.render-html img {
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+}
+
+.render-html table {
+  width: 100%;
+  margin-bottom: 1rem;
+  border-collapse: collapse;
+}
+
+.render-html table th,
+.render-html table td {
+  padding: 0.75rem;
+  border: 1px solid #dee2e6;
+}
+
+.render-html table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.render-html pre,
+.render-html code {
+  background-color: #f8f9fa;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.render-html pre {
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-x: auto;
+}

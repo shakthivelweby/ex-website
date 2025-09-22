@@ -19,6 +19,8 @@ const Form = ({
   );
   const [totalPrice, setTotalPrice] = useState(propTotalPrice || 0);
   const [selectedDate, setSelectedDate] = useState("");
+  const [adultCount, setAdultCount] = useState(1);
+  const [childCount, setChildCount] = useState(0);
 
   // Update local state when props change
   useEffect(() => {
@@ -63,10 +65,19 @@ const Form = ({
         return;
       }
 
+      if (adultCount < 1) {
+        alert("At least one adult is required");
+        setIsLoading(false);
+        return;
+      }
+
       // Add your booking logic here
       console.log("Selected tickets:", selectedTickets);
       console.log("Selected date:", selectedDate);
       console.log("Total price:", totalPrice);
+      console.log("Adults:", adultCount);
+      console.log("Children:", childCount);
+      console.log("Total:", adultCount + childCount);
       alert("Booking functionality will be implemented here");
     } catch (error) {
       console.error("Error:", error);
@@ -79,20 +90,6 @@ const Form = ({
     }
   };
 
-  const handleGetDirections = () => {
-    // Use map link if available, otherwise open Google Maps with the venue location
-    if (attractionDetails.mapLink) {
-      window.open(attractionDetails.mapLink, "_blank");
-    } else {
-      const address = encodeURIComponent(
-        attractionDetails.address || attractionDetails.location
-      );
-      window.open(
-        `https://www.google.com/maps/search/?api=1&query=${address}`,
-        "_blank"
-      );
-    }
-  };
 
   const getSelectedTicketsCount = () => {
     return Object.values(selectedTickets).reduce(
@@ -104,6 +101,22 @@ const Form = ({
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  const handleAdultIncrement = () => {
+    setAdultCount(prev => prev + 1);
+  };
+
+  const handleAdultDecrement = () => {
+    setAdultCount(prev => Math.max(1, prev - 1));
+  };
+
+  const handleChildIncrement = () => {
+    setChildCount(prev => prev + 1);
+  };
+
+  const handleChildDecrement = () => {
+    setChildCount(prev => Math.max(0, prev - 1));
   };
 
   return (
@@ -159,24 +172,64 @@ const Form = ({
         </div>
         </div>
 
-        
+        {/* Adult and Child Quantity Selector - Only show when date is selected */}
+        {selectedDate && (
+          <div className="bg-white rounded-xl p-4 mb-4">
+            {/* <h2 className="text-base font-medium text-gray-800 mb-4">Select Guests</h2> */}
+            
+            {/* Adults Section */}
+            <div className="flex items-center justify-between py-3 border-b border-gray-100">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800">Adults</h3>
+                <p className="text-xs text-gray-500">Over 18+</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAdultDecrement}
+                  disabled={adultCount <= 1}
+                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <i className="fi fi-rr-minus text-xs"></i>
+                </button>
+                <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                  {adultCount}
+                </div>
+                <button
+                  onClick={handleAdultIncrement}
+                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <i className="fi fi-rr-plus text-xs"></i>
+                </button>
+              </div>
+            </div>
 
-        {/* Venue Section */}
-        <div className="bg-white rounded-xl p-4 mb-4">
-          <h2 className="text-base font-medium text-gray-800 mb-2">Location</h2>
-          <div className="flex flex-col">
-            <p className="text-sm text-gray-600 mb-3">
-              {attractionDetails.address}
-            </p>
-            <button
-              onClick={handleGetDirections}
-              className="flex items-center gap-2 text-primary-500 text-sm font-medium"
-            >
-              <i className="fi fi-rr-map-marker text-base"></i>
-              Get Directions
-            </button>
+            {/* Children Section */}
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <h3 className="text-sm font-medium text-gray-800">Child</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleChildDecrement}
+                  disabled={childCount <= 0}
+                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <i className="fi fi-rr-minus text-xs"></i>
+                </button>
+                <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                  {childCount}
+                </div>
+                <button
+                  onClick={handleChildIncrement}
+                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <i className="fi fi-rr-plus text-xs"></i>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
 
         {/* Price and Booking Card */}
         <div className="bg-white rounded-xl p-4">
@@ -200,6 +253,24 @@ const Form = ({
                 </div>
                 <span className="text-sm font-semibold text-green-800">
                   ₹{totalPrice.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Guest Summary - Only show when date is selected */}
+          {selectedDate && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <i className="fi fi-rr-users text-blue-600"></i>
+                  <span className="text-sm font-medium text-blue-800">
+                    {adultCount} Adult{adultCount !== 1 ? "s" : ""}
+                    {childCount > 0 && `, ${childCount} Child${childCount !== 1 ? "ren" : ""}`}
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-blue-800">
+                  Total: {adultCount + childCount} {adultCount + childCount !== 1 ? "" : ""}
                 </span>
               </div>
             </div>

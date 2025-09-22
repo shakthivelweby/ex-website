@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import AttractionCard from "@/components/attractionCard";
 import AttractionFilters from "@/components/AttractionFilters/AttractionFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
@@ -294,15 +295,17 @@ const ClientWrapper = ({
                             <div className="flex items-center gap-2">
                               <span className="text-gray-600 text-sm sm:text-base">{attraction.duration}</span>
                             </div>
-                            <div className="flex items-center gap-1 hidden">
+                            <div className="hidden items-center gap-1">
                               <span className="text-yellow-500 text-lg">★</span>
                               <span className="text-gray-700 font-medium text-sm sm:text-base">{attraction.rating}</span>
                             </div>
                           </div>
                           
-                          <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
-                            Explore Now
-                          </button>
+                          <Link href={`/attractions/${attraction.id}`}>
+                            <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
+                              Explore Now
+                            </button>
+                          </Link>
                         </div>
                         
                         {/* Right Image */}
@@ -357,9 +360,11 @@ const ClientWrapper = ({
                     </div>
                   </div>
                   
-                  <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
-                    Explore Now
-                  </button>
+                  <Link href="/attractions">
+                    <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
+                      Explore Now
+                    </button>
+                  </Link>
                 </div>
                 
                 {/* Right Image */}

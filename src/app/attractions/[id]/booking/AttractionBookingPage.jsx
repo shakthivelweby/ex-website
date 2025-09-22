@@ -15,6 +15,8 @@ const AttractionBookingPage = ({ attractionId }) => {
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+  const [adultChildTickets, setAdultChildTickets] = useState({});
+  const [expandedTicketType, setExpandedTicketType] = useState(null);
 
   // Fetch attraction and ticket details
   useEffect(() => {
@@ -70,21 +72,56 @@ const AttractionBookingPage = ({ attractionId }) => {
     }
   };
 
+  const handleAdultChildQuantityChange = (ticketTypeId, type, change) => {
+    const currentTickets = adultChildTickets[ticketTypeId] || { adult: 0, child: 0 };
+    const newQuantity = Math.max(0, currentTickets[type] + change);
+    
+    const updatedTickets = {
+      ...adultChildTickets,
+      [ticketTypeId]: {
+        ...currentTickets,
+        [type]: newQuantity
+      }
+    };
+
+    // Remove the ticket type if both adult and child are 0
+    if (updatedTickets[ticketTypeId].adult === 0 && updatedTickets[ticketTypeId].child === 0) {
+      const newTickets = { ...updatedTickets };
+      delete newTickets[ticketTypeId];
+      setAdultChildTickets(newTickets);
+    } else {
+      setAdultChildTickets(updatedTickets);
+    }
+  };
+
+  const handleTicketTypeClick = (ticketTypeId) => {
+    if (expandedTicketType === ticketTypeId) {
+      setExpandedTicketType(null);
+    } else {
+      setExpandedTicketType(ticketTypeId);
+    }
+  };
+
   const getTotalSelectedTickets = () => {
-    return Object.values(selectedTickets).reduce(
-      (sum, quantity) => sum + quantity,
+    return Object.values(adultChildTickets).reduce(
+      (sum, tickets) => sum + tickets.adult + tickets.child,
       0
     );
   };
 
   const getTotalPrice = () => {
     let total = 0;
-    Object.entries(selectedTickets).forEach(([ticketTypeId, quantity]) => {
+    
+    // Calculate adult/child tickets
+    Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
       const ticket = ticketData?.find((t) => t.id == ticketTypeId);
-      if (ticket && quantity > 0) {
-        total += parseFloat(ticket.price) * quantity;
+      if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
+        // For now, use same price for adult and child
+        // You can modify this to have different prices for adult/child
+        total += parseFloat(ticket.price) * (tickets.adult + tickets.child);
       }
     });
+    
     return total;
   };
 
@@ -115,17 +152,21 @@ const AttractionBookingPage = ({ attractionId }) => {
     const formattedTickets = [];
     let totalAmount = 0;
 
-    Object.entries(selectedTickets).forEach(([ticketTypeId, quantity]) => {
-      if (quantity === 0) return;
+    // Process adult/child tickets
+    Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
+      if (tickets.adult === 0 && tickets.child === 0) return;
 
       const ticket = ticketData?.find((t) => t.id == ticketTypeId);
-      if (ticket && quantity > 0) {
-        const ticketTotal = parseFloat(ticket.price) * quantity;
+      if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
+        const totalQuantity = tickets.adult + tickets.child;
+        const ticketTotal = parseFloat(ticket.price) * totalQuantity;
         totalAmount += ticketTotal;
 
         formattedTickets.push({
           attraction_ticket_type_id: parseInt(ticketTypeId),
-          quantity: quantity,
+          quantity: totalQuantity,
+          adult_quantity: tickets.adult,
+          child_quantity: tickets.child,
           price: parseFloat(ticket.price),
           total: ticketTotal,
         });
@@ -250,7 +291,8 @@ const AttractionBookingPage = ({ attractionId }) => {
                     <h3 className="text-sm font-medium text-gray-800 mb-3">Available Tickets</h3>
                     <div className="space-y-3">
                       {ticketData?.map((ticket, index) => {
-                        const isSelected = selectedTickets[ticket.id] > 0;
+                        const isSelected = adultChildTickets[ticket.id]?.adult > 0 || adultChildTickets[ticket.id]?.child > 0;
+                        const isExpanded = expandedTicketType === ticket.id;
                         return (
                           <div
                             key={ticket.id}
@@ -262,7 +304,10 @@ const AttractionBookingPage = ({ attractionId }) => {
                               index !== ticketData.length - 1 ? "border-b" : ""
                             }`}
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                            <div 
+                              className="flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer"
+                              onClick={() => handleTicketTypeClick(ticket.id)}
+                            >
                               {/* Left Content */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-3 mb-2">
@@ -317,57 +362,88 @@ const AttractionBookingPage = ({ attractionId }) => {
                                 )}
                               </div>
 
-                              {/* Right Side - Quantity Selector */}
-                              <div className="flex md:items-center justify-center sm:justify-end">
-                                <div
-                                  className={`flex items-center gap-2 p-2 rounded-lg ${
-                                    isSelected
-                                      ? "bg-primary-100 border border-primary-200"
-                                      : "bg-gray-100 border border-gray-200"
-                                  }`}
-                                >
+                              {/* Expand/Collapse Arrow */}
+                              <div className="flex items-center justify-center">
+                                <i className={`fi fi-rr-angle-down text-gray-400 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-180' : ''
+                                }`}></i>
+                              </div>
+                            </div>
+
+                            {/* Adult and Child Quantity Selectors - Only show when expanded */}
+                            {isExpanded && (
+                              <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                              <h5 className="text-sm font-medium text-gray-700 mb-3">Select Adult & Child</h5>
+                              
+                              {/* Adults Section */}
+                              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-800">Adults</h3>
+                                  <p className="text-xs text-gray-500">Over 18+</p>
+                                </div>
+                                <div className="flex items-center gap-2">
                                   <button
                                     onClick={() =>
-                                      handleQuantityChange(ticket.id, -1)
+                                      handleAdultChildQuantityChange(ticket.id, 'adult', -1)
                                     }
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                                      isSelected
-                                        ? "bg-primary-200 text-primary-700 hover:bg-primary-300"
-                                        : "bg-white text-gray-600 hover:bg-gray-200"
-                                    } border-0 shadow-sm`}
+                                    disabled={(adultChildTickets[ticket.id]?.adult || 0) <= 0}
+                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     <i className="fi fi-rr-minus text-xs"></i>
                                   </button>
-
-                                  <span
-                                    className={`w-8 text-center font-bold text-sm ${
-                                      isSelected
-                                        ? "text-primary-800"
-                                        : "text-gray-800"
-                                    }`}
-                                  >
-                                    {selectedTickets[ticket.id] || 0}
-                                  </span>
-
+                                  <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                                    {adultChildTickets[ticket.id]?.adult || 0}
+                                  </div>
                                   <button
                                     onClick={() =>
-                                      handleQuantityChange(ticket.id, 1)
+                                      handleAdultChildQuantityChange(ticket.id, 'adult', 1)
                                     }
                                     disabled={
-                                      selectedTickets[ticket.id] >=
+                                      (adultChildTickets[ticket.id]?.adult || 0) >=
                                       (ticket.maximum_allowed_bookings_per_user || 10)
                                     }
-                                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-                                      isSelected
-                                        ? "bg-primary-200 text-primary-700 hover:bg-primary-300"
-                                        : "bg-white text-gray-600 hover:bg-gray-200"
-                                    } border-0 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    <i className="fi fi-rr-plus text-xs"></i>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Children Section */}
+                              <div className="flex items-center justify-between py-3">
+                                <div>
+                                  <h3 className="text-sm font-medium text-gray-800">Child</h3>
+                                  <p className="text-xs text-gray-500">Under 18</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleAdultChildQuantityChange(ticket.id, 'child', -1)
+                                    }
+                                    disabled={(adultChildTickets[ticket.id]?.child || 0) <= 0}
+                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    <i className="fi fi-rr-minus text-xs"></i>
+                                  </button>
+                                  <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                                    {adultChildTickets[ticket.id]?.child || 0}
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleAdultChildQuantityChange(ticket.id, 'child', 1)
+                                    }
+                                    disabled={
+                                      (adultChildTickets[ticket.id]?.child || 0) >=
+                                      (ticket.maximum_allowed_bookings_per_user || 10)
+                                    }
+                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                   >
                                     <i className="fi fi-rr-plus text-xs"></i>
                                   </button>
                                 </div>
                               </div>
                             </div>
+                            )}
                           </div>
                         );
                       })}
@@ -397,10 +473,11 @@ const AttractionBookingPage = ({ attractionId }) => {
                     </div>
                   </div>
 
-                  {/* Selected Tickets */}
-                  {Object.entries(selectedTickets).map(([ticketTypeId, quantity]) => {
-                    if (quantity === 0) return null;
+                  {/* Adult/Child Tickets */}
+                  {Object.entries(adultChildTickets).map(([ticketTypeId, tickets]) => {
+                    if (tickets.adult === 0 && tickets.child === 0) return null;
                     const ticket = ticketData?.find((t) => t.id == ticketTypeId);
+                    const totalQuantity = tickets.adult + tickets.child;
 
                     return (
                       <div key={ticketTypeId} className="bg-gray-50 rounded-lg p-3">
@@ -409,16 +486,22 @@ const AttractionBookingPage = ({ attractionId }) => {
                             <h4 className="text-sm font-medium text-gray-800">
                               {ticket?.name}
                             </h4>
-                            <p className="text-xs text-gray-600">
-                              Quantity: {quantity}
-                            </p>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              {tickets.adult > 0 && (
+                                <p>Adults: {tickets.adult}</p>
+                              )}
+                              {tickets.child > 0 && (
+                                <p>Children: {tickets.child}</p>
+                              )}
+                              <p>Total: {totalQuantity}</p>
+                            </div>
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-gray-800">
-                              ₹{ticket?.price} × {quantity}
+                              ₹{ticket?.price} × {totalQuantity}
                             </p>
                             <p className="text-base font-semibold text-primary-600">
-                              ₹{(parseFloat(ticket?.price) * quantity).toFixed(2)}
+                              ₹{(parseFloat(ticket?.price) * totalQuantity).toFixed(2)}
                             </p>
                           </div>
                         </div>

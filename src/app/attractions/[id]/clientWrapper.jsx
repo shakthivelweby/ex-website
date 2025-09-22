@@ -225,6 +225,54 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             )}
 
+            {/* Location */}
+            <div className="space-y-4">
+              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Location</h2>
+              <div className="bg-white rounded-xl p-4 border border-gray-200">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                      <i className="fi fi-rr-marker text-lg text-primary-500"></i>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-500 mb-1">Address</p>
+                      <p className="text-gray-700 font-medium leading-relaxed">
+                        {attractionDetails.address || attractionDetails.location || 'Address not available'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {/* <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                      <i className="fi fi-rr-navigation text-lg text-primary-500"></i>
+                    </div> */}
+                    <div className="flex-1">
+                      <button
+                        onClick={() => {
+                          if (attractionDetails.mapLink) {
+                            window.open(attractionDetails.mapLink, "_blank");
+                          } else {
+                            const address = encodeURIComponent(
+                              attractionDetails.address || attractionDetails.location || ''
+                            );
+                            window.open(
+                              `https://www.google.com/maps/search/?api=1&query=${address}`,
+                              "_blank"
+                            );
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-2 py-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors cursor-pointer"
+                      >
+                      
+                        Get Directions
+                        <i className="fi fi-rr-arrow-right text-xs"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* FAQs */}
             {attractionDetails.faqs && attractionDetails.faqs.length > 0 && (
               <div className="space-y-4">

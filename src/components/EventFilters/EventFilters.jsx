@@ -13,15 +13,17 @@ const EventFilters = ({
   isMobile,
   initialFilters,
   onFilterChange,
-  categories,
-  languages,
+  categories = [],
+  languages = [],
 }) => {
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [pendingFilters, setPendingFilters] = useState(initialFilters || {});
 
   useEffect(() => {
     setTempFilters(initialFilters || {});
+    setPendingFilters(initialFilters || {});
     // Initialize date if it exists in filters
     if (initialFilters?.date) {
       if (initialFilters.date === "today") {
@@ -47,21 +49,19 @@ const EventFilters = ({
     if (place) {
       const longitude = place.geometry.location.lng();
       const latitude = place.geometry.location.lat();
-      const newFilters = { ...tempFilters, longitude, latitude };
-      setTempFilters(newFilters);
-      onFilterChange(newFilters);
+      const newFilters = { ...pendingFilters, longitude, latitude };
+      setPendingFilters(newFilters);
       setIsLocationOpen(false);
     }
   };
 
   const handlePriceChange = (value) => {
     const newFilters = {
-      ...tempFilters,
+      ...pendingFilters,
       price_from: value[0],
       price_to: value[1],
     };
-    setTempFilters(newFilters);
-    onFilterChange(newFilters);
+    setPendingFilters(newFilters);
   };
 
   const handleDateChange = (date) => {
@@ -70,11 +70,10 @@ const EventFilters = ({
       // Format date as YYYY-MM-DD for custom dates
       const formattedDate = date.toISOString().split("T")[0];
       const newFilters = {
-        ...tempFilters,
+        ...pendingFilters,
         date: formattedDate,
       };
-      setTempFilters(newFilters);
-      onFilterChange(newFilters);
+      setPendingFilters(newFilters);
     }
   };
 
@@ -95,11 +94,16 @@ const EventFilters = ({
 
     setSelectedDate(new Date()); // Keep UI state for display
     const newFilters = {
-      ...tempFilters,
+      ...pendingFilters,
       date: dateParam,
     };
-    setTempFilters(newFilters);
-    onFilterChange(newFilters);
+    setPendingFilters(newFilters);
+  };
+
+  const applyFilters = () => {
+    setTempFilters(pendingFilters);
+    onFilterChange(pendingFilters);
+    if (onClose) onClose();
   };
 
   const clearAllFilters = () => {
@@ -113,29 +117,32 @@ const EventFilters = ({
       latitude: "",
     };
     setTempFilters(clearedFilters);
+    setPendingFilters(clearedFilters);
     setSelectedDate(new Date()); // Reset to current date for UI
     onFilterChange(clearedFilters);
     if (onClose) onClose();
   };
 
   const hasActiveFilters = () => {
-    return Object.values(tempFilters).some((value) => value);
+    return Object.values(pendingFilters).some((value) => value);
   };
 
   const getActiveFilterCount = () => {
-    return Object.values(tempFilters).filter((value) => value).length;
+    return Object.values(pendingFilters).filter((value) => value).length;
+  };
+
+  const hasPendingChanges = () => {
+    return JSON.stringify(tempFilters) !== JSON.stringify(pendingFilters);
   };
 
   const removeFilter = (key) => {
-    const newFilters = { ...tempFilters, [key]: "" };
-    setTempFilters(newFilters);
+    const newFilters = { ...pendingFilters, [key]: "" };
+    setPendingFilters(newFilters);
 
     // Special handling for date to reset UI state
     if (key === "date") {
       setSelectedDate(new Date());
     }
-
-    onFilterChange(newFilters);
   };
 
   const isDateEqual = (date1, date2) => {
@@ -151,15 +158,15 @@ const EventFilters = ({
 
   // Function to check if date matches quick option
   const checkIfDateMatchesOption = (option) => {
-    if (!tempFilters.date) return false;
+    if (!pendingFilters.date) return false;
 
     switch (option) {
       case "Today":
-        return tempFilters.date === "today";
+        return pendingFilters.date === "today";
       case "Tomorrow":
-        return tempFilters.date === "tomorrow";
+        return pendingFilters.date === "tomorrow";
       case "This Weekend":
-        return tempFilters.date === "weekend";
+        return pendingFilters.date === "weekend";
       default:
         return false;
     }
@@ -174,16 +181,15 @@ const EventFilters = ({
             <i className="fi fi-rr-marker text-gray-400"></i>
             <span className="text-sm font-medium text-gray-700">Location</span>
           </div>
-          {(tempFilters.longitude || tempFilters.latitude) && (
+          {(pendingFilters.longitude || pendingFilters.latitude) && (
             <button
               onClick={() => {
                 const newFilters = {
-                  ...tempFilters,
+                  ...pendingFilters,
                   longitude: "",
                   latitude: "",
                 };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
+                setPendingFilters(newFilters);
               }}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
@@ -193,10 +199,10 @@ const EventFilters = ({
         </div>
         <button
           onClick={() => setIsLocationOpen(true)}
-          className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 text-left text-sm rounded flex items-center gap-2 transition-colors"
+          className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 text-left text-sm rounded-lg flex items-center gap-2 transition-colors"
         >
           <span className="text-gray-600">
-            {tempFilters.longitude && tempFilters.latitude
+            {pendingFilters.longitude && pendingFilters.latitude
               ? "Location selected"
               : "Choose location"}
           </span>
@@ -211,7 +217,7 @@ const EventFilters = ({
             <i className="fi fi-rr-calendar text-gray-400"></i>
             <span className="text-sm font-medium text-gray-700">Date</span>
           </div>
-          {tempFilters.date && (
+          {pendingFilters.date && (
             <button
               onClick={() => removeFilter("date")}
               className="text-xs text-primary-600 hover:text-primary-700"
@@ -225,7 +231,7 @@ const EventFilters = ({
             {["Today", "Tomorrow", "This Weekend"].map((option) => (
               <button
                 key={option}
-                className={`px-3 py-1.5 text-xs transition-colors ${
+                className={`px-3 py-1.5 text-xs transition-colors rounded-lg ${
                   checkIfDateMatchesOption(option)
                     ? "bg-primary-600 text-white"
                     : "bg-gray-50 hover:bg-gray-100 text-gray-700"
@@ -274,12 +280,11 @@ const EventFilters = ({
             <i className="fi fi-rr-comments text-gray-400"></i>
             <span className="text-sm font-medium text-gray-700">Languages</span>
           </div>
-          {tempFilters.language && (
+          {pendingFilters.language && (
             <button
               onClick={() => {
-                const newFilters = { ...tempFilters, language: "" };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
+                const newFilters = { ...pendingFilters, language: "" };
+                setPendingFilters(newFilters);
               }}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
@@ -288,26 +293,29 @@ const EventFilters = ({
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {languages.map((language) => (
-            <button
-              key={language.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                tempFilters.language === language.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
-              }`}
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  language: language.slug,
-                };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
-            >
-              {language.name}
-            </button>
-          ))}
+          {languages && languages.length > 0 ? (
+            languages.map((language) => (
+              <button
+                key={language.id}
+                className={`px-3 py-1.5 text-xs transition-colors rounded-lg ${
+                  pendingFilters.language === language.slug
+                    ? "bg-primary-600 text-white"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-700"
+                }`}
+                onClick={() => {
+                  const newFilters = {
+                    ...pendingFilters,
+                    language: language.slug,
+                  };
+                  setPendingFilters(newFilters);
+                }}
+              >
+                {language.name}
+              </button>
+            ))
+          ) : (
+            <p className="text-xs text-gray-500 py-2">No languages available</p>
+          )}
         </div>
       </div>
 
@@ -320,12 +328,11 @@ const EventFilters = ({
               Categories
             </span>
           </div>
-          {tempFilters.category && (
+          {pendingFilters.category && (
             <button
               onClick={() => {
-                const newFilters = { ...tempFilters, category: "" };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
+                const newFilters = { ...pendingFilters, category: "" };
+                setPendingFilters(newFilters);
               }}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
@@ -334,26 +341,29 @@ const EventFilters = ({
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                tempFilters.category === category.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
-              }`}
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  category: category.slug,
-                };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
-            >
-              {category.name}
-            </button>
-          ))}
+          {categories && categories.length > 0 ? (
+            categories.map((category) => (
+              <button
+                key={category.id}
+                className={`px-3 py-1.5 text-xs transition-colors rounded-lg ${
+                  pendingFilters.category === category.slug
+                    ? "bg-primary-600 text-white"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-700"
+                }`}
+                onClick={() => {
+                  const newFilters = {
+                    ...pendingFilters,
+                    category: category.slug,
+                  };
+                  setPendingFilters(newFilters);
+                }}
+              >
+                {category.name}
+              </button>
+            ))
+          ) : (
+            <p className="text-xs text-gray-500 py-2">No categories available</p>
+          )}
         </div>
       </div>
 
@@ -416,11 +426,11 @@ const EventFilters = ({
         pos="right"
         preventScroll={true}
         draggable={true}
-        className="md:h-auto h-[85vh]"
+        className="w-full max-w-sm sm:max-w-md h-full sm:h-auto sm:max-h-[90vh]"
         title={
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-settings-sliders text-lg text-gray-400"></i>
-            <span className="text-gray-700">Filters</span>
+            <span className="text-gray-700 font-medium">Filters</span>
             {hasActiveFilters() && (
               <span className="text-sm font-normal text-gray-500">
                 ({getActiveFilterCount()})
@@ -429,17 +439,29 @@ const EventFilters = ({
           </div>
         }
       >
-        <div className="px-4">
+        <div className="px-4 py-2 overflow-y-auto flex-1">
           <FilterContent />
         </div>
         <Popup.Footer>
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100">
             <button
               onClick={clearAllFilters}
-              className="h-10 px-4 bg-gray-100 text-gray-700 text-sm font-medium flex-1 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+              className="h-10 px-4 bg-gray-100 text-gray-700 text-sm font-medium flex-1 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 rounded-lg"
             >
               <i className="fi fi-rr-refresh"></i>
               Clear All
+            </button>
+            <button
+              onClick={applyFilters}
+              className={`h-10 px-6 text-sm font-medium flex items-center justify-center gap-2 rounded-lg transition-colors ${
+                hasPendingChanges()
+                  ? "bg-primary-600 text-white hover:bg-primary-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+              disabled={!hasPendingChanges()}
+            >
+              <i className="fi fi-rr-check"></i>
+              Apply Filters
             </button>
           </div>
         </Popup.Footer>

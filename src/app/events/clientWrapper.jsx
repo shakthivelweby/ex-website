@@ -3,7 +3,7 @@
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
 
@@ -21,6 +21,9 @@ const ClientWrapper = ({
   const [categories, setCategories] = useState(initialCategories || []);
   const [languages, setLanguages] = useState(initialLanguages || []);
   const [isClient, setIsClient] = useState(false);
+  const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Get initial filters from server-side search params
   const initialFilters = {
@@ -37,6 +40,39 @@ const ClientWrapper = ({
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Check scroll position and update arrow states
+  const checkScrollPosition = () => {
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
+    }
+  };
+
+  // Scroll functions
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({
+        left: -200,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({
+        left: 200,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  // Update scroll state when categories change
+  useEffect(() => {
+    checkScrollPosition();
+  }, [categories]);
 
   useEffect(() => {
     if (initialFilters.longitude && initialFilters.latitude) {
@@ -246,46 +282,123 @@ const ClientWrapper = ({
               </div>
             </div>
 
-            {/* Category Grid */}
-            <div className="mb-8">
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-4">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() =>
-                      handleFilterChange({
-                        ...initialFilters,
-                        category: category.slug,
-                      })
-                    }
-                    className={`flex flex-col items-center gap-2 group ${
-                      initialFilters.category === category.slug
-                        ? "text-primary-600"
-                        : "text-gray-600 hover:text-primary-600"
-                    }`}
-                  >
-                    <div
-                      className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
+             {/* Category Grid */}
+             <div className="mb-8">
+               {/* Mobile & Tablet: Horizontal Scroll with Navigation */}
+               <div className="lg:hidden">
+                 <div className="relative">
+                   {/* Left Arrow */}
+                   {canScrollLeft && (
+                     <button
+                       onClick={scrollLeft}
+                       className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                     >
+                       <i className="fi fi-rr-angle-left text-gray-600 text-sm"></i>
+                     </button>
+                   )}
+
+                   {/* Right Arrow */}
+                   {canScrollRight && (
+                     <button
+                       onClick={scrollRight}
+                       className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                     >
+                       <i className="fi fi-rr-angle-right text-gray-600 text-sm"></i>
+                     </button>
+                   )}
+
+                   {/* Scrollable Container */}
+                   <div 
+                     ref={scrollContainerRef}
+                     onScroll={checkScrollPosition}
+                     className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 px-1 -mx-1"
+                   >
+                     {categories.map((category) => (
+                       <button
+                         key={category.id}
+                         onClick={() =>
+                           handleFilterChange({
+                             ...initialFilters,
+                             category: category.slug,
+                           })
+                         }
+                         className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
+                           initialFilters.category === category.slug
+                             ? "text-primary-600"
+                             : "text-gray-600 hover:text-primary-600"
+                         }`}
+                       >
+                         <div
+                           className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                             initialFilters.category === category.slug
+                               ? "bg-primary-50 shadow-sm"
+                               : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
+                           }`}
+                         >
+                           {category.image ? (
+                             <img
+                               src={category.image}
+                               alt={category.name}
+                               className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                             />
+                           ) : (
+                             <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                           )}
+                         </div>
+                         <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
+                           {category.name}
+                         </span>
+                       </button>
+                     ))}
+                   </div>
+                   
+                   {/* Gradient fade indicators */}
+                   <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
+                   <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
+                 </div>
+               </div>
+
+              {/* Desktop: Grid Layout */}
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-6 xl:grid-cols-8 gap-4">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() =>
+                        handleFilterChange({
+                          ...initialFilters,
+                          category: category.slug,
+                        })
+                      }
+                      className={`flex flex-col items-center gap-2 group ${
                         initialFilters.category === category.slug
-                          ? "bg-primary-50"
-                          : "bg-gray-50 group-hover:bg-primary-50"
+                          ? "text-primary-600"
+                          : "text-gray-600 hover:text-primary-600"
                       }`}
                     >
-                      {category.image ? (
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                        />
-                      ) : (
-                        <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
-                      )}
-                    </div>
-                    <span className="text-xs font-medium text-center leading-tight">
-                      {category.name}
-                    </span>
-                  </button>
-                ))}
+                      <div
+                        className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
+                          initialFilters.category === category.slug
+                            ? "bg-primary-50"
+                            : "bg-gray-50 group-hover:bg-primary-50"
+                        }`}
+                      >
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                          />
+                        ) : (
+                          <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-center leading-tight">
+                        {category.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -337,14 +450,16 @@ const ClientWrapper = ({
           </div>
         </div>
 
-        {/* Mobile Filters */}
-        <EventFilters
-          isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
-          isMobile
-          initialFilters={initialFilters}
-          onFilterChange={handleFilterChange}
-        />
+         {/* Mobile Filters */}
+         <EventFilters
+           isOpen={isFilterOpen}
+           onClose={() => setIsFilterOpen(false)}
+           isMobile
+           categories={categories}
+           languages={languages}
+           initialFilters={initialFilters}
+           onFilterChange={handleFilterChange}
+         />
 
         {/* Location Picker Popup */}
         <LocationSearchPopup
@@ -356,15 +471,22 @@ const ClientWrapper = ({
         />
       </div>
 
-      <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+       <style jsx global>{`
+         .hide-scrollbar {
+           -ms-overflow-style: none;
+           scrollbar-width: none;
+         }
+         .hide-scrollbar::-webkit-scrollbar {
+           display: none;
+         }
+         .scrollbar-hide {
+           -ms-overflow-style: none;
+           scrollbar-width: none;
+         }
+         .scrollbar-hide::-webkit-scrollbar {
+           display: none;
+         }
+       `}</style>
     </main>
   );
 };

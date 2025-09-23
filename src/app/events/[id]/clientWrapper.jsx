@@ -103,50 +103,42 @@ const EventDetailPage = ({ eventDetails }) => {
                     <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
                       Event Gallery
                     </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {eventDetails.gallery.map((image, index) => {
-                        // Create a dynamic layout with fixed heights for better object-cover
-                        const getImageClass = () => {
-                          if (index === 0) return "col-span-2 row-span-2"; // Large featured image
-                          if (index === 1) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 2) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 3) return "col-span-2 row-span-1"; // Wide image
-                          if (index === 4) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 5) return "col-span-1 row-span-2"; // Tall image
-                          if (index === 6) return "col-span-1 row-span-1"; // Regular size
-                          return "col-span-1 row-span-1"; // Default for remaining images
-                        };
-
-                        const getHeight = () => {
-                          if (index === 0) return "h-[300px] md:h-[400px]"; // Large featured
-                          if (index === 3) return "h-[150px] md:h-[200px]"; // Wide
-                          if (index === 5) return "h-[300px] md:h-[400px]"; // Tall
-                          return "h-[150px] md:h-[200px]"; // Default regular
-                        };
-
-                        return (
-                          <div
-                            key={index}
-                            className={`relative ${getImageClass()} ${getHeight()} rounded-xl overflow-hidden group cursor-pointer`}
-                            onClick={() => setIsImageViewerOpen(true)}
-                          >
-                            <Image
-                              src={image.image}
-                              alt={`Event gallery image ${index + 1}`}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-all duration-500 ease-out"
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            />
-                            {/* Overlay on hover */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <i className="fi fi-rr-zoom-in text-white text-2xl"></i>
-                              </div>
+                    {/* Exact 2x4 Grid Layout - 8 identical square images */}
+                    <div className="grid grid-cols-4 gap-3">
+                      {eventDetails.gallery.slice(0, 8).map((image, index) => (
+                        <div
+                          key={index}
+                          className="relative aspect-square rounded-lg overflow-hidden group cursor-pointer"
+                          onClick={() => setIsImageViewerOpen(true)}
+                        >
+                          <Image
+                            src={image.image}
+                            alt={`Event gallery image ${index + 1}`}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-all duration-300"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                          />
+                          {/* Overlay on hover */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <i className="fi fi-rr-zoom-in text-white text-xl"></i>
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
+                    
+                    {/* Show all photos button if more than 8 images */}
+                    {eventDetails.gallery.length > 8 && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => setIsImageViewerOpen(true)}
+                          className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          View All {eventDetails.gallery.length} Photos
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

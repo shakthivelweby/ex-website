@@ -1,8 +1,11 @@
 import ClientWrapper from "./clientWrapper";
-import { getAttractionCategories, getAttractionLocations, list } from "./service";
+import { getAttractionCategories, getAttractionLocations, list, getAttractions } from "./service";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
+
+  // console.log("Page.js - allCategories.data:", allCategories?.data);
+  
   const allLocations = await getAttractionLocations();
 
   // Await searchParams before accessing its properties
@@ -21,17 +24,27 @@ export default async function Attractions({ searchParams }) {
   };
 
   const attractionsList = await list(filters);
+  
+  // Test the new getAttractions API
+  const attractionsFromAPI = await getAttractions(filters); 
+  
+  // Use the API data instead of mock data
+  const attractionsArray = attractionsFromAPI?.data?.data || [];
 
+  
+  // Debug: Log attraction IDs
+  console.log("Attraction IDs:", attractionsArray.map(attraction => attraction.id));
+  
   // Transform attractions data server-side for SSR based on actual API response
-  const transformedAttractions = attractionsList?.data?.map((attraction) => ({
+  const transformedAttractions = attractionsArray.map((attraction) => ({
     id: attraction.id,
     title: attraction.name,
     description: attraction.description,
     location: attraction.location,
     city: attraction.city,
-    type: attraction.attraction_category_master?.name || "",
-    image: attraction.thumb_image || attraction.cover_image,
-    price: attraction.price || 0,
+    type: attraction.category || "",
+    image: attraction.image || attraction.thumb_image || attraction.cover_image,
+    price: attraction.price?.full_rate || attraction.price || 0,
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
     duration: attraction.duration || "2-3 hours",

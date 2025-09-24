@@ -23,11 +23,11 @@ const AttractionDetailClient = ({ attractionDetails }) => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleTicketSelection = (tickets, price) => {
@@ -81,7 +81,7 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                 <i className="fi fi-rr-arrow-left text-base text-gray-800"></i>
               </button>
               <h1 className="text-base font-medium text-gray-800 truncate">
-                back 
+                back
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -121,10 +121,11 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             </div>
 
-          
             {/* Description */}
             <div className="space-y-4">
-              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">About</h2>
+              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                About
+              </h2>
               <div className="prose prose-gray max-w-none">
                 <p className="text-gray-700 leading-relaxed text-sm">
                   {attractionDetails.description}
@@ -132,62 +133,72 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             </div>
 
-              {/* Gallery */}
-              {attractionDetails.gallery && attractionDetails.gallery.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Gallery</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {attractionDetails.gallery.slice(0, 6).map((image, index) => (
-                    <div
-                      key={index}
-                      className="aspect-square rounded-lg overflow-hidden bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => openImageViewer(index)}
+            {/* Gallery */}
+            {attractionDetails.gallery &&
+              attractionDetails.gallery.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                    Gallery
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {attractionDetails.gallery
+                      .slice(0, 6)
+                      .map((image, index) => (
+                        <div
+                          key={index}
+                          className="aspect-square rounded-lg overflow-hidden bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => openImageViewer(index)}
+                        >
+                          <Image
+                            src={image.image_url || image.image || image}
+                            alt={image.alt_text || `Gallery image ${index + 1}`}
+                            width={300}
+                            height={300}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                  </div>
+                  {attractionDetails.gallery.length > 6 && (
+                    <button
+                      onClick={() => openImageViewer(0)}
+                      className="w-full py-3 text-primary-600 font-medium hover:text-primary-700 transition-colors"
                     >
-                      <Image
-                        src={image.image_url || image}
-                        alt={image.alt_text || `Gallery image ${index + 1}`}
-                        width={300}
-                        height={300}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ))}
+                      View All {attractionDetails.gallery.length} Photos
+                    </button>
+                  )}
                 </div>
-                {attractionDetails.gallery.length > 6 && (
-                  <button
-                    onClick={() => openImageViewer(0)}
-                    className="w-full py-3 text-primary-600 font-medium hover:text-primary-700 transition-colors"
-                  >
-                    View All {attractionDetails.gallery.length} Photos
-                  </button>
-                )}
-              </div>
-            )}
-
+              )}
 
             {/* Attraction Guide */}
             <div className="space-y-4">
-              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Attraction Guide</h2>
+              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                Attraction Guide
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
-                      <i className="fi fi-rr-clock text-lg text-primary-500"></i>
+                      <i className="fi fi-rr-child text-lg text-primary-500"></i>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Duration</p>
-                      <p className="font-medium text-gray-900">{attractionDetails.attractionGuide.duration}</p>
+                      <p className="text-sm text-gray-500">Kids Friendly</p>
+                      <p className="font-medium text-gray-900">
+                        {attractionDetails.attractionGuide.kidsFriendly}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 border border-gray-200">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
-                      <i className="fi fi-rr-sun text-lg text-primary-500"></i>
+                      <i className="fi fi-rr-paw text-lg text-primary-500"></i>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Best Time to Visit</p>
-                      <p className="font-medium text-gray-900">{attractionDetails.attractionGuide.bestTimeToVisit}</p>
+                      <p className="text-sm text-gray-500">Pets Friendly</p>
+                      <p className="font-medium text-gray-900">
+                        {attractionDetails.attractionGuide.petsFriendly}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -199,8 +210,9 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                     <div>
                       <p className="text-sm text-gray-500">Rating</p>
                       <p className="font-medium text-gray-900">
-                        {formatRating(attractionDetails.attractionGuide.rating)} 
-                        ({attractionDetails.attractionGuide.reviewCount} reviews)
+                        {formatRating(attractionDetails.attractionGuide.rating)}
+                        ({attractionDetails.attractionGuide.reviewCount}{" "}
+                        reviews)
                       </p>
                     </div>
                   </div>
@@ -209,25 +221,32 @@ const AttractionDetailClient = ({ attractionDetails }) => {
             </div>
 
             {/* Features */}
-            {attractionDetails.attractionGuide.features && attractionDetails.attractionGuide.features.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Features</h2>
-                <div className="flex flex-wrap gap-2">
-                  {attractionDetails.attractionGuide.features.map((feature, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-50 text-primary-700"
-                    >
-                      {feature}
-                    </span>
-                  ))}
+            {attractionDetails.attractionGuide.features &&
+              attractionDetails.attractionGuide.features.length > 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                    Features
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {attractionDetails.attractionGuide.features.map(
+                      (feature, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-50 text-primary-700"
+                        >
+                          {feature}
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Location */}
             <div className="space-y-4">
-              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Location</h2>
+              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                Location
+              </h2>
               <div className="bg-white rounded-xl p-4 border border-gray-200">
                 <div className="flex flex-col space-y-3">
                   <div className="flex items-start gap-3">
@@ -237,11 +256,13 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                     <div className="flex-1">
                       <p className="text-sm text-gray-500 mb-1">Address</p>
                       <p className="text-gray-700 font-medium leading-relaxed">
-                        {attractionDetails.address || attractionDetails.location || 'Address not available'}
+                        {attractionDetails.address ||
+                          attractionDetails.location ||
+                          "Address not available"}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     {/* <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
                       <i className="fi fi-rr-navigation text-lg text-primary-500"></i>
@@ -253,7 +274,9 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                             window.open(attractionDetails.mapLink, "_blank");
                           } else {
                             const address = encodeURIComponent(
-                              attractionDetails.address || attractionDetails.location || ''
+                              attractionDetails.address ||
+                                attractionDetails.location ||
+                                ""
                             );
                             window.open(
                               `https://www.google.com/maps/search/?api=1&query=${address}`,
@@ -263,7 +286,6 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                         }}
                         className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-2 py-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors cursor-pointer"
                       >
-                      
                         Get Directions
                         <i className="fi fi-rr-arrow-right text-xs"></i>
                       </button>
@@ -276,19 +298,33 @@ const AttractionDetailClient = ({ attractionDetails }) => {
             {/* FAQs */}
             {attractionDetails.faqs && attractionDetails.faqs.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Frequently Asked Questions</h2>
-                <Accordion items={attractionDetails.faqs} />
+                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                  Frequently Asked Questions
+                </h2>
+                {attractionDetails.faqs.map((faq, index) => (
+                  <Accordion
+                    key={index}
+                    title={faq.question}
+                    children={<div className="text-gray-700">{faq.answer}</div>}
+                  />
+                ))}
               </div>
             )}
 
             {/* Terms and Conditions */}
             {attractionDetails.terms && (
               <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Terms & Conditions</h2>
-                <Accordion items={[{
-                  question: "Attraction Terms & Conditions",
-                  answer: attractionDetails.terms
-                }]} />
+                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                  Terms & Conditions
+                </h2>
+
+                <Accordion
+                  children={
+                    <div className="text-gray-700">
+                      {attractionDetails.terms}
+                    </div>
+                  }
+                />
               </div>
             )}
           </div>
@@ -319,9 +355,9 @@ const AttractionDetailClient = ({ attractionDetails }) => {
         <ImageViewer
           isOpen={isImageViewerOpen}
           onClose={() => setIsImageViewerOpen(false)}
-          images={attractionDetails.gallery.map(img => ({
-            src: img.image_url || img,
-            alt: img.alt_text || attractionDetails.title
+          images={attractionDetails.gallery.map((img) => ({
+            src: img.image_url || img.image || img,
+            alt: img.alt_text || attractionDetails.title,
           }))}
           initialIndex={selectedImageIndex}
         />

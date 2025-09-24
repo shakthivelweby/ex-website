@@ -53,7 +53,7 @@ const AttractionBookingPage = ({ attractionId }) => {
 
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   };
 
   const handleQuantityChange = (ticketTypeId, change) => {
@@ -73,19 +73,25 @@ const AttractionBookingPage = ({ attractionId }) => {
   };
 
   const handleAdultChildQuantityChange = (ticketTypeId, type, change) => {
-    const currentTickets = adultChildTickets[ticketTypeId] || { adult: 0, child: 0 };
+    const currentTickets = adultChildTickets[ticketTypeId] || {
+      adult: 0,
+      child: 0,
+    };
     const newQuantity = Math.max(0, currentTickets[type] + change);
-    
+
     const updatedTickets = {
       ...adultChildTickets,
       [ticketTypeId]: {
         ...currentTickets,
-        [type]: newQuantity
-      }
+        [type]: newQuantity,
+      },
     };
 
     // Remove the ticket type if both adult and child are 0
-    if (updatedTickets[ticketTypeId].adult === 0 && updatedTickets[ticketTypeId].child === 0) {
+    if (
+      updatedTickets[ticketTypeId].adult === 0 &&
+      updatedTickets[ticketTypeId].child === 0
+    ) {
       const newTickets = { ...updatedTickets };
       delete newTickets[ticketTypeId];
       setAdultChildTickets(newTickets);
@@ -111,7 +117,7 @@ const AttractionBookingPage = ({ attractionId }) => {
 
   const getTotalPrice = () => {
     let total = 0;
-    
+
     // Calculate adult/child tickets
     Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
       const ticket = ticketData?.find((t) => t.id == ticketTypeId);
@@ -121,7 +127,7 @@ const AttractionBookingPage = ({ attractionId }) => {
         total += parseFloat(ticket.price) * (tickets.adult + tickets.child);
       }
     });
-    
+
     return total;
   };
 
@@ -183,7 +189,9 @@ const AttractionBookingPage = ({ attractionId }) => {
 
     // Encode the data and redirect to checkout
     const encodedData = encodeURIComponent(JSON.stringify(apiBookingData));
-    router.push(`/checkout/attractions?attraction_id=${attractionId}&tickets=${encodedData}`);
+    router.push(
+      `/checkout/attractions?attraction_id=${attractionId}&tickets=${encodedData}`
+    );
   };
 
   if (loading) {
@@ -248,7 +256,8 @@ const AttractionBookingPage = ({ attractionId }) => {
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-tag text-primary-500 text-sm"></i>
                 <span className="text-gray-700 text-sm">
-                  {attractionData.attraction_category_master?.name || "Attraction"}
+                  {attractionData.attraction_category_master?.name ||
+                    "Attraction"}
                 </span>
               </div>
             </div>
@@ -272,7 +281,9 @@ const AttractionBookingPage = ({ attractionId }) => {
                 <div className="p-4 space-y-6">
                   {/* Date Selection */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-3">Select Visit Date</h3>
+                    <h3 className="text-sm font-medium text-gray-800 mb-3">
+                      Select Visit Date
+                    </h3>
                     <div className="relative">
                       <input
                         type="date"
@@ -288,10 +299,14 @@ const AttractionBookingPage = ({ attractionId }) => {
 
                   {/* Ticket Types */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-3">Available Tickets</h3>
+                    <h3 className="text-sm font-medium text-gray-800 mb-3">
+                      Available Tickets
+                    </h3>
                     <div className="space-y-3">
                       {ticketData?.map((ticket, index) => {
-                        const isSelected = adultChildTickets[ticket.id]?.adult > 0 || adultChildTickets[ticket.id]?.child > 0;
+                        const isSelected =
+                          adultChildTickets[ticket.id]?.adult > 0 ||
+                          adultChildTickets[ticket.id]?.child > 0;
                         const isExpanded = expandedTicketType === ticket.id;
                         return (
                           <div
@@ -304,7 +319,7 @@ const AttractionBookingPage = ({ attractionId }) => {
                               index !== ticketData.length - 1 ? "border-b" : ""
                             }`}
                           >
-                            <div 
+                            <div
                               className="flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer"
                               onClick={() => handleTicketTypeClick(ticket.id)}
                             >
@@ -330,7 +345,9 @@ const AttractionBookingPage = ({ attractionId }) => {
                                 {/* Price and Description */}
                                 <div className="flex items-center gap-4 mb-2">
                                   <div className="flex items-baseline gap-1">
-                                    <span className="text-xs text-gray-500">Price:</span>
+                                    <span className="text-xs text-gray-500">
+                                      Price:
+                                    </span>
                                     <span
                                       className={`text-lg font-bold ${
                                         isSelected
@@ -364,85 +381,123 @@ const AttractionBookingPage = ({ attractionId }) => {
 
                               {/* Expand/Collapse Arrow */}
                               <div className="flex items-center justify-center">
-                                <i className={`fi fi-rr-angle-down text-gray-400 transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-180' : ''
-                                }`}></i>
+                                <i
+                                  className={`fi fi-rr-angle-down text-gray-400 transition-transform duration-200 ${
+                                    isExpanded ? "rotate-180" : ""
+                                  }`}
+                                ></i>
                               </div>
                             </div>
 
                             {/* Adult and Child Quantity Selectors - Only show when expanded */}
                             {isExpanded && (
                               <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                              <h5 className="text-sm font-medium text-gray-700 mb-3">Select Adult & Child</h5>
-                              
-                              {/* Adults Section */}
-                              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                                <div>
-                                  <h3 className="text-sm font-medium text-gray-800">Adults</h3>
-                                  <p className="text-xs text-gray-500">Over 18+</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleAdultChildQuantityChange(ticket.id, 'adult', -1)
-                                    }
-                                    disabled={(adultChildTickets[ticket.id]?.adult || 0) <= 0}
-                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    <i className="fi fi-rr-minus text-xs"></i>
-                                  </button>
-                                  <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                                    {adultChildTickets[ticket.id]?.adult || 0}
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      handleAdultChildQuantityChange(ticket.id, 'adult', 1)
-                                    }
-                                    disabled={
-                                      (adultChildTickets[ticket.id]?.adult || 0) >=
-                                      (ticket.maximum_allowed_bookings_per_user || 10)
-                                    }
-                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    <i className="fi fi-rr-plus text-xs"></i>
-                                  </button>
-                                </div>
-                              </div>
+                                <h5 className="text-sm font-medium text-gray-700 mb-3">
+                                  Select Adult & Child
+                                </h5>
 
-                              {/* Children Section */}
-                              <div className="flex items-center justify-between py-3">
-                                <div>
-                                  <h3 className="text-sm font-medium text-gray-800">Child</h3>
-                                  <p className="text-xs text-gray-500">Under 18</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() =>
-                                      handleAdultChildQuantityChange(ticket.id, 'child', -1)
-                                    }
-                                    disabled={(adultChildTickets[ticket.id]?.child || 0) <= 0}
-                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    <i className="fi fi-rr-minus text-xs"></i>
-                                  </button>
-                                  <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                                    {adultChildTickets[ticket.id]?.child || 0}
+                                {/* Adults Section */}
+                                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                                  <div>
+                                    <h3 className="text-sm font-medium text-gray-800">
+                                      Adults
+                                    </h3>
+                                    <p className="text-xs text-gray-500">
+                                      Over 18+
+                                    </p>
                                   </div>
-                                  <button
-                                    onClick={() =>
-                                      handleAdultChildQuantityChange(ticket.id, 'child', 1)
-                                    }
-                                    disabled={
-                                      (adultChildTickets[ticket.id]?.child || 0) >=
-                                      (ticket.maximum_allowed_bookings_per_user || 10)
-                                    }
-                                    className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    <i className="fi fi-rr-plus text-xs"></i>
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() =>
+                                        handleAdultChildQuantityChange(
+                                          ticket.id,
+                                          "adult",
+                                          -1
+                                        )
+                                      }
+                                      disabled={
+                                        (adultChildTickets[ticket.id]?.adult ||
+                                          0) <= 0
+                                      }
+                                      className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      <i className="fi fi-rr-minus text-xs"></i>
+                                    </button>
+                                    <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                                      {adultChildTickets[ticket.id]?.adult || 0}
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        handleAdultChildQuantityChange(
+                                          ticket.id,
+                                          "adult",
+                                          1
+                                        )
+                                      }
+                                      disabled={
+                                        (adultChildTickets[ticket.id]?.adult ||
+                                          0) >=
+                                        (ticket.maximum_allowed_bookings_per_user ||
+                                          10)
+                                      }
+                                      className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      <i className="fi fi-rr-plus text-xs"></i>
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Children Section */}
+                                <div className="flex items-center justify-between py-3">
+                                  <div>
+                                    <h3 className="text-sm font-medium text-gray-800">
+                                      Child
+                                    </h3>
+                                    <p className="text-xs text-gray-500">
+                                      Under 18
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() =>
+                                        handleAdultChildQuantityChange(
+                                          ticket.id,
+                                          "child",
+                                          -1
+                                        )
+                                      }
+                                      disabled={
+                                        (adultChildTickets[ticket.id]?.child ||
+                                          0) <= 0
+                                      }
+                                      className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      <i className="fi fi-rr-minus text-xs"></i>
+                                    </button>
+                                    <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
+                                      {adultChildTickets[ticket.id]?.child || 0}
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        handleAdultChildQuantityChange(
+                                          ticket.id,
+                                          "child",
+                                          1
+                                        )
+                                      }
+                                      disabled={
+                                        (adultChildTickets[ticket.id]?.child ||
+                                          0) >=
+                                        (ticket.maximum_allowed_bookings_per_user ||
+                                          10)
+                                      }
+                                      className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      <i className="fi fi-rr-plus text-xs"></i>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
                             )}
                           </div>
                         );
@@ -474,40 +529,51 @@ const AttractionBookingPage = ({ attractionId }) => {
                   </div>
 
                   {/* Adult/Child Tickets */}
-                  {Object.entries(adultChildTickets).map(([ticketTypeId, tickets]) => {
-                    if (tickets.adult === 0 && tickets.child === 0) return null;
-                    const ticket = ticketData?.find((t) => t.id == ticketTypeId);
-                    const totalQuantity = tickets.adult + tickets.child;
+                  {Object.entries(adultChildTickets).map(
+                    ([ticketTypeId, tickets]) => {
+                      if (tickets.adult === 0 && tickets.child === 0)
+                        return null;
+                      const ticket = ticketData?.find(
+                        (t) => t.id == ticketTypeId
+                      );
+                      const totalQuantity = tickets.adult + tickets.child;
 
-                    return (
-                      <div key={ticketTypeId} className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-800">
-                              {ticket?.name}
-                            </h4>
-                            <div className="text-xs text-gray-600 space-y-1">
-                              {tickets.adult > 0 && (
-                                <p>Adults: {tickets.adult}</p>
-                              )}
-                              {tickets.child > 0 && (
-                                <p>Children: {tickets.child}</p>
-                              )}
-                              <p>Total: {totalQuantity}</p>
+                      return (
+                        <div
+                          key={ticketTypeId}
+                          className="bg-gray-50 rounded-lg p-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-800">
+                                {ticket?.name}
+                              </h4>
+                              <div className="text-xs text-gray-600 space-y-1">
+                                {tickets.adult > 0 && (
+                                  <p>Adults: {tickets.adult}</p>
+                                )}
+                                {tickets.child > 0 && (
+                                  <p>Children: {tickets.child}</p>
+                                )}
+                                <p>Total: {totalQuantity}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-800">
+                                ₹{ticket?.price} × {totalQuantity}
+                              </p>
+                              <p className="text-base font-semibold text-primary-600">
+                                ₹
+                                {(
+                                  parseFloat(ticket?.price) * totalQuantity
+                                ).toFixed(2)}
+                              </p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-800">
-                              ₹{ticket?.price} × {totalQuantity}
-                            </p>
-                            <p className="text-base font-semibold text-primary-600">
-                              ₹{(parseFloat(ticket?.price) * totalQuantity).toFixed(2)}
-                            </p>
-                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    }
+                  )}
                 </div>
               </div>
             )}
@@ -520,7 +586,9 @@ const AttractionBookingPage = ({ attractionId }) => {
               <div className="bg-white rounded-lg shadow border p-4">
                 <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3">
                   <Image
-                    src={attractionData.cover_image || attractionData.thumb_image}
+                    src={
+                      attractionData.cover_image || attractionData.thumb_image
+                    }
                     alt={attractionData.name}
                     fill
                     className="object-cover"
@@ -531,13 +599,15 @@ const AttractionBookingPage = ({ attractionId }) => {
                   {attractionData.name}
                 </h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  {attractionData.attraction_category_master?.name || "Attraction"}
+                  {attractionData.attraction_category_master?.name ||
+                    "Attraction"}
                 </p>
+
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-center gap-2">
                     <i className="fi fi-rr-clock text-primary-500 text-sm"></i>
                     <span className="text-gray-700 text-sm">
-                      {attractionData.opening_hours || "TBD"}
+                      {attractionData.start_time || "TBD"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -613,11 +683,10 @@ const AttractionBookingPage = ({ attractionId }) => {
 
         {/* Mobile Booking Summary - Fixed above navigation on mobile */}
         <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-white shadow-lg z-10">
-              {/* Gray line separator */}
-              <div className="h-px bg-gray-100"></div>
+          {/* Gray line separator */}
+          <div className="h-px bg-gray-100"></div>
           {/* Summary Section */}
           <div className="flex items-center justify-between p-4">
-         
             {/* Left side - Total Tickets */}
             <div>
               <p className="text-sm text-gray-600">Total Tickets</p>
@@ -625,7 +694,7 @@ const AttractionBookingPage = ({ attractionId }) => {
                 {getTotalSelectedTickets()}
               </p>
             </div>
-            
+
             {/* Right side - Total Amount */}
             <div>
               <p className="text-sm text-gray-600">Total Amount</p>
@@ -637,7 +706,7 @@ const AttractionBookingPage = ({ attractionId }) => {
 
           {/* Gray line separator */}
           <div className="h-px bg-gray-100"></div>
-          
+
           {/* Action Buttons */}
           <div className="p-4">
             {currentStep === 1 ? (

@@ -1,6 +1,8 @@
 import apiServerMiddleware from "../api/serverMiddleware";
 
 // Mock data for attractions
+
+/*
 const mockAttractions = [
   {
     id: 1,
@@ -393,6 +395,10 @@ const mockAttractions = [
     cover_image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?q=80&w=2000&auto=format&fit=crop"
   }
 ];
+*/
+
+
+/*
 
 const mockCategories = [
   {
@@ -445,6 +451,10 @@ const mockCategories = [
   }
 ];
 
+*/
+
+/*
+
 const mockLocations = [
   {
     id: 1,
@@ -490,23 +500,33 @@ const mockLocations = [
   }
 ];
 
+*/
+
+
 // get all attraction categories
 export const getAttractionCategories = async () => {
-  // For now, return mock data. Later replace with actual API call
-  return {
-    data: mockCategories,
-    success: true,
-    message: "Categories fetched successfully"
-  };
-  
-  // Uncomment when API is ready
-  // const response = await apiServerMiddleware.get("/attraction-categories");
-  // console.log("Attraction categories :", response.data);
-  // return response.data;
+  try {
+    const response = await apiServerMiddleware.get("/attraction-categories");  
+    console.log("Attraction categories data:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching attraction categories:", error);
+    return {
+      data: [],
+      success: false,
+      message: "Failed to fetch attraction categories"
+    };
+  }
 }
+
+
+
+
+
 
 // get all locations
 export const getAttractionLocations = async () => {
+  /*
   // For now, return mock data. Later replace with actual API call
   return {
     data: mockLocations,
@@ -517,6 +537,7 @@ export const getAttractionLocations = async () => {
   // Uncomment when API is ready
   // const response = await apiServerMiddleware.get("/attraction-locations");
   // return response.data;
+  */
 }
 
 // Helper function to parse date parameter
@@ -595,6 +616,7 @@ const filterAttractions = (attractions, filters) => {
 
 // get attractions with filters
 export const list = async (filters = {}) => {
+  /*
   // For now, return mock data with filtering. Later replace with actual API call
   const filteredAttractions = filterAttractions(mockAttractions, filters);
   
@@ -603,7 +625,7 @@ export const list = async (filters = {}) => {
     success: true,
     message: "Attractions fetched successfully",
     total: filteredAttractions.length
-  };
+  };*/
   
   // Uncomment when API is ready
   // const params = new URLSearchParams();
@@ -630,4 +652,53 @@ export const list = async (filters = {}) => {
   // const url = queryString ? `/attractions?${queryString}` : "/attractions";
   // const response = await apiServerMiddleware.get(url);   
   // return response.data; 
+}
+
+// get attractions with filters
+export const getAttractions = async (filters = {}) => {
+  try {
+    // Just fetch all attractions without any filters
+    const response = await apiServerMiddleware.get("/attractions");
+    console.log("Response data:", response.data);    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching attractions:", error);
+    return {
+      data: [],
+      success: false,
+      message: "Failed to fetch attractions"
+    };
+  }
+}
+
+// get attraction details by id
+export const getAttractionDetails = async (attractionId) => {
+  try {
+    const response = await apiServerMiddleware.get(`/attraction-details/${attractionId}`);
+    console.log("Attraction details response checking for akshay:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching attraction details:", error);
+    return {
+      data: null,
+      success: false,
+      message: "Failed to fetch attraction details"
+    };
+  }
+}
+
+// get attraction gallery by id
+export const getAttractionGallery = async (attractionId) => {
+  try {
+    const response = await apiServerMiddleware.get(`/attraction-gallery/${attractionId}`);
+    console.log("Attraction gallery response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching attraction gallery:", error);
+    return {
+      data: [],
+      success: false,
+      message: "Failed to fetch attraction gallery"
+    };
+  }
 }

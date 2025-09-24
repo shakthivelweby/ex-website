@@ -8,11 +8,15 @@ import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Popup from "@/components/Popup";
 import { useState, useEffect } from "react";
 // Router hooks removed to avoid SSR issues
-import { getAttractionCategories, getAttractionLocations, list } from "./service";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Autoplay } from 'swiper/modules';
-import 'swiper/css';
-import 'swiper/css/navigation';
+import {
+  getAttractionCategories,
+  getAttractionLocations,
+  list,
+} from "./service";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Autoplay } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
 
 const ClientWrapper = ({
   searchParams: initialSearchParams,
@@ -58,7 +62,9 @@ const ClientWrapper = ({
   // Filter featured attractions
   useEffect(() => {
     if (attractions.length > 0) {
-      const featured = attractions.filter(attraction => attraction.promoted || attraction.rating >= 4.5).slice(0, 5);
+      const featured = attractions
+        .filter((attraction) => attraction.promoted || attraction.rating >= 4.5)
+        .slice(0, 5);
       setFeaturedAttractions(featured);
     }
   }, [attractions]);
@@ -144,14 +150,16 @@ const ClientWrapper = ({
     setIsFilterOpen(!isFilterOpen);
     // Prevent body scroll when filter is open
     if (!isFilterOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
   };
 
   // Function to handle filter changes immediately
+
   const handleFilterChange = async (newFilters) => {
+    /*
     updateURL(newFilters);
 
     // Refetch attractions with new filters
@@ -161,29 +169,31 @@ const ClientWrapper = ({
 
       // Transform attractions data
       if (attractionsResponse?.data) {
-        const transformedAttractions = attractionsResponse.data.map((attraction) => ({
-          id: attraction.id,
-          title: attraction.name,
-          description: attraction.description,
-          location: attraction.location,
-          city: attraction.city,
-          type: attraction.attraction_category_master?.name || "",
-          image: attraction.thumb_image || attraction.cover_image,
-          price: attraction.price || 0,
-          rating: attraction.rating || 0,
-          reviewCount: attraction.review_count || 0,
-          duration: attraction.duration || "2-3 hours",
-          bestTimeToVisit: attraction.best_time_to_visit || "Morning",
-          features: attraction.features || [],
-          promoted: attraction.promoted || false,
-          interest_count: attraction.interest_count || 0,
-          openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
-          address: attraction.address || "",
-          coordinates: {
-            latitude: attraction.latitude || 0,
-            longitude: attraction.longitude || 0,
-          },
-        }));
+        const transformedAttractions = attractionsResponse.data.map(
+          (attraction) => ({
+            id: attraction.id,
+            title: attraction.name,
+            description: attraction.description,
+            location: attraction.location,
+            city: attraction.city,
+            type: attraction.attraction_category_master?.name || "",
+            image: attraction.thumb_image || attraction.cover_image,
+            price: attraction.price || 0,
+            rating: attraction.rating || 0,
+            reviewCount: attraction.review_count || 0,
+            duration: attraction.duration || "2-3 hours",
+            bestTimeToVisit: attraction.best_time_to_visit || "Morning",
+            features: attraction.features || [],
+            promoted: attraction.promoted || false,
+            interest_count: attraction.interest_count || 0,
+            openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
+            address: attraction.address || "",
+            coordinates: {
+              latitude: attraction.latitude || 0,
+              longitude: attraction.longitude || 0,
+            },
+          })
+        );
 
         setAttractions(transformedAttractions);
       } else {
@@ -195,25 +205,27 @@ const ClientWrapper = ({
     } finally {
       setLoading(false);
     }
+      */
   };
-
 
   // Category scroll functions
   const scrollCategories = (direction) => {
-    const container = document.getElementById('categoryScrollContainer');
+    const container = document.getElementById("categoryScrollContainer");
     if (container) {
       const scrollAmount = 200;
-      const newScrollLeft = container.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+      const newScrollLeft =
+        container.scrollLeft +
+        (direction === "left" ? -scrollAmount : scrollAmount);
       container.scrollTo({
         left: newScrollLeft,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }
   };
 
   // Check scroll position
   const checkScrollPosition = () => {
-    const container = document.getElementById('categoryScrollContainer');
+    const container = document.getElementById("categoryScrollContainer");
     if (container) {
       const { scrollLeft, scrollWidth, clientWidth } = container;
       setCanScrollLeft(scrollLeft > 0);
@@ -225,10 +237,11 @@ const ClientWrapper = ({
   useEffect(() => {
     if (isClient) {
       checkScrollPosition();
-      const container = document.getElementById('categoryScrollContainer');
+      const container = document.getElementById("categoryScrollContainer");
       if (container) {
-        container.addEventListener('scroll', checkScrollPosition);
-        return () => container.removeEventListener('scroll', checkScrollPosition);
+        container.addEventListener("scroll", checkScrollPosition);
+        return () =>
+          container.removeEventListener("scroll", checkScrollPosition);
       }
     }
   }, [isClient, categories]);
@@ -255,8 +268,8 @@ const ClientWrapper = ({
                   spaceBetween={0}
                   slidesPerView={1}
                   navigation={{
-                    prevEl: '.banner-swiper-button-prev',
-                    nextEl: '.banner-swiper-button-next',
+                    prevEl: ".banner-swiper-button-prev",
+                    nextEl: ".banner-swiper-button-next",
                   }}
                   autoplay={{
                     delay: 2000,
@@ -275,44 +288,53 @@ const ClientWrapper = ({
                               Featured
                             </span>
                           </div>
-                          
+
                           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 mb-3">
                             {attraction.title}
                           </h1>
-                          
+
                           <p className="text-gray-600 text-base sm:text-lg mb-2">
                             {attraction.type}
                           </p>
-                          
+
                           <p className="text-gray-700 text-sm sm:text-base mb-6 leading-relaxed">
                             {attraction.description}
                           </p>
-                          
+
                           <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6">
                             <div className="flex items-center gap-2">
-                              <span className="text-xl sm:text-2xl font-bold text-gray-900">₹ {attraction.price}</span>
+                              <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                                ₹ {attraction.price}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-600 text-sm sm:text-base">{attraction.duration}</span>
+                              <span className="text-gray-600 text-sm sm:text-base">
+                                {attraction.duration}
+                              </span>
                             </div>
                             <div className="hidden items-center gap-1">
                               <span className="text-yellow-500 text-lg">★</span>
-                              <span className="text-gray-700 font-medium text-sm sm:text-base">{attraction.rating}</span>
+                              <span className="text-gray-700 font-medium text-sm sm:text-base">
+                                {attraction.rating}
+                              </span>
                             </div>
                           </div>
-                          
+
                           <Link href={`/attractions/${attraction.id}`}>
                             <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
                               Explore Now
                             </button>
                           </Link>
                         </div>
-                        
+
                         {/* Right Image */}
                         <div className="w-full lg:w-[400px] relative order-1 lg:order-2">
                           <div className="relative h-48 sm:h-64 w-full lg:h-full min-h-[200px] sm:min-h-[300px]">
                             <Image
-                              src={attraction.image || "/images/attractions/card-img.jpg"}
+                              src={
+                                attraction.image ||
+                                "/images/attractions/card-img.jpg"
+                              }
                               alt={attraction.title}
                               fill
                               className="object-cover rounded-2xl w-full h-full"
@@ -334,39 +356,46 @@ const ClientWrapper = ({
                       Featured
                     </span>
                   </div>
-                  
+
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
                     Gateway of India
                   </h1>
-                  
+
                   <p className="text-gray-600 text-base sm:text-lg mb-2">
                     Historical Monument
                   </p>
-                  
+
                   <p className="text-gray-700 text-sm sm:text-base mb-6 leading-relaxed">
-                    Iconic arch monument overlooking the Arabian Sea, a symbol of Mumbai's heritage.
+                    Iconic arch monument overlooking the Arabian Sea, a symbol
+                    of Mumbai's heritage.
                   </p>
-                  
+
                   <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl sm:text-2xl font-bold text-gray-900">₹ 500</span>
+                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
+                        ₹ 500
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-600 text-sm sm:text-base">2 hours</span>
+                      <span className="text-gray-600 text-sm sm:text-base">
+                        2 hours
+                      </span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-yellow-500 text-lg">★</span>
-                      <span className="text-gray-700 font-medium text-sm sm:text-base">4.8</span>
+                      <span className="text-gray-700 font-medium text-sm sm:text-base">
+                        4.8
+                      </span>
                     </div>
                   </div>
-                  
+
                   <Link href="/attractions">
                     <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
                       Explore Now
                     </button>
                   </Link>
                 </div>
-                
+
                 {/* Right Image */}
                 <div className="w-full lg:w-[400px] relative order-1 lg:order-2">
                   <div className="relative h-48 sm:h-64 w-full lg:h-full min-h-[200px] sm:min-h-[300px]">
@@ -405,7 +434,7 @@ const ClientWrapper = ({
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="md:flex items-center gap-3 sm:gap-4">
                 <h2 className="text-xl sm:text-2xl lg:text-[28px] font-semibold text-gray-800 tracking-tight">
-                 Attractions {" "}
+                  Attractions{" "}
                   {/* <span className="text-primary-600">
                     {selectedLocation || "Mumbai"}
                   </span> */}
@@ -416,20 +445,23 @@ const ClientWrapper = ({
               </div>
 
               {/* Mobile Filter Button */}
-                <button
+              <button
                 onClick={toggleFilter}
                 className="lg:hidden relative flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-gray-900 text-white hover:from-primary-600 hover:to-primary-700 transition-all duration-300 hover:shadow-xl hover:scale-105 text-sm font-semibold"
-                >
-                  <i className="fi fi-rr-settings-sliders text-sm"></i>
-                  <span>Filters</span>
-                  {hasActiveFilters() && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">
-                        {Object.values(initialFilters).filter((value) => value).length}
-                      </span>
+              >
+                <i className="fi fi-rr-settings-sliders text-sm"></i>
+                <span>Filters</span>
+                {hasActiveFilters() && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">
+                      {
+                        Object.values(initialFilters).filter((value) => value)
+                          .length
+                      }
                     </span>
-                  )}
-                </button>
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Category Grid */}
@@ -480,7 +512,7 @@ const ClientWrapper = ({
                 {/* Left Arrow */}
                 {canScrollLeft && (
                   <button
-                    onClick={() => scrollCategories('left')}
+                    onClick={() => scrollCategories("left")}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all duration-200"
                   >
                     <i className="fi fi-rr-angle-left text-gray-600 text-sm"></i>
@@ -490,7 +522,7 @@ const ClientWrapper = ({
                 {/* Right Arrow */}
                 {canScrollRight && (
                   <button
-                    onClick={() => scrollCategories('right')}
+                    onClick={() => scrollCategories("right")}
                     className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all duration-200"
                   >
                     <i className="fi fi-rr-angle-right text-gray-600 text-sm"></i>
@@ -498,10 +530,10 @@ const ClientWrapper = ({
                 )}
 
                 {/* Scrollable Container */}
-                <div 
+                <div
                   id="categoryScrollContainer"
                   className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar px-2"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 >
                   {categories.map((category) => (
                     <button
@@ -592,7 +624,6 @@ const ClientWrapper = ({
           </div>
         </div>
 
-
         {/* Mobile Filter Popup */}
         <Popup
           isOpen={isFilterOpen}
@@ -604,13 +635,13 @@ const ClientWrapper = ({
         >
           <div className="p-6 space-y-6">
             <AttractionFilters
-          categories={categories}
-          locations={locations}
-          initialFilters={initialFilters}
-          onFilterChange={handleFilterChange}
+              categories={categories}
+              locations={locations}
+              initialFilters={initialFilters}
+              onFilterChange={handleFilterChange}
               layout="mobile"
               onClose={toggleFilter}
-        />
+            />
           </div>
         </Popup>
 
@@ -649,21 +680,21 @@ const ClientWrapper = ({
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }
-        
+
         /* Swiper Navigation Styling */
         .banner-swiper .swiper-button-next,
         .banner-swiper .swiper-button-prev {
           display: none !important;
         }
-        
+
         .banner-swiper .swiper-pagination {
           display: none !important;
         }
-        
+
         .banner-swiper {
           height: auto !important;
         }
-        
+
         .banner-swiper .swiper-slide {
           height: auto !important;
         }

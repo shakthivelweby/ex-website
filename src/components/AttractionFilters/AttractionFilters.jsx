@@ -105,6 +105,7 @@ const AttractionFilters = ({
       date: "",
       location: "",
       category: "",
+      attraction_type: "",
       event_type: "",
       rating: "",
       price_from: "",
@@ -308,10 +309,10 @@ const AttractionFilters = ({
               Attraction Type
             </span>
           </div>
-          {tempFilters.attraction_type && (
+          {tempFilters.category && (
             <button
               onClick={() => {
-                const newFilters = { ...tempFilters, attraction_type: "" };
+                const newFilters = { ...tempFilters, category: "" };
                 setTempFilters(newFilters);
                 onFilterChange(newFilters);
               }}
@@ -322,35 +323,32 @@ const AttractionFilters = ({
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">
-          {[
-            { value: "cultural", label: "Cultural" },
-            { value: "festival", label: "Festival" },
-            { value: "music", label: "Music" },
-            { value: "sports", label: "Sports" },
-            { value: "food", label: "Food & Drink" },
-            { value: "art", label: "Art & Exhibition" },
-            { value: "conference", label: "Conference" },
-            { value: "workshop", label: "Workshop" }
-          ].map((attractionType) => (
-            <button
-              key={attractionType.value}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                tempFilters.attraction_type === attractionType.value
+          {categories && categories.length > 0 ? (
+            categories.map((category) => (
+              <button
+                key={category.id}
+                className={`px-3 py-1.5 text-xs transition-colors ${
+                  tempFilters.category === category.slug
                     ? "bg-primary-600 text-white"
-                  : "bg-white border border-gray-300 rounded-lg focus:border-primary-500 text-gray-700"
-              }`}
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  attraction_type: attractionType.value,
-                };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
-            >
-              {attractionType.label}
-            </button>
-          ))}
+                    : "bg-white border border-gray-300 rounded-lg focus:border-primary-500 text-gray-700"
+                }`}
+                onClick={() => {
+                  const newFilters = {
+                    ...tempFilters,
+                    category: category.slug,
+                  };
+                  setTempFilters(newFilters);
+                  onFilterChange(newFilters);
+                }}
+              >
+                {category.name}
+              </button>
+            ))
+          ) : (
+            <div className="text-sm text-gray-500 py-2">
+              No categories available
+            </div>
+          )}
         </div>
       </div>
 
@@ -455,7 +453,7 @@ const AttractionFilters = ({
     return (
       <div className="space-y-6">
         <FilterContent />
-        
+
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4 border-t border-gray-100">
           <button
@@ -477,7 +475,7 @@ const AttractionFilters = ({
             Apply Now
           </button>
         </div>
-        
+
         {/* Location Picker Popup */}
         <LocationSearchPopup
           isOpen={isLocationOpen}

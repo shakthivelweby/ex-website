@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const Form = ({
   attractionDetails,
@@ -31,6 +33,10 @@ const Form = ({
       setTotalPrice(propTotalPrice);
     }
   }, [propSelectedTickets, propTotalPrice]);
+
+  useEffect(() => {
+    console.log("attractionDetails check", attractionDetails);
+  }, []);
 
   const handleTicketSelection = () => {
     if (!isLogin()) {
@@ -72,13 +78,6 @@ const Form = ({
       }
 
       // Add your booking logic here
-      console.log("Selected tickets:", selectedTickets);
-      console.log("Selected date:", selectedDate);
-      console.log("Total price:", totalPrice);
-      console.log("Adults:", adultCount);
-      console.log("Children:", childCount);
-      console.log("Total:", adultCount + childCount);
-      alert("Booking functionality will be implemented here");
     } catch (error) {
       console.error("Error:", error);
       alert(
@@ -90,7 +89,6 @@ const Form = ({
     }
   };
 
-
   const getSelectedTicketsCount = () => {
     return Object.values(selectedTickets).reduce(
       (sum, quantity) => sum + quantity,
@@ -100,23 +98,23 @@ const Form = ({
 
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   };
 
   const handleAdultIncrement = () => {
-    setAdultCount(prev => prev + 1);
+    setAdultCount((prev) => prev + 1);
   };
 
   const handleAdultDecrement = () => {
-    setAdultCount(prev => Math.max(1, prev - 1));
+    setAdultCount((prev) => Math.max(1, prev - 1));
   };
 
   const handleChildIncrement = () => {
-    setChildCount(prev => prev + 1);
+    setChildCount((prev) => prev + 1);
   };
 
   const handleChildDecrement = () => {
-    setChildCount(prev => Math.max(0, prev - 1));
+    setChildCount((prev) => Math.max(0, prev - 1));
   };
 
   return (
@@ -149,34 +147,66 @@ const Form = ({
               <div>
                 <p className="text-gray-500 text-xs">Opening & Closing Time</p>
                 <p className="text-gray-700 font-medium">
-                  {attractionDetails.openingTime} - {attractionDetails.closingTime}
+                  {attractionDetails.openingTime} -
+                  {attractionDetails.closingTime}
                 </p>
               </div>
             </div>
           </div>
           {/* Date Selection */}
-         <div className="mt-4">
-          <h2 className="text-base font-medium text-gray-800 mb-3">Select Date</h2>
-          <div className="relative">
-            <input
-              type="date"
-              name="visitDate"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              min={getMinDate()}
-              className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 appearance-none"
-              required
-            />
-            {/* <i className="fi fi-rr-calendar absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i> */}
+          <div className="mt-4">
+            <h2 className="text-base font-medium text-gray-800 mb-3">
+              Select Date
+            </h2>
+            <div className="relative">
+              {isMobilePopup ? (
+                // Inline calendar for mobile
+                <div className="border-t border-gray-200 pt-3">
+                  <DatePicker
+                    selected={selectedDate ? new Date(selectedDate) : null}
+                    onChange={(date) =>
+                      setSelectedDate(
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    minDate={new Date()}
+                    inline
+                    placeholderText="Choose Date"
+                    className="w-full"
+                    dateFormat="dd/MM/yyyy"
+                  />
+                </div>
+              ) : (
+                // Popup calendar for desktop
+                <>
+                  <DatePicker
+                    minDate={new Date()}
+                    placeholderText="Choose Date"
+                    className="w-full h-12 px-4 pr-10 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 cursor-pointer font-medium"
+                    selected={selectedDate ? new Date(selectedDate) : null}
+                    onChange={(date) =>
+                      setSelectedDate(
+                        date ? date.toISOString().split("T")[0] : ""
+                      )
+                    }
+                    showPopperArrow={false}
+                    dateFormat="dd/MM/yyyy"
+                    popperPlacement="bottom-start"
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                    <i className="fi fi-rr-calendar text-lg"></i>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-        </div>
         </div>
 
         {/* Adult and Child Quantity Selector - Only show when date is selected */}
         {selectedDate && (
           <div className="bg-white rounded-xl p-4 mb-4">
             {/* <h2 className="text-base font-medium text-gray-800 mb-4">Select Guests</h2> */}
-            
+
             {/* Adults Section */}
             <div className="flex items-center justify-between py-3 border-b border-gray-100">
               <div>
@@ -230,7 +260,6 @@ const Form = ({
           </div>
         )}
 
-
         {/* Price and Booking Card */}
         <div className="bg-white rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
@@ -266,11 +295,13 @@ const Form = ({
                   <i className="fi fi-rr-users text-blue-600"></i>
                   <span className="text-sm font-medium text-blue-800">
                     {adultCount} Adult{adultCount !== 1 ? "s" : ""}
-                    {childCount > 0 && `, ${childCount} Child${childCount !== 1 ? "ren" : ""}`}
+                    {childCount > 0 &&
+                      `, ${childCount} Child${childCount !== 1 ? "ren" : ""}`}
                   </span>
                 </div>
                 <span className="text-sm font-semibold text-blue-800">
-                  Total: {adultCount + childCount} {adultCount + childCount !== 1 ? "" : ""}
+                  Total: {adultCount + childCount}{" "}
+                  {adultCount + childCount !== 1 ? "" : ""}
                 </span>
               </div>
             </div>
@@ -282,11 +313,12 @@ const Form = ({
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-calendar text-blue-600"></i>
                 <span className="text-sm font-medium text-blue-800">
-                  Visit Date: {new Date(selectedDate).toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  Visit Date:{" "}
+                  {new Date(selectedDate).toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </span>
               </div>

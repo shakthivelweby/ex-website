@@ -24,6 +24,44 @@ const Form = ({
   const [adultCount, setAdultCount] = useState(1);
   const [childCount, setChildCount] = useState(0);
 
+  // Function to check if a date should be disabled
+  const isDateDisabled = (date) => {
+    // Use local date format to avoid timezone issues
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+
+    // Check closeout_dates for date range restrictions
+    if (
+      attractionDetails?.closeoutDates &&
+      attractionDetails.closeoutDates.length > 0
+    ) {
+      for (const closeout of attractionDetails.closeoutDates) {
+        // Check date range restrictions
+        if (closeout.start_date && closeout.end_date) {
+          if (dateStr >= closeout.start_date && dateStr <= closeout.end_date) {
+            return true;
+          }
+        }
+
+        // Check day-of-week restrictions from applicable_days
+        if (closeout.applicable_days) {
+          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+          const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+          const dayName = dayNames[dayOfWeek];
+
+          // If the day is set to 0 in applicable_days, disable it
+          if (closeout.applicable_days[dayName] === 0) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
   // Update local state when props change
   useEffect(() => {
     if (propSelectedTickets) {
@@ -34,17 +72,28 @@ const Form = ({
     }
   }, [propSelectedTickets, propTotalPrice]);
 
-  useEffect(() => {
-    console.log("attractionDetails check", attractionDetails);
-  }, []);
-
   const handleTicketSelection = () => {
+    console.log("handleTicketSelection clicked");
     if (!isLogin()) {
       const event = new CustomEvent("showLogin");
       window.dispatchEvent(event);
       return;
     }
+
+    // Store selected date in localStorage if available
+    if (selectedDate) {
+      localStorage.setItem(
+        `attraction_${attractionDetails.id}_selectedDate`,
+        selectedDate
+      );
+      console.log("Stored date in localStorage:", selectedDate);
+      console.log("Attraction ID:", attractionDetails.id);
+    } else {
+      console.log("No date selected to store");
+    }
+
     // Redirect to booking page
+    console.log("attractionDetails fetching in form", attractionDetails);
     router.push(`/attractions/${attractionDetails.id}/booking`);
   };
 
@@ -170,10 +219,37 @@ const Form = ({
                       )
                     }
                     minDate={new Date()}
+                    filterDate={(date) => !isDateDisabled(date)}
                     inline
                     placeholderText="Choose Date"
                     className="w-full"
                     dateFormat="dd/MM/yyyy"
+                    renderDayContents={(day, date) => {
+                      const isDisabled = isDateDisabled(date);
+                      return (
+                        <div
+                          style={{ textAlign: "center", position: "relative" }}
+                        >
+                          <div>{day}</div>
+                          {isDisabled && (
+                            <div
+                              style={{
+                                fontSize: "0.65em",
+                                color: "#EF4444",
+                                position: "absolute",
+                                left: 0,
+                                top: "23px",
+                                textAlign: "center",
+                                width: "100%",
+                                fontWeight: "500",
+                              }}
+                            >
+                              N/A
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }}
                   />
                 </div>
               ) : (
@@ -181,6 +257,7 @@ const Form = ({
                 <>
                   <DatePicker
                     minDate={new Date()}
+                    filterDate={(date) => !isDateDisabled(date)}
                     placeholderText="Choose Date"
                     className="w-full h-12 px-4 pr-10 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 cursor-pointer font-medium"
                     selected={selectedDate ? new Date(selectedDate) : null}
@@ -192,6 +269,32 @@ const Form = ({
                     showPopperArrow={false}
                     dateFormat="dd/MM/yyyy"
                     popperPlacement="bottom-start"
+                    renderDayContents={(day, date) => {
+                      const isDisabled = isDateDisabled(date);
+                      return (
+                        <div
+                          style={{ textAlign: "center", position: "relative" }}
+                        >
+                          <div>{day}</div>
+                          {isDisabled && (
+                            <div
+                              style={{
+                                fontSize: "0.65em",
+                                color: "#EF4444",
+                                position: "absolute",
+                                left: 0,
+                                top: "23px",
+                                textAlign: "center",
+                                width: "100%",
+                                fontWeight: "500",
+                              }}
+                            >
+                              N/A
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
                     <i className="fi fi-rr-calendar text-lg"></i>
@@ -203,74 +306,26 @@ const Form = ({
         </div>
 
         {/* Adult and Child Quantity Selector - Only show when date is selected */}
-        {selectedDate && (
-          <div className="bg-white rounded-xl p-4 mb-4">
-            {/* <h2 className="text-base font-medium text-gray-800 mb-4">Select Guests</h2> */}
-
-            {/* Adults Section */}
-            <div className="flex items-center justify-between py-3 border-b border-gray-100">
-              <div>
-                <h3 className="text-sm font-medium text-gray-800">Adults</h3>
-                <p className="text-xs text-gray-500">Over 18+</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleAdultDecrement}
-                  disabled={adultCount <= 1}
-                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <i className="fi fi-rr-minus text-xs"></i>
-                </button>
-                <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                  {adultCount}
-                </div>
-                <button
-                  onClick={handleAdultIncrement}
-                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  <i className="fi fi-rr-plus text-xs"></i>
-                </button>
-              </div>
-            </div>
-
-            {/* Children Section */}
-            <div className="flex items-center justify-between py-3">
-              <div>
-                <h3 className="text-sm font-medium text-gray-800">Child</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleChildDecrement}
-                  disabled={childCount <= 0}
-                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <i className="fi fi-rr-minus text-xs"></i>
-                </button>
-                <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                  {childCount}
-                </div>
-                <button
-                  onClick={handleChildIncrement}
-                  className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  <i className="fi fi-rr-plus text-xs"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Price and Booking Card */}
         <div className="bg-white rounded-xl p-4">
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">Entry fee</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">
-              {attractionDetails.price}
+              {attractionDetails.rateType === "full"
+                ? attractionDetails.fullRate
+                  ? `₹${attractionDetails.fullRate}`
+                  : attractionDetails.price
+                : attractionDetails.rateType === "pax"
+                ? attractionDetails.adultPrice
+                  ? `₹${attractionDetails.adultPrice}`
+                  : attractionDetails.price
+                : attractionDetails.price}
             </span>
           </div>
 
           {/* Selected Tickets Summary */}
-          {getSelectedTicketsCount() > 0 && (
+          {/* {getSelectedTicketsCount() > 0 && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -285,10 +340,10 @@ const Form = ({
                 </span>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Guest Summary - Only show when date is selected */}
-          {selectedDate && (
+          {/* {selectedDate && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -305,7 +360,7 @@ const Form = ({
                 </span>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Selected Date Summary */}
           {selectedDate && (
@@ -333,6 +388,7 @@ const Form = ({
                   onClick={handleTicketSelection}
                   size="lg"
                   className="w-full rounded-full"
+                  disabled={!selectedDate}
                   icon={<i className="fi fi-rr-ticket ml-2"></i>}
                 >
                   Select Tickets
@@ -356,6 +412,7 @@ const Form = ({
                   onClick={handleTicketSelection}
                   size="lg"
                   className="w-full rounded-full"
+                  disabled={!selectedDate}
                   icon={<i className="fi fi-rr-ticket ml-2"></i>}
                 >
                   Select Tickets

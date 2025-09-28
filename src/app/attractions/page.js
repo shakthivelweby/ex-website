@@ -44,7 +44,11 @@ export default async function Attractions({ searchParams }) {
     city: attraction.city,
     type: attraction.category || "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
-    price: attraction.price?.full_rate || attraction.price || 0,
+    price: attraction.price?.rate_type === "full" 
+      ? attraction.price?.full_rate 
+      : attraction.price?.rate_type === "pax" 
+        ? attraction.price?.adult_price 
+        : attraction.price?.full_rate || attraction.price || 0,
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
     duration: attraction.duration || "2-3 hours",

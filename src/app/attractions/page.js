@@ -33,7 +33,7 @@ export default async function Attractions({ searchParams }) {
 
   
   // Debug: Log attraction IDs
-  console.log("Attraction IDs:", attractionsArray.map(attraction => attraction.id));
+  console.log("Attraction want a re-check", attractionsArray.map(attraction => attraction));
   
   // Transform attractions data server-side for SSR based on actual API response
   const transformedAttractions = attractionsArray.map((attraction) => ({

@@ -1,11 +1,30 @@
 import AttractionDetailClient from "./clientWrapper";
-import { attractionInfo, getAttractionGallery } from "./service";
+import { attractionInfo, getAttractionGallery, getTicketPricesForDateServer } from "./service";
 
-const AttractionDetailPage = async ({ params }) => {
+const AttractionDetailPage = async ({ params, searchParams }) => {
   const { id } = await params;
+  
+  // Get today's date as default for pricing
+  const today = new Date();
+  const todayString = today.toISOString().split("T")[0];
+  
+  // Get date from search params if available, otherwise use today
+  const resolvedSearchParams = await searchParams;
+  const selectedDate = resolvedSearchParams.date || todayString;
 
   const attractionResponse = await attractionInfo(id);  
   const galleryResponse = await getAttractionGallery(id);
+  
+  // Fetch date-specific pricing on server-side
+  let dateSpecificPricing = null;
+  try {
+    const pricingResponse = await getTicketPricesForDateServer(id, selectedDate);
+    dateSpecificPricing = pricingResponse?.data?.ticket_prices || null;
+    console.log("Date-specific pricing loaded for date:", selectedDate, "Data:", dateSpecificPricing);
+  } catch (error) {
+    console.error("Error fetching date-specific pricing:", error);
+    // Continue with fallback pricing
+  }
 
 
   const getGalleryData = galleryResponse?.data || [];
@@ -22,7 +41,7 @@ const AttractionDetailPage = async ({ params }) => {
   }
 
   const attraction = attractionResponse.data;
-  console.log("Attraction data to check full rate:", attraction.attraction.attraction_ticket_type_prices[0]);
+  console.log("Attraction data to check full rate:", attraction.attraction);
 
   
 
@@ -36,6 +55,13 @@ const AttractionDetailPage = async ({ params }) => {
   const rateType = ticketPrice?.rate_type;
   const adultPrice = ticketPrice?.adult_price;
   const childPrice = ticketPrice?.child_price;
+  
+  // Use date-specific pricing if available, otherwise fall back to default pricing
+  const currentTicketData = dateSpecificPricing?.[0] || ticketPrice;
+  const currentFullRate = currentTicketData?.full_rate || fullRate;
+  const currentRateType = currentTicketData?.rate_type || rateType;
+  const currentAdultPrice = currentTicketData?.adult_price || adultPrice;
+  const currentChildPrice = currentTicketData?.child_price || childPrice;
 
   // Format opening and closing times
   const formatTime = (timeString) => {
@@ -56,15 +82,18 @@ const AttractionDetailPage = async ({ params }) => {
     // closingTime: attraction.attraction.end_time,
     location: attraction.attraction.location,
     address: attraction.attraction.address,
-    price: rateType === "full" 
-      ? (fullRate ? `₹${fullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
-      : rateType === "pax" 
-        ? (adultPrice ? `₹${adultPrice}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
-        : (fullRate ? `₹${fullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry')),
-    fullRate: fullRate,
-    rateType: rateType,
-    adultPrice: adultPrice,
-    childPrice: childPrice,
+    price: currentRateType === "full" 
+      ? (currentFullRate ? `₹${currentFullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
+      : currentRateType === "pax" 
+        ? (currentAdultPrice ? `₹${currentAdultPrice}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
+        : (currentFullRate ? `₹${currentFullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry')),
+    fullRate: currentFullRate,
+    rateType: currentRateType,
+    adultPrice: currentAdultPrice,
+    childPrice: currentChildPrice,
+    // Add date-specific pricing data
+    dateSpecificPricing: dateSpecificPricing,
+    selectedDate: selectedDate,
     image: attraction.attraction.cover_image || attraction.attraction.thumb_image,
     description: attraction.attraction.description,
     attractionGuide: {

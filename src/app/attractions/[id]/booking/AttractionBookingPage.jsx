@@ -8,7 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import {
   attractionInfo,
   getAttractionTickets,
-  getDetailsForBooking,
+  getTicketPricesForDate,
 } from "../service";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
@@ -87,13 +87,123 @@ const AttractionBookingPage = ({
     const storedDate = localStorage.getItem(
       `attraction_${attractionId}_selectedDate`
     );
-    console.log("Checking localStorage for date:", storedDate);
-    console.log("Attraction ID:", attractionId);
+    // console.log("Checking localStorage for date:", storedDate);
+    // console.log("Attraction ID:", attractionId);
     if (storedDate) {
-      console.log("Setting selected date from localStorage:", storedDate);
+      //console.log("Setting selected date from localStorage:", storedDate);
       setSelectedDate(storedDate);
     }
   }, [attractionId]);
+
+  useEffect(() => {
+    console.log("Selected date:", selectedDate);
+
+    // Call API when date changes to get date-specific pricing
+    if (selectedDate && attractionId) {
+      console.log(
+        "Date changed, fetching date-specific pricing for:",
+        selectedDate
+      );
+      fetchDateSpecificPricing();
+    }
+  }, [selectedDate]);
+
+  const fetchDateSpecificPricing = async () => {
+    try {
+      console.log(
+        "Fetching date-specific pricing for attraction:",
+        attractionId,
+        "date:",
+        selectedDate
+      );
+      const response = await getTicketPricesForDate(attractionId, selectedDate);
+
+      if (response && response.data && response.data.ticket_prices) {
+        console.log("Date-specific pricing response:", response.data);
+
+        // Transform the new API response structure to match the expected format
+        const transformedData = {
+          attraction_ticket_type_prices: response.data.ticket_prices.map(
+            (ticket) => ({
+              id: ticket.ticket_type_id,
+              attraction_ticket_type_id: ticket.attraction_ticket_type_id,
+              attraction_ticket_type: {
+                attraction_ticket_type_master: {
+                  name: ticket.ticket_type_name,
+                },
+              },
+              adult_price: ticket.adult_price,
+              child_price: ticket.child_price,
+              full_rate: ticket.full_rate,
+              rate_type: ticket.rate_type,
+              guide_rate: ticket.guide_rate,
+              discount: ticket.discount,
+              description: ticket.description,
+              child_description: ticket.child_description,
+              maximum_allowed_bookings_per_user:
+                ticket.maximum_allowed_bookings_per_user,
+              pricing_type: ticket.pricing_type,
+              seasonal_period: ticket.seasonal_period,
+            })
+          ),
+        };
+
+        setTicketData(transformedData);
+
+        // Also update attraction data with image and other details from API response
+        if (response.data.attraction) {
+          setAttractionData((prevData) => {
+            const updatedAttractionData = {
+              ...prevData,
+              id: response.data.attraction.id || prevData.id,
+              name: response.data.attraction.name || prevData.name,
+              location: response.data.attraction.location || prevData.location,
+              cover_image: (() => {
+                const coverImage =
+                  response.data.attraction.cover_image ||
+                  response.data.attraction.thumb_image;
+                console.log("Raw cover_image URL:", coverImage);
+
+                // Clean up the URL if it has double paths
+                if (
+                  coverImage &&
+                  coverImage.includes(
+                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/"
+                  )
+                ) {
+                  const cleanedUrl = coverImage.replace(
+                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/",
+                    "http://127.0.0.1:8000/"
+                  );
+                  console.log("Cleaned cover_image URL:", cleanedUrl);
+                  return cleanedUrl;
+                }
+
+                return coverImage;
+              })(),
+              start_time:
+                response.data.attraction.start_time || prevData.start_time,
+              end_time: response.data.attraction.end_time || prevData.end_time,
+              description:
+                response.data.attraction.description || prevData.description,
+            };
+            console.log(
+              "Updated attraction data with cover_image:",
+              updatedAttractionData
+            );
+            return updatedAttractionData;
+          });
+        }
+
+        console.log(
+          "Ticket data updated with date-specific pricing:",
+          transformedData
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching date-specific pricing:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -106,32 +216,23 @@ const AttractionBookingPage = ({
         return;
       }
 
-      const bookingResponse = await getDetailsForBooking(attractionId);
-      console.log("Booking details response:", bookingResponse);
+      // Disabled: const bookingResponse = await getDetailsForBooking(attractionId);
+      // console.log("Booking details response:", bookingResponse);
 
-      if (bookingResponse && bookingResponse.data) {
-        // The API response structure might be different, let's handle it properly
-        const responseData = bookingResponse.data;
+      // Set default attraction data (API call disabled)
+      setAttractionData({
+        id: attractionId,
+        name: "Attraction",
+        location: "",
+        cover_image: null,
+        start_time: "09:00",
+        end_time: "18:00",
+        attraction_category_master: null,
+        duration: "TBD",
+      });
 
-        // Set attraction data (basic info)
-        setAttractionData({
-          id: responseData.id || attractionId,
-          name: responseData.name || "Attraction",
-          location: responseData.location || "",
-          cover_image: responseData.cover_image || responseData.thumb_image,
-          start_time: responseData.start_time,
-          end_time: responseData.end_time,
-          attraction_category_master: responseData.attraction_category_master,
-          duration: responseData.duration || "TBD",
-        });
-
-        // Set ticket data (booking details)
-        setTicketData(responseData);
-      } else {
-        console.error("No data received from API");
-        setAttractionData(null);
-        setTicketData(null);
-      }
+      // Set empty ticket data initially (will be populated when date is selected)
+      setTicketData(null);
     } catch (error) {
       console.error("Error fetching booking data:", error);
       setAttractionData(null);
@@ -174,11 +275,22 @@ const AttractionBookingPage = ({
   };
 
   const handleAdultChildQuantityChange = (ticketTypeId, type, change) => {
+    console.log("handleAdultChildQuantityChange called:", {
+      ticketTypeId,
+      type,
+      change,
+    });
     const currentTickets = adultChildTickets[ticketTypeId] || {
       adult: 0,
       child: 0,
     };
     const newQuantity = Math.max(0, currentTickets[type] + change);
+    console.log(
+      "Current tickets:",
+      currentTickets,
+      "New quantity:",
+      newQuantity
+    );
 
     const updatedTickets = {
       ...adultChildTickets,
@@ -218,11 +330,19 @@ const AttractionBookingPage = ({
 
   const getTotalPrice = () => {
     let total = 0;
+    console.log("getTotalPrice - adultChildTickets:", adultChildTickets);
+    console.log("getTotalPrice - ticketData:", ticketData);
 
     // Calculate adult/child tickets
     Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
       const ticket = ticketData?.attraction_ticket_type_prices?.find(
         (t) => t.attraction_ticket_type_id == ticketTypeId
+      );
+      console.log(
+        `getTotalPrice - ticketTypeId: ${ticketTypeId}, tickets:`,
+        tickets,
+        "found ticket:",
+        ticket
       );
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         if (ticket.rate_type === "full") {
@@ -232,7 +352,14 @@ const AttractionBookingPage = ({
             ticketPrice =
               ticket.full_rate - (ticket.full_rate * ticket.discount) / 100;
           }
-          total += parseFloat(ticketPrice) * (tickets.adult + tickets.child);
+          const subtotal =
+            parseFloat(ticketPrice) * (tickets.adult + tickets.child);
+          console.log(
+            `getTotalPrice - full_rate calculation: ${ticketPrice} * ${
+              tickets.adult + tickets.child
+            } = ${subtotal}`
+          );
+          total += subtotal;
         } else if (ticket.rate_type === "pax") {
           // Use separate adult_price and child_price
           let adultPrice = parseFloat(ticket.adult_price || 0);
@@ -250,16 +377,23 @@ const AttractionBookingPage = ({
             childPrice = childPrice - (childPrice * ticket.discount) / 100;
           }
 
-          total += adultPrice * tickets.adult + childPrice * tickets.child;
+          const subtotal =
+            adultPrice * tickets.adult + childPrice * tickets.child;
+          console.log(
+            `getTotalPrice - pax calculation: adult(${adultPrice} * ${tickets.adult}) + child(${childPrice} * ${tickets.child}) = ${subtotal}`
+          );
+          total += subtotal;
         }
       }
     });
 
     // Add guide price if guide is selected
     if (needGuide && guideRate > 0) {
+      console.log(`getTotalPrice - adding guide rate: ${guideRate}`);
       total += parseFloat(guideRate);
     }
 
+    console.log(`getTotalPrice - final total: ${total}`);
     return total;
   };
 
@@ -284,6 +418,12 @@ const AttractionBookingPage = ({
       return;
     }
 
+    console.log(
+      "handleProceedToPayment - adultChildTickets:",
+      adultChildTickets
+    );
+    console.log("handleProceedToPayment - ticketData:", ticketData);
+
     // Format the selected tickets data according to API requirements
     const formattedTickets = [];
     let totalAmount = 0;
@@ -294,6 +434,12 @@ const AttractionBookingPage = ({
 
       const ticket = ticketData?.attraction_ticket_type_prices?.find(
         (t) => t.attraction_ticket_type_id == ticketTypeId
+      );
+      console.log(
+        `handleProceedToPayment - ticketTypeId: ${ticketTypeId}, tickets:`,
+        tickets,
+        "found ticket:",
+        ticket
       );
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         const totalQuantity = tickets.adult + tickets.child;
@@ -306,6 +452,15 @@ const AttractionBookingPage = ({
             ticketPrice =
               ticket.full_rate - (ticket.full_rate * ticket.discount) / 100;
           }
+          console.log(
+            `handleProceedToPayment - full_rate calculation: ${
+              ticket.full_rate
+            } (discount: ${
+              ticket.discount
+            }%) = ${ticketPrice} * ${totalQuantity} = ${
+              ticketPrice * totalQuantity
+            }`
+          );
         } else if (ticket.rate_type === "pax") {
           // For pax tickets, we need to calculate based on adult/child quantities
           let adultPrice = parseFloat(ticket.adult_price || 0);
@@ -327,33 +482,54 @@ const AttractionBookingPage = ({
           const adultTotal = adultPrice * tickets.adult;
           const childTotal = childPrice * tickets.child;
           const ticketTotal = adultTotal + childTotal;
+          console.log(
+            `handleProceedToPayment - pax calculation: adult(${adultPrice} * ${tickets.adult}) + child(${childPrice} * ${tickets.child}) = ${ticketTotal}`
+          );
           totalAmount += ticketTotal;
 
           formattedTickets.push({
+            id: parseInt(ticketTypeId),
             attraction_ticket_type_id: parseInt(ticketTypeId),
             quantity: totalQuantity,
             adult_quantity: tickets.adult,
             child_quantity: tickets.child,
             adult_price: adultPrice,
             child_price: childPrice,
+            unit_price: adultPrice, // Add required unit_price field
+            total_price: ticketTotal, // Add required total_price field
             total: ticketTotal,
           });
           return; // Skip the rest of the logic for pax tickets
         }
 
         const ticketTotal = parseFloat(ticketPrice) * totalQuantity;
+        console.log(
+          `handleProceedToPayment - adding full_rate total: ${ticketTotal}`
+        );
         totalAmount += ticketTotal;
 
         formattedTickets.push({
+          id: parseInt(ticketTypeId),
           attraction_ticket_type_id: parseInt(ticketTypeId),
           quantity: totalQuantity,
           adult_quantity: tickets.adult,
           child_quantity: tickets.child,
           price: parseFloat(ticketPrice),
+          unit_price: parseFloat(ticketPrice), // Add required unit_price field
+          total_price: ticketTotal, // Add required total_price field
           total: ticketTotal,
         });
       }
     });
+
+    // Add guide rate if needed
+    if (needGuide && guideRate > 0) {
+      console.log(`handleProceedToPayment - adding guide rate: ${guideRate}`);
+      totalAmount += parseFloat(guideRate);
+    }
+
+    console.log(`handleProceedToPayment - final totalAmount: ${totalAmount}`);
+    console.log(`handleProceedToPayment - formattedTickets:`, formattedTickets);
 
     // Prepare the booking data for checkout
     const apiBookingData = {
@@ -364,6 +540,11 @@ const AttractionBookingPage = ({
       need_guide: needGuide,
       guide_rate: needGuide ? guideRate : 0,
     };
+
+    console.log(
+      `handleProceedToPayment - final apiBookingData:`,
+      apiBookingData
+    );
 
     // Clean up stored date from localStorage
     localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
@@ -383,7 +564,7 @@ const AttractionBookingPage = ({
     );
   }
 
-  if (!attractionData || !ticketData) {
+  if (!attractionData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -416,12 +597,20 @@ const AttractionBookingPage = ({
           <div className="bg-white rounded-lg shadow border p-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative w-16 h-16 rounded-lg overflow-hidden">
-                <Image
-                  src={attractionData.cover_image || attractionData.thumb_image}
-                  alt={attractionData.name}
-                  fill
-                  className="object-cover"
-                />
+                {attractionData.cover_image || attractionData.thumb_image ? (
+                  <Image
+                    src={
+                      attractionData.cover_image || attractionData.thumb_image
+                    }
+                    alt={attractionData.name}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                    <i className="fi fi-rr-image text-gray-400 text-xl"></i>
+                  </div>
+                )}
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-800">
@@ -460,21 +649,25 @@ const AttractionBookingPage = ({
           <div className="lg:col-span-2">
             {currentStep === 1 ? (
               <div className="bg-white rounded-lg shadow border">
-                <div className="px-4 py-3 border-b border-gray-200">
+                {/* <div className="px-4 py-3 border-b border-gray-200">
                   <h2 className="text-base font-medium text-gray-800">
                     Select Your Tickets
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     Choose your preferred ticket type and visit date
                   </p>
-                </div>
+                </div> */}
 
                 <div className="p-4 space-y-6">
                   {/* Date Selection */}
-                  <div>
+
+                  {/* <div>
                     <h3 className="text-sm font-medium text-gray-800 mb-3">
                       Select Visit Date
                     </h3>
+
+
+
                     <div className="relative">
                       {isMobile ? (
                         // Inline calendar for mobile
@@ -483,11 +676,92 @@ const AttractionBookingPage = ({
                             selected={
                               selectedDate ? new Date(selectedDate) : null
                             }
-                            onChange={(date) =>
-                              setSelectedDate(
-                                date ? date.toISOString().split("T")[0] : ""
-                              )
-                            }
+                            onChange={async (date) => {
+                              const dateString = date
+                                ? date.toISOString().split("T")[0]
+                                : "";
+                              setSelectedDate(dateString);
+
+                              // Call API when date is selected
+                              if (dateString && attractionId) {
+                                console.log(
+                                  "Mobile Date selected, calling API for:",
+                                  dateString
+                                );
+                                try {
+                                  const response = await getTicketPricesForDate(
+                                    attractionId,
+                                    dateString
+                                  );
+                                  if (response && response.data && response.data.ticket_prices) {
+                                    // Transform the new API response structure to match the expected format
+                                    const transformedData = {
+                                      attraction_ticket_type_prices: response.data.ticket_prices.map(ticket => ({
+                                        id: ticket.ticket_type_id,
+                                        attraction_ticket_type_id: ticket.attraction_ticket_type_id,
+                                        attraction_ticket_type: {
+                                          attraction_ticket_type_master: {
+                                            name: ticket.ticket_type_name
+                                          }
+                                        },
+                                        adult_price: ticket.adult_price,
+                                        child_price: ticket.child_price,
+                                        full_rate: ticket.full_rate,
+                                        rate_type: ticket.rate_type,
+                                        guide_rate: ticket.guide_rate,
+                                        discount: ticket.discount,
+                                        description: ticket.description,
+                                        child_description: ticket.child_description,
+                                        maximum_allowed_bookings_per_user: ticket.maximum_allowed_bookings_per_user,
+                                        pricing_type: ticket.pricing_type,
+                                        seasonal_period: ticket.seasonal_period
+                                      }))
+                                    };
+                                    setTicketData(transformedData);
+                                    
+                                    // Also update attraction data with image and other details from API response
+                                    if (response.data.attraction) {
+                                      setAttractionData(prevData => {
+                                        const updatedAttractionData = {
+                                          ...prevData,
+                                          id: response.data.attraction.id || prevData.id,
+                                          name: response.data.attraction.name || prevData.name,
+                                          location: response.data.attraction.location || prevData.location,
+                                          cover_image: (() => {
+                                            const coverImage = response.data.attraction.cover_image || response.data.attraction.thumb_image;
+                                            console.log("Raw cover_image URL:", coverImage);
+                                            
+                                            // Clean up the URL if it has double paths
+                                            if (coverImage && coverImage.includes('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/')) {
+                                              const cleanedUrl = coverImage.replace('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/', 'http://127.0.0.1:8000/');
+                                              console.log("Cleaned cover_image URL:", cleanedUrl);
+                                              return cleanedUrl;
+                                            }
+                                            
+                                            return coverImage;
+                                          })(),
+                                          start_time: response.data.attraction.start_time || prevData.start_time,
+                                          end_time: response.data.attraction.end_time || prevData.end_time,
+                                          description: response.data.attraction.description || prevData.description,
+                                        };
+                                        console.log("Mobile - Updated attraction data with cover_image:", updatedAttractionData);
+                                        return updatedAttractionData;
+                                      });
+                                    }
+                                    
+                                    console.log(
+                                      "Mobile Ticket data updated with date-specific pricing:",
+                                      transformedData
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "Error fetching date-specific pricing:",
+                                    error
+                                  );
+                                }
+                              }
+                            }}
                             minDate={new Date()}
                             filterDate={(date) => !isDateDisabled(date)}
                             inline
@@ -536,11 +810,92 @@ const AttractionBookingPage = ({
                             selected={
                               selectedDate ? new Date(selectedDate) : null
                             }
-                            onChange={(date) =>
-                              setSelectedDate(
-                                date ? date.toISOString().split("T")[0] : ""
-                              )
-                            }
+                            onChange={async (date) => {
+                              const dateString = date
+                                ? date.toISOString().split("T")[0]
+                                : "";
+                              setSelectedDate(dateString);
+
+                              // Call API when date is selected
+                              if (dateString && attractionId) {
+                                console.log(
+                                  "Desktop Date selected, calling API for:",
+                                  dateString
+                                );
+                                try {
+                                  const response = await getTicketPricesForDate(
+                                    attractionId,
+                                    dateString
+                                  );
+                                  if (response && response.data && response.data.ticket_prices) {
+                                    // Transform the new API response structure to match the expected format
+                                    const transformedData = {
+                                      attraction_ticket_type_prices: response.data.ticket_prices.map(ticket => ({
+                                        id: ticket.ticket_type_id,
+                                        attraction_ticket_type_id: ticket.attraction_ticket_type_id,
+                                        attraction_ticket_type: {
+                                          attraction_ticket_type_master: {
+                                            name: ticket.ticket_type_name
+                                          }
+                                        },
+                                        adult_price: ticket.adult_price,
+                                        child_price: ticket.child_price,
+                                        full_rate: ticket.full_rate,
+                                        rate_type: ticket.rate_type,
+                                        guide_rate: ticket.guide_rate,
+                                        discount: ticket.discount,
+                                        description: ticket.description,
+                                        child_description: ticket.child_description,
+                                        maximum_allowed_bookings_per_user: ticket.maximum_allowed_bookings_per_user,
+                                        pricing_type: ticket.pricing_type,
+                                        seasonal_period: ticket.seasonal_period
+                                      }))
+                                    };
+                                    setTicketData(transformedData);
+                                    
+                                    // Also update attraction data with image and other details from API response
+                                    if (response.data.attraction) {
+                                      setAttractionData(prevData => {
+                                        const updatedAttractionData = {
+                                          ...prevData,
+                                          id: response.data.attraction.id || prevData.id,
+                                          name: response.data.attraction.name || prevData.name,
+                                          location: response.data.attraction.location || prevData.location,
+                                          cover_image: (() => {
+                                            const coverImage = response.data.attraction.cover_image || response.data.attraction.thumb_image;
+                                            console.log("Raw cover_image URL:", coverImage);
+                                            
+                                            // Clean up the URL if it has double paths
+                                            if (coverImage && coverImage.includes('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/')) {
+                                              const cleanedUrl = coverImage.replace('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/', 'http://127.0.0.1:8000/');
+                                              console.log("Cleaned cover_image URL:", cleanedUrl);
+                                              return cleanedUrl;
+                                            }
+                                            
+                                            return coverImage;
+                                          })(),
+                                          start_time: response.data.attraction.start_time || prevData.start_time,
+                                          end_time: response.data.attraction.end_time || prevData.end_time,
+                                          description: response.data.attraction.description || prevData.description,
+                                        };
+                                        console.log("Desktop - Updated attraction data with cover_image:", updatedAttractionData);
+                                        return updatedAttractionData;
+                                      });
+                                    }
+                                    
+                                    console.log(
+                                      "Desktop Ticket data updated with date-specific pricing:",
+                                      transformedData
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.error(
+                                    "Error fetching date-specific pricing:",
+                                    error
+                                  );
+                                }
+                              }
+                            }}
                             showPopperArrow={false}
                             dateFormat="dd/MM/yyyy"
                             popperPlacement="bottom-start"
@@ -580,7 +935,7 @@ const AttractionBookingPage = ({
                         </>
                       )}
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Ticket Types */}
                   <div>
@@ -672,11 +1027,10 @@ const AttractionBookingPage = ({
                                         // Get the base price based on rate_type
                                         const basePrice =
                                           ticket.rate_type === "full"
-                                            ? ticket.full_rate
-                                            : ticket.adult_price ||
-                                              ticket.child_price ||
-                                              ticket.full_rate ||
-                                              0;
+                                            ? ticket.full_rate || 0
+                                            : ticket.rate_type === "pax"
+                                            ? ticket.adult_price || 0
+                                            : 0;
 
                                         if (ticket.discount > 0) {
                                           // Show both actual price (strikethrough) and offer price when discount exists
@@ -777,8 +1131,10 @@ const AttractionBookingPage = ({
                                       <p className="text-xs text-gray-500">
                                         Over 18+ - ₹
                                         {ticket.rate_type === "full"
-                                          ? ticket.full_rate
-                                          : ticket.adult_price || 0}
+                                          ? ticket.full_rate || 0
+                                          : ticket.rate_type === "pax"
+                                          ? ticket.adult_price || 0
+                                          : 0}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -835,8 +1191,10 @@ const AttractionBookingPage = ({
                                       <p className="text-xs text-gray-500">
                                         Under 18 - ₹
                                         {ticket.rate_type === "full"
-                                          ? ticket.full_rate
-                                          : ticket.child_price || 0}
+                                          ? ticket.full_rate || 0
+                                          : ticket.rate_type === "pax"
+                                          ? ticket.child_price || 0
+                                          : 0}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -1051,15 +1409,21 @@ const AttractionBookingPage = ({
               {/* Attraction Details Card */}
               <div className="bg-white rounded-lg shadow border p-4">
                 <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3">
-                  <Image
-                    src={
-                      attractionData.cover_image || attractionData.thumb_image
-                    }
-                    alt={attractionData.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 33vw"
-                  />
+                  {attractionData.cover_image || attractionData.thumb_image ? (
+                    <Image
+                      src={
+                        attractionData.cover_image || attractionData.thumb_image
+                      }
+                      alt={attractionData.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 1024px) 100vw, 33vw"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+                    </div>
+                  )}
                 </div>
                 <h3 className="text-base font-medium text-gray-800 mb-2">
                   {attractionData.name}

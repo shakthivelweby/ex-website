@@ -6,6 +6,7 @@ import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { getDetailsForBooking, getTicketPricesForDate } from "./service";
 
 const Form = ({
   attractionDetails,
@@ -20,12 +21,20 @@ const Form = ({
     propSelectedTickets || {}
   );
   const [totalPrice, setTotalPrice] = useState(propTotalPrice || 0);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(
+    attractionDetails?.selectedDate || ""
+  );
   const [adultCount, setAdultCount] = useState(1);
   const [childCount, setChildCount] = useState(0);
+  const [ticketPrices, setTicketPrices] = useState(
+    attractionDetails?.dateSpecificPricing || []
+  );
 
   // Function to check if a date should be disabled
   const isDateDisabled = (date) => {
+    // Debug: Log attractionDetails to see what data is available
+    // console.log("attractionDetails in Form.jsx:", attractionDetails);
+
     // Use local date format to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -61,6 +70,21 @@ const Form = ({
 
     return false;
   };
+
+  // Initialize with pre-loaded data on component mount
+  useEffect(() => {
+    if (
+      attractionDetails?.dateSpecificPricing &&
+      attractionDetails?.selectedDate
+    ) {
+      setTicketPrices(attractionDetails.dateSpecificPricing);
+      setSelectedDate(attractionDetails.selectedDate);
+      console.log(
+        "Form initialized with date-specific pricing:",
+        attractionDetails.dateSpecificPricing
+      );
+    }
+  }, []);
 
   // Update local state when props change
   useEffect(() => {
@@ -213,11 +237,42 @@ const Form = ({
                 <div className="border-t border-gray-200 pt-3">
                   <DatePicker
                     selected={selectedDate ? new Date(selectedDate) : null}
-                    onChange={(date) =>
-                      setSelectedDate(
-                        date ? date.toISOString().split("T")[0] : ""
-                      )
-                    }
+                    onChange={async (date) => {
+                      const dateString = date
+                        ? date.toISOString().split("T")[0]
+                        : "";
+                      setSelectedDate(dateString);
+
+                      // Call API when date is selected
+                      if (dateString && attractionDetails?.id) {
+                        console.log(
+                          "Form Mobile Date selected, calling API for:",
+                          dateString
+                        );
+                        try {
+                          const response = await getTicketPricesForDate(
+                            attractionDetails.id,
+                            dateString
+                          );
+                          if (
+                            response &&
+                            response.data &&
+                            response.data.ticket_prices
+                          ) {
+                            console.log(
+                              "Form Mobile Ticket data updated with date-specific pricing:",
+                              response.data
+                            );
+                            setTicketPrices(response.data.ticket_prices);
+                          }
+                        } catch (error) {
+                          console.error(
+                            "Error fetching date-specific pricing:",
+                            error
+                          );
+                        }
+                      }
+                    }}
                     minDate={new Date()}
                     filterDate={(date) => !isDateDisabled(date)}
                     inline
@@ -261,11 +316,42 @@ const Form = ({
                     placeholderText="Choose Date"
                     className="w-full h-12 px-4 pr-10 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 cursor-pointer font-medium"
                     selected={selectedDate ? new Date(selectedDate) : null}
-                    onChange={(date) =>
-                      setSelectedDate(
-                        date ? date.toISOString().split("T")[0] : ""
-                      )
-                    }
+                    onChange={async (date) => {
+                      const dateString = date
+                        ? date.toISOString().split("T")[0]
+                        : "";
+                      setSelectedDate(dateString);
+
+                      // Call API when date is selected
+                      if (dateString && attractionDetails?.id) {
+                        console.log(
+                          "Form Desktop Date selected, calling API for:",
+                          dateString
+                        );
+                        try {
+                          const response = await getTicketPricesForDate(
+                            attractionDetails.id,
+                            dateString
+                          );
+                          if (
+                            response &&
+                            response.data &&
+                            response.data.ticket_prices
+                          ) {
+                            console.log(
+                              "Form Desktop Ticket data updated with date-specific pricing:",
+                              response.data
+                            );
+                            setTicketPrices(response.data.ticket_prices);
+                          }
+                        } catch (error) {
+                          console.error(
+                            "Error fetching date-specific pricing:",
+                            error
+                          );
+                        }
+                      }
+                    }}
                     showPopperArrow={false}
                     dateFormat="dd/MM/yyyy"
                     popperPlacement="bottom-start"
@@ -312,15 +398,33 @@ const Form = ({
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">Entry fee</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">
-              {attractionDetails.rateType === "full"
-                ? attractionDetails.fullRate
-                  ? `₹${attractionDetails.fullRate}`
-                  : attractionDetails.price
-                : attractionDetails.rateType === "pax"
-                ? attractionDetails.adultPrice
-                  ? `₹${attractionDetails.adultPrice}`
-                  : attractionDetails.price
-                : attractionDetails.price}
+              {(() => {
+                // Get the first ticket from the API response
+                const ticketData = ticketPrices?.[0];
+
+                if (ticketData) {
+                  if (ticketData.rate_type === "full") {
+                    return ticketData.full_rate
+                      ? `₹${ticketData.full_rate}`
+                      : attractionDetails.price;
+                  } else if (ticketData.rate_type === "pax") {
+                    return ticketData.adult_price
+                      ? `₹${ticketData.adult_price}`
+                      : attractionDetails.price;
+                  }
+                }
+
+                // Fallback to original logic if no ticket data
+                return attractionDetails.rateType === "full"
+                  ? attractionDetails.fullRate
+                    ? `₹${attractionDetails.fullRate}`
+                    : attractionDetails.price
+                  : attractionDetails.rateType === "pax"
+                  ? attractionDetails.adultPrice
+                    ? `₹${attractionDetails.adultPrice}`
+                    : attractionDetails.price
+                  : attractionDetails.price;
+              })()}
             </span>
           </div>
 

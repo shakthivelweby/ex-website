@@ -39,7 +39,7 @@ export const getDetailsForBooking = async (id) => {
   console.log("Running booking fetching")
   try {
     const response = await apiMiddleware.get(`/attraction-booking-details/${id}`);
-    console.log("Booking details response:", JSON.stringify(response.data, null, 2));
+   // console.log("Booking details response:", JSON.stringify(response.data, null, 2));
 
     return response.data;
   } catch (error) {
@@ -48,6 +48,40 @@ export const getDetailsForBooking = async (id) => {
       data: null,
       success: false,
       message: "Failed to fetch booking details"
+    };
+  }
+};
+
+// Get attraction ticket prices for specific date (Client-side)
+export const getTicketPricesForDate = async (attractionId, date) => {
+  console.log("Fetching ticket prices for attraction:", attractionId, "date:", date);
+  try {
+    const response = await apiMiddleware.get(`/attraction-ticket-prices/${attractionId}?date=${date}`);
+    console.log("Ticket prices response:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ticket prices for date:", error);
+    return {
+      data: null,
+      success: false,
+      message: "Failed to fetch ticket prices for date"
+    };
+  }
+};
+
+// Get attraction ticket prices for specific date (Server-side)
+export const getTicketPricesForDateServer = async (attractionId, date) => {
+  console.log("Fetching ticket prices for attraction (server):", attractionId, "date:", date);
+  try {
+    const response = await apiServerMiddleware.get(`/attraction-ticket-prices/${attractionId}?date=${date}`);
+    console.log("Ticket prices response (server):", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching ticket prices for date (server):", error);
+    return {
+      data: null,
+      success: false,
+      message: "Failed to fetch ticket prices for date"
     };
   }
 };

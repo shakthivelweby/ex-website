@@ -23,7 +23,9 @@ const createOrder = async (data) => {
 
 const verifyPayment = async (data) => {
     try {
-        const response = await apiMiddleware.post("/attraction-payment-verify", data);
+        const response = await apiMiddleware.post("/attraction-payment-verify", data, {
+            timeout: 60000, // 60 seconds timeout specifically for payment verification
+        });
         return response.data;
     } catch (error) {
         throw error;

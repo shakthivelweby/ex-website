@@ -255,6 +255,7 @@ export default function AttractionCheckoutPage() {
               console.log("- User email (from profile):", verificationResponse.data.user?.email);
               console.log("- Payment form email:", formData.email);
               console.log("- Email will be sent to:", verificationResponse.data.user?.email || "user profile email");
+              console.log("- Email status:", verificationResponse.data.email_status || "Not specified in response");
               console.log("- Check your email for booking confirmation");
               setSuccessMessage({
                 title: "Booking Successful!",
@@ -284,7 +285,13 @@ export default function AttractionCheckoutPage() {
 
     } catch (error) {
       console.error("Booking error:", error);
-      setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
+      
+      // Handle specific timeout errors
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        setError("Payment verification is taking longer than expected. Please check your bookings page to confirm if the payment was successful.");
+      } else {
+        setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }

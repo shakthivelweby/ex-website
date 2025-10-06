@@ -12,6 +12,7 @@ import {
   getAttractionCategories,
   getAttractionLocations,
   list,
+  getAttractions,
 } from "./service";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
@@ -159,32 +160,42 @@ const ClientWrapper = ({
   // Function to handle filter changes immediately
 
   const handleFilterChange = async (newFilters) => {
-    /*
     updateURL(newFilters);
 
     // Refetch attractions with new filters
     try {
       setLoading(true);
-      const attractionsResponse = await list(newFilters);
+      const attractionsResponse = await getAttractions(newFilters);
 
       // Transform attractions data
-      if (attractionsResponse?.data) {
-        const transformedAttractions = attractionsResponse.data.map(
+      if (attractionsResponse?.data?.data) {
+        const transformedAttractions = attractionsResponse.data.data.map(
           (attraction) => ({
             id: attraction.id,
             title: attraction.name,
             description: attraction.description,
             location: attraction.location,
             city: attraction.city,
-            type: attraction.attraction_category_master?.name || "",
-            image: attraction.thumb_image || attraction.cover_image,
-            price: attraction.price || 0,
+            type:
+              attraction.attraction_category_master?.name ||
+              attraction.category ||
+              "",
+            image:
+              attraction.image ||
+              attraction.thumb_image ||
+              attraction.cover_image,
+            price:
+              attraction.price?.rate_type === "full"
+                ? attraction.price?.full_rate
+                : attraction.price?.rate_type === "pax"
+                ? attraction.price?.adult_price
+                : attraction.price?.full_rate || attraction.price || 0,
             rating: attraction.rating || 0,
             reviewCount: attraction.review_count || 0,
             duration: attraction.duration || "2-3 hours",
             bestTimeToVisit: attraction.best_time_to_visit || "Morning",
             features: attraction.features || [],
-            promoted: attraction.promoted || false,
+            promoted: attraction.promoted || attraction.rating >= 4.0 || false,
             interest_count: attraction.interest_count || 0,
             openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
             address: attraction.address || "",
@@ -205,7 +216,6 @@ const ClientWrapper = ({
     } finally {
       setLoading(false);
     }
-      */
   };
 
   // Category scroll functions

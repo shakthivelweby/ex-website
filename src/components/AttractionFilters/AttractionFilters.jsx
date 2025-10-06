@@ -434,9 +434,13 @@ const AttractionFilters = ({
               parseInt(tempFilters.price_to) || 1000,
             ]}
             onChange={handlePriceChange}
-            formatDisplay={(value) =>
-              value ? `₹${value[0]} - ₹${value[1]}` : "Select Price Range"
-            }
+            formatDisplay={(value) => {
+              if (!value || value.length !== 2) return "Select Price Range";
+              if (value[0] === 0 && value[1] === 1000) return "Any Price";
+              if (value[0] === 0) return `Under ₹${value[1]}`;
+              if (value[1] === 1000) return `₹${value[0]}+`;
+              return `₹${value[0]} - ₹${value[1]}`;
+            }}
             title="Price Range"
           />
           <div className="mt-2 flex justify-between text-xs text-gray-500">

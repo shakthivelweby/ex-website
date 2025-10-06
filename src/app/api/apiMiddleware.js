@@ -8,7 +8,7 @@ const apiMiddleware = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // optional timeout
+  timeout: 30000, // increased to 30 seconds for payment verification
 });
 
 // Request interceptor to add auth token if exists

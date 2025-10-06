@@ -154,20 +154,129 @@ export const list = async (filters = {}) => {
   // return response.data; 
 }
 
+// Client-side price filtering function
+const applyClientSidePriceFilter = (responseData, filters) => {
+  if (!responseData?.data?.data) return responseData;
+  
+  const priceFrom = parseFloat(filters.price_from) || 0;
+  const priceTo = parseFloat(filters.price_to) || Infinity;
+  
+  const filteredAttractions = responseData.data.data.filter(attraction => {
+    // Get attraction price from various possible fields
+    let attractionPrice = 0;
+    
+    if (attraction.price?.rate_type === "full") {
+      attractionPrice = parseFloat(attraction.price?.full_rate) || 0;
+    } else if (attraction.price?.rate_type === "pax") {
+      attractionPrice = parseFloat(attraction.price?.adult_price) || 0;
+    } else {
+      attractionPrice = parseFloat(attraction.price?.full_rate || attraction.price || 0);
+    }
+    
+    return attractionPrice >= priceFrom && attractionPrice <= priceTo;
+  });
+  
+  console.log(`💰 Price filtering: ${responseData.data.data.length} → ${filteredAttractions.length} attractions`);
+  console.log(`💰 Price range: ₹${priceFrom} - ₹${priceTo}`);
+  
+  return {
+    ...responseData,
+    data: {
+      ...responseData.data,
+      data: filteredAttractions
+    }
+  };
+};
+
 // get attractions with filters
 export const getAttractions = async (filters = {}) => {
   try {
-    // Just fetch all attractions without any filters
-    const response = await apiServerMiddleware.get("/attractions");
-    console.log("Response data:", response.data);    
-    return response.data;
+    const params = new URLSearchParams();
+    
+    // Add only basic filters that are likely supported by backend
+    if (filters.location && filters.location.trim()) {
+      params.append("location", filters.location.trim());
+    }
+    if (filters.category && filters.category.trim()) {
+      params.append("category", filters.category.trim());
+    }
+    
+    // Temporarily disable price filtering until backend supports it
+    // if (filters.price_from && !isNaN(filters.price_from) && filters.price_from !== "0") {
+    //   params.append("price_from", filters.price_from);
+    // }
+    // if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== "1000") {
+    //   params.append("price_to", filters.price_to);
+    // }
+    
+    // Temporarily disable other filters until backend supports them
+    // if (filters.rating && filters.rating.trim()) {
+    //   params.append("rating", filters.rating.trim());
+    // }
+    // if (filters.longitude && !isNaN(filters.longitude)) {
+    //   params.append("longitude", filters.longitude);
+    // }
+    // if (filters.latitude && !isNaN(filters.latitude)) {
+    //   params.append("latitude", filters.latitude);
+    // }
+    
+    // Parse and add date parameter
+    if (filters.date && filters.date.trim()) {
+      const parsedDate = parseDateParameter(filters.date);
+      if (parsedDate) {
+        params.append("date", parsedDate);
+      }
+    }
+    
+    const queryString = params.toString();
+    const url = queryString ? `/attractions?${queryString}` : "/attractions";
+    
+    console.log("🔍 Attraction Filters Debug:");
+    console.log("- Filters:", filters);
+    console.log("- Query String:", queryString);
+    console.log("- Final URL:", url);
+    
+    // Check if we're sending unsupported parameters
+    const supportedParams = ['location', 'category', 'date'];
+    const unsupportedParams = Object.keys(filters).filter(key => 
+      filters[key] && !supportedParams.includes(key) && key !== 'price_from' && key !== 'price_to'
+    );
+    
+    if (unsupportedParams.length > 0) {
+      console.warn("⚠️ Potentially unsupported parameters:", unsupportedParams);
+    }
+    
+    const response = await apiServerMiddleware.get(url);
+    console.log("✅ Response data:", response.data);
+    
+    // Apply client-side price filtering if needed
+    let filteredData = response.data;
+    if (filters.price_from || filters.price_to) {
+      console.log("🔍 Applying client-side price filtering");
+      filteredData = applyClientSidePriceFilter(response.data, filters);
+    }
+    
+    return filteredData;
   } catch (error) {
-    console.error("Error fetching attractions:", error);
-    return {
-      data: [],
-      success: false,
-      message: "Failed to fetch attractions"
-    };
+    console.error("❌ Error fetching attractions:", error);
+    console.error("- Error response:", error.response?.data);
+    console.error("- Error status:", error.response?.status);
+    console.error("- Error message:", error.message);
+    
+    // If filtering fails, try to fetch all attractions without filters
+    console.log("🔄 Attempting fallback: fetching all attractions without filters");
+    try {
+      const fallbackResponse = await apiServerMiddleware.get("/attractions");
+      console.log("✅ Fallback successful:", fallbackResponse.data);
+      return fallbackResponse.data;
+    } catch (fallbackError) {
+      console.error("❌ Fallback also failed:", fallbackError);
+      return {
+        data: [],
+        success: false,
+        message: "Failed to fetch attractions. Please try again later."
+      };
+    }
   }
 }
 

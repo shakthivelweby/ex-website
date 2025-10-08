@@ -6,7 +6,7 @@ import apiMiddleware from "../../api/apiMiddleware";
 export const attractionInfo = async (id) => {
   try {
     const response = await apiServerMiddleware.get(`/attraction-details/${id}`);
-    
+    console.log("pricing section checking",response.data);    
     return response.data;
   } catch (error) {
     console.error("Error fetching attraction details:", error);
@@ -36,7 +36,6 @@ export const getAttractionGallery = async (id) => {
 
 // Get attraction booking details (for ticket selection)
 export const getDetailsForBooking = async (id) => {
-  console.log("Running booking fetching")
   try {
     const response = await apiMiddleware.get(`/attraction-booking-details/${id}`);
    // console.log("Booking details response:", JSON.stringify(response.data, null, 2));
@@ -52,12 +51,15 @@ export const getDetailsForBooking = async (id) => {
   }
 };
 
+
+
+
 // Get attraction ticket prices for specific date (Client-side)
 export const getTicketPricesForDate = async (attractionId, date) => {
   console.log("Fetching ticket prices for attraction:", attractionId, "date:", date);
   try {
     const response = await apiMiddleware.get(`/attraction-ticket-prices/${attractionId}?date=${date}`);
-    console.log("Ticket prices response:", response.data);
+    console.log("new Ticket prices response:", response.data);
     return response.data;
   } catch (error) {
     console.error("Error fetching ticket prices for date:", error);
@@ -68,6 +70,8 @@ export const getTicketPricesForDate = async (attractionId, date) => {
     };
   }
 };
+
+
 
 // Get attraction ticket prices for specific date (Server-side)
 export const getTicketPricesForDateServer = async (attractionId, date) => {

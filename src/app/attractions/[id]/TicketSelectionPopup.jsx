@@ -4,7 +4,12 @@ import { useState, useEffect } from "react";
 import Popup from "@/components/Popup";
 import { getDetailsForBooking } from "./service";
 
-const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => {
+const TicketSelectionPopup = ({
+  isOpen,
+  onClose,
+  attractionId,
+  onContinue,
+}) => {
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
@@ -22,6 +27,8 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
     try {
       setLoading(true);
       const response = await getDetailsForBooking(attractionId);
+
+      console.log("checking pricing in ticket right", response.data);
       setBookingData(response.data);
     } catch (error) {
       console.error("Error fetching booking details:", error);
@@ -100,7 +107,7 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
 
   const getMinDate = () => {
     const today = new Date();
-    return today.toISOString().split('T')[0];
+    return today.toISOString().split("T")[0];
   };
 
   if (loading) {
@@ -132,7 +139,9 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
         <div className="p-4 space-y-4">
           {/* Date Selection */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">Select Visit Date</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+              Select Visit Date
+            </h3>
             <div className="relative">
               <input
                 type="date"
@@ -155,7 +164,10 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {bookingData[0].attraction_ticket_prices.length} ticket type
-                  {bookingData[0].attraction_ticket_prices.length !== 1 ? "s" : ""} available
+                  {bookingData[0].attraction_ticket_prices.length !== 1
+                    ? "s"
+                    : ""}{" "}
+                  available
                 </p>
               </div>
 
@@ -163,7 +175,9 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
                 {bookingData[0].attraction_ticket_prices.map((ticketPrice) => {
                   const ticketTypeId = ticketPrice.attraction_ticket_type_id;
                   const isSelected = selectedTickets[ticketTypeId] > 0;
-                  const ticketType = ticketPrice.attraction_ticket_type.attraction_ticket_type_master;
+                  const ticketType =
+                    ticketPrice.attraction_ticket_type
+                      .attraction_ticket_type_master;
 
                   return (
                     <div
@@ -272,27 +286,32 @@ const TicketSelectionPopup = ({ isOpen, onClose, attractionId, onContinue }) => 
             <div className="mt-3 pt-3 border-t border-gray-100">
               <p className="text-xs text-gray-500 mb-2">Selected:</p>
               <div className="space-y-1">
-                {Object.entries(selectedTickets).map(([ticketTypeId, quantity]) => {
-                  if (quantity === 0) return null;
-                  const ticketPrice = bookingData?.[0]?.attraction_ticket_prices.find(
-                    (t) => t.attraction_ticket_type_id == ticketTypeId
-                  );
-                  const ticketType = ticketPrice?.attraction_ticket_type.attraction_ticket_type_master;
+                {Object.entries(selectedTickets).map(
+                  ([ticketTypeId, quantity]) => {
+                    if (quantity === 0) return null;
+                    const ticketPrice =
+                      bookingData?.[0]?.attraction_ticket_prices.find(
+                        (t) => t.attraction_ticket_type_id == ticketTypeId
+                      );
+                    const ticketType =
+                      ticketPrice?.attraction_ticket_type
+                        .attraction_ticket_type_master;
 
-                  return (
-                    <div
-                      key={ticketTypeId}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <span className="text-gray-600">
-                        {ticketType?.name}
-                      </span>
-                      <span className="text-gray-800 font-medium">
-                        {quantity} × ₹{ticketPrice?.price}
-                      </span>
-                    </div>
-                  );
-                })}
+                    return (
+                      <div
+                        key={ticketTypeId}
+                        className="flex items-center justify-between text-xs"
+                      >
+                        <span className="text-gray-600">
+                          {ticketType?.name}
+                        </span>
+                        <span className="text-gray-800 font-medium">
+                          {quantity} × ₹{ticketPrice?.price}
+                        </span>
+                      </div>
+                    );
+                  }
+                )}
               </div>
             </div>
           )}

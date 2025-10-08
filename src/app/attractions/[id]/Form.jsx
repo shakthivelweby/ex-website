@@ -73,6 +73,7 @@ const Form = ({
 
   // Initialize with pre-loaded data on component mount
   useEffect(() => {
+    console.log("attractionDetails in Form.jsx:", attractionDetails);
     if (
       attractionDetails?.dateSpecificPricing &&
       attractionDetails?.selectedDate
@@ -110,8 +111,6 @@ const Form = ({
         `attraction_${attractionDetails.id}_selectedDate`,
         selectedDate
       );
-      console.log("Stored date in localStorage:", selectedDate);
-      console.log("Attraction ID:", attractionDetails.id);
     } else {
       console.log("No date selected to store");
     }
@@ -324,10 +323,6 @@ const Form = ({
 
                       // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
-                        console.log(
-                          "Form Desktop Date selected, calling API for:",
-                          dateString
-                        );
                         try {
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
@@ -338,10 +333,6 @@ const Form = ({
                             response.data &&
                             response.data.ticket_prices
                           ) {
-                            console.log(
-                              "Form Desktop Ticket data updated with date-specific pricing:",
-                              response.data
-                            );
                             setTicketPrices(response.data.ticket_prices);
                           }
                         } catch (error) {

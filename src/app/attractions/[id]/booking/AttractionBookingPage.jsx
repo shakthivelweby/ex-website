@@ -1053,12 +1053,12 @@ const AttractionBookingPage = ({
                                               <div className="flex items-baseline gap-1">
                                                 <span className="text-lg font-bold text-green-600">
                                                   ₹
-                                                  {Math.round(
+                                                  {(
                                                     basePrice -
-                                                      (basePrice *
-                                                        ticket.discount) /
-                                                        100
-                                                  )}
+                                                    (basePrice *
+                                                      ticket.discount) /
+                                                      100
+                                                  ).toFixed(2)}
                                                 </span>
                                               </div>
                                             </>
@@ -1322,15 +1322,15 @@ const AttractionBookingPage = ({
                                   return (
                                     <>
                                       <p className="text-sm text-gray-800">
-                                        ₹{Math.round(ticketPrice)} ×{" "}
+                                        ₹{parseFloat(ticketPrice).toFixed(2)} ×{" "}
                                         {totalQuantity}
                                       </p>
                                       <p className="text-base font-semibold text-primary-600">
                                         ₹
-                                        {Math.round(
+                                        {(
                                           parseFloat(ticketPrice) *
-                                            totalQuantity
-                                        )}
+                                          totalQuantity
+                                        ).toFixed(2)}
                                       </p>
                                     </>
                                   );
@@ -1372,19 +1372,19 @@ const AttractionBookingPage = ({
                                       <div className="text-sm text-gray-800 space-y-1">
                                         {tickets.adult > 0 && (
                                           <p>
-                                            Adult: ₹{Math.round(adultPrice)} ×{" "}
+                                            Adult: ₹{adultPrice.toFixed(2)} ×{" "}
                                             {tickets.adult}
                                           </p>
                                         )}
                                         {tickets.child > 0 && (
                                           <p>
-                                            Child: ₹{Math.round(childPrice)} ×{" "}
+                                            Child: ₹{childPrice.toFixed(2)} ×{" "}
                                             {tickets.child}
                                           </p>
                                         )}
                                       </div>
                                       <p className="text-base font-semibold text-primary-600">
-                                        ₹{Math.round(grandTotal)}
+                                        ₹{grandTotal.toFixed(2)}
                                       </p>
                                     </>
                                   );
@@ -1486,7 +1486,7 @@ const AttractionBookingPage = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Total Amount:</span>
                     <span className="text-lg font-semibold text-primary-600">
-                      ₹{Math.round(getTotalPrice())}
+                      ₹{getTotalPrice().toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -1542,7 +1542,7 @@ const AttractionBookingPage = ({
             <div>
               <p className="text-sm text-gray-600">Total Amount</p>
               <p className="text-lg font-semibold text-gray-800">
-                ₹{getTotalPrice().toFixed(0)}
+                ₹{getTotalPrice().toFixed(2)}
               </p>
             </div>
           </div>

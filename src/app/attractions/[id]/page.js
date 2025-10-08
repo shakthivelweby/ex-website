@@ -15,20 +15,6 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
   const attractionResponse = await attractionInfo(id);  
   const galleryResponse = await getAttractionGallery(id);
   
-  // Fetch date-specific pricing on server-side
-  let dateSpecificPricing = null;
-  try {
-    const pricingResponse = await getTicketPricesForDateServer(id, selectedDate);
-    dateSpecificPricing = pricingResponse?.data?.ticket_prices || null;
-    console.log("Date-specific pricing loaded for date:", selectedDate, "Data:", dateSpecificPricing);
-  } catch (error) {
-    console.error("Error fetching date-specific pricing:", error);
-    // Continue with fallback pricing
-  }
-
-
-  const getGalleryData = galleryResponse?.data || [];
-
   if (!attractionResponse?.data) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -41,7 +27,13 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
   }
 
   const attraction = attractionResponse.data;
-  console.log("Attraction data to check full rate:", attraction.attraction);
+  const getGalleryData = galleryResponse?.data || [];
+  
+  // Use default pricing from attraction data for initial load
+  // Date-specific pricing will be fetched client-side when user changes date
+  const dateSpecificPricing = attraction.attraction?.attraction_ticket_type_prices || null;
+  
+  console.log("Using attraction_ticket_type_prices for initial pricing:", dateSpecificPricing);
 
   
 
@@ -50,7 +42,8 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
   const priceStructure = attraction.price;
   
   // Get pricing information from attraction_ticket_type_prices if available
-  const ticketPrice = attraction.attraction.attraction_ticket_type_prices?.[0];
+const ticketPrice = attraction.attraction.attraction_ticket_type_prices?.[0];
+
   const fullRate = ticketPrice?.full_rate;
   const rateType = ticketPrice?.rate_type;
   const adultPrice = ticketPrice?.adult_price;

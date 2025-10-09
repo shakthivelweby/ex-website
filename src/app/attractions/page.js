@@ -1,5 +1,6 @@
 import ClientWrapper from "./clientWrapper";
 import { getAttractionCategories, getAttractionLocations, list, getAttractions } from "./service";
+import { formatTimeTo12Hour } from "@/utils/formatDate";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
@@ -31,9 +32,10 @@ export default async function Attractions({ searchParams }) {
   // Use the API data instead of mock data
   const attractionsArray = attractionsFromAPI?.data?.data || [];
 
+  console.log("Server-side: Checking attractions for start_time", attractionsArray);
+
   
-  // Debug: Log attraction IDs
-  console.log("Attraction want a re-check", attractionsArray.map(attraction => attraction));
+
   
   // Transform attractions data server-side for SSR based on actual API response
   const transformedAttractions = attractionsArray.map((attraction) => ({
@@ -42,7 +44,7 @@ export default async function Attractions({ searchParams }) {
     description: attraction.description,
     location: attraction.location,
     city: attraction.city,
-    type: attraction.category || "",
+    type: attraction.attraction_category_master?.name || attraction.category || "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
     price: attraction.price?.rate_type === "full" 
       ? attraction.price?.full_rate 
@@ -51,10 +53,12 @@ export default async function Attractions({ searchParams }) {
         : attraction.price?.full_rate || attraction.price || 0,
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
-    duration: attraction.duration || "2-3 hours",
+    duration: formatTimeTo12Hour(attraction.start_time) || "updating",
     bestTimeToVisit: attraction.best_time_to_visit || "Morning",
     features: attraction.features || [],
-    promoted: attraction.promoted || false,
+    promoted: attraction.promoted || attraction.popular === "1" || attraction.recommended === "1" || false,
+    popular: attraction.popular === "1",
+    recommended: attraction.recommended === "1",
     interest_count: attraction.interest_count || 0,
     openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
     address: attraction.address || "",

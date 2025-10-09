@@ -127,9 +127,12 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                 About
               </h2>
               <div className="prose prose-gray max-w-none">
-                <p className="text-gray-700 leading-relaxed text-sm">
-                  {attractionDetails.description}
-                </p>
+                <p
+                  className="text-gray-700 leading-relaxed text-sm"
+                  dangerouslySetInnerHTML={{
+                    __html: attractionDetails.description,
+                  }}
+                ></p>
               </div>
             </div>
 
@@ -320,9 +323,12 @@ const AttractionDetailClient = ({ attractionDetails }) => {
 
                 <Accordion
                   children={
-                    <div className="text-gray-700">
-                      {attractionDetails.terms}
-                    </div>
+                    <div
+                      className="text-gray-700"
+                      dangerouslySetInnerHTML={{
+                        __html: attractionDetails.terms,
+                      }}
+                    ></div>
                   }
                 />
               </div>

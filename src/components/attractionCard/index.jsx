@@ -2,22 +2,24 @@ import Image from "next/image";
 import Link from "next/link";
 
 const AttractionCard = ({ attraction }) => {
-  const { 
-    title, 
-    description, 
-    location, 
-    city, 
-    type, 
-    image, 
-    price, 
-    rating, 
-    reviewCount, 
-    duration, 
-    bestTimeToVisit, 
-    features, 
-    promoted, 
+  const {
+    title,
+    description,
+    location,
+    city,
+    type,
+    image,
+    price,
+    rating,
+    reviewCount,
+    duration,
+    bestTimeToVisit,
+    features,
+    promoted,
+    popular,
+    recommended,
     interest_count,
-    openingHours 
+    openingHours,
   } = attraction;
 
   // Format rating display
@@ -46,14 +48,20 @@ const AttractionCard = ({ attraction }) => {
 
     if (hasHalfStar) {
       stars.push(
-        <i key="half" className="fi fi-sr-star-half text-yellow-400 text-sm"></i>
+        <i
+          key="half"
+          className="fi fi-sr-star-half text-yellow-400 text-sm"
+        ></i>
       );
     }
 
     const remainingStars = 5 - Math.ceil(rating);
     for (let i = 0; i < remainingStars; i++) {
       stars.push(
-        <i key={`empty-${i}`} className="fi fi-sr-star text-gray-300 text-sm"></i>
+        <i
+          key={`empty-${i}`}
+          className="fi fi-sr-star text-gray-300 text-sm"
+        ></i>
       );
     }
 
@@ -81,15 +89,29 @@ const AttractionCard = ({ attraction }) => {
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
 
-        {/* Top Section - Featured and Rating */}
+        {/* Top Section - Badges */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
-          {promoted && (
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white">
-              <span>⭐</span>
-              <span>Featured</span>
-            </span>
-          )}
-          
+          <div className="flex items-center gap-2">
+            {popular && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-500 text-white">
+                <span>🔥</span>
+                <span>Popular</span>
+              </span>
+            )}
+            {recommended && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
+                <span>✨</span>
+                <span>Recommended</span>
+              </span>
+            )}
+            {promoted && !popular && !recommended && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white">
+                <span>⭐</span>
+                <span>Featured</span>
+              </span>
+            )}
+          </div>
+
           {/* Rating */}
           <div className="flex items-center gap-1 text-sm px-2 py-1 rounded-full backdrop-blur-md bg-black/20 text-white hidden">
             <i className="fi fi-sr-star text-yellow-400 text-sm"></i>
@@ -107,28 +129,26 @@ const AttractionCard = ({ attraction }) => {
               {title || "Untitled Attraction"}
             </h3>
           </div>
-        {/* Divider */}
-        <hr className="border-white/30 mb-4" />
+          {/* Divider */}
+          <hr className="border-white/30 mb-4" />
 
           {/* Rating and Price Row */}
           <div className="flex items-center gap-2 justify-between w-full">
-           
             {/* Price */}
             <div className="text-right">
               <span className="text-white font-bold text-lg">
-                {formatPrice(price)} <span className="text-xs font-normal text-white/80">/ onwards</span>
+                {formatPrice(price)}{" "}
+                <span className="text-xs font-normal text-white/80">
+                  / onwards
+                </span>
               </span>
             </div>
-              {/* Book Now Button */}
-          <button className ="flex items-center gap-1 text-sm px-3 py-1 rounded-full backdrop-blur-md bg-white/10 text-white border border-white/10">
-            Book Now
-            <i className="fi fi-rr-arrow-right text-sm"></i>
-          </button>
+            {/* Book Now Button */}
+            <button className="flex items-center gap-1 text-sm px-3 py-1 rounded-full backdrop-blur-md bg-white/10 text-white border border-white/10">
+              Book Now
+              <i className="fi fi-rr-arrow-right text-sm"></i>
+            </button>
           </div>
-
-      
-
-        
         </div>
       </div>
     </Link>

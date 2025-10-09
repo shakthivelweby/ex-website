@@ -12,6 +12,7 @@ import {
 } from "../service";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
+import { formatTimeTo12Hour } from "@/utils/formatDate";
 
 const AttractionBookingPage = ({
   attractionId,
@@ -649,294 +650,7 @@ const AttractionBookingPage = ({
           <div className="lg:col-span-2">
             {currentStep === 1 ? (
               <div className="bg-white rounded-lg shadow border">
-                {/* <div className="px-4 py-3 border-b border-gray-200">
-                  <h2 className="text-base font-medium text-gray-800">
-                    Select Your Tickets
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Choose your preferred ticket type and visit date
-                  </p>
-                </div> */}
-
                 <div className="p-4 space-y-6">
-                  {/* Date Selection */}
-
-                  {/* <div>
-                    <h3 className="text-sm font-medium text-gray-800 mb-3">
-                      Select Visit Date
-                    </h3>
-
-
-
-                    <div className="relative">
-                      {isMobile ? (
-                        // Inline calendar for mobile
-                        <div className="border-t border-gray-200 pt-3">
-                          <DatePicker
-                            selected={
-                              selectedDate ? new Date(selectedDate) : null
-                            }
-                            onChange={async (date) => {
-                              const dateString = date
-                                ? date.toISOString().split("T")[0]
-                                : "";
-                              setSelectedDate(dateString);
-
-                              // Call API when date is selected
-                              if (dateString && attractionId) {
-                                console.log(
-                                  "Mobile Date selected, calling API for:",
-                                  dateString
-                                );
-                                try {
-                                  const response = await getTicketPricesForDate(
-                                    attractionId,
-                                    dateString
-                                  );
-                                  if (response && response.data && response.data.ticket_prices) {
-                                    // Transform the new API response structure to match the expected format
-                                    const transformedData = {
-                                      attraction_ticket_type_prices: response.data.ticket_prices.map(ticket => ({
-                                        id: ticket.ticket_type_id,
-                                        attraction_ticket_type_id: ticket.attraction_ticket_type_id,
-                                        attraction_ticket_type: {
-                                          attraction_ticket_type_master: {
-                                            name: ticket.ticket_type_name
-                                          }
-                                        },
-                                        adult_price: ticket.adult_price,
-                                        child_price: ticket.child_price,
-                                        full_rate: ticket.full_rate,
-                                        rate_type: ticket.rate_type,
-                                        guide_rate: ticket.guide_rate,
-                                        discount: ticket.discount,
-                                        description: ticket.description,
-                                        child_description: ticket.child_description,
-                                        maximum_allowed_bookings_per_user: ticket.maximum_allowed_bookings_per_user,
-                                        pricing_type: ticket.pricing_type,
-                                        seasonal_period: ticket.seasonal_period
-                                      }))
-                                    };
-                                    setTicketData(transformedData);
-                                    
-                                    // Also update attraction data with image and other details from API response
-                                    if (response.data.attraction) {
-                                      setAttractionData(prevData => {
-                                        const updatedAttractionData = {
-                                          ...prevData,
-                                          id: response.data.attraction.id || prevData.id,
-                                          name: response.data.attraction.name || prevData.name,
-                                          location: response.data.attraction.location || prevData.location,
-                                          cover_image: (() => {
-                                            const coverImage = response.data.attraction.cover_image || response.data.attraction.thumb_image;
-                                            console.log("Raw cover_image URL:", coverImage);
-                                            
-                                            // Clean up the URL if it has double paths
-                                            if (coverImage && coverImage.includes('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/')) {
-                                              const cleanedUrl = coverImage.replace('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/', 'http://127.0.0.1:8000/');
-                                              console.log("Cleaned cover_image URL:", cleanedUrl);
-                                              return cleanedUrl;
-                                            }
-                                            
-                                            return coverImage;
-                                          })(),
-                                          start_time: response.data.attraction.start_time || prevData.start_time,
-                                          end_time: response.data.attraction.end_time || prevData.end_time,
-                                          description: response.data.attraction.description || prevData.description,
-                                        };
-                                        console.log("Mobile - Updated attraction data with cover_image:", updatedAttractionData);
-                                        return updatedAttractionData;
-                                      });
-                                    }
-                                    
-                                    console.log(
-                                      "Mobile Ticket data updated with date-specific pricing:",
-                                      transformedData
-                                    );
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "Error fetching date-specific pricing:",
-                                    error
-                                  );
-                                }
-                              }
-                            }}
-                            minDate={new Date()}
-                            filterDate={(date) => !isDateDisabled(date)}
-                            inline
-                            placeholderText="Choose Date"
-                            className="w-full"
-                            dateFormat="dd/MM/yyyy"
-                            renderDayContents={(day, date) => {
-                              const isDisabled = isDateDisabled(date);
-                              return (
-                                <div
-                                  style={{
-                                    textAlign: "center",
-                                    position: "relative",
-                                  }}
-                                >
-                                  <div>{day}</div>
-                                  {isDisabled && (
-                                    <div
-                                      style={{
-                                        fontSize: "0.65em",
-                                        color: "#EF4444",
-                                        position: "absolute",
-                                        left: 0,
-                                        top: "23px",
-                                        textAlign: "center",
-                                        width: "100%",
-                                        fontWeight: "500",
-                                      }}
-                                    >
-                                      N/A
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        // Popup calendar for desktop
-                        <>
-                          <DatePicker
-                            minDate={new Date()}
-                            filterDate={(date) => !isDateDisabled(date)}
-                            placeholderText="Choose Date"
-                            className="w-full h-12 px-4 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 cursor-pointer font-medium"
-                            selected={
-                              selectedDate ? new Date(selectedDate) : null
-                            }
-                            onChange={async (date) => {
-                              const dateString = date
-                                ? date.toISOString().split("T")[0]
-                                : "";
-                              setSelectedDate(dateString);
-
-                              // Call API when date is selected
-                              if (dateString && attractionId) {
-                                console.log(
-                                  "Desktop Date selected, calling API for:",
-                                  dateString
-                                );
-                                try {
-                                  const response = await getTicketPricesForDate(
-                                    attractionId,
-                                    dateString
-                                  );
-                                  if (response && response.data && response.data.ticket_prices) {
-                                    // Transform the new API response structure to match the expected format
-                                    const transformedData = {
-                                      attraction_ticket_type_prices: response.data.ticket_prices.map(ticket => ({
-                                        id: ticket.ticket_type_id,
-                                        attraction_ticket_type_id: ticket.attraction_ticket_type_id,
-                                        attraction_ticket_type: {
-                                          attraction_ticket_type_master: {
-                                            name: ticket.ticket_type_name
-                                          }
-                                        },
-                                        adult_price: ticket.adult_price,
-                                        child_price: ticket.child_price,
-                                        full_rate: ticket.full_rate,
-                                        rate_type: ticket.rate_type,
-                                        guide_rate: ticket.guide_rate,
-                                        discount: ticket.discount,
-                                        description: ticket.description,
-                                        child_description: ticket.child_description,
-                                        maximum_allowed_bookings_per_user: ticket.maximum_allowed_bookings_per_user,
-                                        pricing_type: ticket.pricing_type,
-                                        seasonal_period: ticket.seasonal_period
-                                      }))
-                                    };
-                                    setTicketData(transformedData);
-                                    
-                                    // Also update attraction data with image and other details from API response
-                                    if (response.data.attraction) {
-                                      setAttractionData(prevData => {
-                                        const updatedAttractionData = {
-                                          ...prevData,
-                                          id: response.data.attraction.id || prevData.id,
-                                          name: response.data.attraction.name || prevData.name,
-                                          location: response.data.attraction.location || prevData.location,
-                                          cover_image: (() => {
-                                            const coverImage = response.data.attraction.cover_image || response.data.attraction.thumb_image;
-                                            console.log("Raw cover_image URL:", coverImage);
-                                            
-                                            // Clean up the URL if it has double paths
-                                            if (coverImage && coverImage.includes('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/')) {
-                                              const cleanedUrl = coverImage.replace('http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/', 'http://127.0.0.1:8000/');
-                                              console.log("Cleaned cover_image URL:", cleanedUrl);
-                                              return cleanedUrl;
-                                            }
-                                            
-                                            return coverImage;
-                                          })(),
-                                          start_time: response.data.attraction.start_time || prevData.start_time,
-                                          end_time: response.data.attraction.end_time || prevData.end_time,
-                                          description: response.data.attraction.description || prevData.description,
-                                        };
-                                        console.log("Desktop - Updated attraction data with cover_image:", updatedAttractionData);
-                                        return updatedAttractionData;
-                                      });
-                                    }
-                                    
-                                    console.log(
-                                      "Desktop Ticket data updated with date-specific pricing:",
-                                      transformedData
-                                    );
-                                  }
-                                } catch (error) {
-                                  console.error(
-                                    "Error fetching date-specific pricing:",
-                                    error
-                                  );
-                                }
-                              }
-                            }}
-                            showPopperArrow={false}
-                            dateFormat="dd/MM/yyyy"
-                            popperPlacement="bottom-start"
-                            renderDayContents={(day, date) => {
-                              const isDisabled = isDateDisabled(date);
-                              return (
-                                <div
-                                  style={{
-                                    textAlign: "center",
-                                    position: "relative",
-                                  }}
-                                >
-                                  <div>{day}</div>
-                                  {isDisabled && (
-                                    <div
-                                      style={{
-                                        fontSize: "0.65em",
-                                        color: "#EF4444",
-                                        position: "absolute",
-                                        left: 0,
-                                        top: "23px",
-                                        textAlign: "center",
-                                        width: "100%",
-                                        fontWeight: "500",
-                                      }}
-                                    >
-                                      N/A
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            }}
-                          />
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
-                            <i className="fi fi-rr-calendar text-lg"></i>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div> */}
-
                   {/* Ticket Types */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -946,7 +660,7 @@ const AttractionBookingPage = ({
 
                       {/* Guide Toggle */}
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-600">
+                        <span className="text-sm text-gray-600">
                           Need a guide
                         </span>
                         <button
@@ -1437,19 +1151,14 @@ const AttractionBookingPage = ({
                   <div className="flex items-center gap-2">
                     <i className="fi fi-rr-clock text-primary-500 text-sm"></i>
                     <span className="text-gray-700 text-sm">
-                      {attractionData.start_time || "TBD"}
+                      Start Time:{" "}
+                      {formatTimeTo12Hour(attractionData.start_time) || "TBD"}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <i className="fi fi-rr-map-marker text-primary-500 text-sm"></i>
                     <span className="text-gray-700 text-sm">
                       {attractionData.location}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="fi fi-rr-tag text-primary-500 text-sm"></i>
-                    <span className="text-gray-700 text-sm">
-                      {attractionData.duration || "TBD"}
                     </span>
                   </div>
                 </div>

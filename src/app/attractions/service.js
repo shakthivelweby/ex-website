@@ -7,11 +7,9 @@ import apiServerMiddleware from "../api/serverMiddleware";
 export const getAttractionCategories = async () => {
   try {
     const response = await apiServerMiddleware.get("/attraction-categories");  
-    console.log("Attraction categories data:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error fetching attraction categories:", error);
-    return {
+     return {
       data: [],
       success: false,
       message: "Failed to fetch attraction categories"
@@ -176,8 +174,7 @@ const applyClientSidePriceFilter = (responseData, filters) => {
     return attractionPrice >= priceFrom && attractionPrice <= priceTo;
   });
   
-  console.log(`💰 Price filtering: ${responseData.data.data.length} → ${filteredAttractions.length} attractions`);
-  console.log(`💰 Price range: ₹${priceFrom} - ₹${priceTo}`);
+
   
   return {
     ...responseData,
@@ -231,11 +228,6 @@ export const getAttractions = async (filters = {}) => {
     const queryString = params.toString();
     const url = queryString ? `/attractions?${queryString}` : "/attractions";
     
-    console.log("🔍 Attraction Filters Debug:");
-    console.log("- Filters:", filters);
-    console.log("- Query String:", queryString);
-    console.log("- Final URL:", url);
-    
     // Check if we're sending unsupported parameters
     const supportedParams = ['location', 'category', 'date'];
     const unsupportedParams = Object.keys(filters).filter(key => 
@@ -247,30 +239,24 @@ export const getAttractions = async (filters = {}) => {
     }
     
     const response = await apiServerMiddleware.get(url);
-    console.log("✅ Response data:", response.data);
+    
     
     // Apply client-side price filtering if needed
     let filteredData = response.data;
     if (filters.price_from || filters.price_to) {
-      console.log("🔍 Applying client-side price filtering");
       filteredData = applyClientSidePriceFilter(response.data, filters);
     }
     
     return filteredData;
   } catch (error) {
-    console.error("❌ Error fetching attractions:", error);
-    console.error("- Error response:", error.response?.data);
-    console.error("- Error status:", error.response?.status);
-    console.error("- Error message:", error.message);
+  
     
     // If filtering fails, try to fetch all attractions without filters
-    console.log("🔄 Attempting fallback: fetching all attractions without filters");
+  
     try {
       const fallbackResponse = await apiServerMiddleware.get("/attractions");
-      console.log("✅ Fallback successful:", fallbackResponse.data);
       return fallbackResponse.data;
     } catch (fallbackError) {
-      console.error("❌ Fallback also failed:", fallbackError);
       return {
         data: [],
         success: false,
@@ -284,11 +270,9 @@ export const getAttractions = async (filters = {}) => {
 export const getAttractionDetails = async (attractionId) => {
   try {
     const response = await apiServerMiddleware.get(`/attraction-details/${attractionId}`);
-    console.log("Attraction details response checking for akshay:", response.data);
-    return response.data;
+     return response.data;
   } catch (error) {
-    console.error("Error fetching attraction details:", error);
-    return {
+      return {
       data: null,
       success: false,
       message: "Failed to fetch attraction details"
@@ -300,11 +284,9 @@ export const getAttractionDetails = async (attractionId) => {
 export const getAttractionGallery = async (attractionId) => {
   try {
     const response = await apiServerMiddleware.get(`/attraction-gallery/${attractionId}`);
-    console.log("Attraction gallery response:", response.data);
-    return response.data;
+     return response.data;
   } catch (error) {
-    console.error("Error fetching attraction gallery:", error);
-    return {
+     return {
       data: [],
       success: false,
       message: "Failed to fetch attraction gallery"

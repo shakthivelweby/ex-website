@@ -14,6 +14,7 @@ import {
   list,
   getAttractions,
 } from "./service";
+import { formatTimeTo12Hour } from "@/utils/formatDate";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay } from "swiper/modules";
 import "swiper/css";
@@ -167,6 +168,11 @@ const ClientWrapper = ({
       setLoading(true);
       const attractionsResponse = await getAttractions(newFilters);
 
+      console.log(
+        "attractionsResponse checking for duration check",
+        attractionsResponse.data.data
+      );
+
       // Transform attractions data
       if (attractionsResponse?.data?.data) {
         const transformedAttractions = attractionsResponse.data.data.map(
@@ -192,10 +198,17 @@ const ClientWrapper = ({
                 : attraction.price?.full_rate || attraction.price || 0,
             rating: attraction.rating || 0,
             reviewCount: attraction.review_count || 0,
-            duration: attraction.duration || "2-3 hours",
+            duration: formatTimeTo12Hour(attraction.start_time) || "updating",
             bestTimeToVisit: attraction.best_time_to_visit || "Morning",
             features: attraction.features || [],
-            promoted: attraction.promoted || attraction.rating >= 4.0 || false,
+            promoted:
+              attraction.promoted ||
+              attraction.popular === "1" ||
+              attraction.recommended === "1" ||
+              attraction.rating >= 4.0 ||
+              false,
+            popular: attraction.popular === "1",
+            recommended: attraction.recommended === "1",
             interest_count: attraction.interest_count || 0,
             openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
             address: attraction.address || "",
@@ -307,9 +320,12 @@ const ClientWrapper = ({
                             {attraction.type}
                           </p>
 
-                          <p className="text-gray-700 text-sm sm:text-base mb-6 leading-relaxed">
-                            {attraction.description}
-                          </p>
+                          <p
+                            className="text-gray-700 text-sm sm:text-base mb-6 leading-relaxed"
+                            dangerouslySetInnerHTML={{
+                              __html: attraction.description,
+                            }}
+                          ></p>
 
                           <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6">
                             <div className="flex items-center gap-2">
@@ -319,7 +335,7 @@ const ClientWrapper = ({
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-gray-600 text-sm sm:text-base">
-                                {attraction.duration}
+                                Start Time: {attraction.duration}
                               </span>
                             </div>
                             <div className="hidden items-center gap-1">
@@ -388,7 +404,7 @@ const ClientWrapper = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-gray-600 text-sm sm:text-base">
-                        2 hours
+                        Start time: 6:00 AM
                       </span>
                     </div>
                     <div className="flex items-center gap-1">

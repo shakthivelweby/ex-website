@@ -38,8 +38,8 @@ const ClientWrapper = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Get initial filters from server-side search params
-  const initialFilters = {
+  // Get initial filters from server-side search params - Make it reactive state
+  const [initialFilters, setInitialFilters] = useState({
     date: initialSearchParams.date || "",
     location: initialSearchParams.location || "",
     category: initialSearchParams.category || "",
@@ -48,7 +48,7 @@ const ClientWrapper = ({
     price_to: initialSearchParams.price_to || "",
     longitude: initialSearchParams.longitude || "",
     latitude: initialSearchParams.latitude || "",
-  };
+  });
 
   // Mark component as client-side after mount
   useEffect(() => {
@@ -162,6 +162,9 @@ const ClientWrapper = ({
 
   const handleFilterChange = async (newFilters) => {
     updateURL(newFilters);
+
+    // Update initialFilters state so it's passed down to child components
+    setInitialFilters(newFilters);
 
     // Refetch attractions with new filters
     try {

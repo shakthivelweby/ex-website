@@ -88,40 +88,24 @@ const AttractionBookingPage = ({
     const storedDate = localStorage.getItem(
       `attraction_${attractionId}_selectedDate`
     );
-    // console.log("Checking localStorage for date:", storedDate);
-    // console.log("Attraction ID:", attractionId);
+
     if (storedDate) {
-      //console.log("Setting selected date from localStorage:", storedDate);
       setSelectedDate(storedDate);
     }
   }, [attractionId]);
 
   useEffect(() => {
-    console.log("Selected date:", selectedDate);
-
     // Call API when date changes to get date-specific pricing
     if (selectedDate && attractionId) {
-      console.log(
-        "Date changed, fetching date-specific pricing for:",
-        selectedDate
-      );
       fetchDateSpecificPricing();
     }
   }, [selectedDate]);
 
   const fetchDateSpecificPricing = async () => {
     try {
-      console.log(
-        "Fetching date-specific pricing for attraction:",
-        attractionId,
-        "date:",
-        selectedDate
-      );
       const response = await getTicketPricesForDate(attractionId, selectedDate);
 
       if (response && response.data && response.data.ticket_prices) {
-        console.log("Date-specific pricing response:", response.data);
-
         // Transform the new API response structure to match the expected format
         const transformedData = {
           attraction_ticket_type_prices: response.data.ticket_prices.map(
@@ -163,7 +147,6 @@ const AttractionBookingPage = ({
                 const coverImage =
                   response.data.attraction.cover_image ||
                   response.data.attraction.thumb_image;
-                console.log("Raw cover_image URL:", coverImage);
 
                 // Clean up the URL if it has double paths
                 if (
@@ -176,7 +159,7 @@ const AttractionBookingPage = ({
                     "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/",
                     "http://127.0.0.1:8000/"
                   );
-                  console.log("Cleaned cover_image URL:", cleanedUrl);
+
                   return cleanedUrl;
                 }
 
@@ -188,18 +171,9 @@ const AttractionBookingPage = ({
               description:
                 response.data.attraction.description || prevData.description,
             };
-            console.log(
-              "Updated attraction data with cover_image:",
-              updatedAttractionData
-            );
             return updatedAttractionData;
           });
         }
-
-        console.log(
-          "Ticket data updated with date-specific pricing:",
-          transformedData
-        );
       }
     } catch (error) {
       console.error("Error fetching date-specific pricing:", error);
@@ -209,16 +183,10 @@ const AttractionBookingPage = ({
   const fetchData = async () => {
     try {
       setLoading(true);
-      console.log("Fetching booking details for attraction:", attractionId);
-
       if (!attractionId) {
-        console.error("No attraction ID provided");
         setLoading(false);
         return;
       }
-
-      // Disabled: const bookingResponse = await getDetailsForBooking(attractionId);
-      // console.log("Booking details response:", bookingResponse);
 
       // Set default attraction data (API call disabled)
       setAttractionData({
@@ -235,7 +203,6 @@ const AttractionBookingPage = ({
       // Set empty ticket data initially (will be populated when date is selected)
       setTicketData(null);
     } catch (error) {
-      console.error("Error fetching booking data:", error);
       setAttractionData(null);
       setTicketData(null);
     } finally {
@@ -276,22 +243,11 @@ const AttractionBookingPage = ({
   };
 
   const handleAdultChildQuantityChange = (ticketTypeId, type, change) => {
-    console.log("handleAdultChildQuantityChange called:", {
-      ticketTypeId,
-      type,
-      change,
-    });
     const currentTickets = adultChildTickets[ticketTypeId] || {
       adult: 0,
       child: 0,
     };
     const newQuantity = Math.max(0, currentTickets[type] + change);
-    console.log(
-      "Current tickets:",
-      currentTickets,
-      "New quantity:",
-      newQuantity
-    );
 
     const updatedTickets = {
       ...adultChildTickets,
@@ -331,19 +287,11 @@ const AttractionBookingPage = ({
 
   const getTotalPrice = () => {
     let total = 0;
-    console.log("getTotalPrice - adultChildTickets:", adultChildTickets);
-    console.log("getTotalPrice - ticketData:", ticketData);
 
     // Calculate adult/child tickets
     Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
       const ticket = ticketData?.attraction_ticket_type_prices?.find(
         (t) => t.attraction_ticket_type_id == ticketTypeId
-      );
-      console.log(
-        `getTotalPrice - ticketTypeId: ${ticketTypeId}, tickets:`,
-        tickets,
-        "found ticket:",
-        ticket
       );
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         if (ticket.rate_type === "full") {
@@ -355,11 +303,6 @@ const AttractionBookingPage = ({
           }
           const subtotal =
             parseFloat(ticketPrice) * (tickets.adult + tickets.child);
-          console.log(
-            `getTotalPrice - full_rate calculation: ${ticketPrice} * ${
-              tickets.adult + tickets.child
-            } = ${subtotal}`
-          );
           total += subtotal;
         } else if (ticket.rate_type === "pax") {
           // Use separate adult_price and child_price
@@ -380,9 +323,6 @@ const AttractionBookingPage = ({
 
           const subtotal =
             adultPrice * tickets.adult + childPrice * tickets.child;
-          console.log(
-            `getTotalPrice - pax calculation: adult(${adultPrice} * ${tickets.adult}) + child(${childPrice} * ${tickets.child}) = ${subtotal}`
-          );
           total += subtotal;
         }
       }
@@ -390,11 +330,8 @@ const AttractionBookingPage = ({
 
     // Add guide price if guide is selected
     if (needGuide && guideRate > 0) {
-      console.log(`getTotalPrice - adding guide rate: ${guideRate}`);
       total += parseFloat(guideRate);
     }
-
-    console.log(`getTotalPrice - final total: ${total}`);
     return total;
   };
 
@@ -419,12 +356,6 @@ const AttractionBookingPage = ({
       return;
     }
 
-    console.log(
-      "handleProceedToPayment - adultChildTickets:",
-      adultChildTickets
-    );
-    console.log("handleProceedToPayment - ticketData:", ticketData);
-
     // Format the selected tickets data according to API requirements
     const formattedTickets = [];
     let totalAmount = 0;
@@ -436,12 +367,7 @@ const AttractionBookingPage = ({
       const ticket = ticketData?.attraction_ticket_type_prices?.find(
         (t) => t.attraction_ticket_type_id == ticketTypeId
       );
-      console.log(
-        `handleProceedToPayment - ticketTypeId: ${ticketTypeId}, tickets:`,
-        tickets,
-        "found ticket:",
-        ticket
-      );
+
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         const totalQuantity = tickets.adult + tickets.child;
 
@@ -453,15 +379,6 @@ const AttractionBookingPage = ({
             ticketPrice =
               ticket.full_rate - (ticket.full_rate * ticket.discount) / 100;
           }
-          console.log(
-            `handleProceedToPayment - full_rate calculation: ${
-              ticket.full_rate
-            } (discount: ${
-              ticket.discount
-            }%) = ${ticketPrice} * ${totalQuantity} = ${
-              ticketPrice * totalQuantity
-            }`
-          );
         } else if (ticket.rate_type === "pax") {
           // For pax tickets, we need to calculate based on adult/child quantities
           let adultPrice = parseFloat(ticket.adult_price || 0);
@@ -483,9 +400,7 @@ const AttractionBookingPage = ({
           const adultTotal = adultPrice * tickets.adult;
           const childTotal = childPrice * tickets.child;
           const ticketTotal = adultTotal + childTotal;
-          console.log(
-            `handleProceedToPayment - pax calculation: adult(${adultPrice} * ${tickets.adult}) + child(${childPrice} * ${tickets.child}) = ${ticketTotal}`
-          );
+
           totalAmount += ticketTotal;
 
           formattedTickets.push({
@@ -504,9 +419,6 @@ const AttractionBookingPage = ({
         }
 
         const ticketTotal = parseFloat(ticketPrice) * totalQuantity;
-        console.log(
-          `handleProceedToPayment - adding full_rate total: ${ticketTotal}`
-        );
         totalAmount += ticketTotal;
 
         formattedTickets.push({
@@ -525,12 +437,8 @@ const AttractionBookingPage = ({
 
     // Add guide rate if needed
     if (needGuide && guideRate > 0) {
-      console.log(`handleProceedToPayment - adding guide rate: ${guideRate}`);
       totalAmount += parseFloat(guideRate);
     }
-
-    console.log(`handleProceedToPayment - final totalAmount: ${totalAmount}`);
-    console.log(`handleProceedToPayment - formattedTickets:`, formattedTickets);
 
     // Prepare the booking data for checkout
     const apiBookingData = {
@@ -541,11 +449,6 @@ const AttractionBookingPage = ({
       need_guide: needGuide,
       guide_rate: needGuide ? guideRate : 0,
     };
-
-    console.log(
-      `handleProceedToPayment - final apiBookingData:`,
-      apiBookingData
-    );
 
     // Clean up stored date from localStorage
     localStorage.removeItem(`attraction_${attractionId}_selectedDate`);

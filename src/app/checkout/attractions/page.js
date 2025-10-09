@@ -195,7 +195,7 @@ export default function AttractionCheckoutPage() {
         total_price: ticket.total_price || ticket.total || 0,
       })) || [];
 
-      console.log("Checkout - enhancedBookingTickets:", enhancedBookingTickets);
+     
 
       // Prepare booking data according to API requirements
       const apiBookingData = {
@@ -210,7 +210,7 @@ export default function AttractionCheckoutPage() {
         guide_rate: selectedTickets.guide_rate || 0,
       };
 
-      console.log("Checkout - apiBookingData:", apiBookingData);
+    
 
       // First create booking to get order ID
       const response = await book(apiBookingData);
@@ -245,18 +245,10 @@ export default function AttractionCheckoutPage() {
               signature: paymentResponse.data.razorpay_signature,
             });
 
-            console.log("Attraction Payment Verification Response:", verificationResponse);
 
-            if (verificationResponse.status) {
-              console.log("Payment verification successful, email should be sent by backend");
+            if (verificationResponse.status) {     
               
-              // Debug email addresses
-              console.log("📧 Email Debug Info:");
-              console.log("- User email (from profile):", verificationResponse.data.user?.email);
-              console.log("- Payment form email:", formData.email);
-              console.log("- Email will be sent to:", verificationResponse.data.user?.email || "user profile email");
-              console.log("- Email status:", verificationResponse.data.email_status || "Not specified in response");
-              console.log("- Check your email for booking confirmation");
+  
               setSuccessMessage({
                 title: "Booking Successful!",
                 message: "Your attraction tickets have been booked successfully. Check your email for details.",
@@ -264,15 +256,13 @@ export default function AttractionCheckoutPage() {
               setShowSuccess(true);
             } else {
               // Payment verification failed - mark payment as failed
-              const failRes = await paymentFailure(orderRes.data.attraction_payment_id);
-              console.log(failRes);
+              const failRes = await paymentFailure(orderRes.data.attraction_payment_id);   
               
               setError("Payment verification failed. Please contact support.");
             }
           } else {
             // Payment initialization failed - mark payment as failed
-            const failRes = await paymentFailure(orderRes.data.attraction_payment_id);
-            console.log(failRes);
+            const failRes = await paymentFailure(orderRes.data.attraction_payment_id);       
             
             setError("Payment initialization failed. Please try again.");
           }
@@ -284,7 +274,7 @@ export default function AttractionCheckoutPage() {
       }
 
     } catch (error) {
-      console.error("Booking error:", error);
+
       
       // Handle specific timeout errors
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
@@ -433,7 +423,7 @@ export default function AttractionCheckoutPage() {
                 <div className="space-y-1">
                   <div className="flex justify-between font-bold pt-1.5 border-t border-green-200">
                     <span className="text-gray-900 text-sm">Total Amount</span>
-                    <span className="text-primary-600 text-sm">₹{Math.round(totalAmount)}</span>
+                    <span className="text-primary-600 text-sm">₹{parseFloat(totalAmount).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -717,7 +707,7 @@ export default function AttractionCheckoutPage() {
                     {ticketDetails.map((ticket, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span className="text-gray-600">{ticket.ticketType}</span>
-                        <span className="text-gray-900 font-semibold">₹{Math.round(ticket.total)}</span>
+                        <span className="text-gray-900 font-semibold">₹{parseFloat(ticket.total).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
@@ -738,7 +728,7 @@ export default function AttractionCheckoutPage() {
                     </div>
                     <div className="flex justify-between font-bold pt-2 border-t border-green-200">
                       <span className="text-gray-900">Total Amount</span>
-                      <span className="text-primary-600">₹{Math.round(totalAmount)}</span>
+                      <span className="text-primary-600">₹{parseFloat(totalAmount).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

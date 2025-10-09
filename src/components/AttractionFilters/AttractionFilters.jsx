@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,9 +17,19 @@ const AttractionFilters = ({
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const prevInitialFiltersRef = useRef();
 
   useEffect(() => {
-    setTempFilters(initialFilters || {});
+    // Only update tempFilters if initialFilters actually changed from previous value
+    const prevFilters = prevInitialFiltersRef.current;
+    const filtersChanged =
+      JSON.stringify(initialFilters) !== JSON.stringify(prevFilters);
+
+    if (filtersChanged) {
+      prevInitialFiltersRef.current = initialFilters;
+      setTempFilters(initialFilters || {});
+    }
+
     // Initialize date if it exists in filters
     if (initialFilters?.date) {
       if (initialFilters.date === "today") {
@@ -42,13 +52,35 @@ const AttractionFilters = ({
   }, [initialFilters]);
 
   const handlePlaceSelected = (place) => {
-    if (place) {
-      const longitude = place.geometry.location.lng();
-      const latitude = place.geometry.location.lat();
-      const newFilters = { ...tempFilters, longitude, latitude };
-      setTempFilters(newFilters);
-      onFilterChange(newFilters);
-      setIsLocationOpen(false);
+    // Handle undefined place
+    if (!place) {
+      console.warn("No place selected");
+      return;
+    }
+
+    // Check if place has required geometry data
+    if (place.geometry && place.geometry.location) {
+      const longitude =
+        typeof place.geometry.location.lng === "function"
+          ? place.geometry.location.lng()
+          : place.geometry.location.lng;
+      const latitude =
+        typeof place.geometry.location.lat === "function"
+          ? place.geometry.location.lat()
+          : place.geometry.location.lat;
+
+      if (longitude && latitude) {
+        const newFilters = { ...tempFilters, longitude, latitude };
+        setTempFilters(newFilters);
+        onFilterChange(newFilters);
+        setIsLocationOpen(false);
+      } else {
+        console.warn("Invalid coordinates received:", { longitude, latitude });
+      }
+    } else {
+      // Place object doesn't have geometry data
+      console.warn("Place object missing geometry data:", place);
+      // Optionally, you could still close the popup or show an error to the user
     }
   };
 
@@ -324,26 +356,29 @@ const AttractionFilters = ({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {categories && categories.length > 0 ? (
-            categories.map((category) => (
-              <button
-                key={category.id}
-                className={`px-3 py-1.5 text-xs transition-colors ${
-                  tempFilters.category === category.slug
-                    ? "bg-primary-600 text-white"
-                    : "bg-white border border-gray-300 rounded-lg focus:border-primary-500 text-gray-700"
-                }`}
-                onClick={() => {
-                  const newFilters = {
-                    ...tempFilters,
-                    category: category.slug,
-                  };
-                  setTempFilters(newFilters);
-                  onFilterChange(newFilters);
-                }}
-              >
-                {category.name}
-              </button>
-            ))
+            categories.map((category) => {
+              const isSelected = tempFilters.category === category.slug;
+              return (
+                <button
+                  key={category.id}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    isSelected
+                      ? "bg-primary-600 text-white"
+                      : "bg-white border border-gray-300 text-gray-700 hover:border-primary-300"
+                  }`}
+                  onClick={() => {
+                    const newFilters = {
+                      ...tempFilters,
+                      category: category.slug,
+                    };
+                    setTempFilters(newFilters);
+                    onFilterChange(newFilters);
+                  }}
+                >
+                  {category.name}
+                </button>
+              );
+            })
           ) : (
             <div className="text-sm text-gray-500 py-2">
               No categories available

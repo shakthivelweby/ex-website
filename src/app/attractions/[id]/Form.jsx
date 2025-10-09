@@ -32,9 +32,6 @@ const Form = ({
 
   // Function to check if a date should be disabled
   const isDateDisabled = (date) => {
-    // Debug: Log attractionDetails to see what data is available
-    // console.log("attractionDetails in Form.jsx:", attractionDetails);
-
     // Use local date format to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -73,17 +70,12 @@ const Form = ({
 
   // Initialize with pre-loaded data on component mount
   useEffect(() => {
-    console.log("attractionDetails in Form.jsx:", attractionDetails);
     if (
       attractionDetails?.dateSpecificPricing &&
       attractionDetails?.selectedDate
     ) {
       setTicketPrices(attractionDetails.dateSpecificPricing);
       setSelectedDate(attractionDetails.selectedDate);
-      console.log(
-        "Form initialized with date-specific pricing:",
-        attractionDetails.dateSpecificPricing
-      );
     }
   }, []);
 
@@ -98,7 +90,6 @@ const Form = ({
   }, [propSelectedTickets, propTotalPrice]);
 
   const handleTicketSelection = () => {
-    console.log("handleTicketSelection clicked");
     if (!isLogin()) {
       const event = new CustomEvent("showLogin");
       window.dispatchEvent(event);
@@ -116,7 +107,6 @@ const Form = ({
     }
 
     // Redirect to booking page
-    console.log("attractionDetails fetching in form", attractionDetails);
     router.push(`/attractions/${attractionDetails.id}/booking`);
   };
 
@@ -132,13 +122,11 @@ const Form = ({
       }
 
       if (Object.keys(selectedTickets).length === 0) {
-        alert("Please select tickets first");
         setIsLoading(false);
         return;
       }
 
       if (!selectedDate) {
-        alert("Please select a date");
         setIsLoading(false);
         return;
       }
@@ -151,11 +139,6 @@ const Form = ({
 
       // Add your booking logic here
     } catch (error) {
-      console.error("Error:", error);
-      alert(
-        error.response?.data?.message ||
-          "Something went wrong. Please try again."
-      );
     } finally {
       setIsLoading(false);
     }
@@ -244,10 +227,6 @@ const Form = ({
 
                       // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
-                        console.log(
-                          "Form Mobile Date selected, calling API for:",
-                          dateString
-                        );
                         try {
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
@@ -258,10 +237,6 @@ const Form = ({
                             response.data &&
                             response.data.ticket_prices
                           ) {
-                            console.log(
-                              "Form Mobile Ticket data updated with date-specific pricing:",
-                              response.data
-                            );
                             setTicketPrices(response.data.ticket_prices);
                           }
                         } catch (error) {
@@ -418,44 +393,6 @@ const Form = ({
               })()}
             </span>
           </div>
-
-          {/* Selected Tickets Summary */}
-          {/* {getSelectedTicketsCount() > 0 && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <i className="fi fi-rr-ticket text-green-600"></i>
-                  <span className="text-sm font-medium text-green-800">
-                    {getSelectedTicketsCount()} ticket
-                    {getSelectedTicketsCount() !== 1 ? "s" : ""} selected
-                  </span>
-                </div>
-                <span className="text-sm font-semibold text-green-800">
-                  ₹{totalPrice.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          )} */}
-
-          {/* Guest Summary - Only show when date is selected */}
-          {/* {selectedDate && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <i className="fi fi-rr-users text-blue-600"></i>
-                  <span className="text-sm font-medium text-blue-800">
-                    {adultCount} Adult{adultCount !== 1 ? "s" : ""}
-                    {childCount > 0 &&
-                      `, ${childCount} Child${childCount !== 1 ? "ren" : ""}`}
-                  </span>
-                </div>
-                <span className="text-sm font-semibold text-blue-800">
-                  Total: {adultCount + childCount}{" "}
-                  {adultCount + childCount !== 1 ? "" : ""}
-                </span>
-              </div>
-            </div>
-          )} */}
 
           {/* Selected Date Summary */}
           {selectedDate && (

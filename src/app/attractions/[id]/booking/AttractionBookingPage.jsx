@@ -78,11 +78,6 @@ const AttractionBookingPage = ({
     return false;
   };
 
-  // Fetch attraction and ticket details
-  useEffect(() => {
-    fetchData();
-  }, [attractionId]);
-
   // Check for selected date from localStorage (if coming from Form.jsx)
   useEffect(() => {
     const storedDate = localStorage.getItem(
@@ -177,36 +172,6 @@ const AttractionBookingPage = ({
       }
     } catch (error) {
       console.error("Error fetching date-specific pricing:", error);
-    }
-  };
-
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      if (!attractionId) {
-        setLoading(false);
-        return;
-      }
-
-      // Set default attraction data (API call disabled)
-      setAttractionData({
-        id: attractionId,
-        name: "Attraction",
-        location: "",
-        cover_image: null,
-        start_time: "09:00",
-        end_time: "18:00",
-        attraction_category_master: null,
-        duration: "TBD",
-      });
-
-      // Set empty ticket data initially (will be populated when date is selected)
-      setTicketData(null);
-    } catch (error) {
-      setAttractionData(null);
-      setTicketData(null);
-    } finally {
-      setLoading(false);
     }
   };
 

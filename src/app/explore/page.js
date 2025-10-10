@@ -58,7 +58,7 @@ export default function Explore() {
             <span className="inline-block text-xs tracking-[0.2em] uppercase text-white/90 font-medium">
               Start Your Journey
             </span>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-light text-white leading-[1.1] tracking-tight">
+            <h1 className="text-4xl lg:text-6xl font-semibold text-white leading-[1.1] tracking-tight">
               Explore Amazing Destinations
             </h1>
           </div>
@@ -219,21 +219,36 @@ export default function Explore() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-start mb-10">
-              <div className="flex items-center gap-2 mb-4 justify-start">
+              {/* <div className="flex items-center gap-2 mb-4 justify-start">
                   <div className="w-12 h-[2px] bg-primary-500"></div>
                   <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
                     Popular Choices
                   </span>
-              </div>
+              </div> */}
             <div className="flex items-end justify-between w-full">
-              <div>
-                <h2 className="text-3xl font-light text-gray-900 mb-3 tracking-tight">
+              <div className="inline-block relative">
+              <Image
+                          src="/home/star-light.png"
+                          alt=""
+                          width={100}
+                          height={100}
+                          className="absolute -left-8 -top-6 w-6 h-6 animate-pulse"
+                        />
+                <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-3">
                   Featured Destinations
                 </h2>
+                <Image
+                          src="/home/star-dark.png"
+                          alt=""
+                          width={100}
+                          height={100}
+                          className="absolute top-0 -right-5 -bottom-4 w-10 h-10 animate-pulse"
+                        />
                 <p className="text-gray-600 max-w-2xl text-base">
                   Discover our handpicked selection of India&apos;s most beloved travel destinations
                 </p>
               </div>
+             
             </div>
           </div>
 

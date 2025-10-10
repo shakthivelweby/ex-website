@@ -274,64 +274,69 @@ const BookingPage = ({ eventId }) => {
                     >
                       {/* Date Header */}
                       <div
-                        className="px-5 py-4 cursor-pointer hover:bg-gradient-to-r hover:from-primary-50 hover:to-transparent transition-all duration-200"
+                        className="px-4 py-4 cursor-pointer hover:bg-gray-50 transition-all duration-200"
                         onClick={() => handleDateClick(date.id)}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
-                              <div className="flex flex-col items-center justify-center w-12 h-12 bg-primary-100 rounded-lg border border-primary-200">
-                                <span className="text-xs font-bold text-primary-700 uppercase">
-                                  {new Date(date.date).toLocaleDateString(
-                                    "en-US",
-                                    { month: "short" }
-                                  )}
-                                </span>
-                                <span className="text-lg font-bold text-primary-800">
-                                  {new Date(date.date).getDate()}
-                                </span>
-                              </div>
-                              <div>
-                                <h3 className="text-base font-semibold text-gray-800">
-                                  {formatDate(date.date)}
-                                </h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-200">
-                                    <i className="fi fi-rr-play text-xs"></i>
-                                    {date.event_shows.length} show
-                                    {date.event_shows.length !== 1 ? "s" : ""}
-                                  </span>
-                                  <span className="text-xs text-gray-500">
-                                    {date.event_ticket_prices.length} ticket
-                                    types
-                                  </span>
+                        <div className="flex items-center justify-between w-full gap-4">
+                          {/* Left side - Date indicator and details */}
+                          <div className="flex items-center gap-4">
+                            {/* Date indicator - teal square */}
+                            <div className="hidden md:flex flex-col items-center justify-center w-12 h-12 bg-teal-500 rounded-lg">
+                              <span className="text-xs font-bold text-white uppercase">
+                                {new Date(date.date).toLocaleDateString(
+                                  "en-US",
+                                  { month: "short" }
+                                )}
+                              </span>
+                              <span className="text-lg font-bold text-white">
+                                {new Date(date.date).getDate()}
+                              </span>
+                            </div>
+                            
+                            {/* Event details */}
+                            <div>
+                              <h3 className="text-base font-bold text-gray-800">
+                                {formatDate(date.date)}
+                              </h3>
+                              <div className="md:flex items-center gap-2 mt-1">
+                                <div className="flex items-center justify-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full border border-blue-200">
+                                  <i className="fi fi-rr-play text-xs"></i>
+                                  {date.event_shows.length} show
+                                  {date.event_shows.length !== 1 ? "s" : ""}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-4 md:mt-0">
+                                  {date.event_ticket_prices.length} ticket types
                                 </div>
                               </div>
                             </div>
                           </div>
+
+                          {/* Right side - Price and expand button */}
                           <div className="flex items-center gap-3">
+                            {/* Price section */}
                             <div className="text-right">
                               <p className="text-xs text-gray-500">
                                 Starting from
                               </p>
-                              <p className="text-sm font-semibold text-primary-600">
-                                ₹
-                                {Math.min(
+                              <p className="text-base font-bold text-teal-600">
+                                ₹{Math.min(
                                   ...date.event_ticket_prices.map((t) =>
                                     parseFloat(t.price)
                                   )
                                 )}
                               </p>
                             </div>
+
+                            {/* Expand button */}
                             <div
-                              className={`w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition-all duration-200 ${
+                              className={`w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center transition-all duration-200 ${
                                 expandedDate === date.id
-                                  ? "bg-primary-100 text-primary-600"
+                                  ? "bg-teal-100 text-teal-600"
                                   : "text-gray-400"
                               }`}
                             >
                               <i
-                                className={`fi fi-rr-chevron-down transition-transform duration-200 ${
+                                className={`fi fi-br-angle-down text-xs transition-transform duration-200 flex items-center justify-center ${
                                   expandedDate === date.id ? "rotate-180" : ""
                                 }`}
                               ></i>
@@ -391,7 +396,7 @@ const BookingPage = ({ eventId }) => {
                                       }`}
                                     >
                                       <i
-                                        className={`fi fi-rr-chevron-down text-xs transition-transform duration-200 ${
+                                        className={`ffi fi-br-angle-down flex items-center justify-center text-xs transition-transform duration-200 ${
                                           expandedShow ===
                                           `${date.id}-${show.id}`
                                             ? "rotate-180"

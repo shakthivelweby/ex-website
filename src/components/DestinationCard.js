@@ -5,7 +5,7 @@ const DestinationCard = ({ destination }) => {
   const { name, image, packageCount, description = "Discover amazing tour packages", trending = false } = destination;
 
   return (
-    <div className="relative h-[400px] w-full rounded-2xl overflow-hidden group cursor-pointer border border-gray-200 bg-white">
+    <div className="relative h-[500px] w-full rounded-2xl overflow-hidden group cursor-pointer border border-gray-200 bg-white">
       {/* Background Image */}
       <Image 
         src={image} 
@@ -15,10 +15,8 @@ const DestinationCard = ({ destination }) => {
       />
       
              {/* Package Count Badge */}
-       <div className={`absolute top-4 left-4 z-10 backdrop-blur-sm text-white text-sm px-3 py-1.5 rounded-lg ${
-         trending ? 'bg-gray-800/30' : 'bg-gray-800/80'
-       }`}>
-         {trending ? "   Trending" : `${packageCount || 0} Tour Packages`}
+       <div className="absolute top-4 left-4 z-10 backdrop-blur-sm text-white text-sm px-3 py-1.5 rounded-lg bg-gray-800/50">
+         {`${packageCount || 0} Tour Packages`}
        </div>
       
       {/* Content Overlay */}
@@ -31,9 +29,11 @@ const DestinationCard = ({ destination }) => {
         
         {/* View Packages Button */}
         <Link href={`/packages/${name.toLowerCase().replace(/\s+/g, '-')}`}>
-          <button className="bg-gray-700/80 hover:bg-gray-600/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all duration-300 group-hover:bg-gray-600/90">
+          <button className="relative bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl px-6 py-3 group-hover/btn:bg-primary-500 transition-all duration-300 w-full">
+            <div className="flex items-center justify-between">
             View Packages
             <i className="fi fi-rr-arrow-right text-sm group-hover:translate-x-1 transition-transform"></i>
+            </div>
           </button>
         </Link>
       </div>

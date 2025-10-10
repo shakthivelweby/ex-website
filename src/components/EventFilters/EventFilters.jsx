@@ -20,28 +20,33 @@ const EventFilters = ({
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  // Only sync with initialFilters on mount
   useEffect(() => {
-    setTempFilters(initialFilters || {});
-    // Initialize date if it exists in filters
-    if (initialFilters?.date) {
-      if (initialFilters.date === "today") {
-        setSelectedDate(new Date());
-      } else if (initialFilters.date === "tomorrow") {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        setSelectedDate(tomorrow);
-      } else if (initialFilters.date === "weekend") {
-        const today = new Date();
-        const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
-        const weekend = new Date(today);
-        weekend.setDate(today.getDate() + daysUntilSaturday);
-        setSelectedDate(weekend);
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date)) {
-        // Custom date format
-        setSelectedDate(new Date(initialFilters.date));
+    if (initialFilters) {
+      setTempFilters(initialFilters);
+
+      // Initialize date if it exists in filters
+      if (initialFilters?.date) {
+        if (initialFilters.date === "today") {
+          setSelectedDate(new Date());
+        } else if (initialFilters.date === "tomorrow") {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          setSelectedDate(tomorrow);
+        } else if (initialFilters.date === "weekend") {
+          const today = new Date();
+          const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
+          const weekend = new Date(today);
+          weekend.setDate(today.getDate() + daysUntilSaturday);
+          setSelectedDate(weekend);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date)) {
+          // Custom date format
+          setSelectedDate(new Date(initialFilters.date));
+        }
       }
     }
-  }, [initialFilters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const handlePlaceSelected = (place) => {
     if (place) {
@@ -80,24 +85,33 @@ const EventFilters = ({
 
   const handleQuickDateSelect = (option) => {
     let dateParam = "";
+    let dateToSet = new Date();
 
     switch (option) {
       case "Today":
         dateParam = "today";
+        dateToSet = new Date();
         break;
       case "Tomorrow":
         dateParam = "tomorrow";
+        dateToSet = new Date();
+        dateToSet.setDate(dateToSet.getDate() + 1);
         break;
       case "This Weekend":
         dateParam = "weekend";
+        const today = new Date();
+        const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
+        dateToSet = new Date(today);
+        dateToSet.setDate(today.getDate() + daysUntilSaturday);
         break;
     }
 
-    setSelectedDate(new Date()); // Keep UI state for display
+    setSelectedDate(dateToSet);
     const newFilters = {
       ...tempFilters,
       date: dateParam,
     };
+    console.log("Date filter clicked:", option, "New filters:", newFilters);
     setTempFilters(newFilters);
     onFilterChange(newFilters);
   };
@@ -225,10 +239,10 @@ const EventFilters = ({
             {["Today", "Tomorrow", "This Weekend"].map((option) => (
               <button
                 key={option}
-                className={`px-3 py-1.5 text-xs transition-colors ${
+                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                   checkIfDateMatchesOption(option)
-                    ? "bg-primary-600 text-white"
-                    : "bg-gray-50 hover:bg-gray-100 text-gray-700"
+                    ? "bg-primary-600 text-white shadow-sm"
+                    : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
                 }`}
                 onClick={() => handleQuickDateSelect(option)}
               >
@@ -291,16 +305,23 @@ const EventFilters = ({
           {languages.map((language) => (
             <button
               key={language.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 tempFilters.language === language.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
+                  ? "bg-primary-600 text-white shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
               }`}
               onClick={() => {
                 const newFilters = {
                   ...tempFilters,
-                  language: language.slug,
+                  language:
+                    tempFilters.language === language.slug ? "" : language.slug,
                 };
+                console.log(
+                  "Language filter clicked:",
+                  language.name,
+                  "New filters:",
+                  newFilters
+                );
                 setTempFilters(newFilters);
                 onFilterChange(newFilters);
               }}
@@ -337,16 +358,23 @@ const EventFilters = ({
           {categories.map((category) => (
             <button
               key={category.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 tempFilters.category === category.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
+                  ? "bg-primary-600 text-white shadow-sm"
+                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
               }`}
               onClick={() => {
                 const newFilters = {
                   ...tempFilters,
-                  category: category.slug,
+                  category:
+                    tempFilters.category === category.slug ? "" : category.slug,
                 };
+                console.log(
+                  "Category filter clicked:",
+                  category.name,
+                  "New filters:",
+                  newFilters
+                );
                 setTempFilters(newFilters);
                 onFilterChange(newFilters);
               }}

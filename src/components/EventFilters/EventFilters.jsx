@@ -21,33 +21,11 @@ const EventFilters = ({
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [pendingFilters, setPendingFilters] = useState(initialFilters || {});
 
-  // Only sync with initialFilters on mount
+  // Only sync with initialFilters on mount or when popup opens
   useEffect(() => {
-    setTempFilters(initialFilters || {});
-    setPendingFilters(initialFilters || {});
-    // Initialize date if it exists in filters
-    if (initialFilters?.date) {
-      if (initialFilters.date === "today") {
-        setSelectedDate(new Date());
-      } else if (initialFilters.date === "tomorrow") {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        setSelectedDate(tomorrow);
-      } else if (initialFilters.date === "weekend") {
-        const today = new Date();
-        const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
-        const weekend = new Date(today);
-        weekend.setDate(today.getDate() + daysUntilSaturday);
-        setSelectedDate(weekend);
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date)) {
-        // Custom date format
-        setSelectedDate(new Date(initialFilters.date));
-      }
-    }
-  }, [initialFilters]);
-    if (initialFilters) {
-      setTempFilters(initialFilters);
-
+    if (isOpen || isOpen === undefined) {
+      setTempFilters(initialFilters || {});
+      setPendingFilters(initialFilters || {});
       // Initialize date if it exists in filters
       if (initialFilters?.date) {
         if (initialFilters.date === "today") {
@@ -69,7 +47,7 @@ const EventFilters = ({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
+  }, [isOpen]);
 
   const handlePlaceSelected = (place) => {
     if (place) {
@@ -343,10 +321,6 @@ const EventFilters = ({
           {languages.map((language) => (
             <button
               key={language.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                getCurrentFilters().language === language.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
               className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 tempFilters.language === language.slug
                   ? "bg-primary-600 text-white shadow-sm"
@@ -400,10 +374,6 @@ const EventFilters = ({
           {categories.map((category) => (
             <button
               key={category.id}
-              className={`px-3 py-1.5 text-xs transition-colors ${
-                getCurrentFilters().category === category.slug
-                  ? "bg-primary-600 text-white"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700"
               className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
                 tempFilters.category === category.slug
                   ? "bg-primary-600 text-white shadow-sm"
@@ -565,15 +535,13 @@ const EventFilters = ({
             onClick={clearAllFilters}
             className="h-9 px-4 bg-gray-100 text-gray-700 text-sm font-medium flex-1 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 rounded-lg"
           >
-            <i className="fi fi-rr-refresh"></i>
             Clear All
           </button>
           <button
             onClick={applyFilters}
             className="h-9 px-4 text-sm font-medium flex items-center justify-center gap-2 rounded-lg transition-colors bg-primary-600 text-white hover:bg-primary-700"
           >
-            <i className="fi fi-rr-check"></i>
-            Apply Filters
+            Apply
           </button>
         </div>
       </div>

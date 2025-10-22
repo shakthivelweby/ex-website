@@ -18,11 +18,12 @@ const AttractionBookingPage = ({
   attractionId,
   closeoutDates = [],
   guideRate = 0,
+  initialAttractionData = null,
 }) => {
   const router = useRouter();
-  const [attractionData, setAttractionData] = useState(null);
+  const [attractionData, setAttractionData] = useState(initialAttractionData);
   const [ticketData, setTicketData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
@@ -134,10 +135,10 @@ const AttractionBookingPage = ({
         if (response.data.attraction) {
           setAttractionData((prevData) => {
             const updatedAttractionData = {
-              ...prevData,
-              id: response.data.attraction.id || prevData.id,
-              name: response.data.attraction.name || prevData.name,
-              location: response.data.attraction.location || prevData.location,
+              ...(prevData || {}),
+              id: response.data.attraction.id || prevData?.id,
+              name: response.data.attraction.name || prevData?.name,
+              location: response.data.attraction.location || prevData?.location,
               cover_image: (() => {
                 const coverImage =
                   response.data.attraction.cover_image ||
@@ -161,10 +162,10 @@ const AttractionBookingPage = ({
                 return coverImage;
               })(),
               start_time:
-                response.data.attraction.start_time || prevData.start_time,
-              end_time: response.data.attraction.end_time || prevData.end_time,
+                response.data.attraction.start_time || prevData?.start_time,
+              end_time: response.data.attraction.end_time || prevData?.end_time,
               description:
-                response.data.attraction.description || prevData.description,
+                response.data.attraction.description || prevData?.description,
             };
             return updatedAttractionData;
           });

@@ -278,7 +278,7 @@ const ClientWrapper = ({
       <div className="bg-gray-100 py-4 sm:py-8 px-4 sm:px-6">
         <div className="container mx-auto">
           <div className="overflow-hidden">
-            {featuredAttractions.length > 0 ? (
+            {featuredAttractions.length > 0 && (
               <div className="relative">
                 {/* Navigation Arrows - Hidden on Mobile */}
                 <button className="banner-swiper-button-prev hidden md:flex absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-white hover:bg-gray-50 rounded-full items-center justify-center shadow-lg transition-all duration-200 z-20 border border-gray-200">
@@ -376,68 +376,6 @@ const ClientWrapper = ({
                   ))}
                 </Swiper>
               </div>
-            ) : (
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-16">
-                {/* Left Content */}
-                <div className="flex-1 p-4 sm:p-6 lg:p-8 flex flex-col justify-center order-2 lg:order-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                      Featured
-                    </span>
-                  </div>
-
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
-                    Gateway of India
-                  </h1>
-
-                  <p className="text-gray-600 text-base sm:text-lg mb-2">
-                    Historical Monument
-                  </p>
-
-                  <p className="text-gray-700 text-sm sm:text-base mb-6 leading-relaxed">
-                    Iconic arch monument overlooking the Arabian Sea, a symbol
-                    of Mumbai's heritage.
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6 mb-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl sm:text-2xl font-bold text-gray-900">
-                        ₹ 500
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-600 text-sm sm:text-base">
-                        Start time: 6:00 AM
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-500 text-lg">★</span>
-                      <span className="text-gray-700 font-medium text-sm sm:text-base">
-                        4.8
-                      </span>
-                    </div>
-                  </div>
-
-                  <Link href="/attractions">
-                    <button className="bg-teal-600 hover:bg-teal-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold transition-colors duration-200 w-fit text-sm sm:text-base">
-                      Explore Now
-                    </button>
-                  </Link>
-                </div>
-
-                {/* Right Image */}
-                <div className="w-full lg:w-[400px] relative order-1 lg:order-2">
-                  <div className="relative h-48 sm:h-64 w-full lg:h-full min-h-[200px] sm:min-h-[300px]">
-                    <Image
-                      src="/home/destination-1.webp"
-                      alt="Gateway of India"
-                      fill
-                      className="object-cover rounded-2xl w-full h-full"
-                      priority
-                    />
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         </div>
@@ -513,7 +451,7 @@ const ClientWrapper = ({
                     }`}
                   >
                     <div
-                      className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
+                      className={`w-16 h-16 p-2 rounded-lg flex items-center justify-center transition-colors ${
                         initialFilters.category === category.slug
                           ? "bg-primary-50"
                           : "bg-gray-50 group-hover:bg-primary-50"
@@ -526,7 +464,7 @@ const ClientWrapper = ({
                           className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
                         />
                       ) : (
-                        <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                        <i className="fi fi-rr-tag text-gray-400 text-xl"></i>
                       )}
                     </div>
                     <span className="text-xs font-medium text-center leading-tight">
@@ -580,7 +518,7 @@ const ClientWrapper = ({
                       }`}
                     >
                       <div
-                        className={`w-16 h-16 p-3 rounded-xl flex items-center justify-center transition-colors ${
+                        className={`w-20 h-20 p-2 rounded-xl flex items-center justify-center transition-colors ${
                           initialFilters.category === category.slug
                             ? "bg-primary-50 border-2 border-primary-200"
                             : "bg-gray-50 group-hover:bg-primary-50 border-2 border-transparent"
@@ -593,7 +531,7 @@ const ClientWrapper = ({
                             className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
                           />
                         ) : (
-                          <i className="fi fi-rr-tag text-gray-400 text-xl"></i>
+                          <i className="fi fi-rr-tag text-gray-400 text-2xl"></i>
                         )}
                       </div>
                       <span className="text-xs font-medium text-center leading-tight">

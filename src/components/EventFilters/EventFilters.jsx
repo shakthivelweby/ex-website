@@ -53,10 +53,18 @@ const EventFilters = ({
     if (place) {
       const longitude = place.geometry.location.lng();
       const latitude = place.geometry.location.lat();
-      const newFilters = { ...tempFilters, longitude, latitude };
+      const locationName = place.name || place.formatted_address || "";
+      const newFilters = {
+        ...tempFilters,
+        longitude,
+        latitude,
+        location: locationName,
+      };
       setTempFilters(newFilters);
       setPendingFilters(newFilters);
       setIsLocationOpen(false);
+      // Apply location filter immediately
+      onFilterChange(newFilters);
     }
   };
 
@@ -128,6 +136,7 @@ const EventFilters = ({
       price_to: "",
       longitude: "",
       latitude: "",
+      location: "",
     };
     setTempFilters(clearedFilters);
     setPendingFilters(clearedFilters);
@@ -211,9 +220,12 @@ const EventFilters = ({
                   ...tempFilters,
                   longitude: "",
                   latitude: "",
+                  location: "",
                 };
                 setTempFilters(newFilters);
                 setPendingFilters(newFilters);
+                // Apply cleared location filter immediately
+                onFilterChange(newFilters);
               }}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
@@ -226,8 +238,8 @@ const EventFilters = ({
           className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 text-left text-sm rounded flex items-center gap-2 transition-colors"
         >
           <span className="text-gray-600">
-            {getCurrentFilters().longitude && getCurrentFilters().latitude
-              ? "Location selected"
+            {getCurrentFilters().location
+              ? getCurrentFilters().location
               : "Choose location"}
           </span>
           <i className="fi fi-rr-angle-small-right ml-auto text-gray-400"></i>

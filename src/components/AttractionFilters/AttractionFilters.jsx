@@ -58,6 +58,10 @@ const AttractionFilters = ({
       return;
     }
 
+    // Extract location name from place object
+    const locationName =
+      place.name || place.formatted_address || place.vicinity || "";
+
     // Check if place has required geometry data
     if (place.geometry && place.geometry.location) {
       const longitude =
@@ -70,17 +74,39 @@ const AttractionFilters = ({
           : place.geometry.location.lat;
 
       if (longitude && latitude) {
-        const newFilters = { ...tempFilters, longitude, latitude };
+        const newFilters = {
+          ...tempFilters,
+          longitude,
+          latitude,
+          location: locationName, // Add location name for backend filtering
+        };
         setTempFilters(newFilters);
         onFilterChange(newFilters);
         setIsLocationOpen(false);
+        console.log("📍 Location selected:", locationName, "Coordinates:", {
+          longitude,
+          latitude,
+        });
       } else {
         console.warn("Invalid coordinates received:", { longitude, latitude });
       }
     } else {
-      // Place object doesn't have geometry data
-      console.warn("Place object missing geometry data:", place);
-      // Optionally, you could still close the popup or show an error to the user
+      // Even without coordinates, we can still filter by location name
+      if (locationName) {
+        const newFilters = {
+          ...tempFilters,
+          location: locationName,
+        };
+        setTempFilters(newFilters);
+        onFilterChange(newFilters);
+        setIsLocationOpen(false);
+        console.log("📍 Location selected (name only):", locationName);
+      } else {
+        console.warn(
+          "Place object missing both geometry data and location name:",
+          place
+        );
+      }
     }
   };
 
@@ -195,13 +221,14 @@ const AttractionFilters = ({
             <i className="fi fi-rr-marker text-gray-400"></i>
             <span className="text-sm font-medium text-gray-700">Location</span>
           </div>
-          {(tempFilters.longitude || tempFilters.latitude) && (
+          {tempFilters.location && (
             <button
               onClick={() => {
                 const newFilters = {
                   ...tempFilters,
                   longitude: "",
                   latitude: "",
+                  location: "",
                 };
                 setTempFilters(newFilters);
                 onFilterChange(newFilters);
@@ -217,9 +244,7 @@ const AttractionFilters = ({
           className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-primary-500 focus:outline-none text-left text-sm rounded-lg flex items-center gap-2 transition-colors"
         >
           <span className="text-gray-600">
-            {tempFilters.longitude && tempFilters.latitude
-              ? "Location selected"
-              : "Choose location"}
+            {tempFilters.location ? tempFilters.location : "Choose location"}
           </span>
           <i className="fi fi-rr-angle-small-right ml-auto text-gray-400"></i>
         </button>

@@ -210,27 +210,26 @@ export const getAttractions = async (filters = {}) => {
     // if (filters.rating && filters.rating.trim()) {
     //   params.append("rating", filters.rating.trim());
     // }
-    // if (filters.longitude && !isNaN(filters.longitude)) {
-    //   params.append("longitude", filters.longitude);
-    // }
-    // if (filters.latitude && !isNaN(filters.latitude)) {
-    //   params.append("latitude", filters.latitude);
-    // }
+
+    if (filters.longitude && !isNaN(filters.longitude)) {
+      params.append("longitude", filters.longitude);
+    }
+    if (filters.latitude && !isNaN(filters.latitude)) {
+      params.append("latitude", filters.latitude);
+    }
     
     // Parse and add date parameter
     if (filters.date && filters.date.trim()) {
       const parsedDate = parseDateParameter(filters.date);
       if (parsedDate) {
         params.append("date", parsedDate);
-        console.log("🗓️ Date filter applied:", parsedDate);
       }
     }
     
     const queryString = params.toString();
     const url = queryString ? `/attractions?${queryString}` : "/attractions";
     
-    console.log("🔍 API Request URL:", url);
-    console.log("📋 Filters being sent:", filters);
+ 
     
     // Check if we're sending unsupported parameters
     const supportedParams = ['location', 'category', 'date'];

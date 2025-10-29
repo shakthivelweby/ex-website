@@ -16,14 +16,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { formatDate } from "@/utils/formatDate";
 
-
 export default function ClientWrapper({
   packageData,
   date,
   packagePriceData,
   packageStayCategory,
   packageCombinations,
-  supplierInfo
+  supplierInfo,
 }) {
   const loadingTexts = [
     "Crafting your perfect itinerary...",
@@ -32,7 +31,7 @@ export default function ClientWrapper({
     "Curating the best moments...",
     "Planning your dream journey...",
     "Designing your travel story...",
-    "Preparing your travel guide..."
+    "Preparing your travel guide...",
   ];
 
   /* all states */
@@ -48,7 +47,7 @@ export default function ClientWrapper({
   const [currentLoadingText, setCurrentLoadingText] = useState(0);
   const [downloadSize, setDownloadSize] = useState({ total: 0, downloaded: 0 });
   const [showFormatModal, setShowFormatModal] = useState(false);
-  const [itineraryFormat, setItineraryFormat] = useState('daywise');
+  const [itineraryFormat, setItineraryFormat] = useState("daywise");
   const [startDate, setStartDate] = useState(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
 
@@ -63,9 +62,6 @@ export default function ClientWrapper({
     selectedStayCategory.package_stay_category_id,
     date
   );
-
-
-
 
   const [enquireOnly, setEnquireOnly] = useState(false);
 
@@ -83,14 +79,14 @@ export default function ClientWrapper({
       const timeoutId = setTimeout(() => {
         container.scrollTo({
           top: 300,
-          behavior: 'smooth'
+          behavior: "smooth",
         });
 
         // Scroll back up after another delay
         setTimeout(() => {
           container.scrollTo({
             top: 0,
-            behavior: 'smooth'
+            behavior: "smooth",
           });
         }, 600);
       }, 500);
@@ -105,7 +101,6 @@ export default function ClientWrapper({
 
   useEffect(() => {
     if (isClient) {
-
       setEnquireOnly(!packagePriceData.rateAvailable);
     }
   }, [isClient, packagePriceData.rateAvailable]);
@@ -130,30 +125,29 @@ export default function ClientWrapper({
     if (showMobileForm) {
       // Save current scroll position and add styles
       const scrollY = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
       document.body.style.top = `-${scrollY}px`;
     } else {
       // Restore scroll position
       const scrollY = document.body.style.top;
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
-      window.scrollTo(0, parseInt(scrollY || '0', 10) * -1);
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
+      window.scrollTo(0, parseInt(scrollY || "0", 10) * -1);
     }
 
     // Cleanup function
     return () => {
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
+      document.body.style.position = "";
+      document.body.style.width = "";
+      document.body.style.top = "";
     };
   }, [showMobileForm]);
 
   // update rate
   useEffect(() => {
     if (packageRate?.data) {
-      console.log(packageRate)
       setPackagePrice(packageRate.data.adultPrice);
       setEnquireOnly(!packageRate.data.rateAvailable);
     }
@@ -164,7 +158,7 @@ export default function ClientWrapper({
     e.preventDefault();
 
     if (!isLogin()) {
-      const event = new CustomEvent('showLogin');
+      const event = new CustomEvent("showLogin");
       window.dispatchEvent(event);
       return;
     }
@@ -173,13 +167,13 @@ export default function ClientWrapper({
   };
 
   const handleFormatSubmit = async () => {
-    if (!itineraryFormat || (itineraryFormat === 'datewise' && !startDate)) {
+    if (!itineraryFormat || (itineraryFormat === "datewise" && !startDate)) {
       return;
     }
 
     // Hide the modal first
     setShowFormatModal(false);
-    setItineraryFormat('daywise');
+    setItineraryFormat("daywise");
     setStartDate(null);
     setShowStartDatePicker(false);
 
@@ -188,27 +182,31 @@ export default function ClientWrapper({
       setDownloadProgress(0);
       setDownloadSize({ total: 0, downloaded: 0 });
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL + '/api/web';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL + "/api/web";
       const params = new URLSearchParams({
         stay_category_id: selectedStayCategory.stay_category_id,
-        daywise: itineraryFormat === 'daywise',
-        ...(itineraryFormat === 'datewise' && { start_date: formatDate(startDate) })
+        daywise: itineraryFormat === "daywise",
+        ...(itineraryFormat === "datewise" && {
+          start_date: formatDate(startDate),
+        }),
       });
-      const url = `${baseUrl}/package-download-itinerary/${packageData.data.id}?${params.toString()}`;
+      const url = `${baseUrl}/package-download-itinerary/${
+        packageData.data.id
+      }?${params.toString()}`;
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Accept': 'application/pdf'
-        }
+          Accept: "application/pdf",
+        },
       });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error("Network response was not ok");
       }
 
-      const contentLength = +response.headers.get('Content-Length');
-      setDownloadSize(prev => ({ ...prev, total: contentLength }));
+      const contentLength = +response.headers.get("Content-Length");
+      setDownloadSize((prev) => ({ ...prev, total: contentLength }));
 
       const reader = response.body.getReader();
       let receivedLength = 0;
@@ -218,15 +216,21 @@ export default function ClientWrapper({
         const { done, value } = await reader.read();
 
         if (done) {
-          const finalProgress = Math.round((receivedLength / contentLength) * 100);
+          const finalProgress = Math.round(
+            (receivedLength / contentLength) * 100
+          );
           if (finalProgress < 100) {
             const remainingSteps = Math.floor((100 - finalProgress) / 5);
             for (let i = 0; i < remainingSteps; i++) {
-              await new Promise(resolve => setTimeout(resolve, 50));
-              setDownloadProgress(prev => Math.min(prev + 5, 99));
+              await new Promise((resolve) => setTimeout(resolve, 50));
+              setDownloadProgress((prev) => Math.min(prev + 5, 99));
               // Update downloaded size proportionally
-              const newDownloaded = (contentLength * Math.min(prev + 5, 99)) / 100;
-              setDownloadSize(prev => ({ ...prev, downloaded: newDownloaded }));
+              const newDownloaded =
+                (contentLength * Math.min(prev + 5, 99)) / 100;
+              setDownloadSize((prev) => ({
+                ...prev,
+                downloaded: newDownloaded,
+              }));
             }
           }
           break;
@@ -234,33 +238,32 @@ export default function ClientWrapper({
 
         chunks.push(value);
         receivedLength += value.length;
-        setDownloadSize(prev => ({ ...prev, downloaded: receivedLength }));
+        setDownloadSize((prev) => ({ ...prev, downloaded: receivedLength }));
 
         const progress = (receivedLength / contentLength) * 100;
         setDownloadProgress(Math.min(Math.round(progress), 99));
       }
 
       // Create and download the blob
-      const blob = new Blob(chunks, { type: 'application/pdf' });
+      const blob = new Blob(chunks, { type: "application/pdf" });
       const blobUrl = window.URL.createObjectURL(blob);
 
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = blobUrl;
       link.download = `${packageData.data.name}-itinerary.pdf`;
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       setDownloadProgress(100);
-      setDownloadSize(prev => ({ ...prev, downloaded: prev.total }));
-      await new Promise(resolve => setTimeout(resolve, 300));
+      setDownloadSize((prev) => ({ ...prev, downloaded: prev.total }));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
-
     } catch (error) {
-      console.error('Error downloading itinerary:', error);
-      alert('Failed to download itinerary. Please try again later.');
+      console.error("Error downloading itinerary:", error);
+      alert("Failed to download itinerary. Please try again later.");
     } finally {
       setTimeout(() => {
         setIsDownloading(false);
@@ -275,7 +278,6 @@ export default function ClientWrapper({
 
   return (
     <div>
-
       <ImageViewer
         images={images}
         isOpen={isImageViewerOpen}
@@ -287,7 +289,7 @@ export default function ClientWrapper({
         isOpen={showFormatModal}
         onClose={() => {
           setShowFormatModal(false);
-          setItineraryFormat('daywise');
+          setItineraryFormat("daywise");
           setStartDate(null);
           setShowStartDatePicker(false);
         }}
@@ -305,27 +307,31 @@ export default function ClientWrapper({
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     onClick={() => {
-                      setItineraryFormat('daywise');
+                      setItineraryFormat("daywise");
                       setShowStartDatePicker(false);
                     }}
-                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'daywise'
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    className={`p-4 border rounded-xl text-center ${
+                      itineraryFormat === "daywise"
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
                   >
                     <i className="fi fi-rr-calendar-lines text-2xl mb-2"></i>
                     <p className="text-sm font-medium">Day-wise</p>
-                    <p className="text-xs text-gray-500 mt-1">Day 1, Day 2, etc.</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Day 1, Day 2, etc.
+                    </p>
                   </button>
                   <button
                     onClick={() => {
-                      setItineraryFormat('datewise');
+                      setItineraryFormat("datewise");
                       setShowStartDatePicker(true);
                     }}
-                    className={`p-4 border rounded-xl text-center ${itineraryFormat === 'datewise'
-                      ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                    className={`p-4 border rounded-xl text-center ${
+                      itineraryFormat === "datewise"
+                        ? "border-primary-500 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
                   >
                     <i className="fi fi-rr-calendar-clock text-2xl mb-2"></i>
                     <p className="text-sm font-medium">Date-wise</p>
@@ -360,7 +366,7 @@ export default function ClientWrapper({
               <button
                 onClick={() => {
                   setShowFormatModal(false);
-                  setItineraryFormat('daywise');
+                  setItineraryFormat("daywise");
                   setStartDate(null);
                   setShowStartDatePicker(false);
                 }}
@@ -370,11 +376,12 @@ export default function ClientWrapper({
               </button>
               <button
                 onClick={handleFormatSubmit}
-                disabled={itineraryFormat === 'datewise' && !startDate}
-                className={`flex-1 px-6 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${itineraryFormat === 'datewise' && !startDate
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-primary-600 hover:bg-primary-700'
-                  }`}
+                disabled={itineraryFormat === "datewise" && !startDate}
+                className={`flex-1 px-6 py-2.5 text-sm font-medium text-white rounded-lg transition-colors ${
+                  itineraryFormat === "datewise" && !startDate
+                    ? "bg-gray-300 cursor-not-allowed"
+                    : "bg-primary-600 hover:bg-primary-700"
+                }`}
               >
                 Download
               </button>
@@ -505,10 +512,9 @@ export default function ClientWrapper({
                   Package provided by
                 </span>
                 <h4 className="text-xs font-normal text-gray-800 ml-2 underline">
-                  {supplierInfo?.supplier_details?.company_name || 'Unknown Supplier'}
-
+                  {supplierInfo?.supplier_details?.company_name ||
+                    "Unknown Supplier"}
                 </h4>
-
               </div>
               <h1 className="text-2xl md:text-3xl tracking-tight font-medium text-gray-800 mb-6 mt-2">
                 {name}
@@ -520,7 +526,11 @@ export default function ClientWrapper({
                     Choose Trip Duration
                   </h3>
                   <div className="flex flex-wrap gap-4">
-                    <PackageDuration combinationData={packageCombinations.data} date={date} packageId={packageData.data.id} />
+                    <PackageDuration
+                      combinationData={packageCombinations.data}
+                      date={date}
+                      packageId={packageData.data.id}
+                    />
                   </div>
                 </div>
               )}
@@ -550,7 +560,8 @@ export default function ClientWrapper({
                         Detailed Itinerary
                       </h3>
                       <p className="text-xs text-gray-500 mb-3">
-                        Download the complete day-by-day travel plan and inclusions
+                        Download the complete day-by-day travel plan and
+                        inclusions
                       </p>
                       <div className="space-y-2">
                         <button
@@ -583,10 +594,16 @@ export default function ClientWrapper({
                             <div className="text-xs text-gray-500 mt-1 flex justify-between items-center">
                               <span>
                                 {downloadProgress > 0
-                                  ? `${formatBytes(downloadSize.downloaded)} of ${formatBytes(downloadSize.total)}`
-                                  : 'Starting download...'}
+                                  ? `${formatBytes(
+                                      downloadSize.downloaded
+                                    )} of ${formatBytes(downloadSize.total)}`
+                                  : "Starting download..."}
                               </span>
-                              {downloadProgress > 0 && <span className="font-medium">{downloadProgress}%</span>}
+                              {downloadProgress > 0 && (
+                                <span className="font-medium">
+                                  {downloadProgress}%
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
@@ -602,7 +619,7 @@ export default function ClientWrapper({
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 ">
                   {inclusions.map((item) => {
-                    const { icon_url, name, id } = item.inclusion_master;
+                    const { icon_url, name, id } = item.inclusion_master || {};
                     return (
                       <div key={id} className="flex items-center">
                         <img
@@ -650,14 +667,22 @@ export default function ClientWrapper({
       <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
         <button
           onClick={() => setShowMobileForm(true)}
-          className={`w-full ${enquireOnly ? 'bg-yellow-500' : 'bg-primary-500'} text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg`}
+          className={`w-full ${
+            enquireOnly ? "bg-yellow-500" : "bg-primary-500"
+          } text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg`}
         >
           <div className="flex items-center">
-            <span className="text-sm">{enquireOnly ? 'Send Enquiry' : 'Check Availability'}</span>
+            <span className="text-sm">
+              {enquireOnly ? "Send Enquiry" : "Check Availability"}
+            </span>
           </div>
           <div className="flex items-center">
             <span className="text-sm font-bold">₹{packagePrice}</span>
-            <i className={`${enquireOnly ? 'fi fi-rr-envelope' : 'fi fi-rr-calendar-clock'} ml-2 text-sm`}></i>
+            <i
+              className={`${
+                enquireOnly ? "fi fi-rr-envelope" : "fi fi-rr-calendar-clock"
+              } ml-2 text-sm`}
+            ></i>
           </div>
         </button>
       </div>

@@ -528,18 +528,21 @@ const AttractionBookingPage = ({
                       </h3>
 
                       {/* Guide Toggle */}
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600">
-                          Need a guide
-                        </span>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
+                          <span className="text-sm font-medium text-gray-700 pr-2">
+                            Need a guide
+                          </span>
+                        </div>
                         <button
                           onClick={() => setNeedGuide(!needGuide)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                            needGuide ? "bg-primary-600" : "bg-gray-200"
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                            needGuide ? "bg-primary-600" : "bg-gray-300"
                           }`}
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
                               needGuide ? "translate-x-6" : "translate-x-1"
                             }`}
                           />

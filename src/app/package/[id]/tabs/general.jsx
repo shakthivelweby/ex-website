@@ -12,27 +12,28 @@ function GeneralTab({ packageData, activeTab }) {
     total_days,
     total_nights,
     tour_type,
-    faqs
+    faqs,
+    package_suitable,
   } = packageData.data;
- 
+
   return (
     <div
-      className={`prose max-w-none text-gray-800 ${activeTab === "details" ? "block" : "hidden"
-        }`}
+      className={`prose max-w-none text-gray-800 ${
+        activeTab === "details" ? "block" : "hidden"
+      }`}
     >
       {/* Main description */}
-      {about && <div className="mb-4 render-html" dangerouslySetInnerHTML={{ __html: about }} />}
-
+      {about && (
+        <div
+          className="mb-4 render-html"
+          dangerouslySetInnerHTML={{ __html: about }}
+        />
+      )}
 
       {/* Trip details in pill layout with fixed icons */}
-      <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-6 border-t border-b border-gray-200  mb-4`}>
-
-
-
-
-        
-       
-
+      <div
+        className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 py-6 border-t border-b border-gray-200  mb-4`}
+      >
         {pickup_point && (
           <>
             <div className="flex items-start">
@@ -81,6 +82,18 @@ function GeneralTab({ packageData, activeTab }) {
           </>
         )}
 
+        <div className="flex items-start">
+          <i className="fi fi-rr-users text-primary-500 text-xl mt-0.5 mr-3 flex-shrink-0"></i>
+          <div>
+            <p className="text-sm text-gray-500">Suitable for</p>
+            <p className="font-medium text-gray-800">
+              {package_suitable && package_suitable.length > 0
+                ? package_suitable.map((item) => item.suitable.name).join(", ")
+                : "N/A"}
+            </p>
+          </div>
+        </div>
+
         {tour_type === "fixed_departure" && (
           <>
             <div className="flex items-start">
@@ -100,13 +113,9 @@ function GeneralTab({ packageData, activeTab }) {
                 </p>
               </div>
             </div>
-          
           </>
         )}
-
-
       </div>
-
 
       {/* Additional Information Section as Accordion */}
       <Accordion title="Additional information" defaultOpen={false}>
@@ -122,18 +131,10 @@ function GeneralTab({ packageData, activeTab }) {
       </h3>
 
       {faqs.map((faq) => (
-        <Accordion
-          key={faq.id}
-          title={faq.question}
-          defaultOpen={false}
-        >
+        <Accordion key={faq.id} title={faq.question} defaultOpen={false}>
           <p className="text-gray-800">{faq.answer}</p>
         </Accordion>
       ))}
-
-     
-
-     
     </div>
   );
 }

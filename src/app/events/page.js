@@ -17,23 +17,9 @@ export default async function Events({ searchParams }) {
     price_to: resolvedSearchParams.price_to || "",
     longitude: resolvedSearchParams.longitude || "",
     latitude: resolvedSearchParams.latitude || "",
-    location: resolvedSearchParams.location || "",
   };
 
   const eventsList = await list(filters);
-
-  // Haversine formula to calculate distance between two coordinates
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // Radius of Earth in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
-  };
 
   // Transform events data server-side for SSR based on actual API response
   const transformedEvents = eventsList?.data?.map((event) => ({
@@ -43,8 +29,6 @@ export default async function Events({ searchParams }) {
     venue: event.location,
     type: event.event_category_master?.name || "",
     image: event.thumb_image || event.cover_image,
-    latitude: event.latitude,
-    longitude: event.longitude,
     price: (() => {
       if (event.event_days && event.event_days.length > 0) {
         const prices = event.event_days
@@ -96,23 +80,6 @@ export default async function Events({ searchParams }) {
     promoted: true,
     interest_count: 245,
   })) || [];
-
-  // Sort events by distance only if specific coordinates are provided
-  // Backend handles filtering by location name
-  if (transformedEvents.length > 0 && filters.latitude && filters.longitude) {
-    const userLat = parseFloat(filters.latitude);
-    const userLon = parseFloat(filters.longitude);
-    
-    transformedEvents.sort((a, b) => {
-      const distanceA = a.latitude && a.longitude 
-        ? calculateDistance(userLat, userLon, parseFloat(a.latitude), parseFloat(a.longitude))
-        : Infinity;
-      const distanceB = b.latitude && b.longitude 
-        ? calculateDistance(userLat, userLon, parseFloat(b.latitude), parseFloat(b.longitude))
-        : Infinity;
-      return distanceA - distanceB;
-    });
-  }
 
   return (
     <ClientWrapper

@@ -51,14 +51,10 @@ const Form = ({
       }
 
       if (Object.keys(selectedTickets).length === 0) {
+        alert("Please select tickets first");
         setIsLoading(false);
         return;
       }
-
-      // Add your booking logic here
-      console.log("Selected tickets:", selectedTickets);
-      console.log("Total price:", totalPrice);
-      alert("Booking functionality will be implemented here");
     } catch (error) {
       console.error("Error:", error);
       alert(
@@ -122,6 +118,15 @@ const Form = ({
               <div>
                 <p className="text-gray-500 text-xs">Date</p>
                 <p className="text-gray-700 font-medium">{eventDetails.date}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                <i className="fi fi-rr-clock text-base text-primary-500"></i>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Time</p>
+                <p className="text-gray-700 font-medium">{eventDetails.time}</p>
               </div>
             </div>
           </div>

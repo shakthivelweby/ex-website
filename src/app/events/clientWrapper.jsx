@@ -7,21 +7,6 @@ import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
 
-// Haversine formula to calculate distance between two coordinates
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Radius of Earth in kilometers
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c; // Distance in km
-};
-
 const ClientWrapper = ({
   searchParams: initialSearchParams,
   initialEvents,
@@ -36,9 +21,9 @@ const ClientWrapper = ({
   const [categories, setCategories] = useState(initialCategories || []);
   const [languages, setLanguages] = useState(initialLanguages || []);
   const [isClient, setIsClient] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollContainerRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Get initial filters from server-side search params
   const initialFilters = {
@@ -49,7 +34,6 @@ const ClientWrapper = ({
     price_to: initialSearchParams.price_to || "",
     longitude: initialSearchParams.longitude || "",
     latitude: initialSearchParams.latitude || "",
-    location: initialSearchParams.location || "",
   };
 
   // Mark component as client-side after mount
@@ -57,7 +41,7 @@ const ClientWrapper = ({
     setIsClient(true);
   }, []);
 
-  // Check scroll position
+  // Check scroll position and update arrow states
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } =
@@ -70,38 +54,32 @@ const ClientWrapper = ({
   // Scroll functions
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: -200, behavior: "smooth" });
+      scrollContainerRef.current.scrollBy({
+        left: -200,
+        behavior: "smooth",
+      });
     }
   };
 
   const scrollRight = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: 200, behavior: "smooth" });
+      scrollContainerRef.current.scrollBy({
+        left: 200,
+        behavior: "smooth",
+      });
     }
   };
 
-  // Check scroll position on mount and when categories change
+  // Update scroll state when categories change
   useEffect(() => {
     checkScrollPosition();
-    const scrollContainer = scrollContainerRef.current;
-    if (scrollContainer) {
-      scrollContainer.addEventListener("scroll", checkScrollPosition);
-      return () =>
-        scrollContainer.removeEventListener("scroll", checkScrollPosition);
-    }
   }, [categories]);
 
   useEffect(() => {
-    if (initialFilters.location) {
-      setSelectedLocation(initialFilters.location);
-    } else if (initialFilters.longitude && initialFilters.latitude) {
+    if (initialFilters.longitude && initialFilters.latitude) {
       setSelectedLocation("Selected Location");
     }
-  }, [
-    initialFilters.location,
-    initialFilters.longitude,
-    initialFilters.latitude,
-  ]);
+  }, [initialFilters.longitude, initialFilters.latitude]);
 
   // Function to check if any filters are active
   const hasActiveFilters = () => {
@@ -148,13 +126,9 @@ const ClientWrapper = ({
     if (newFilters.longitude && newFilters.latitude) {
       params.set("longitude", newFilters.longitude);
       params.set("latitude", newFilters.latitude);
-      if (newFilters.location) {
-        params.set("location", newFilters.location);
-      }
     } else {
       params.delete("longitude");
       params.delete("latitude");
-      params.delete("location");
     }
 
     // Update the URL without refreshing the page
@@ -165,13 +139,12 @@ const ClientWrapper = ({
   // Handle location selection
   const handlePlaceSelected = (place) => {
     if (place) {
-      const locationName = place.name || place.formatted_address || "";
+      const locationName = place.name;
       setSelectedLocation(locationName);
       updateURL({
         ...initialFilters,
         longitude: place.geometry.location.lng(),
         latitude: place.geometry.location.lat(),
-        location: locationName,
       });
       setIsLocationOpen(false);
     }
@@ -180,14 +153,6 @@ const ClientWrapper = ({
   // Function to handle filter changes immediately
   const handleFilterChange = async (newFilters) => {
     updateURL(newFilters);
-
-    // Update selected location display
-    if (newFilters.location) {
-      setSelectedLocation(newFilters.location);
-    } else if (!newFilters.longitude && !newFilters.latitude) {
-      // Reset to default if location is cleared
-      setSelectedLocation(null);
-    }
 
     // Refetch events with new filters
     try {
@@ -203,8 +168,6 @@ const ClientWrapper = ({
           venue: event.location,
           type: event.event_category_master?.name || "",
           image: event.thumb_image || event.cover_image,
-          latitude: event.latitude,
-          longitude: event.longitude,
           price: (() => {
             if (event.event_days && event.event_days.length > 0) {
               const prices = event.event_days
@@ -257,39 +220,6 @@ const ClientWrapper = ({
           interest_count: 245,
         }));
 
-        // Sort events by distance only if specific coordinates are provided
-        // Backend handles filtering by location name
-        if (
-          transformedEvents.length > 0 &&
-          newFilters.latitude &&
-          newFilters.longitude
-        ) {
-          const userLat = parseFloat(newFilters.latitude);
-          const userLon = parseFloat(newFilters.longitude);
-
-          transformedEvents.sort((a, b) => {
-            const distanceA =
-              a.latitude && a.longitude
-                ? calculateDistance(
-                    userLat,
-                    userLon,
-                    parseFloat(a.latitude),
-                    parseFloat(a.longitude)
-                  )
-                : Infinity;
-            const distanceB =
-              b.latitude && b.longitude
-                ? calculateDistance(
-                    userLat,
-                    userLon,
-                    parseFloat(b.latitude),
-                    parseFloat(b.longitude)
-                  )
-                : Infinity;
-            return distanceA - distanceB;
-          });
-        }
-
         setEvents(transformedEvents);
       } else {
         setEvents([]);
@@ -327,7 +257,7 @@ const ClientWrapper = ({
                 <h2 className="text-sm sm:text-base font-medium text-gray-900">
                   Events in{" "}
                   <span className="text-primary-600">
-                    {selectedLocation || "Kochi"}
+                    {selectedLocation || "Mumbai"}
                   </span>
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
@@ -548,6 +478,13 @@ const ClientWrapper = ({
           scrollbar-width: none;
         }
         .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
       `}</style>

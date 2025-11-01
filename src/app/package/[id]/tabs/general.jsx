@@ -14,6 +14,8 @@ function GeneralTab({ packageData, activeTab }) {
     tour_type,
     faqs
   } = packageData.data;
+
+  console.log("ajith checking",packageData.data);
  
   return (
     <div

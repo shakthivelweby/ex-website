@@ -118,7 +118,7 @@ function GeneralTab({ packageData, activeTab }) {
         />
       </Accordion>
 
-      {/* Frequently Asked Questions */}
+      {/* Frequently Asked Questions section */}
       <h3 className="text-lg font-medium text-gray-800 mt-8 mb-4">
         Frequently Asked Questions
       </h3>

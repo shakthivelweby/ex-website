@@ -64,8 +64,7 @@ export default function EventCheckoutPage() {
         } else {
           setError("Failed to load event details");
         }
-      } catch (error) {
-        console.error("Error fetching event details:", error);
+      } catch (error) {      
         setError("Failed to load event details. Please try again.");
       } finally {
         setIsLoadingData(false);
@@ -121,7 +120,7 @@ export default function EventCheckoutPage() {
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
     return `${displayHour}:${minutes} ${ampm}`;
   };
-
+ 
   const getTotalSelectedTickets = () => {
     // Handle new data structure
     if (selectedTickets.bookingTickets) {

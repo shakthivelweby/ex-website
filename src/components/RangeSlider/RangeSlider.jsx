@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Slider from 'rc-slider';
-import 'rc-slider/assets/index.css';
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
 
 const RangeSlider = ({
   min,
@@ -31,7 +31,7 @@ const RangeSlider = ({
   // Add click outside handler
   useEffect(() => {
     if (!isMounted) return;
-    
+
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
@@ -39,11 +39,11 @@ const RangeSlider = ({
     };
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen, isMounted]);
 
@@ -57,8 +57,9 @@ const RangeSlider = ({
 
   const handleReset = (e) => {
     e.stopPropagation();
-    setValue(null);
-    onChange(null);
+    const resetValue = [min, max];
+    setValue(resetValue);
+    onChange(resetValue);
   };
 
   const handleDropdownClick = (e) => {
@@ -75,7 +76,11 @@ const RangeSlider = ({
             value !== null ? "text-gray-900" : "text-gray-500"
           } ${className}`}
         >
-          {formatDisplay(value)}
+          {formatDisplay
+            ? formatDisplay(value)
+            : value
+            ? `₹${value[0]} - ₹${value[1]}`
+            : "Select Price Range"}
         </button>
       </div>
     );
@@ -90,11 +95,15 @@ const RangeSlider = ({
           value !== null ? "text-gray-900" : "text-gray-500"
         } ${className}`}
       >
-        {formatDisplay(value)}
+        {formatDisplay
+          ? formatDisplay(value)
+          : value
+          ? `₹${value[0]} - ₹${value[1]}`
+          : "Select Price Range"}
       </button>
 
       {isOpen && (
-        <div 
+        <div
           className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg"
           onClick={handleDropdownClick}
         >
@@ -109,29 +118,47 @@ const RangeSlider = ({
                 Reset
               </button>
             </div>
-            <div className="flex items-center gap-4 px-2" onClick={handleDropdownClick}>
+            <div
+              className="flex items-center gap-4 px-2"
+              onClick={handleDropdownClick}
+            >
               <Slider
+                range
                 min={min}
                 max={max}
                 step={step}
-                value={value === null ? min : value}
+                value={value === null ? [min, max] : value}
                 onChange={handleSliderChange}
                 onChangeComplete={handleSliderAfterChange}
-                trackStyle={{ backgroundColor: '#069494', height: 2 }}
-                handleStyle={{
-                  borderColor: '#069494',
-                  height: 20,
-                  width: 20,
-                  marginTop: -8,
-                  backgroundColor: '#069494',
-                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.1)',
-                }}
-                railStyle={{ backgroundColor: '#E5E7EB', height: 2 }}
+                trackStyle={[{ backgroundColor: "#069494", height: 2 }]}
+                handleStyle={[
+                  {
+                    borderColor: "#069494",
+                    height: 20,
+                    width: 20,
+                    marginTop: -8,
+                    backgroundColor: "#069494",
+                    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
+                  },
+                  {
+                    borderColor: "#069494",
+                    height: 20,
+                    width: 20,
+                    marginTop: -8,
+                    backgroundColor: "#069494",
+                    boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)",
+                  },
+                ]}
+                railStyle={{ backgroundColor: "#E5E7EB", height: 2 }}
               />
             </div>
             <div className="mt-4 flex justify-between text-xs text-gray-500">
-              <span>{formatDisplay(min)}</span>
-              <span>{formatDisplay(max)}</span>
+              <span>
+                {formatDisplay ? formatDisplay([min, min]) : `₹${min}`}
+              </span>
+              <span>
+                {formatDisplay ? formatDisplay([max, max]) : `₹${max}`}
+              </span>
             </div>
           </div>
         </div>

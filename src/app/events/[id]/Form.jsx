@@ -55,11 +55,6 @@ const Form = ({
         setIsLoading(false);
         return;
       }
-
-      // Add your booking logic here
-      console.log("Selected tickets:", selectedTickets);
-      console.log("Total price:", totalPrice);
-      alert("Booking functionality will be implemented here");
     } catch (error) {
       console.error("Error:", error);
       alert(

@@ -39,3 +39,40 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large files and archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bz2
+*.xz
+*.dmg
+*.iso
+*.exe
+*.msi
+*.deb
+*.rpm
+*.pkg
+
+# Files larger than 50MB
+**/*.zip
+**/*.rar
+**/*.7z
+**/*.tar
+**/*.gz
+**/*.bz2
+**/*.xz
+**/*.dmg
+**/*.iso
+**/*.exe
+**/*.msi
+**/*.deb
+**/*.rpm
+**/*.pkg
+
+# Specific large files that were problematic
+**/v3.4Apps*
+**/*Set-Up*
+**/*Setup*

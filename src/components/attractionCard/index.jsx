@@ -1,121 +1,158 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 
-export default function AttractionCard({ attraction }) {
+const AttractionCard = ({ attraction }) => {
   const {
-    id,
     title,
-    venue,
+    description,
+    location,
+    city,
     type,
     image,
     price,
-    duration,
     rating,
-    availableSlots,
+    reviewCount,
+    duration,
+    bestTimeToVisit,
+    features,
     promoted,
+    popular,
+    recommended,
     interest_count,
+    openingHours,
   } = attraction;
 
+  // Format rating display
+  const formatRating = (rating) => {
+    if (!rating || rating === 0) return "0.0";
+    return rating.toFixed(1);
+  };
+
+  // Format price display
+  const formatPrice = (price) => {
+    if (!price || price === 0) return "Free";
+    return `₹${price}`;
+  };
+
+  // Render star rating
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <i key={i} className="fi fi-sr-star text-yellow-400 text-sm"></i>
+      );
+    }
+
+    if (hasHalfStar) {
+      stars.push(
+        <i
+          key="half"
+          className="fi fi-sr-star-half text-yellow-400 text-sm"
+        ></i>
+      );
+    }
+
+    const remainingStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < remainingStars; i++) {
+      stars.push(
+        <i
+          key={`empty-${i}`}
+          className="fi fi-sr-star text-gray-300 text-sm"
+        ></i>
+      );
+    }
+
+    return stars;
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer border border-gray-100"
-    >
-      <Link href={`/attraction/${id}`} className="block">
-        {/* Image Container */}
-        <div className="relative h-48 overflow-hidden">
+    <Link href={`/attractions/${attraction.id}`} className="block group">
+      <div className="relative flex flex-col h-[400px] overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
+        {/* Background Image */}
+        {image ? (
           <Image
-            src={image || "/fallback-cover.webp"}
+            src={image}
             alt={title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           />
-          
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          
-          {/* Badges */}
-          <div className="absolute top-3 left-3 flex gap-2">
-            {promoted && (
-              <span className="bg-primary-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                Popular
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+            <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+          </div>
+        )}
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+
+        {/* Top Section - Badges */}
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-2">
+            {popular && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-500 text-white">
+                <span>🔥</span>
+                <span>Popular</span>
               </span>
             )}
-            {type && (
-              <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
-                {type}
+            {recommended && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
+                <span>✨</span>
+                <span>Recommended</span>
+              </span>
+            )}
+            {promoted && !popular && !recommended && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white">
+                <span>⭐</span>
+                <span>Featured</span>
               </span>
             )}
           </div>
 
           {/* Rating */}
-          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
-            <i className="fi fi-sr-star text-yellow-400 text-xs"></i>
-            <span className="text-xs font-medium text-gray-800">{rating}</span>
-          </div>
-
-          {/* Interest Count */}
-          <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <i className="fi fi-rr-heart text-xs"></i>
-            <span>{interest_count}</span>
+          <div className="flex items-center gap-1 text-sm px-2 py-1 rounded-full backdrop-blur-md bg-black/20 text-white hidden">
+            <i className="fi fi-sr-star text-yellow-400 text-sm"></i>
+            <span className="text-white text-sm font-medium">
+              {formatRating(rating)}
+            </span>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {/* Content Section - Using Flex */}
+        <div className="flex flex-col justify-end h-full p-6 relative z-10">
           {/* Title */}
-          <h3 className="font-semibold text-gray-900 text-base mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">
-            {title}
-          </h3>
-
-          {/* Venue and Duration */}
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-            <div className="flex items-center gap-1">
-              <i className="fi fi-rr-marker text-xs"></i>
-              <span className="line-clamp-1">{venue}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <i className="fi fi-rr-clock text-xs"></i>
-              <span>{duration}</span>
-            </div>
+          <div className="mb-3">
+            <h3 className="text-base font-semibold text-white leading-tight">
+              {title || "Untitled Attraction"}
+            </h3>
           </div>
+          {/* Divider */}
+          <hr className="border-white/30 mb-4" />
 
-          {/* Price and Availability */}
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold text-gray-900">₹{price}</span>
-                <span className="text-sm text-gray-500">per person</span>
-              </div>
-              <div className="text-xs text-gray-500">
-                {availableSlots > 0 ? (
-                  <span className="text-green-600">
-                    {availableSlots} slots available
-                  </span>
-                ) : (
-                  <span className="text-red-500">Sold out</span>
-                )}
-              </div>
+          {/* Rating and Price Row */}
+          <div className="flex items-center gap-2 justify-between w-full">
+            {/* Price */}
+            <div className="text-right">
+              <span className="text-white font-bold text-lg">
+                {formatPrice(price)}{" "}
+                <span className="text-xs font-normal text-white/80">
+                  / onwards
+                </span>
+              </span>
             </div>
-
             {/* Book Now Button */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-            >
-              <span>Book</span>
-              <i className="fi fi-rr-arrow-small-right text-xs"></i>
-            </motion.button>
+            <button className="flex items-center gap-1 text-sm px-3 py-1 rounded-full backdrop-blur-md bg-white/10 text-white border border-white/10">
+              Book Now
+              <i className="fi fi-rr-arrow-right text-sm"></i>
+            </button>
           </div>
         </div>
-      </Link>
-    </motion.div>
+      </div>
+    </Link>
   );
-}
+};
+
+export default AttractionCard;

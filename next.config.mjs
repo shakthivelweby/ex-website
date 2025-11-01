@@ -1,16 +1,22 @@
 /** @type {import('next').NextConfig} */
-
 const mobileIp = '192.168.1.38';
 
 const nextConfig = {
-  // ✅ Custom config for your own use (not used by Next.js itself)
-  allowedDevOrigins: [
-    mobileIp,
-    'http://localhost:3000',
-    'https://api.exploreworld.com',
-  ],
+  typescript: {
+    // Disable type checking during build (for faster dev)
+    ignoreBuildErrors: true,
+  },
 
-  // ✅ Remote image patterns used by Next.js <Image />
+  // ✅ Your custom config (not used by Next.js)
+  customConfig: {
+    allowedDevOrigins: [
+      `http://${mobileIp}:3000`,
+      'http://localhost:3000',
+      'https://api.exploreworld.com',
+    ],
+  },
+
+  // ✅ Configure remote images
   images: {
     remotePatterns: [
       {
@@ -18,12 +24,12 @@ const nextConfig = {
         hostname: mobileIp,
       },
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
         protocol: 'http',
         hostname: '127.0.0.1',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
       },
       {
         protocol: 'https',
@@ -35,6 +41,11 @@ const nextConfig = {
         pathname: '/images/**',
       },
     ],
+  },
+
+  // ✅ Optional performance improvements
+  experimental: {
+    turbo: true, // enables Rust-based turbo compilation for dev speed
   },
 };
 

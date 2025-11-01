@@ -65,6 +65,12 @@ const navLinks = [
     icon: "fi fi-rr-glass-cheers",
     matchPath: (path) => path === "/events" || path.startsWith("/events")
   },
+  {
+    name: "Attractions",
+    href: "/attractions",
+    icon: "fi fi-rr-ferris-wheel",
+    matchPath: (path) => path === "/attractions" || path.startsWith("/attractions")
+  },
   // { 
   //   name: "Activities", 
   //   href: "#", 

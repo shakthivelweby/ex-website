@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,19 +17,9 @@ const AttractionFilters = ({
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const prevInitialFiltersRef = useRef();
 
   useEffect(() => {
-    // Only update tempFilters if initialFilters actually changed from previous value
-    const prevFilters = prevInitialFiltersRef.current;
-    const filtersChanged =
-      JSON.stringify(initialFilters) !== JSON.stringify(prevFilters);
-
-    if (filtersChanged) {
-      prevInitialFiltersRef.current = initialFilters;
-      setTempFilters(initialFilters || {});
-    }
-
+    setTempFilters(initialFilters || {});
     // Initialize date if it exists in filters
     if (initialFilters?.date) {
       if (initialFilters.date === "today") {
@@ -223,16 +213,7 @@ const AttractionFilters = ({
           </div>
           {tempFilters.location && (
             <button
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  longitude: "",
-                  latitude: "",
-                  location: "",
-                };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
+              onClick={() => removeFilter("location")}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Clear
@@ -368,11 +349,7 @@ const AttractionFilters = ({
           </div>
           {tempFilters.category && (
             <button
-              onClick={() => {
-                const newFilters = { ...tempFilters, category: "" };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
+              onClick={() => removeFilter("category")}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Clear
@@ -423,11 +400,7 @@ const AttractionFilters = ({
           </div>
           {tempFilters.category && (
             <button
-              onClick={() => {
-                const newFilters = { ...tempFilters, category: "" };
-                setTempFilters(newFilters);
-                onFilterChange(newFilters);
-              }}
+              onClick={() => removeFilter("category")}
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Clear
@@ -518,28 +491,6 @@ const AttractionFilters = ({
       <div className="space-y-6">
         <FilterContent />
 
-        {/* Action Buttons */}
-        <div className="flex gap-3 pt-4 border-t border-gray-100">
-          <button
-            onClick={clearAllFilters}
-            className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
-            Clear All
-          </button>
-          <button
-            onClick={() => {
-              // Apply filters (they're already applied in real-time)
-              // Close the popup if onClose is provided
-              if (onClose) {
-                onClose();
-              }
-            }}
-            className="flex-1 py-2.5 px-4 rounded-full bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-          >
-            Apply Now
-          </button>
-        </div>
-
         {/* Location Picker Popup */}
         <LocationSearchPopup
           isOpen={isLocationOpen}
@@ -556,7 +507,7 @@ const AttractionFilters = ({
   if (layout === "sidebar") {
     return (
       <div className="bg-white shadow-sm border border-gray-100 rounded-lg h-fit sticky top-4">
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-3 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <i className="fi fi-rr-settings-sliders text-gray-400"></i>
@@ -567,40 +518,11 @@ const AttractionFilters = ({
                 </span>
               )}
             </div>
-            {hasActiveFilters() && (
-              <button
-                onClick={clearAllFilters}
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Clear All
-              </button>
-            )}
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="px-3">
           <FilterContent />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex gap-3">
-            <button
-              onClick={clearAllFilters}
-              className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => {
-                // Apply filters (they're already applied in real-time)
-                // This button can be used to confirm selection or refresh
-              }}
-              className="flex-1 py-2.5 px-4 rounded-full bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-            >
-              Apply Now
-            </button>
-          </div>
         </div>
 
         {/* Location Picker Popup */}
@@ -618,7 +540,7 @@ const AttractionFilters = ({
   // Inline layout (default)
   return (
     <div className="bg-white shadow-sm border border-gray-100 rounded-lg">
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-3 border-b border-gray-100">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-settings-sliders text-gray-400"></i>
@@ -629,40 +551,11 @@ const AttractionFilters = ({
               </span>
             )}
           </div>
-          {hasActiveFilters() && (
-            <button
-              onClick={clearAllFilters}
-              className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Clear All
-            </button>
-          )}
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="px-3">
         <FilterContent />
-      </div>
-
-      {/* Action Buttons */}
-      <div className="p-4 border-t border-gray-100">
-        <div className="flex gap-3">
-          <button
-            onClick={clearAllFilters}
-            className="flex-1 py-2.5 px-4 rounded-full border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-          >
-            Clear All
-          </button>
-          <button
-            onClick={() => {
-              // Apply filters (they're already applied in real-time)
-              // This button can be used to confirm selection or refresh
-            }}
-            className="flex-1 py-2.5 px-4 rounded-full bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-          >
-            Apply Now
-          </button>
-        </div>
       </div>
 
       {/* Location Picker Popup */}

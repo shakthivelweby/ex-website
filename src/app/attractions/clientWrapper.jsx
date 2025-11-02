@@ -171,11 +171,6 @@ const ClientWrapper = ({
       setLoading(true);
       const attractionsResponse = await getAttractions(newFilters);
 
-      console.log(
-        "attractionsResponse checking for duration check",
-        attractionsResponse.data.data
-      );
-
       // Transform attractions data
       if (attractionsResponse?.data?.data) {
         const transformedAttractions = attractionsResponse.data.data.map(

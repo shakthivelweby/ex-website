@@ -310,7 +310,7 @@ export default function AttractionCheckoutPage() {
             Attraction not found
           </h2>
           <p className="text-gray-600">
-            The attraction you're looking for doesn't exist.
+            The attraction you&apos;re looking for doesn&apos;t exist.
           </p>
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function AttractionCheckoutPage() {
             
             {isLoading && (
               <div className="mt-3 text-center">
-                <p className="text-xs text-gray-500">Please don't close this window while processing...</p>
+                <p className="text-xs text-gray-500">Please don&apos;t close this window while processing...</p>
               </div>
             )}
 
@@ -631,7 +631,7 @@ export default function AttractionCheckoutPage() {
                 
                 {isLoading && (
                   <div className="text-center">
-                    <p className="text-sm text-gray-500">Please don't close this window while processing...</p>
+                    <p className="text-sm text-gray-500">Please don&apos;t close this window while processing...</p>
                   </div>
                 )}
 

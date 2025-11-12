@@ -741,8 +741,7 @@ export default function HomePage() {
 
 {/* NEW DESIGN SECTION */}
       {/* Book without agency section */}
-        <section className="container mx-auto px-4">
-        
+        <section className="container mx-auto px-4 hidden">        
     
                 <div className="relative overflow-hidden">
                 {/* Decorative blurred circle background at the top */}

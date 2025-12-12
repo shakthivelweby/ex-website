@@ -19,7 +19,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.19.1",
-    "next": "15.3.2",
+    "next": "15.3.6",
     "rc-slider": "^11.1.8",
     "react": "^19.0.0",
     "react-calendar": "^5.1.0",

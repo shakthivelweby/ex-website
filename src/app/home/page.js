@@ -35,14 +35,38 @@ const TravelMemories = () => {
   const x = useTransform(scrollYProgress, [0, 1], ["1%", "-65%"]);
 
   const memories = [
-    { src: "https://images.pexels.com/photos/237272/pexels-photo-237272.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Wanderlust" },
-    { src: "https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Adventure" },
-    { src: "https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Serenity" },
-    { src: "https://images.pexels.com/photos/3278215/pexels-photo-3278215.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Explore" },
-    { src: "https://images.pexels.com/photos/450441/pexels-photo-450441.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Journey" },
-    { src: "https://images.pexels.com/photos/1267697/pexels-photo-1267697.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Memories" },
-    { src: "https://images.pexels.com/photos/1371360/pexels-photo-1371360.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Escapade" },
-    { src: "https://images.pexels.com/photos/210243/pexels-photo-210243.jpeg?auto=compress&cs=tinysrgb&w=600", tag: "Sunset" },
+    {
+      src: "https://images.pexels.com/photos/237272/pexels-photo-237272.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Wanderlust",
+    },
+    {
+      src: "https://images.pexels.com/photos/1271619/pexels-photo-1271619.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Adventure",
+    },
+    {
+      src: "https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Serenity",
+    },
+    {
+      src: "https://images.pexels.com/photos/3278215/pexels-photo-3278215.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Explore",
+    },
+    {
+      src: "https://images.pexels.com/photos/450441/pexels-photo-450441.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Journey",
+    },
+    {
+      src: "https://images.pexels.com/photos/1267697/pexels-photo-1267697.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Memories",
+    },
+    {
+      src: "https://images.pexels.com/photos/1371360/pexels-photo-1371360.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Escapade",
+    },
+    {
+      src: "https://images.pexels.com/photos/210243/pexels-photo-210243.jpeg?auto=compress&cs=tinysrgb&w=600",
+      tag: "Sunset",
+    },
   ];
 
   return (
@@ -63,7 +87,7 @@ const TravelMemories = () => {
               key={i}
               className="relative flex-shrink-0 w-[300px] h-[400px] bg-white p-4 shadow-xl transition-all duration-300 transform cursor-pointer group rounded-sm hover:z-10 hover:scale-105"
               style={{
-                transform: `rotate(${i % 2 === 0 ? '-2deg' : '2deg'})`,
+                transform: `rotate(${i % 2 === 0 ? "-2deg" : "2deg"})`,
               }}
             >
               {/* Realistic Pin */}
@@ -374,8 +398,9 @@ export default function HomePage() {
         url += `?state=${destination.state_id}`;
       }
       if (destination.destination_id) {
-        url += `${destination.state_id ? "&" : "?"}destination=${destination.destination_id
-          }`;
+        url += `${destination.state_id ? "&" : "?"}destination=${
+          destination.destination_id
+        }`;
       }
       router.push(url);
     } else {
@@ -399,8 +424,9 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-2.5">
             <i
-              className={`${tripOptions.find((opt) => opt.value === selectedTrip)?.icon
-                } text-gray-800 text-base transition-colors`}
+              className={`${
+                tripOptions.find((opt) => opt.value === selectedTrip)?.icon
+              } text-gray-800 text-base transition-colors`}
             ></i>
             <span className="text-base">{selectedTrip}</span>
           </div>
@@ -437,18 +463,20 @@ export default function HomePage() {
                   setSelectedTrip(option.value);
                   setIsDropdownOpen(false);
                 }}
-                className={`w-full px-5 py-3.5 text-left text-[14px] hover:bg-gray-50/80 transition-all flex items-center gap-3 group ${selectedTrip === option.value
-                  ? "text-primary-500 font-medium bg-primary-50/50"
-                  : "text-gray-700"
-                  }`}
+                className={`w-full px-5 py-3.5 text-left text-[14px] hover:bg-gray-50/80 transition-all flex items-center gap-3 group ${
+                  selectedTrip === option.value
+                    ? "text-primary-500 font-medium bg-primary-50/50"
+                    : "text-gray-700"
+                }`}
                 whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
                 whileTap={{ backgroundColor: "rgba(0,0,0,0.05)" }}
               >
                 <i
-                  className={`${option.icon} text-lg ${selectedTrip === option.value
-                    ? "text-primary-500"
-                    : "text-gray-500 group-hover:text-primary-500 transition-colors"
-                    }`}
+                  className={`${option.icon} text-lg ${
+                    selectedTrip === option.value
+                      ? "text-primary-500"
+                      : "text-gray-500 group-hover:text-primary-500 transition-colors"
+                  }`}
                 ></i>
                 <div>
                   <div className="font-medium">{option.label}</div>
@@ -741,7 +769,8 @@ export default function HomePage() {
                 <p className="text-base text-gray-600 leading-relaxed text-left">
                   Discover a world of possibilities. From curated packages to
                   thrilling activities, everything you need for the perfect
-                  journey. We bring you the best options to make your travel experience seamless and memorable.
+                  journey. We bring you the best options to make your travel
+                  experience seamless and memorable.
                 </p>
               </motion.div>
             </div>
@@ -845,8 +874,9 @@ export default function HomePage() {
                   <div
                     className={`
                     bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 
-                    flex flex-col ${index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
-                      } 
+                    flex flex-col ${
+                      index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
+                    } 
                     min-h-[350px] lg:h-[400px] relative transition-all duration-300
                     hover:shadow-2xl transform
                   `}
@@ -977,12 +1007,15 @@ export default function HomePage() {
                           destinations[0].image ||
                           "https://images.unsplash.com/photo-1557750255-c76072a7bb56?q=80&w=1000",
                         packageCount: destinations[0].package_count || 0,
-                        description: `${destinations[0].package_count || 0
-                          } Tour Packages`,
+                        description: `${
+                          destinations[0].package_count || 0
+                        } Tour Packages`,
                         href: destinations[0].country_id
-                          ? `/packages/${destinations[0].country_id}?state=${destinations[0].state_id || ""
-                          }&destination=${destinations[0].destination_id || ""
-                          }`
+                          ? `/packages/${destinations[0].country_id}?state=${
+                              destinations[0].state_id || ""
+                            }&destination=${
+                              destinations[0].destination_id || ""
+                            }`
                           : `/explore`,
                       }}
                       className="h-full"
@@ -998,12 +1031,15 @@ export default function HomePage() {
                           destinations[1].image ||
                           "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
                         packageCount: destinations[1].package_count || 0,
-                        description: `${destinations[1].package_count || 0
-                          } Tour Packages`,
+                        description: `${
+                          destinations[1].package_count || 0
+                        } Tour Packages`,
                         href: destinations[1].country_id
-                          ? `/packages/${destinations[1].country_id}?state=${destinations[1].state_id || ""
-                          }&destination=${destinations[1].destination_id || ""
-                          }`
+                          ? `/packages/${destinations[1].country_id}?state=${
+                              destinations[1].state_id || ""
+                            }&destination=${
+                              destinations[1].destination_id || ""
+                            }`
                           : `/explore`,
                       }}
                       className="h-full"
@@ -1022,11 +1058,13 @@ export default function HomePage() {
                         destinations[2].image ||
                         "https://images.unsplash.com/photo-1523482580672-01e6f2836647?q=80&w=1000",
                       packageCount: destinations[2].package_count || 0,
-                      description: `${destinations[2].package_count || 0
-                        } Tour Packages`,
+                      description: `${
+                        destinations[2].package_count || 0
+                      } Tour Packages`,
                       href: destinations[2].country_id
-                        ? `/packages/${destinations[2].country_id}?state=${destinations[2].state_id || ""
-                        }&destination=${destinations[2].destination_id || ""}`
+                        ? `/packages/${destinations[2].country_id}?state=${
+                            destinations[2].state_id || ""
+                          }&destination=${destinations[2].destination_id || ""}`
                         : `/explore`,
                     }}
                     className="h-full"
@@ -1045,12 +1083,15 @@ export default function HomePage() {
                           destinations[3].image ||
                           "https://images.unsplash.com/photo-1516550893923-42d28e560348?q=80&w=1000",
                         packageCount: destinations[3].package_count || 0,
-                        description: `${destinations[3].package_count || 0
-                          } Tour Packages`,
+                        description: `${
+                          destinations[3].package_count || 0
+                        } Tour Packages`,
                         href: destinations[3].country_id
-                          ? `/packages/${destinations[3].country_id}?state=${destinations[3].state_id || ""
-                          }&destination=${destinations[3].destination_id || ""
-                          }`
+                          ? `/packages/${destinations[3].country_id}?state=${
+                              destinations[3].state_id || ""
+                            }&destination=${
+                              destinations[3].destination_id || ""
+                            }`
                           : `/explore`,
                       }}
                       className="h-full"
@@ -1066,12 +1107,15 @@ export default function HomePage() {
                           destinations[4].image ||
                           "https://images.unsplash.com/photo-1591523447926-a0b2fd8936ac?q=80&w=1000",
                         packageCount: destinations[4].package_count || 0,
-                        description: `${destinations[4].package_count || 0
-                          } Tour Packages`,
+                        description: `${
+                          destinations[4].package_count || 0
+                        } Tour Packages`,
                         href: destinations[4].country_id
-                          ? `/packages/${destinations[4].country_id}?state=${destinations[4].state_id || ""
-                          }&destination=${destinations[4].destination_id || ""
-                          }`
+                          ? `/packages/${destinations[4].country_id}?state=${
+                              destinations[4].state_id || ""
+                            }&destination=${
+                              destinations[4].destination_id || ""
+                            }`
                           : `/explore`,
                       }}
                       className="h-full"
@@ -1404,11 +1448,10 @@ export default function HomePage() {
             </div>
           </div>
         </motion.section>
-
-      </div >
+      </div>
 
       {/* Footer */}
-      < Footer />
-    </div >
+      <Footer />
+    </div>
   );
 }

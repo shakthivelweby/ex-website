@@ -551,7 +551,7 @@ export default function HomePage() {
                   transition={{ duration: 0.6, delay: 0.3 }}
                   className="text-xl md:text-2xl text-white/90 mb-8 md:mb-12 font-light max-w-2xl mx-auto"
                 >
-                  Explore the world's best experiences at the best prices.
+                  Explore the world&#39;s best experiences at the best prices.
                 </motion.p>
 
                 {/* Search Box with Animation */}

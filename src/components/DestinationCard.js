@@ -47,7 +47,7 @@ const DestinationCard = ({ destination, className = "" }) => {
         {/* Bottom Content with Reveal Animation */}
         <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
           <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-            <h3 className="text-3xl font-bold text-white mb-2 leading-tight drop-shadow-sm group-hover:text-primary-100 transition-colors">
+            <h3 className="text-2xl md:text-3xl font-bold text-white mb-1 leading-tight drop-shadow-sm group-hover:text-primary-100 transition-colors">
               {name}
             </h3>
 

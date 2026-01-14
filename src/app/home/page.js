@@ -189,6 +189,17 @@ export default function HomePage() {
   const [scrollX, setScrollX] = useState(0);
   const [imageParallax, setImageParallax] = useState(0);
   const scrollSectionRef = useRef(null);
+  const destinationScrollRef = useRef(null);
+
+  const scrollDestinations = (direction) => {
+    if (destinationScrollRef.current) {
+      const scrollAmount = 350;
+      destinationScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   const router = useRouter();
 
@@ -694,7 +705,7 @@ export default function HomePage() {
               </div>
               <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
                 Discover, Compare, <br />
-                <span className="text-primary-600">Book Direct.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Book Direct.</span>
               </h2>
               <p className="text-gray-600 text-base leading-relaxed mb-6">
                 Your single discovery platform to easily find, compare, and book
@@ -802,8 +813,8 @@ export default function HomePage() {
                     Curated For You
                   </span>
                 </div>
-                <h2 className="text-3xl lg:text-3xl xl:text-4xl font-bold text-gray-900 mb-6 tracking-tight leading-tight">
-                  What You Can Book
+                <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
+                  What You  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Can Book</span>
                 </h2>
                 <p className="text-base text-gray-600 leading-relaxed text-left">
                   Discover a world of possibilities. From curated packages to
@@ -987,186 +998,121 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Explore by Destination Section */}
-        <motion.section
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="container mx-auto px-4 py-16 mt-8 bg-white"
-        >
-          <div className="flex items-end justify-between mb-12">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2 mb-4">
-                <Image
-                  src="/home/star-light.png"
-                  alt=""
-                  width={24}
-                  height={24}
-                  className="w-6 h-6 animate-pulse"
-                />
-                <span className="text-xs tracking-[0.2em] uppercase text-gray-500 font-medium">
-                  Popular Destinations
-                </span>
+        {/* Explore by Destination Section - Horizontal Scroll */}
+        <section className="py-24 bg-gray-50 relative overflow-hidden">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
+              {/* Left Control Panel (Sticky on Desktop) */}
+              <div className="lg:w-1/3 flex flex-col justify-center lg:sticky lg:top-32 h-fit z-10">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-12 h-[2px] bg-primary-500"></span>
+                    <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                      Destinations
+                    </span>
+                  </div>
+                  <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
+                    Escape to the <br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Extraordinary</span>
+                  </h2>
+                  <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
+                    Explore our curated list of top-rated destinations. From sandy beaches to snowy mountains, find the perfect spot for your next vacation.
+                  </p>
+
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => scrollDestinations("left")}
+                      className="w-14 h-14 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all duration-300 group"
+                      aria-label="Scroll left"
+                    >
+                      <i className="fi fi-rr-arrow-left text-xl group-hover:-translate-x-1 transition-transform"></i>
+                    </button>
+                    <button
+                      onClick={() => scrollDestinations("right")}
+                      className="w-14 h-14 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all duration-300 group"
+                      aria-label="Scroll right"
+                    >
+                      <i className="fi fi-rr-arrow-right text-xl group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                  </div>
+
+                  <div className="mt-12">
+                    <Link
+                      href="/explore"
+                      className="text-primary-600 font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all"
+                    >
+                      View All Destinations
+                      <i className="fi fi-rr-arrow-right"></i>
+                    </Link>
+                  </div>
+                </motion.div>
               </div>
-              <h2 className="text-3xl lg:text-[42px] font-semibold text-gray-900 mb-3 tracking-tight leading-none">
-                Explore by Destination
-              </h2>
-              <p className="text-gray-600 text-lg font-light">
-                Browse by destination to find curated trips, activities, and
-                rentals.
-              </p>
+
+              {/* Right Scrollable Panel */}
+              <div className="lg:w-2/3 min-w-0"> {/* min-w-0 prevents flex child from overflowing */}
+                {loading ? (
+                  <div className="flex gap-6 overflow-hidden">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="min-w-[300px] h-[450px] bg-white rounded-[32px] animate-pulse"></div>
+                    ))}
+                  </div>
+                ) : destinations.length > 0 ? (
+                  <div
+                    ref={destinationScrollRef}
+                    className="flex gap-6 overflow-x-auto pb-8 pt-4 snap-x snap-mandatory scrollbar-hide -mr-4 pr-4 lg:pr-0 lg:mr-0"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                  >
+                    {/* Intro Card / Call to action card if desired, else just destinations */}
+                    {destinations.map((dest, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: 50 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.1, duration: 0.5 }}
+                        className="min-w-[280px] md:min-w-[340px] h-[450px] md:h-[500px] snap-start"
+                      >
+                        <DestinationCard
+                          destination={{
+                            name: dest.name,
+                            image: dest.image || "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
+                            packageCount: dest.package_count || 0,
+                            description: dest.description || `${dest.package_count || 0} Tours available`,
+                            trending: idx < 2, // First 2 are trending
+                            href: dest.country_id
+                              ? `/packages/${dest.country_id}?state=${dest.state_id || ""}&destination=${dest.destination_id || ""}`
+                              : `/explore`,
+                          }}
+                          className="h-full shadow-lg hover:shadow-xl transition-shadow duration-300"
+                        />
+                      </motion.div>
+                    ))}
+
+                    {/* "See More" End Card */}
+                    <div className="min-w-[200px] md:min-w-[250px] h-[450px] md:h-[500px] snap-start flex items-center justify-center">
+                      <Link href="/explore" className="group flex flex-col items-center gap-4 text-center">
+                        <div className="w-20 h-20 rounded-full border-2 border-primary-100 flex items-center justify-center group-hover:bg-primary-50 transition-colors">
+                          <i className="fi fi-rr-arrow-right text-3xl text-primary-500 group-hover:translate-x-1 transition-transform"></i>
+                        </div>
+                        <span className="font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                          Browse All <br /> Destinations
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-[400px] text-gray-400 bg-white rounded-[32px]">
+                    No destinations available
+                  </div>
+                )}
+              </div>
             </div>
-            <Link
-              href="/explore"
-              className="hidden lg:flex items-center gap-2 px-6 py-3 rounded-full bg-gray-50 hover:bg-gray-100 text-gray-900 font-medium text-sm transition-colors"
-            >
-              View All
-              <i className="fi fi-rr-arrow-right"></i>
-            </Link>
           </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-auto lg:h-[600px] mx-auto max-w-7xl">
-              <div className="flex items-center justify-center h-[600px]">
-                <div className="text-gray-400">Loading destinations...</div>
-              </div>
-            </div>
-          ) : destinations.length > 0 ? (
-            /* Destination Grid */
-            <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px] mx-auto max-w-7xl">
-              {/* Left Column */}
-              <div className="lg:w-1/4 flex flex-col gap-4">
-                {destinations[0] && (
-                  <div className="h-[300px] lg:h-1/2">
-                    <DestinationCard
-                      destination={{
-                        name: destinations[0].name,
-                        image:
-                          destinations[0].image ||
-                          "https://images.unsplash.com/photo-1557750255-c76072a7bb56?q=80&w=1000",
-                        packageCount: destinations[0].package_count || 0,
-                        description: `${destinations[0].package_count || 0
-                          } Tour Packages`,
-                        href: destinations[0].country_id
-                          ? `/packages/${destinations[0].country_id}?state=${destinations[0].state_id || ""
-                          }&destination=${destinations[0].destination_id || ""
-                          }`
-                          : `/explore`,
-                      }}
-                      className="h-full"
-                    />
-                  </div>
-                )}
-                {destinations[1] && (
-                  <div className="h-[300px] lg:h-1/2">
-                    <DestinationCard
-                      destination={{
-                        name: destinations[1].name,
-                        image:
-                          destinations[1].image ||
-                          "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
-                        packageCount: destinations[1].package_count || 0,
-                        description: `${destinations[1].package_count || 0
-                          } Tour Packages`,
-                        href: destinations[1].country_id
-                          ? `/packages/${destinations[1].country_id}?state=${destinations[1].state_id || ""
-                          }&destination=${destinations[1].destination_id || ""
-                          }`
-                          : `/explore`,
-                      }}
-                      className="h-full"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Middle Column */}
-              {destinations[2] && (
-                <div className="lg:w-1/2 h-[300px] lg:h-auto">
-                  <DestinationCard
-                    destination={{
-                      name: destinations[2].name,
-                      image:
-                        destinations[2].image ||
-                        "https://images.unsplash.com/photo-1523482580672-01e6f2836647?q=80&w=1000",
-                      packageCount: destinations[2].package_count || 0,
-                      description: `${destinations[2].package_count || 0
-                        } Tour Packages`,
-                      href: destinations[2].country_id
-                        ? `/packages/${destinations[2].country_id}?state=${destinations[2].state_id || ""
-                        }&destination=${destinations[2].destination_id || ""}`
-                        : `/explore`,
-                    }}
-                    className="h-full"
-                  />
-                </div>
-              )}
-
-              {/* Right Column */}
-              <div className="lg:w-1/4 flex flex-col gap-4">
-                {destinations[3] && (
-                  <div className="h-[300px] lg:h-1/2">
-                    <DestinationCard
-                      destination={{
-                        name: destinations[3].name,
-                        image:
-                          destinations[3].image ||
-                          "https://images.unsplash.com/photo-1516550893923-42d28e560348?q=80&w=1000",
-                        packageCount: destinations[3].package_count || 0,
-                        description: `${destinations[3].package_count || 0
-                          } Tour Packages`,
-                        href: destinations[3].country_id
-                          ? `/packages/${destinations[3].country_id}?state=${destinations[3].state_id || ""
-                          }&destination=${destinations[3].destination_id || ""
-                          }`
-                          : `/explore`,
-                      }}
-                      className="h-full"
-                    />
-                  </div>
-                )}
-                {destinations[4] && (
-                  <div className="h-[300px] lg:h-1/2">
-                    <DestinationCard
-                      destination={{
-                        name: destinations[4].name,
-                        image:
-                          destinations[4].image ||
-                          "https://images.unsplash.com/photo-1591523447926-a0b2fd8936ac?q=80&w=1000",
-                        packageCount: destinations[4].package_count || 0,
-                        description: `${destinations[4].package_count || 0
-                          } Tour Packages`,
-                        href: destinations[4].country_id
-                          ? `/packages/${destinations[4].country_id}?state=${destinations[4].state_id || ""
-                          }&destination=${destinations[4].destination_id || ""
-                          }`
-                          : `/explore`,
-                      }}
-                      className="h-full"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-auto lg:h-[600px] mx-auto max-w-7xl">
-              <div className="flex items-center justify-center h-[600px]">
-                <div className="text-gray-400">No destinations available</div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-center mt-8 lg:hidden">
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-medium text-sm"
-            >
-              View All Destinations
-              <i className="fi fi-rr-arrow-right"></i>
-            </Link>
-          </div>
-        </motion.section>
+        </section>
 
         {/* Popular on the Platform Section - Refreshed */}
         <motion.section
@@ -1174,16 +1120,37 @@ export default function HomePage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="container mx-auto px-4 py-16 mt-8 border-t border-gray-100"
+          className="container mx-auto px-4 py-24 relative"
         >
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-3xl lg:text-[42px] font-semibold text-gray-900 mb-4 tracking-tight">
-              Trending Experiences
-            </h2>
-            <p className="text-gray-600 text-lg font-light max-w-2xl mx-auto">
-              Highly rated for a reason. Book what everyone&apos;s talking
-              about.
-            </p>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+            <div className="max-w-2xl text-left">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="w-8 h-[2px] bg-primary-500"></span>
+                <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                  Trending Now
+                </span>
+              </div>
+              <h2 className="ext-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
+                Travel Trends <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">
+                  You’ll Love
+                </span>
+              </h2>
+            </div>
+
+            <div className="flex flex-col items-start md:items-end gap-6">
+              <p className="text-gray-500 text-lg max-w-md md:text-right leading-relaxed">
+                Discover the most booked and highest rated activities by travelers
+                like you this week.
+              </p>
+              <Link
+                href="/explore"
+                className="text-primary-600 font-semibold inline-flex items-center gap-2 hover:gap-4 transition-all"
+              >
+                <span className="font-medium">View All Trending</span>
+                <i className="fi fi-rr-arrow-right group-hover:translate-x-1 transition-transform"></i>
+              </Link>
+            </div>
           </div>
 
           {loading ? (

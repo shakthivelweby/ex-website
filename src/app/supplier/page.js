@@ -286,7 +286,7 @@ export default function SupplierPage() {
                                     <i className="fi fi-rr-money-check-edit"></i>
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900 mb-2">Payout Tracking</h3>
-                                <p className="text-gray-500 text-sm">Transparent commission reports and payout history. Know exactly when and how much you're getting paid.</p>
+                                <p className="text-gray-500 text-sm">Transparent commission reports and payout history. Know exactly when and how much you&apos;re getting paid.</p>
                             </motion.div>
                         </div>
                     </div>

@@ -28,11 +28,45 @@ import "swiper/css/free-mode";
 
 const TravelMemories = () => {
   const targetRef = useRef(null);
+  const contentRef = useRef(null);
+  const lastCardRef = useRef(null);
+  const [scrollRange, setScrollRange] = useState(0);
+
+  useEffect(() => {
+    const updateScrollRange = () => {
+      if (contentRef.current && lastCardRef.current) {
+        const viewportWidth = window.innerWidth;
+
+        // Get the last card's left edge position relative to viewport (when x = 0, initial state)
+        const lastCardRect = lastCardRef.current.getBoundingClientRect();
+        const lastCardLeftViewport = lastCardRect.left;
+
+        // Calculate range so that when scrollYProgress = 1, last card's left edge appears at viewport right edge
+        // When we apply x = -range, the last card moves left by 'range' pixels
+        // We want: lastCardLeftViewport - range = viewportWidth
+        // Therefore: range = lastCardLeftViewport - viewportWidth
+        const range = lastCardLeftViewport - viewportWidth;
+        setScrollRange(Math.max(0, range));
+      }
+    };
+
+    // Initial update with a small delay to ensure DOM is ready
+    const timeoutId = setTimeout(updateScrollRange, 100);
+
+    // Update on resize
+    window.addEventListener("resize", updateScrollRange);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", updateScrollRange);
+    };
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: targetRef,
+    offset: ["start start", "end end"],
   });
 
-  const x = useTransform(scrollYProgress, [0, 1], ["1%", "-65%"]);
+  const x = useTransform(scrollYProgress, [0, 1], ["0px", `-${scrollRange}px`]);
 
   const memories = [
     {
@@ -70,9 +104,12 @@ const TravelMemories = () => {
   ];
 
   return (
-    <section ref={targetRef} className="relative h-[300vh] bg-gray-50">
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden z-10">
-        <div className="container mx-auto px-4 absolute top-28 left-0 right-0 z-10 text-center">
+    <section
+      ref={targetRef}
+      className="relative h-[150vh] md:h-[200vh] lg:h-[300vh] bg-gray-50"
+    >
+      <div className="sticky top-0 flex flex-col h-screen justify-center items-center overflow-hidden z-10 pt-20 pb-10">
+        <div className="container mx-auto px-4 text-center mb-8 lg:mb-12 shrink-0">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2 font-handwriting">
             Captured Moments
           </h2>
@@ -81,11 +118,16 @@ const TravelMemories = () => {
           </p>
         </div>
 
-        <motion.div style={{ x }} className="flex gap-12 px-12 md:px-24">
+        <motion.div
+          ref={contentRef}
+          style={{ x }}
+          className="flex gap-8 lg:gap-12 px-4 md:px-24 items-center"
+        >
           {memories.map((m, i) => (
             <div
               key={i}
-              className="relative flex-shrink-0 w-[300px] h-[400px] bg-white p-4 shadow-xl transition-all duration-300 transform cursor-pointer group rounded-sm hover:z-10 hover:scale-105"
+              ref={i === memories.length - 1 ? lastCardRef : null}
+              className="relative flex-shrink-0 w-[150px] h-[200px] lg:w-[300px] lg:h-[400px] bg-white p-2 lg:p-4 shadow-xl transition-all duration-300 transform cursor-pointer group rounded-sm hover:z-10 hover:scale-105"
               style={{
                 transform: `rotate(${i % 2 === 0 ? "-2deg" : "2deg"})`,
               }}
@@ -97,7 +139,7 @@ const TravelMemories = () => {
                 </div>
               </div>
 
-              <div className="w-full h-[85%] relative overflow-hidden bg-gray-100 mb-3 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500">
+              <div className="w-full h-[80%] lg:h-[85%] relative overflow-hidden bg-gray-100 mb-3 grayscale-[20%] group-hover:grayscale-0 transition-all duration-500">
                 <Image
                   src={m.src}
                   alt={m.tag}
@@ -105,7 +147,7 @@ const TravelMemories = () => {
                   className="object-cover transition-transform duration-700"
                 />
               </div>
-              <div className="text-center font-handwriting text-gray-600 text-xl group-hover:text-primary-600 transition-colors">
+              <div className="text-center font-handwriting text-gray-600 text-sm lg:text-xl group-hover:text-primary-600 transition-colors">
                 #{m.tag}
               </div>
             </div>
@@ -345,8 +387,8 @@ export default function HomePage() {
             )
           );
 
-          // Transform horizontally based on scroll (reduced speed for smoother movement)
-          const translateX = scrollProgress * 80 - 40; // Reduced from 200 to 80 for slower, smoother movement
+          // Transform horizontally based on scroll - from right to left
+          const translateX = 100 - scrollProgress * 200; // Starts at 100% (right) and moves to -100% (left)
           setScrollX(translateX);
 
           // Parallax effect for image (moves slower than scroll, creating depth)
@@ -713,7 +755,10 @@ export default function HomePage() {
           </div>
         </motion.section>
 
-        <section ref={scrollSectionRef} className="relative overflow-hidden">
+        <section
+          ref={scrollSectionRef}
+          className="relative overflow-hidden h-[550px] md:h-[600px] lg:h-[700px]"
+        >
           <Image
             className="w-full h-full object-cover"
             src="/cover.jpg"
@@ -738,6 +783,7 @@ export default function HomePage() {
           </p>
         </section>
 
+        {/* What You Can Book Section - Stacking Cards */}
         {/* What You Can Book Section - Stacking Cards */}
         <section className="container mx-auto px-4 py-24" id="booking-section">
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-20 items-start">
@@ -918,7 +964,7 @@ export default function HomePage() {
                     </div>
 
                     {/* Image Side */}
-                    <div className="flex-1 relative h-[200px] lg:h-full overflow-hidden">
+                    <div className="flex-none lg:flex-1 relative h-[220px] lg:h-full overflow-hidden">
                       <div className="absolute inset-0 bg-gray-900/10 z-10 transition-opacity hover:opacity-0"></div>
                       <motion.div
                         whileHover={{ scale: 1.05 }}
@@ -987,11 +1033,12 @@ export default function HomePage() {
               </div>
             </div>
           ) : destinations.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-auto lg:h-[600px] mx-auto max-w-7xl">
+            /* Destination Grid */
+            <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[600px] mx-auto max-w-7xl">
               {/* Left Column */}
-              <div className="flex flex-col gap-4 min-h-[500px] lg:min-h-0">
+              <div className="lg:w-1/4 flex flex-col gap-4">
                 {destinations[0] && (
-                  <div className="h-1/2">
+                  <div className="h-[300px] lg:h-1/2">
                     <DestinationCard
                       destination={{
                         name: destinations[0].name,
@@ -1012,7 +1059,7 @@ export default function HomePage() {
                   </div>
                 )}
                 {destinations[1] && (
-                  <div className="h-1/2">
+                  <div className="h-[300px] lg:h-1/2">
                     <DestinationCard
                       destination={{
                         name: destinations[1].name,
@@ -1036,7 +1083,7 @@ export default function HomePage() {
 
               {/* Middle Column */}
               {destinations[2] && (
-                <div className="lg:col-span-2 min-h-[500px] lg:min-h-0">
+                <div className="lg:w-1/2 h-[300px] lg:h-auto">
                   <DestinationCard
                     destination={{
                       name: destinations[2].name,
@@ -1057,9 +1104,9 @@ export default function HomePage() {
               )}
 
               {/* Right Column */}
-              <div className="flex flex-col gap-4 min-h-[500px] lg:min-h-0">
+              <div className="lg:w-1/4 flex flex-col gap-4">
                 {destinations[3] && (
-                  <div className="h-1/2">
+                  <div className="h-[300px] lg:h-1/2">
                     <DestinationCard
                       destination={{
                         name: destinations[3].name,
@@ -1080,7 +1127,7 @@ export default function HomePage() {
                   </div>
                 )}
                 {destinations[4] && (
-                  <div className="h-1/2">
+                  <div className="h-[300px] lg:h-1/2">
                     <DestinationCard
                       destination={{
                         name: destinations[4].name,
@@ -1375,52 +1422,99 @@ export default function HomePage() {
           transition={{ duration: 0.6, ease: "easeOut" }}
           className="container mx-auto px-4 py-16 mt-8"
         >
-          <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl p-8 md:p-12 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Main CTA Card */}
+            <div className="lg:col-span-7 xl:col-span-8 bg-gray-900 rounded-[32px] p-8 md:p-12 relative overflow-hidden flex flex-col justify-between min-h-[400px] border border-gray-800">
+              {/* Background Accents */}
+              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary-500/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3"></div>
 
-            <div className="relative z-10 max-w-4xl mx-auto text-center">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="w-12 h-[2px] bg-white/50"></div>
-                <span className="text-xs tracking-[0.2em] uppercase text-white/90 font-medium">
-                  For Suppliers
-                </span>
-                <div className="w-12 h-[2px] bg-white/50"></div>
+              <div className="relative z-10">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/10 backdrop-blur-md mb-6">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  <span className="text-xs font-medium text-white/90 tracking-wide uppercase">
+                    Submit your list
+                  </span>
+                </div>
+
+                <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-[1.1]">
+                  Expand your reach <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-white">
+                    Worldwide.
+                  </span>
+                </h2>
+
+                <p className="text-gray-400 text-lg max-w-lg mb-8 leading-relaxed">
+                  Connect with millions of travelers planning their next
+                  adventure. Simple onboarding, powerful tools, and 24/7
+                  support.
+                </p>
               </div>
-              <h2 className="text-3xl lg:text-5xl font-bold mb-4 tracking-tight">
-                Sell Directly to Travelers
-              </h2>
-              <p className="text-lg text-white/90 mb-8 max-w-2xl mx-auto">
-                Join thousands of verified suppliers. List your experiences,
-                reach more customers, and grow your business with our
-                commission-based model.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+
+              <div className="relative z-10 flex flex-wrap gap-4">
                 <Link
                   href="/supplier/register"
-                  className="bg-white text-primary-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-all flex items-center gap-2 group"
                 >
-                  List Your Experience
+                  Become a Partner
+                  <i className="fi fi-rr-arrow-right group-hover:translate-x-1 transition-transform"></i>
                 </Link>
                 <Link
                   href="/supplier/login"
-                  className="bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white px-8 py-4 rounded-full font-semibold hover:bg-white/20 transition-all duration-300"
+                  className="px-8 py-4 bg-transparent border border-gray-700 text-white rounded-full font-medium hover:bg-white/5 transition-all"
                 >
-                  Become a Supplier
+                  <span className="opacity-80">Log In</span>
                 </Link>
               </div>
-              <div className="mt-8 flex items-center justify-center gap-8 text-sm text-white/80">
-                <div className="flex items-center gap-2">
-                  <i className="fi fi-rr-check-circle"></i>
-                  <span>No setup fees</span>
+            </div>
+
+            {/* Side Feature Cards */}
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+              {/* Feature 1 */}
+              <div className="bg-primary-50 rounded-[32px] p-8 flex-1 flex flex-col justify-center border border-primary-100/50 hover:shadow-lg transition-shadow duration-300">
+                <div className="w-12 h-12 rounded-2xl bg-primary-100 text-primary-600 flex items-center justify-center text-2xl mb-4">
+                  <i className="fi fi-rr-wallet"></i>
                 </div>
-                <div className="flex items-center gap-2">
-                  <i className="fi fi-rr-check-circle"></i>
-                  <span>Commission-based</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <i className="fi fi-rr-check-circle"></i>
-                  <span>Quick onboarding</span>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Maximized Earnings
+                </h3>
+                <p className="text-gray-600">
+                  Competitive commission rates and zero listing fees. Keep more
+                  of what you earn.
+                </p>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="bg-primary-600 rounded-[32px] p-8 flex-1 flex flex-col justify-center text-white relative overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700"></div>
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold mb-2">Instant Visibility</h3>
+                  <p className="text-primary-100 mb-4">
+                    Your experiences go live immediately after verification.
+                    Start getting bookings today.
+                  </p>
+                  <div className="flex -space-x-3">
+                    {[
+                      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop",
+                      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=100&h=100&fit=crop",
+                      "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100&h=100&fit=crop",
+                      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
+                    ].map((src, i) => (
+                      <div
+                        key={i}
+                        className="w-8 h-8 rounded-full border-2 border-primary-600 bg-gray-300 relative overflow-hidden"
+                      >
+                        <Image
+                          src={src}
+                          fill
+                          alt="user"
+                          className="object-cover"
+                        />
+                      </div>
+                    ))}
+                    <div className="w-8 h-8 rounded-full border-2 border-primary-600 bg-white text-primary-700 flex items-center justify-center text-[10px] font-bold z-10">
+                      1k+
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

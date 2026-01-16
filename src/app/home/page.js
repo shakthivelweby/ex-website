@@ -451,8 +451,9 @@ export default function HomePage() {
         url += `?state=${destination.state_id}`;
       }
       if (destination.destination_id) {
-        url += `${destination.state_id ? "&" : "?"}destination=${destination.destination_id
-          }`;
+        url += `${destination.state_id ? "&" : "?"}destination=${
+          destination.destination_id
+        }`;
       }
       router.push(url);
     } else {
@@ -476,8 +477,9 @@ export default function HomePage() {
         >
           <div className="flex items-center gap-2.5">
             <i
-              className={`${tripOptions.find((opt) => opt.value === selectedTrip)?.icon
-                } text-gray-800 text-base transition-colors`}
+              className={`${
+                tripOptions.find((opt) => opt.value === selectedTrip)?.icon
+              } text-gray-800 text-base transition-colors`}
             ></i>
             <span className="text-base">{selectedTrip}</span>
           </div>
@@ -514,18 +516,20 @@ export default function HomePage() {
                   setSelectedTrip(option.value);
                   setIsDropdownOpen(false);
                 }}
-                className={`w-full px-5 py-3.5 text-left text-[14px] hover:bg-gray-50/80 transition-all flex items-center gap-3 group ${selectedTrip === option.value
-                  ? "text-primary-500 font-medium bg-primary-50/50"
-                  : "text-gray-700"
-                  }`}
+                className={`w-full px-5 py-3.5 text-left text-[14px] hover:bg-gray-50/80 transition-all flex items-center gap-3 group ${
+                  selectedTrip === option.value
+                    ? "text-primary-500 font-medium bg-primary-50/50"
+                    : "text-gray-700"
+                }`}
                 whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
                 whileTap={{ backgroundColor: "rgba(0,0,0,0.05)" }}
               >
                 <i
-                  className={`${option.icon} text-lg ${selectedTrip === option.value
-                    ? "text-primary-500"
-                    : "text-gray-500 group-hover:text-primary-500 transition-colors"
-                    }`}
+                  className={`${option.icon} text-lg ${
+                    selectedTrip === option.value
+                      ? "text-primary-500"
+                      : "text-gray-500 group-hover:text-primary-500 transition-colors"
+                  }`}
                 ></i>
                 <div>
                   <div className="font-medium">{option.label}</div>
@@ -683,116 +687,58 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Platform Value Section */}
-        {/* Platform Value Section - Refreshed */}
+        {/* Feature Cards Row Section */}
         <motion.section
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="container mx-auto px-4 py-16 mt-8"
+          className="container mx-auto px-4 py-8 mt-8"
         >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12 bg-gradient-to-br from-gray-50 via-gray-50 to-primary-50/30 rounded-[40px] p-8 md:p-12 overflow-hidden relative">
-            {/* Decorative background elements */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-primary-100/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
-            <div className="md:w-1/3">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-12 h-[2px] bg-primary-500"></div>
-                <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
-                  About The Platform
-                </span>
-              </div>
-              <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
-                Discover, Compare, <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Book Direct.</span>
-              </h2>
-              <p className="text-gray-600 text-base leading-relaxed mb-6">
-                Your single discovery platform to easily find, compare, and book
-                trips, activities, and rentals. Focusing on destination-based
-                browsing and trust-driven design to offer you better pricing and
-                transparency.
-              </p>
-              <button className="text-primary-600 font-medium flex items-center gap-2 hover:gap-3 transition-all">
-                Learn more about us <i className="fi fi-rr-arrow-right"></i>
-              </button>
-            </div>
-
-            <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {[
-                {
-                  icon: "fi fi-rr-search-alt",
-                  title: "Search-First Discovery",
-                  description: "Find exactly what you want",
-                },
-                {
-                  icon: "fi fi-rr-hand-holding-usd",
-                  title: "Direct Booking",
-                  description: "Zero middleman fees",
-                },
-                {
-                  icon: "fi fi-rr-shield-check",
-                  title: "Verified Suppliers",
-                  description: "100% trusted partners",
-                },
-                {
-                  icon: "fi fi-rr-gem",
-                  title: "Experience Driven",
-                  description: "Curated local experiences",
-                },
-              ].map((feature, index) => (
-                <motion.div
-                  key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-sm hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 flex items-start gap-4 border border-white/50 hover:border-primary-100"
-                >
-                  <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 text-primary-600 border border-gray-100">
-                    <i className={`${feature.icon} text-xl`}></i>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900 mb-1">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
-                      {feature.description}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                icon: "fi fi-rr-search-alt",
+                title: "Discover Destinations",
+                description: "Explore amazing places worldwide",
+              },
+              {
+                icon: "fi fi-rr-hand-holding-usd",
+                title: "Direct Booking",
+                description: "Zero middleman fees",
+              },
+              {
+                icon: "fi fi-rr-shield-check",
+                title: "Verified Suppliers",
+                description: "100% trusted partners",
+              },
+              {
+                icon: "fi fi-rr-gem",
+                title: "Experience Driven",
+                description: "Curated local experiences",
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-sm hover:shadow-xl hover:shadow-primary-500/10 transition-all duration-300 flex items-start gap-4 border border-white/50 hover:border-primary-100"
+              >
+                <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center flex-shrink-0 text-primary-600 border border-gray-100">
+                  <i className={`${feature.icon} text-xl`}></i>
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-500 text-sm">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.section>
-
-        <section
-          ref={scrollSectionRef}
-          className="relative overflow-hidden h-[550px] md:h-[600px] lg:h-[700px]"
-        >
-          <Image
-            className="w-full h-full object-cover"
-            src="/cover.jpg"
-            alt="banner image"
-            width={1000}
-            height={1000}
-            style={{
-              transform: `translateY(${imageParallax}%) scale(1.1)`,
-              willChange: "transform",
-              transition: "transform 0.1s ease-out",
-            }}
-          />
-          <p
-            className="absolute top-1/2 left-0 text-white text-7xl font-bold z-10 whitespace-nowrap"
-            style={{
-              transform: `translateX(${scrollX}%) translateY(-50%)`,
-              willChange: "transform",
-            }}
-          >
-            DISCOVER YOUR NEXT ADVENTURE • EXPLORE THE WORLD • CREATE MEMORIES •
-            DISCOVER YOUR NEXT ADVENTURE • EXPLORE THE WORLD • CREATE MEMORIES
-          </p>
-        </section>
 
         {/* What You Can Book Section - Stacking Cards */}
         {/* What You Can Book Section - Stacking Cards */}
@@ -814,7 +760,10 @@ export default function HomePage() {
                   </span>
                 </div>
                 <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
-                  What You  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Can Book</span>
+                  What You{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">
+                    Can Book
+                  </span>
                 </h2>
                 <p className="text-base text-gray-600 leading-relaxed text-left">
                   Discover a world of possibilities. From curated packages to
@@ -924,8 +873,9 @@ export default function HomePage() {
                   <div
                     className={`
                     bg-white rounded-2xl overflow-hidden shadow-xl border border-gray-100 
-                    flex flex-col ${index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
-                      } 
+                    flex flex-col ${
+                      index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
+                    } 
                     min-h-[350px] lg:h-[400px] relative transition-all duration-300
                     hover:shadow-2xl transform
                   `}
@@ -1017,10 +967,14 @@ export default function HomePage() {
                   </div>
                   <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
                     Escape to the <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">Extraordinary</span>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">
+                      Extraordinary
+                    </span>
                   </h2>
                   <p className="text-gray-500 text-lg mb-8 leading-relaxed max-w-md">
-                    Explore our curated list of top-rated destinations. From sandy beaches to snowy mountains, find the perfect spot for your next vacation.
+                    Explore our curated list of top-rated destinations. From
+                    sandy beaches to snowy mountains, find the perfect spot for
+                    your next vacation.
                   </p>
 
                   <div className="flex items-center gap-4">
@@ -1053,18 +1007,23 @@ export default function HomePage() {
               </div>
 
               {/* Right Scrollable Panel */}
-              <div className="lg:w-2/3 min-w-0"> {/* min-w-0 prevents flex child from overflowing */}
+              <div className="lg:w-2/3 min-w-0">
+                {" "}
+                {/* min-w-0 prevents flex child from overflowing */}
                 {loading ? (
                   <div className="flex gap-6 overflow-hidden">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="min-w-[300px] h-[450px] bg-white rounded-[32px] animate-pulse"></div>
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        className="min-w-[300px] h-[450px] bg-white rounded-[32px] animate-pulse"
+                      ></div>
                     ))}
                   </div>
                 ) : destinations.length > 0 ? (
                   <div
                     ref={destinationScrollRef}
                     className="flex gap-6 overflow-x-auto pb-8 pt-4 snap-x snap-mandatory scrollbar-hide -mr-4 pr-4 lg:pr-0 lg:mr-0"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                   >
                     {/* Intro Card / Call to action card if desired, else just destinations */}
                     {destinations.map((dest, idx) => (
@@ -1079,12 +1038,18 @@ export default function HomePage() {
                         <DestinationCard
                           destination={{
                             name: dest.name,
-                            image: dest.image || "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
+                            image:
+                              dest.image ||
+                              "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
                             packageCount: dest.package_count || 0,
-                            description: dest.description || `${dest.package_count || 0} Tours available`,
+                            description:
+                              dest.description ||
+                              `${dest.package_count || 0} Tours available`,
                             trending: idx < 2, // First 2 are trending
                             href: dest.country_id
-                              ? `/packages/${dest.country_id}?state=${dest.state_id || ""}&destination=${dest.destination_id || ""}`
+                              ? `/packages/${dest.country_id}?state=${
+                                  dest.state_id || ""
+                                }&destination=${dest.destination_id || ""}`
                               : `/explore`,
                           }}
                           className="h-full shadow-lg hover:shadow-xl transition-shadow duration-300"
@@ -1094,7 +1059,10 @@ export default function HomePage() {
 
                     {/* "See More" End Card */}
                     <div className="min-w-[200px] md:min-w-[250px] h-[450px] md:h-[500px] snap-start flex items-center justify-center">
-                      <Link href="/explore" className="group flex flex-col items-center gap-4 text-center">
+                      <Link
+                        href="/explore"
+                        className="group flex flex-col items-center gap-4 text-center"
+                      >
                         <div className="w-20 h-20 rounded-full border-2 border-primary-100 flex items-center justify-center group-hover:bg-primary-50 transition-colors">
                           <i className="fi fi-rr-arrow-right text-3xl text-primary-500 group-hover:translate-x-1 transition-transform"></i>
                         </div>
@@ -1112,6 +1080,34 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section
+          ref={scrollSectionRef}
+          className="relative overflow-hidden h-[550px] md:h-[600px] lg:h-[700px]"
+        >
+          <Image
+            className="w-full h-full object-cover"
+            src="/cover.jpg"
+            alt="banner image"
+            width={1000}
+            height={1000}
+            style={{
+              transform: `translateY(${imageParallax}%) scale(1.1)`,
+              willChange: "transform",
+              transition: "transform 0.1s ease-out",
+            }}
+          />
+          <p
+            className="absolute top-1/2 left-0 text-white text-7xl font-bold z-10 whitespace-nowrap"
+            style={{
+              transform: `translateX(${scrollX}%) translateY(-50%)`,
+              willChange: "transform",
+            }}
+          >
+            DISCOVER YOUR NEXT ADVENTURE • EXPLORE THE WORLD • CREATE MEMORIES •
+            DISCOVER YOUR NEXT ADVENTURE • EXPLORE THE WORLD • CREATE MEMORIES
+          </p>
         </section>
 
         {/* Popular on the Platform Section - Refreshed */}
@@ -1140,8 +1136,8 @@ export default function HomePage() {
 
             <div className="flex flex-col items-start md:items-end gap-6">
               <p className="text-gray-500 text-lg max-w-md md:text-right leading-relaxed">
-                Discover the most booked and highest rated activities by travelers
-                like you this week.
+                Discover the most booked and highest rated activities by
+                travelers like you this week.
               </p>
               <Link
                 href="/explore"

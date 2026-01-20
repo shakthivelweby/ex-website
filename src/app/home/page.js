@@ -1414,19 +1414,23 @@ export default function HomePage() {
               </div>
 
               <div className="relative z-10 flex flex-wrap gap-4">
-                <Link
-                  href="/supplier/register"
+                <a
+                  href="https://supplier.exploreworld.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-all flex items-center gap-2 group"
                 >
                   Become a Partner
                   <i className="fi fi-rr-arrow-right group-hover:translate-x-1 transition-transform"></i>
-                </Link>
-                <Link
-                  href="/supplier/login"
+                </a>
+                <a
+                  href="https://supplier.exploreworld.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-8 py-4 bg-transparent border border-gray-700 text-white rounded-full font-medium hover:bg-white/5 transition-all"
                 >
                   <span className="opacity-80">Log In</span>
-                </Link>
+                </a>
               </div>
             </div>
 

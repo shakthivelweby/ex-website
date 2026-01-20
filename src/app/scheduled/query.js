@@ -18,11 +18,7 @@ export const useScheduledTrips = (filters) => {
       filters.pax
     ],
     queryFn: () => getScheduledTrips(filters),
-    enabled: Boolean(
-      filters?.latitude != null && 
-      filters?.longitude != null && 
-      filters?.selectedDate != null
-    ),
+    enabled: Boolean(filters?.selectedDate != null),
     staleTime: 0,
     cacheTime: 0,
     refetchOnMount: true,

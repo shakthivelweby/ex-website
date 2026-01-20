@@ -16,7 +16,7 @@ export default function Scheduled() {
   // State for selected date from DateNavBar - Initialize with null to prevent hydration mismatch
   const [selectedDate, setSelectedDate] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [mobileLayout, setMobileLayout] = useState('grid'); // Changed from 'grid' to 'list'
+  const [mobileLayout, setMobileLayout] = useState("grid"); // Changed from 'grid' to 'list'
   // Add state for start location and location edit popup
   const [startLocation, setStartLocation] = useState("");
   const [isLocationPopupOpen, setIsLocationPopupOpen] = useState(false);
@@ -26,16 +26,19 @@ export default function Scheduled() {
   const [isMobile, setIsMobile] = useState(false);
 
   const [locationCoordinates, setLocationCoordinates] = useState({
-    latitude: 10.1631526,
-    longitude: 76.64127119999999,
+    latitude: null,
+    longitude: null,
   });
+
+  // Track if we've loaded from localStorage to prevent clearing on initial mount
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
 
   // is mobile check
   useEffect(() => {
     if (isMobile) {
-      setMobileLayout('list');
+      setMobileLayout("list");
     } else {
-      setMobileLayout('grid');
+      setMobileLayout("grid");
     }
   }, [isMobile, setMobileLayout]);
 
@@ -87,17 +90,16 @@ export default function Scheduled() {
 
   // Google API Key - you can move this to environment variables
 
-
   // Handle mounting and initialize date
   useEffect(() => {
     setIsMounted(true);
     setSelectedDate(new Date());
   }, []);
 
-
   useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted || !hasLoadedFromStorage) return;
 
+    // Only save to localStorage if location is actually set
     if (locationCoordinates.latitude && locationCoordinates.longitude) {
       localStorage.setItem(
         "locationCoordinates",
@@ -106,15 +108,20 @@ export default function Scheduled() {
     }
     if (startLocation) {
       localStorage.setItem("startLocation", startLocation);
+    } else {
+      // Only remove from localStorage if location is intentionally cleared (after initial load)
+      localStorage.removeItem("startLocation");
+      localStorage.removeItem("locationCoordinates");
     }
-
-  }, [locationCoordinates, startLocation, isMounted]);
+  }, [locationCoordinates, startLocation, isMounted, hasLoadedFromStorage]);
 
   // get from local storage - only after mounting
   useEffect(() => {
     if (!isMounted) return;
 
-    const storedLocationCoordinates = localStorage.getItem("locationCoordinates");
+    const storedLocationCoordinates = localStorage.getItem(
+      "locationCoordinates"
+    );
     const storedStartLocation = localStorage.getItem("startLocation");
     const storedDestination = localStorage.getItem("choosedDestination");
 
@@ -124,7 +131,7 @@ export default function Scheduled() {
       setDestinationName(destination.name);
 
       // Update filters based on type using functional update
-      setFilters(prev => {
+      setFilters((prev) => {
         const updatedFilters = { ...prev };
         // Clear existing IDs first
         delete updatedFilters.country_id;
@@ -133,13 +140,13 @@ export default function Scheduled() {
 
         // Set the appropriate ID based on type
         switch (destination.type) {
-          case 'country':
+          case "country":
             updatedFilters.country_id = destination.id;
             break;
-          case 'state':
+          case "state":
             updatedFilters.state_id = destination.id;
             break;
-          case 'destination':
+          case "destination":
             updatedFilters.destination_id = destination.id;
             break;
         }
@@ -148,41 +155,33 @@ export default function Scheduled() {
     }
 
     // Handle starting location and coordinates separately
+    // Only load from localStorage if exists, don't set defaults
     if (storedLocationCoordinates && storedStartLocation) {
       setLocationCoordinates(JSON.parse(storedLocationCoordinates));
       setStartLocation(storedStartLocation);
-    } else {
-      // Set default location as Kerala
-      const defaultCoordinates = {
-        latitude: 10.1631526,
-        longitude: 76.64127119999999,
-      };
-      setLocationCoordinates(defaultCoordinates);
-      setStartLocation("Kerala");
-
-      // Store default values in localStorage
-      localStorage.setItem("locationCoordinates", JSON.stringify(defaultCoordinates));
-      localStorage.setItem("startLocation", "Kerala");
     }
+
+    // Mark that we've loaded from storage to prevent clearing on initial mount
+    setHasLoadedFromStorage(true);
   }, [isMounted]); // Removed filters dependency
-
-
 
   const { data: scheduledTrips } = useScheduledTrips(filters);
   const { data: destinationsData } = useDestinations();
   const packages = scheduledTrips?.data || [];
 
   // Format destinations for dropdown - wrapped in useMemo to prevent recalculation on every render
-  const destinationOptions = useMemo(() =>
-    destinationsData?.data?.map(dest => ({
-      value: dest.id.toString(),
-      label: dest.name,
-      coordinates: {
-        latitude: dest.latitude,
-        longitude: dest.longitude
-      }
-    })) || []
-    , [destinationsData?.data]);
+  const destinationOptions = useMemo(
+    () =>
+      destinationsData?.data?.map((dest) => ({
+        value: dest.id.toString(),
+        label: dest.name,
+        coordinates: {
+          latitude: dest.latitude,
+          longitude: dest.longitude,
+        },
+      })) || [],
+    [destinationsData?.data]
+  );
 
   // set default destination id
   useEffect(() => {
@@ -193,7 +192,7 @@ export default function Scheduled() {
       setDestinationName(destination.name);
 
       // Update filters based on type using functional update
-      setFilters(prev => {
+      setFilters((prev) => {
         const updatedFilters = { ...prev };
         // Clear existing IDs first
         delete updatedFilters.country_id;
@@ -202,13 +201,13 @@ export default function Scheduled() {
 
         // Set the appropriate ID based on type
         switch (destination.type) {
-          case 'country':
+          case "country":
             updatedFilters.country_id = destination.id;
             break;
-          case 'state':
+          case "state":
             updatedFilters.state_id = destination.id;
             break;
-          case 'destination':
+          case "destination":
             updatedFilters.destination_id = destination.id;
             break;
         }
@@ -218,22 +217,25 @@ export default function Scheduled() {
       const destination = {
         id: 1,
         name: "India",
-        type: 'country',
-        country_id: 1
+        type: "country",
+        country_id: 1,
       };
       const destinationData = {
         id: destination.id,
         name: destination.name,
         type: destination.type,
-        country_id: destination.country_id
+        country_id: destination.country_id,
       };
-      localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
+      localStorage.setItem(
+        "choosedDestination",
+        JSON.stringify(destinationData)
+      );
       setDestinationId(destination.id);
       setDestinationName(destination.name);
       // Update filters with destination details using functional update
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
-        country_id: destination.country_id
+        country_id: destination.country_id,
       }));
     }
   }, [isDestinationPopupOpen]); // Removed filters dependency
@@ -246,23 +248,26 @@ export default function Scheduled() {
         setDestinationId(destination.id);
         setDestinationName(destination.name);
 
-        setFilters(prev => ({
+        setFilters((prev) => ({
           ...prev,
           country_id: destination.country_id || null,
           state_id: destination.state_id || null,
-          destination_id: destination.type === 'destination' ? destination.id : null
+          destination_id:
+            destination.type === "destination" ? destination.id : null,
         }));
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   // Update coordinates when destination changes
   useEffect(() => {
     if (filters.destination) {
-      const selectedDest = destinationOptions.find(opt => opt.value === filters.destination);
+      const selectedDest = destinationOptions.find(
+        (opt) => opt.value === filters.destination
+      );
       if (selectedDest?.coordinates) {
         // Remove this since we don't need coordinates for destination
         // setLocationCoordinates(selectedDest.coordinates);
@@ -277,9 +282,9 @@ export default function Scheduled() {
     };
 
     checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
+    window.addEventListener("resize", checkIsMobile);
 
-    return () => window.removeEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
   const openLocationPopup = () => {
@@ -296,12 +301,21 @@ export default function Scheduled() {
         formattedAddress: place.formatted_address,
       };
 
-      // Update state with the location data
-      setStartLocation(locationData.name);
-      setLocationCoordinates({
+      const newCoordinates = {
         latitude: locationData.latitude,
         longitude: locationData.longitude,
-      });
+      };
+
+      // Update state with the location data
+      setStartLocation(locationData.name);
+      setLocationCoordinates(newCoordinates);
+
+      // Immediately save to localStorage
+      localStorage.setItem(
+        "locationCoordinates",
+        JSON.stringify(newCoordinates)
+      );
+      localStorage.setItem("startLocation", locationData.name);
 
       // Close popup
       setIsLocationPopupOpen(false);
@@ -320,10 +334,20 @@ export default function Scheduled() {
     setFilters((prev) => ({
       ...prev,
       selectedDate: selectedDate.toISOString().split("T")[0],
-      longitude: locationCoordinates.longitude,
-      latitude: locationCoordinates.latitude,
+      // Only include location if it's been set by user
+      ...(startLocation &&
+      locationCoordinates.latitude &&
+      locationCoordinates.longitude
+        ? {
+            longitude: locationCoordinates.longitude,
+            latitude: locationCoordinates.latitude,
+          }
+        : {
+            longitude: null,
+            latitude: null,
+          }),
     }));
-  }, [selectedDate, locationCoordinates]);
+  }, [selectedDate, locationCoordinates, startLocation]);
 
   // Update individual filter values in temporary state
   const updateFilter = (name, value) => {
@@ -357,7 +381,7 @@ export default function Scheduled() {
   // Clear all filters
   const clearAllFilters = () => {
     // Clear the main filters state
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       destination: null,
       budget_from: null,
@@ -402,7 +426,8 @@ export default function Scheduled() {
       tempFilters.budget_from ||
       tempFilters.budget_to ||
       tempFilters.sort_by_price ||
-      (tempFilters.dateRange?.startDate || tempFilters.dateRange?.endDate) ||
+      tempFilters.dateRange?.startDate ||
+      tempFilters.dateRange?.endDate ||
       tempFilters.pax ||
       tempFilters.duration
     );
@@ -414,7 +439,8 @@ export default function Scheduled() {
     if (tempFilters.destination) count++;
     if (tempFilters.budget_from || tempFilters.budget_to) count++;
     if (tempFilters.sort_by_price) count++;
-    if (tempFilters.dateRange?.startDate || tempFilters.dateRange?.endDate) count++;
+    if (tempFilters.dateRange?.startDate || tempFilters.dateRange?.endDate)
+      count++;
     if (tempFilters.pax) count++;
     if (tempFilters.duration) count++;
     return count;
@@ -423,26 +449,35 @@ export default function Scheduled() {
   // Apply filters
   const applyFilters = () => {
     // Create a clean filters object without null values
-    const cleanFilters = Object.entries(tempFilters).reduce((acc, [key, value]) => {
-      if (value !== null && value !== '') {
-        if (key === 'dateRange') {
-          if (value.startDate || value.endDate) {
-            acc[key] = {
-              startDate: value.startDate?.toISOString().split('T')[0] || null,
-              endDate: value.endDate?.toISOString().split('T')[0] || null,
-            };
+    const cleanFilters = Object.entries(tempFilters).reduce(
+      (acc, [key, value]) => {
+        if (value !== null && value !== "") {
+          if (key === "dateRange") {
+            if (value.startDate || value.endDate) {
+              acc[key] = {
+                startDate: value.startDate?.toISOString().split("T")[0] || null,
+                endDate: value.endDate?.toISOString().split("T")[0] || null,
+              };
+            }
+          } else {
+            acc[key] = value;
           }
-        } else {
-          acc[key] = value;
         }
-      }
-      return acc;
-    }, {});
+        return acc;
+      },
+      {}
+    );
 
-    // Add the current location coordinates
-    cleanFilters.longitude = locationCoordinates.longitude;
-    cleanFilters.latitude = locationCoordinates.latitude;
-    cleanFilters.selectedDate = selectedDate?.toISOString().split('T')[0] || "";
+    // Add the current location coordinates only if location is set
+    if (
+      startLocation &&
+      locationCoordinates.latitude &&
+      locationCoordinates.longitude
+    ) {
+      cleanFilters.longitude = locationCoordinates.longitude;
+      cleanFilters.latitude = locationCoordinates.latitude;
+    }
+    cleanFilters.selectedDate = selectedDate?.toISOString().split("T")[0] || "";
 
     // Update main filters state with clean values
     setFilters(cleanFilters);
@@ -468,8 +503,11 @@ export default function Scheduled() {
 
         <div className="container mx-auto px-4  ">
           {/* Title with edit button */}
-          <h1 className="text-2xl text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto" style={{ lineHeight: '1.3' }}>
-            Schedule trips to explore {" "}
+          <h1
+            className="text-2xl text-gray-900 md:text-4xl font-medium text-center mb-0 tracking-tight py-12 px-2 w-full md:w-[60%] mx-auto"
+            style={{ lineHeight: "1.3" }}
+          >
+            Schedule trips to explore{" "}
             <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
               {destinationName}
             </span>
@@ -477,14 +515,19 @@ export default function Scheduled() {
               className="inline-flex items-center justify-center fi fi-rr-pencil text-gray-900 text-xs text-white relative top-0 left-2 cursor-pointer mr-4 w-6 h-6  bg-primary-700 rounded-full p-1"
               onClick={openDestinationPopup}
             ></i>
-            which start from { }
-            <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
-              {startLocation}
-            </span>
-            <i
-              className="inline-flex items-center justify-center fi fi-rr-pencil text-gray-900 text-xs text-white relative top-0 left-2 cursor-pointer mr-4 w-6 h-6  bg-primary-700 rounded-full p-1"
-              onClick={openLocationPopup}
-            ></i>
+            {startLocation && (
+              <>
+                {" "}
+                which start from{" "}
+                <span className="text-primary-600 underline underline-offset-4 relative cursor-pointer">
+                  {startLocation}
+                </span>
+                <i
+                  className="inline-flex items-center justify-center fi fi-rr-pencil text-gray-900 text-xs text-white relative top-0 left-2 cursor-pointer mr-4 w-6 h-6  bg-primary-700 rounded-full p-1"
+                  onClick={openLocationPopup}
+                ></i>
+              </>
+            )}
           </h1>
 
           {/* destination list popup */}
@@ -502,6 +545,14 @@ export default function Scheduled() {
             onPlaceSelected={handlePlaceSelect}
             googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
             title="Change Starting Location"
+            initialValue={startLocation}
+            onClear={() => {
+              setStartLocation("");
+              setLocationCoordinates({ latitude: null, longitude: null });
+              localStorage.removeItem("startLocation");
+              localStorage.removeItem("locationCoordinates");
+              setIsLocationPopupOpen(false);
+            }}
           />
 
           {/* Mobile Filter Popup */}
@@ -527,17 +578,44 @@ export default function Scheduled() {
             <Popup.Content>
               <div className="space-y-6">
                 {/* Where you like to go */}
-                <div className="space-y-3" onClick={openLocationPopup} >
-                  <div className="flex items-center justify-between  mb-4 cursor-pointer" >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between mb-4">
                     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                       <i className="fi fi-rr-marker text-primary-500"></i>
                       Starting Location
                     </label>
-                    {filters.destination && (
-                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">Selected</span>
+                    {startLocation && (
+                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">
+                        Selected
+                      </span>
                     )}
                   </div>
-                  <div className="border-b border-gray-200 w-full text-gray-700 font-bold">{startLocation}</div>
+                  <div
+                    className="border-b border-gray-200 w-full text-gray-700 font-bold cursor-pointer hover:text-primary-600 transition-colors flex items-center justify-between group"
+                    onClick={openLocationPopup}
+                  >
+                    <span className={startLocation ? "" : "text-gray-400"}>
+                      {startLocation || "Click to set starting location"}
+                    </span>
+                    {startLocation && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setStartLocation("");
+                          setLocationCoordinates({
+                            latitude: null,
+                            longitude: null,
+                          });
+                          localStorage.removeItem("startLocation");
+                          localStorage.removeItem("locationCoordinates");
+                        }}
+                        className="ml-2 p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Clear location"
+                      >
+                        <i className="fi fi-rr-cross-small text-sm"></i>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Your Budget */}
@@ -548,7 +626,9 @@ export default function Scheduled() {
                       Budget Range
                     </label>
                     {(tempFilters.budget_from || tempFilters.budget_to) && (
-                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">Selected</span>
+                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">
+                        Selected
+                      </span>
                     )}
                   </div>
                   <RangeSlider
@@ -556,15 +636,23 @@ export default function Scheduled() {
                     min={6000}
                     max={53000}
                     step={1000}
-                    initialValue={tempFilters.budget_from || tempFilters.budget_to || ""}
+                    initialValue={
+                      tempFilters.budget_from || tempFilters.budget_to || ""
+                    }
                     formatDisplay={(val) => {
                       if (!val) return "Set your budget range";
                       const maxVal = Math.min(val + 3000, 53000);
-                      return `₹${Math.floor(val / 1000)}k to ₹${Math.floor(maxVal / 1000)}k`;
+                      return `₹${Math.floor(val / 1000)}k to ₹${Math.floor(
+                        maxVal / 1000
+                      )}k`;
                     }}
                     title="Price Range"
                     onChange={(value) => updateFilter("budget", value)}
-                    className={tempFilters.budget_from || tempFilters.budget_to ? "border-b-2 border-primary-500" : "border-b border-gray-200"}
+                    className={
+                      tempFilters.budget_from || tempFilters.budget_to
+                        ? "border-b-2 border-primary-500"
+                        : "border-b border-gray-200"
+                    }
                   />
                 </div>
 
@@ -576,22 +664,32 @@ export default function Scheduled() {
                       Price Sorting
                     </label>
                     {tempFilters.sort_by_price && (
-                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">Selected</span>
+                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">
+                        Selected
+                      </span>
                     )}
                   </div>
                   <Dropdown
                     key={`sort-${resetKey}`}
                     options={[
                       { value: "asc", label: "Low to High" },
-                      { value: "desc", label: "High to Low" }
+                      { value: "desc", label: "High to Low" },
                     ]}
                     placeholder="Sort by price"
-                    value={[
-                      { value: "asc", label: "Low to High" },
-                      { value: "desc", label: "High to Low" }
-                    ].find(opt => opt.value === tempFilters.sort_by_price) || null}
+                    value={
+                      [
+                        { value: "asc", label: "Low to High" },
+                        { value: "desc", label: "High to Low" },
+                      ].find(
+                        (opt) => opt.value === tempFilters.sort_by_price
+                      ) || null
+                    }
                     onChange={(option) => updateFilter("sort_by_price", option)}
-                    className={tempFilters.sort_by_price ? "border-b-1 border-primary-500" : "border-b border-gray-200"}
+                    className={
+                      tempFilters.sort_by_price
+                        ? "border-b-1 border-primary-500"
+                        : "border-b border-gray-200"
+                    }
                   />
                 </div>
 
@@ -603,7 +701,9 @@ export default function Scheduled() {
                       Travelers
                     </label>
                     {tempFilters.pax && (
-                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">Selected</span>
+                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">
+                        Selected
+                      </span>
                     )}
                   </div>
                   <RangeSlider
@@ -612,10 +712,18 @@ export default function Scheduled() {
                     max={50}
                     step={1}
                     initialValue={tempFilters.pax || ""}
-                    formatDisplay={(val) => (!val ? "Number of travelers" : `${val} ${val === 1 ? 'Traveler' : 'Travelers'}`)}
+                    formatDisplay={(val) =>
+                      !val
+                        ? "Number of travelers"
+                        : `${val} ${val === 1 ? "Traveler" : "Travelers"}`
+                    }
                     title="Number of Travelers"
                     onChange={(value) => updateFilter("pax", value)}
-                    className={tempFilters.pax ? "border-b-2 border-primary-500" : "border-b border-gray-200"}
+                    className={
+                      tempFilters.pax
+                        ? "border-b-2 border-primary-500"
+                        : "border-b border-gray-200"
+                    }
                   />
                 </div>
 
@@ -627,7 +735,9 @@ export default function Scheduled() {
                       Duration
                     </label>
                     {tempFilters.duration && (
-                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">Selected</span>
+                      <span className="text-xs font-medium text-primary-500 bg-primary-50 px-2 py-1 rounded-full">
+                        Selected
+                      </span>
                     )}
                   </div>
                   <RangeSlider
@@ -638,11 +748,17 @@ export default function Scheduled() {
                     initialValue={tempFilters.duration || ""}
                     formatDisplay={(val) => {
                       if (!val) return "Select trip duration";
-                      return `${val} ${val === 1 ? 'Day' : 'Days'} ${val - 1} ${val - 1 === 1 ? 'Night' : 'Nights'}`;
+                      return `${val} ${val === 1 ? "Day" : "Days"} ${val - 1} ${
+                        val - 1 === 1 ? "Night" : "Nights"
+                      }`;
                     }}
                     title="Trip Duration"
                     onChange={(value) => updateFilter("duration", value)}
-                    className={tempFilters.duration ? "border-b-2 border-primary-500" : "border-b border-gray-200"}
+                    className={
+                      tempFilters.duration
+                        ? "border-b-2 border-primary-500"
+                        : "border-b border-gray-200"
+                    }
                   />
                 </div>
               </div>
@@ -676,21 +792,25 @@ export default function Scheduled() {
                   <i className="fi fi-rr-calendar text-gray-900 text-sm"></i>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 font-medium">Trips Available</span>
+                  <span className="text-xs text-gray-500 font-medium">
+                    Trips Available
+                  </span>
                   <span className="text-sm md:text-lg font-bold text-gray-900">
                     <span className="md:hidden">
-                      {selectedDate && new Intl.DateTimeFormat('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric'
-                      }).format(selectedDate)}
+                      {selectedDate &&
+                        new Intl.DateTimeFormat("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        }).format(selectedDate)}
                     </span>
                     <span className="hidden md:inline">
-                      {selectedDate && new Intl.DateTimeFormat('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric'
-                      }).format(selectedDate)}
+                      {selectedDate &&
+                        new Intl.DateTimeFormat("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        }).format(selectedDate)}
                     </span>
                   </span>
                 </div>
@@ -701,26 +821,34 @@ export default function Scheduled() {
                 {/* View Toggle */}
                 <div className="flex items-center bg-white rounded-full p-0.5 border border-gray-100 shadow-sm lg:hidden">
                   <button
-                    onClick={() => setMobileLayout('list')}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${mobileLayout === 'list'
-                      ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
-                      : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                    onClick={() => setMobileLayout("list")}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+                      mobileLayout === "list"
+                        ? "bg-gray-900 text-white shadow-sm scale-[1.02]"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
                     aria-label="List view"
                   >
-                    <i className={`fi fi-rr-list text-[13px] transition-transform ${mobileLayout === 'list' ? 'scale-110' : ''
-                      }`}></i>
+                    <i
+                      className={`fi fi-rr-list text-[13px] transition-transform ${
+                        mobileLayout === "list" ? "scale-110" : ""
+                      }`}
+                    ></i>
                   </button>
                   <button
-                    onClick={() => setMobileLayout('grid')}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${mobileLayout === 'grid'
-                      ? 'bg-gray-900 text-white shadow-sm scale-[1.02]'
-                      : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                    onClick={() => setMobileLayout("grid")}
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all ${
+                      mobileLayout === "grid"
+                        ? "bg-gray-900 text-white shadow-sm scale-[1.02]"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
                     aria-label="Grid view"
                   >
-                    <i className={`fi fi-rr-apps text-[13px] transition-transform ${mobileLayout === 'grid' ? 'scale-110' : ''
-                      }`}></i>
+                    <i
+                      className={`fi fi-rr-apps text-[13px] transition-transform ${
+                        mobileLayout === "grid" ? "scale-110" : ""
+                      }`}
+                    ></i>
                   </button>
                 </div>
                 <div className="">
@@ -740,20 +868,29 @@ export default function Scheduled() {
           </div>
 
           {/* Trip Cards - Grid/List View */}
-          <div className={`${mobileLayout === 'grid'
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-            : 'flex flex-col gap-4'
-            }`}>
+          <div
+            className={`${
+              mobileLayout === "grid"
+                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                : "flex flex-col gap-4"
+            }`}
+          >
             {packages?.length === 0 && (
               <div className="col-span-full text-center py-16 ">
                 <div className="max-w-md mx-auto px-8">
                   <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>
                   <p className="text-gray-600 mb-8">
-                    Sorry, we couldn&apos;t find any packages starting from{" "}
-                    <span className="font-medium text-gray-900">
-                      {startLocation}
-                    </span>{" "}
-                    right now
+                    Sorry, we couldn&apos;t find any packages
+                    {startLocation && (
+                      <>
+                        {" "}
+                        starting from{" "}
+                        <span className="font-medium text-gray-900">
+                          {startLocation}
+                        </span>
+                      </>
+                    )}{" "}
+                    for this date right now
                   </p>
                 </div>
               </div>
@@ -767,7 +904,7 @@ export default function Scheduled() {
                 total_nights,
                 starting_location,
                 final_adult_price,
-                available_slot
+                available_slot,
               } = trip;
 
               return (

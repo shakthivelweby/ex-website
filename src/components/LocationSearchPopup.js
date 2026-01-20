@@ -4,16 +4,19 @@ import Popup from "./Popup";
 import Autocomplete from "react-google-autocomplete";
 import { useEffect, useState } from "react";
 
-export default function LocationSearchPopup({ 
-  isOpen, 
-  onClose, 
+export default function LocationSearchPopup({
+  isOpen,
+  onClose,
   onPlaceSelected,
   googleApiKey,
-  title
+  title,
+  initialValue = "",
+  onClear,
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
+  const [inputValue, setInputValue] = useState(initialValue);
 
   // Function to get state name from coordinates using Google Geocoding API
   const getStateFromCoords = async (latitude, longitude) => {
@@ -22,14 +25,14 @@ export default function LocationSearchPopup({
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleApiKey}`
       );
       const data = await response.json();
-      
+
       if (data.status !== "OK") {
         throw new Error("Failed to get location details");
       }
 
       // Find the state component from address components
       const stateComponent = data.results[0]?.address_components.find(
-        component => component.types.includes("administrative_area_level_1")
+        (component) => component.types.includes("administrative_area_level_1")
       );
 
       if (!stateComponent) {
@@ -41,8 +44,8 @@ export default function LocationSearchPopup({
         formattedAddress: data.results[0]?.formatted_address,
         location: {
           lat: latitude,
-          lng: longitude
-        }
+          lng: longitude,
+        },
       };
     } catch (error) {
       console.error("Error getting state:", error);
@@ -76,15 +79,17 @@ export default function LocationSearchPopup({
             geometry: {
               location: {
                 lat: () => stateInfo.location.lat,
-                lng: () => stateInfo.location.lng
-              }
-            }
+                lng: () => stateInfo.location.lng,
+              },
+            },
           };
 
           onPlaceSelected(placeObject);
           setIsDetectingLocation(false);
         } catch (error) {
-          setLocationError("Could not determine your location. Please try again.");
+          setLocationError(
+            "Could not determine your location. Please try again."
+          );
           setIsDetectingLocation(false);
         }
       },
@@ -109,9 +114,24 @@ export default function LocationSearchPopup({
     );
   };
 
+  // Update input value when initialValue changes or popup opens
+  useEffect(() => {
+    if (isOpen) {
+      setInputValue(initialValue);
+    }
+  }, [isOpen, initialValue]);
+
+  // Handle clear location
+  const handleClear = () => {
+    setInputValue("");
+    if (onClear) {
+      onClear();
+    }
+  };
+
   // Add custom styles for the Google Places Autocomplete dropdown
   useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .pac-container {
         border-radius: 16px !important;
@@ -230,8 +250,12 @@ export default function LocationSearchPopup({
                 </div>
               </div>
               <div>
-                <h3 className="text-gray-900 font-semibold text-lg leading-none mb-1">{title}</h3>
-                <p className="text-gray-500 text-sm">Search cities or regions in India</p>
+                <h3 className="text-gray-900 font-semibold text-lg leading-none mb-1">
+                  {title}
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  Search cities or regions in India
+                </p>
               </div>
             </div>
 
@@ -241,32 +265,55 @@ export default function LocationSearchPopup({
                   <i className="fi fi-rr-search text-gray-400 text-base"></i>
                 </div>
                 <Autocomplete
+                  key={isOpen ? `autocomplete-${inputValue}` : "autocomplete"}
                   apiKey={googleApiKey}
-                  onPlaceSelected={onPlaceSelected}
+                  onPlaceSelected={(place) => {
+                    setInputValue(place.name || place.formatted_address);
+                    onPlaceSelected(place);
+                  }}
                   options={{
-                    types: ['(regions)'],
-                    componentRestrictions: { country: 'in' },
-                    fields: ['name', 'formatted_address', 'geometry']
+                    types: ["(regions)"],
+                    componentRestrictions: { country: "in" },
+                    fields: ["name", "formatted_address", "geometry"],
                   }}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   placeholder="Enter city or destination name..."
                   className={`block w-full h-12 bg-transparent rounded-2xl transition-all duration-200
-                    pl-11 pr-12 text-[15px] text-gray-900 placeholder:text-gray-400 
+                    pl-11 pr-24 text-[15px] text-gray-900 placeholder:text-gray-400 
                     focus:outline-none border border-transparent
-                    ${isFocused ? 'bg-white border-gray-200 shadow-sm' : ''}`}
-                  defaultValue=""
+                    ${isFocused ? "bg-white border-gray-200 shadow-sm" : ""}`}
+                  defaultValue={inputValue}
                 />
-                <div className="absolute inset-y-0 right-0 flex items-center">
+                <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+                  {inputValue && (
+                    <button
+                      onClick={handleClear}
+                      className="h-10 w-10 flex items-center justify-center text-gray-400 
+                        hover:text-red-500 transition-colors rounded-xl
+                        cursor-pointer hover:bg-red-50"
+                      title="Clear location"
+                    >
+                      <i className="fi fi-rr-cross-small text-base"></i>
+                    </button>
+                  )}
                   <button
                     onClick={handleAutoDetectLocation}
                     disabled={isDetectingLocation}
-                    className={`h-12 w-12 flex items-center justify-center text-gray-400 
-                      hover:text-primary-500 transition-colors rounded-2xl
-                      ${isDetectingLocation ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:bg-white'}`}
+                    className={`h-10 w-10 flex items-center justify-center text-gray-400 
+                      hover:text-primary-500 transition-colors rounded-xl
+                      ${
+                        isDetectingLocation
+                          ? "cursor-not-allowed opacity-50"
+                          : "cursor-pointer hover:bg-primary-50"
+                      }`}
                     title="Use current location"
                   >
-                    <i className={`fi fi-rr-location-crosshairs text-base ${isDetectingLocation ? 'animate-spin' : ''}`}></i>
+                    <i
+                      className={`fi fi-rr-location-crosshairs text-base ${
+                        isDetectingLocation ? "animate-spin" : ""
+                      }`}
+                    ></i>
                   </button>
                 </div>
               </div>
@@ -291,7 +338,8 @@ export default function LocationSearchPopup({
             </div>
             <div>
               <p className="text-gray-600 text-sm leading-relaxed">
-                Choose your starting point to find the best trips available from your location.
+                Choose your starting point to find the best trips available from
+                your location.
               </p>
             </div>
           </div>
@@ -299,4 +347,4 @@ export default function LocationSearchPopup({
       </div>
     </Popup>
   );
-} 
+}

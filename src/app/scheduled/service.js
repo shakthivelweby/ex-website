@@ -3,8 +3,6 @@ import apiMiddleware from "@/app/api/apiMiddleware";
 export const getScheduledTrips = async (filters) => {
   // Clean and validate the filters
   const cleanFilters = {
-    startLongitude: filters.longitude || '',
-    startLatitude: filters.latitude || '',
     selectedDate: filters.selectedDate || '',
     country_id: filters.country_id || '',
     state_id: filters.state_id || '',
@@ -15,6 +13,12 @@ export const getScheduledTrips = async (filters) => {
     duration: filters.duration || '',
     total_pax: filters.pax || ''
   };
+
+  // Only include location if provided
+  if (filters.longitude && filters.latitude) {
+    cleanFilters.startLongitude = filters.longitude;
+    cleanFilters.startLatitude = filters.latitude;
+  }
 
   // if (cleanFilters.country_id == "") { 
   //   delete cleanFilters.country_id;

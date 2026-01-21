@@ -453,12 +453,12 @@ const Form = ({
 
         {/* Package status badge */}
         <span
-          className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${tourTypeConfig[tour_type].color}`}
+          className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${enquireOnly ? 'bg-blue-200' : tourTypeConfig[tour_type].color}`}
         >
           <i
-            className={`${tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}
+            className={`${enquireOnly ? 'fi fi-rr-umbrella-beach' : tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}
           ></i>
-          {tourTypeConfig[tour_type].title}
+          {enquireOnly ? 'Private Package' : tourTypeConfig[tour_type].title}
         </span>
 
         {/* Price and duration display */}

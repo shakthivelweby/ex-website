@@ -37,6 +37,9 @@ export default function Scheduled() {
   // Track if we've already found the earliest available date
   const hasFoundEarliestDate = useRef(false);
 
+  // Track if date has been initialized (prevents query from running before earliest date is found)
+  const [isDateInitialized, setIsDateInitialized] = useState(false);
+
   // is mobile check
   useEffect(() => {
     if (isMobile) {
@@ -101,11 +104,10 @@ export default function Scheduled() {
     return new Date();
   };
 
-  // Handle mounting and initialize date
+  // Handle mounting
   useEffect(() => {
     setIsMounted(true);
-    // Set today as initial date, will be updated if earlier date is found
-    setSelectedDate(new Date());
+    // Don't set date yet - wait for earliest date to be found
   }, []);
 
   useEffect(() => {
@@ -184,7 +186,7 @@ export default function Scheduled() {
     data: scheduledTrips,
     isLoading,
     isFetching,
-  } = useScheduledTrips(filters);
+  } = useScheduledTrips(filters, isDateInitialized);
   const { data: destinationsData } = useDestinations();
   const packages = scheduledTrips?.data || [];
   const isQueryLoading = isLoading || isFetching;
@@ -274,9 +276,9 @@ export default function Scheduled() {
     }
   }, [isDestinationPopupOpen, isMounted]); // Run on mount and when popup opens/closes
 
-  // Find and set the earliest available trip date when destination is loaded
+  // Find and set the earliest available trip date when destination is loaded (only on initial load)
   useEffect(() => {
-    if (!isMounted || hasFoundEarliestDate.current) return;
+    if (!isMounted || isDateInitialized || hasFoundEarliestDate.current) return;
 
     // Check if we have a destination filter
     const hasDestinationFilter = Boolean(
@@ -287,35 +289,44 @@ export default function Scheduled() {
 
     if (!hasDestinationFilter) return;
 
-    // Only find earliest date on initial load (when selectedDate is today)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const currentSelectedDate = selectedDate ? new Date(selectedDate) : null;
-    currentSelectedDate?.setHours(0, 0, 0, 0);
+    // Find earliest date first, then set it (this prevents fetching with today's date)
+    hasFoundEarliestDate.current = true;
+    findEarliestAvailableDate(filters)
+      .then((earliestDate) => {
+        const dateToUse = earliestDate || new Date();
+        const dateString = dateToUse.toISOString().split("T")[0];
 
-    // Only search for earliest date if current date is today (initial load)
-    if (
-      currentSelectedDate &&
-      currentSelectedDate.getTime() === today.getTime()
-    ) {
-      hasFoundEarliestDate.current = true;
-      findEarliestAvailableDate(filters)
-        .then((earliestDate) => {
-          if (earliestDate) {
-            console.log("Setting earliest available date:", earliestDate);
-            setSelectedDate(earliestDate);
-          }
-        })
-        .catch((error) => {
-          console.error("Error in findEarliestAvailableDate:", error);
-        });
-    }
+        console.log("Setting earliest available date:", dateToUse);
+
+        // Update both selectedDate state and filters.selectedDate at the same time
+        setSelectedDate(dateToUse);
+        setFilters((prev) => ({
+          ...prev,
+          selectedDate: dateString,
+        }));
+
+        // Mark as initialized after both states are updated
+        setIsDateInitialized(true);
+      })
+      .catch((error) => {
+        console.error("Error in findEarliestAvailableDate:", error);
+        // On error, use today as fallback
+        const today = new Date();
+        const todayString = today.toISOString().split("T")[0];
+
+        setSelectedDate(today);
+        setFilters((prev) => ({
+          ...prev,
+          selectedDate: todayString,
+        }));
+        setIsDateInitialized(true);
+      });
   }, [
     isMounted,
     filters.country_id,
     filters.state_id,
     filters.destination_id,
-    selectedDate,
+    isDateInitialized,
   ]); // Run when destination is first loaded
 
   // Add a storage event listener to handle updates from other components (cross-tab)

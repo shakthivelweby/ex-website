@@ -479,22 +479,32 @@ export default function Scheduled() {
   useEffect(() => {
     if (!selectedDate) return; // Add this check to prevent unnecessary updates
 
-    setFilters((prev) => ({
-      ...prev,
-      selectedDate: selectedDate.toISOString().split("T")[0],
-      // Only include location if it's been set by user
-      ...(startLocation &&
-      locationCoordinates.latitude &&
-      locationCoordinates.longitude
-        ? {
-            longitude: locationCoordinates.longitude,
-            latitude: locationCoordinates.latitude,
-          }
-        : {
-            longitude: null,
-            latitude: null,
-          }),
-    }));
+    const newDateString = selectedDate.toISOString().split("T")[0];
+
+    // Only update if the date has actually changed to prevent glitches
+    setFilters((prev) => {
+      // Check if date is the same to avoid unnecessary updates
+      if (prev.selectedDate === newDateString) {
+        return prev; // Return previous state if date hasn't changed
+      }
+
+      return {
+        ...prev,
+        selectedDate: newDateString,
+        // Only include location if it's been set by user
+        ...(startLocation &&
+        locationCoordinates.latitude &&
+        locationCoordinates.longitude
+          ? {
+              longitude: locationCoordinates.longitude,
+              latitude: locationCoordinates.latitude,
+            }
+          : {
+              longitude: null,
+              latitude: null,
+            }),
+      };
+    });
   }, [selectedDate, locationCoordinates, startLocation]);
 
   // Update individual filter values directly - applies immediately

@@ -33,7 +33,7 @@ const DateNavBar = ({ onDateChange, selectedDate: externalSelectedDate }) => {
         }
       }
     }
-  }, [externalSelectedDate, selectedDate]);
+  }, [externalSelectedDate]); // Removed selectedDate from dependencies to prevent glitch loop
 
   // Notify parent component when date changes
   useEffect(() => {

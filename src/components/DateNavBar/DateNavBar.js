@@ -19,17 +19,21 @@ const DateNavBar = ({ onDateChange, selectedDate: externalSelectedDate }) => {
   useEffect(() => {
     if (externalSelectedDate) {
       const externalDate = new Date(externalSelectedDate);
-      const currentDate = new Date(selectedDate);
-      // Only update if dates are different (compare dates, not time)
-      if (
-        externalDate.getFullYear() !== currentDate.getFullYear() ||
-        externalDate.getMonth() !== currentDate.getMonth() ||
-        externalDate.getDate() !== currentDate.getDate()
-      ) {
-        setSelectedDate(externalDate);
+      // Check if externalDate is valid
+      if (!isNaN(externalDate.getTime())) {
+        const currentDate = selectedDate ? new Date(selectedDate) : null;
+        // Only update if dates are different (compare dates, not time)
+        if (
+          !currentDate ||
+          externalDate.getFullYear() !== currentDate.getFullYear() ||
+          externalDate.getMonth() !== currentDate.getMonth() ||
+          externalDate.getDate() !== currentDate.getDate()
+        ) {
+          setSelectedDate(externalDate);
+        }
       }
     }
-  }, [externalSelectedDate]);
+  }, [externalSelectedDate, selectedDate]);
 
   // Notify parent component when date changes
   useEffect(() => {

@@ -89,8 +89,9 @@ export default function Scheduled() {
     try {
       const response = await getEarliestAvailableDate(filters);
 
-      if (response?.earliest_date) {
-        return new Date(response.earliest_date);
+      // Response structure: { data: { earliest_date: "2026-04-01" } }
+      if (response?.data?.earliest_date) {
+        return new Date(response.data.earliest_date);
       }
     } catch (error) {
       console.error("Error finding earliest available date:", error);
@@ -298,11 +299,16 @@ export default function Scheduled() {
       currentSelectedDate.getTime() === today.getTime()
     ) {
       hasFoundEarliestDate.current = true;
-      findEarliestAvailableDate(filters).then((earliestDate) => {
-        if (earliestDate) {
-          setSelectedDate(earliestDate);
-        }
-      });
+      findEarliestAvailableDate(filters)
+        .then((earliestDate) => {
+          if (earliestDate) {
+            console.log("Setting earliest available date:", earliestDate);
+            setSelectedDate(earliestDate);
+          }
+        })
+        .catch((error) => {
+          console.error("Error in findEarliestAvailableDate:", error);
+        });
     }
   }, [
     isMounted,

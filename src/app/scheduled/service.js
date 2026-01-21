@@ -1,40 +1,51 @@
 import apiMiddleware from "@/app/api/apiMiddleware";
 
 export const getScheduledTrips = async (filters) => {
-  // Clean and validate the filters
-  const cleanFilters = {
-    selectedDate: filters.selectedDate || '',
-    country_id: filters.country_id || '',
-    state_id: filters.state_id || '',
-    destination_id: filters.destination_id || '',
-    price_range_from: filters.budget_from || '',
-    price_range_to: filters.budget_to || '',
-    sort_by_price: filters.sort_by_price || '',
-    duration: filters.duration || '',
-    total_pax: filters.pax || ''
-  };
+  // Build query parameters - only include non-empty values
+  const queryParams = new URLSearchParams();
 
-  // Only include location if provided
-  if (filters.longitude && filters.latitude) {
-    cleanFilters.startLongitude = filters.longitude;
-    cleanFilters.startLatitude = filters.latitude;
+  // selectedDate is required
+  if (filters.selectedDate) {
+    queryParams.append('selectedDate', filters.selectedDate);
   }
 
-  // if (cleanFilters.country_id == "") { 
-  //   delete cleanFilters.country_id;
-  // }else if (cleanFilters.state_id == "") { 
-  //   delete cleanFilters.state_id;
-  // }else if (cleanFilters.destination_id == "") { 
-  //   delete cleanFilters.destination_id;
-  // }
+  // Destination filters - only include one (country_id, state_id, or destination_id)
+  if (filters.destination_id) {
+    queryParams.append('destination_id', filters.destination_id);
+  } else if (filters.state_id) {
+    queryParams.append('state_id', filters.state_id);
+  } else if (filters.country_id) {
+    queryParams.append('country_id', filters.country_id);
+  }
 
-  // Convert all values to strings and remove any [object Object]
-  const queryParams = new URLSearchParams();
-  Object.entries(cleanFilters).forEach(([key, value]) => {
-    if (value !== null && value !== undefined && value !== '') {
-      queryParams.append(key, String(value));
-    }
-  });
+  // Price range filters
+  if (filters.budget_from) {
+    queryParams.append('price_range_from', filters.budget_from);
+  }
+  if (filters.budget_to) {
+    queryParams.append('price_range_to', filters.budget_to);
+  }
+
+  // Sort by price - ensure it's a valid value
+  if (filters.sort_by_price && (filters.sort_by_price === 'asc' || filters.sort_by_price === 'desc')) {
+    queryParams.append('sort_by_price', filters.sort_by_price);
+  }
+
+  // Duration filter
+  if (filters.duration) {
+    queryParams.append('duration', filters.duration);
+  }
+
+  // Total pax filter
+  if (filters.pax) {
+    queryParams.append('total_pax', filters.pax);
+  }
+
+  // Location filters - only include if both are provided
+  if (filters.longitude && filters.latitude) {
+    queryParams.append('startLongitude', filters.longitude);
+    queryParams.append('startLatitude', filters.latitude);
+  }
 
   const response = await apiMiddleware.get(`/scheduled-trips?${queryParams.toString()}`);
   return response.data;

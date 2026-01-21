@@ -68,6 +68,9 @@ export default function Search({
       destination_id: item.type === 'destination' ? item.id : null
     };
     localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
+    
+    // Dispatch custom event to notify other components in the same window
+    window.dispatchEvent(new CustomEvent("destinationChanged"));
 
     if (selectedType === 'package') {
       let url;

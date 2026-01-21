@@ -11,6 +11,7 @@ import Popup from "@/components/Popup";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Search from "@/components/Search/Search";
 import { useScheduledTrips, useDestinations } from "./query";
+import { getScheduledTrips } from "./service";
 
 export default function Scheduled() {
   // State for selected date from DateNavBar - Initialize with null to prevent hydration mismatch
@@ -32,6 +33,9 @@ export default function Scheduled() {
 
   // Track if we've loaded from localStorage to prevent clearing on initial mount
   const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
+
+  // Track if we've already found the earliest available date
+  const hasFoundEarliestDate = useRef(false);
 
   // is mobile check
   useEffect(() => {
@@ -72,9 +76,53 @@ export default function Scheduled() {
 
   // Google API Key - you can move this to environment variables
 
+  // Function to find the earliest available trip date
+  const findEarliestAvailableDate = async (filters) => {
+    // Check if we have a destination filter
+    const hasDestination =
+      (filters?.country_id && filters.country_id !== "") ||
+      (filters?.state_id && filters.state_id !== "") ||
+      (filters?.destination_id && filters.destination_id !== "");
+
+    if (!hasDestination) return new Date();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    // Set a very high limit (5 years) to prevent infinite loops, but allow searching far ahead
+    // The loop will stop as soon as it finds the first available date
+    const maxDaysToCheck = 1825; // Check up to 5 years ahead
+
+    for (let i = 0; i < maxDaysToCheck; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() + i);
+      const dateString = checkDate.toISOString().split("T")[0];
+
+      try {
+        const testFilters = {
+          selectedDate: dateString,
+          country_id: filters?.country_id || "",
+          state_id: filters?.state_id || "",
+          destination_id: filters?.destination_id || "",
+        };
+        const response = await getScheduledTrips(testFilters);
+
+        if (response?.data && response.data.length > 0) {
+          return checkDate;
+        }
+      } catch (error) {
+        // Continue to next date if error occurs
+        console.error(`Error checking date ${dateString}:`, error);
+      }
+    }
+
+    // If no available date found within 2 years, return today
+    return new Date();
+  };
+
   // Handle mounting and initialize date
   useEffect(() => {
     setIsMounted(true);
+    // Set today as initial date, will be updated if earlier date is found
     setSelectedDate(new Date());
   }, []);
 
@@ -150,9 +198,25 @@ export default function Scheduled() {
     setHasLoadedFromStorage(true);
   }, [isMounted]); // Removed filters dependency
 
-  const { data: scheduledTrips } = useScheduledTrips(filters);
+  const {
+    data: scheduledTrips,
+    isLoading,
+    isFetching,
+  } = useScheduledTrips(filters);
   const { data: destinationsData } = useDestinations();
   const packages = scheduledTrips?.data || [];
+  const isQueryLoading = isLoading || isFetching;
+
+  // Check if query is enabled (has required filters)
+  const hasSelectedDate = Boolean(
+    filters?.selectedDate != null && filters?.selectedDate !== ""
+  );
+  const hasDestinationFilter = Boolean(
+    (filters?.country_id && filters?.country_id !== "") ||
+      (filters?.state_id && filters?.state_id !== "") ||
+      (filters?.destination_id && filters?.destination_id !== "")
+  );
+  const isQueryEnabled = hasSelectedDate && hasDestinationFilter;
 
   // Format destinations for dropdown - wrapped in useMemo to prevent recalculation on every render
   const destinationOptions = useMemo(
@@ -227,6 +291,45 @@ export default function Scheduled() {
       }));
     }
   }, [isDestinationPopupOpen, isMounted]); // Run on mount and when popup opens/closes
+
+  // Find and set the earliest available trip date when destination is loaded
+  useEffect(() => {
+    if (!isMounted || hasFoundEarliestDate.current) return;
+
+    // Check if we have a destination filter
+    const hasDestinationFilter = Boolean(
+      (filters?.country_id && filters.country_id !== "") ||
+        (filters?.state_id && filters.state_id !== "") ||
+        (filters?.destination_id && filters.destination_id !== "")
+    );
+
+    if (!hasDestinationFilter) return;
+
+    // Only find earliest date on initial load (when selectedDate is today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentSelectedDate = selectedDate ? new Date(selectedDate) : null;
+    currentSelectedDate?.setHours(0, 0, 0, 0);
+
+    // Only search for earliest date if current date is today (initial load)
+    if (
+      currentSelectedDate &&
+      currentSelectedDate.getTime() === today.getTime()
+    ) {
+      hasFoundEarliestDate.current = true;
+      findEarliestAvailableDate(filters).then((earliestDate) => {
+        if (earliestDate) {
+          setSelectedDate(earliestDate);
+        }
+      });
+    }
+  }, [
+    isMounted,
+    filters.country_id,
+    filters.state_id,
+    filters.destination_id,
+    selectedDate,
+  ]); // Run when destination is first loaded
 
   // Add a storage event listener to handle updates from other components (cross-tab)
   useEffect(() => {
@@ -923,7 +1026,17 @@ export default function Scheduled() {
                 : "flex flex-col gap-4"
             }`}
           >
-            {packages?.length === 0 && (
+            {isQueryEnabled && isQueryLoading && (
+              <div className="col-span-full text-center py-16">
+                <div className="max-w-md mx-auto px-8">
+                  <div className="animate-pulse">
+                    <div className="h-8 w-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto mb-4 animate-spin"></div>
+                    <p className="text-gray-600">Loading packages...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {isQueryEnabled && !isQueryLoading && packages?.length === 0 && (
               <div className="col-span-full text-center py-16 ">
                 <div className="max-w-md mx-auto px-8">
                   <i className="fi fi-rr-info-circle text-3xl text-gray-400 mb-4 block"></i>

@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const DateNavBar = ({ onDateChange }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+const DateNavBar = ({ onDateChange, selectedDate: externalSelectedDate }) => {
+  const [selectedDate, setSelectedDate] = useState(externalSelectedDate || new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const calendarRef = useRef(null);
@@ -14,6 +14,22 @@ const DateNavBar = ({ onDateChange }) => {
   const lastScrollY = useRef(0);
   const [isMobile, setIsMobile] = useState(false);
   const navBarRef = useRef(null);
+
+  // Sync with external selectedDate prop
+  useEffect(() => {
+    if (externalSelectedDate) {
+      const externalDate = new Date(externalSelectedDate);
+      const currentDate = new Date(selectedDate);
+      // Only update if dates are different (compare dates, not time)
+      if (
+        externalDate.getFullYear() !== currentDate.getFullYear() ||
+        externalDate.getMonth() !== currentDate.getMonth() ||
+        externalDate.getDate() !== currentDate.getDate()
+      ) {
+        setSelectedDate(externalDate);
+      }
+    }
+  }, [externalSelectedDate]);
 
   // Notify parent component when date changes
   useEffect(() => {

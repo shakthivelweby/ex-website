@@ -583,7 +583,10 @@ export default function Scheduled() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] lg:w-[800px] lg:h-[800px] bg-primary-100 rounded-full blur-3xl opacity-40 md:opacity-30 z-0"></div>
       {/* wrap div */}
       <div className="relative z-10 w-full">
-        <DateNavBar onDateChange={setSelectedDate} />
+        <DateNavBar
+          onDateChange={setSelectedDate}
+          selectedDate={selectedDate}
+        />
 
         <div className="container mx-auto px-4  ">
           {/* Title with edit button */}

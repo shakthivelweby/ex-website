@@ -11,7 +11,7 @@ import Popup from "@/components/Popup";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Search from "@/components/Search/Search";
 import { useScheduledTrips, useDestinations } from "./query";
-import { getScheduledTrips } from "./service";
+import { getEarliestAvailableDate } from "./service";
 
 export default function Scheduled() {
   // State for selected date from DateNavBar - Initialize with null to prevent hydration mismatch
@@ -76,7 +76,7 @@ export default function Scheduled() {
 
   // Google API Key - you can move this to environment variables
 
-  // Function to find the earliest available trip date
+  // Function to find the earliest available trip date using backend API
   const findEarliestAvailableDate = async (filters) => {
     // Check if we have a destination filter
     const hasDestination =
@@ -86,36 +86,17 @@ export default function Scheduled() {
 
     if (!hasDestination) return new Date();
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day
-    // Set a very high limit (5 years) to prevent infinite loops, but allow searching far ahead
-    // The loop will stop as soon as it finds the first available date
-    const maxDaysToCheck = 1825; // Check up to 5 years ahead
+    try {
+      const response = await getEarliestAvailableDate(filters);
 
-    for (let i = 0; i < maxDaysToCheck; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(today.getDate() + i);
-      const dateString = checkDate.toISOString().split("T")[0];
-
-      try {
-        const testFilters = {
-          selectedDate: dateString,
-          country_id: filters?.country_id || "",
-          state_id: filters?.state_id || "",
-          destination_id: filters?.destination_id || "",
-        };
-        const response = await getScheduledTrips(testFilters);
-
-        if (response?.data && response.data.length > 0) {
-          return checkDate;
-        }
-      } catch (error) {
-        // Continue to next date if error occurs
-        console.error(`Error checking date ${dateString}:`, error);
+      if (response?.earliest_date) {
+        return new Date(response.earliest_date);
       }
+    } catch (error) {
+      console.error("Error finding earliest available date:", error);
     }
 
-    // If no available date found within 2 years, return today
+    // If no available date found, return today
     return new Date();
   };
 

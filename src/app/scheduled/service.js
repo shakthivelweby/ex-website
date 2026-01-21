@@ -56,3 +56,30 @@ export const getDestinations = async () => {
   return response.data;
 };
 
+export const getEarliestAvailableDate = async (filters) => {
+  // Build query parameters - only include destination filters
+  const queryParams = new URLSearchParams();
+
+  // Destination filters - only include one (country_id, state_id, or destination_id)
+  if (filters.destination_id) {
+    queryParams.append('destination_id', filters.destination_id);
+  } else if (filters.state_id) {
+    queryParams.append('state_id', filters.state_id);
+  } else if (filters.country_id) {
+    queryParams.append('country_id', filters.country_id);
+  }
+
+  // Duration filter
+  if (filters.duration) {
+    queryParams.append('duration', filters.duration);
+  }
+
+  // Total pax filter
+  if (filters.pax) {
+    queryParams.append('total_pax', filters.pax);
+  }
+
+  const response = await apiMiddleware.get(`/earliest-available-date?${queryParams.toString()}`);
+  return response.data;
+};
+

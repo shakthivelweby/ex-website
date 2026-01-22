@@ -40,6 +40,9 @@ export default function Scheduled() {
   // Track if date has been initialized (prevents query from running before earliest date is found)
   const [isDateInitialized, setIsDateInitialized] = useState(false);
 
+  // Trigger to open DateNavBar calendar
+  const [openCalendarTrigger, setOpenCalendarTrigger] = useState(0);
+
   // is mobile check
   useEffect(() => {
     if (isMobile) {
@@ -613,6 +616,7 @@ export default function Scheduled() {
         <DateNavBar
           onDateChange={setSelectedDate}
           selectedDate={selectedDate}
+          openCalendarTrigger={openCalendarTrigger}
         />
 
         <div className="container mx-auto px-4  ">
@@ -950,10 +954,17 @@ export default function Scheduled() {
             <div className="absolute inset-0 bg-gradient-to-r from-primary-50 via-primary-25 to-transparent rounded-xl opacity-60"></div>
             <div className="relative flex items-center justify-between px-3 md:px-4">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg shadow-md">
+                <button
+                  onClick={() => setOpenCalendarTrigger((prev) => prev + 1)}
+                  className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors cursor-pointer"
+                  aria-label="Open calendar"
+                >
                   <i className="fi fi-rr-calendar text-gray-900 text-sm"></i>
-                </div>
-                <div className="flex flex-col">
+                </button>
+                <button
+                  onClick={() => setOpenCalendarTrigger((prev) => prev + 1)}
+                  className="flex flex-col text-left hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <span className="text-xs text-gray-500 font-medium">
                     Trips Available
                   </span>
@@ -975,7 +986,7 @@ export default function Scheduled() {
                         }).format(selectedDate)}
                     </span>
                   </span>
-                </div>
+                </button>
               </div>
 
               {/* Layout Toggle Controls */}

@@ -164,8 +164,8 @@ export default function Popup({
     switch (effectivePosition) {
       case 'center':
         return {
-          container: 'items-center justify-center p-4',
-          panel: isMobile ? 'w-full rounded-[32px] max-w-lg transform overflow-hidden' : 'w-full max-w-lg transform overflow-hidden'
+          container: isMobile ? 'items-center justify-center' : 'items-center justify-center p-4',
+          panel: isMobile ? 'w-full rounded-[32px] transform overflow-hidden' : 'w-full max-w-lg transform overflow-hidden'
         };
       case 'bottom':
         return {
@@ -175,12 +175,12 @@ export default function Popup({
       case 'right':
         return {
           container: 'items-stretch justify-end min-h-screen h-full',
-          panel: isMobile ? 'h-[80vh] w-full rounded-tl-[32px] max-w-lg overflow-hidden' : 'min-h-screen h-full w-full max-w-lg overflow-hidden'
+          panel: isMobile ? 'h-[80vh] w-full rounded-tl-[32px] overflow-hidden' : 'min-h-screen h-full w-full max-w-lg overflow-hidden'
         };
       case 'left':
         return {
           container: 'items-stretch justify-start min-h-screen h-full',
-          panel: isMobile ? 'h-[80vh] w-full rounded-tr-[32px] max-w-lg overflow-hidden' : 'min-h-screen h-full w-full max-w-lg overflow-hidden'
+          panel: isMobile ? 'h-[80vh] w-full rounded-tr-[32px] overflow-hidden' : 'min-h-screen h-full w-full max-w-lg overflow-hidden'
         };
       default:
         return baseClasses;
@@ -255,7 +255,7 @@ export default function Popup({
                     ${pannelStyle}
                     bg-white text-left align-middle shadow-xl
                     flex flex-col transform-gpu
-                    ${className}
+                    ${isMobile ? className.replace(/max-w-\w+/g, '').trim() : className}
                   `}
                 >
                   <PopupHeader 

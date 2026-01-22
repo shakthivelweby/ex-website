@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-import Popup from '../Popup';
-import { useSearch } from '@/app/search/query';
-import { useFeaturedDestinations } from '@/app/search/query';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import Popup from "../Popup";
+import { useSearch } from "@/app/search/query";
+import { useFeaturedDestinations } from "@/app/search/query";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Animation variants
 const containerVariants = {
@@ -12,35 +12,35 @@ const containerVariants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
-    }
-  }
+      staggerChildren: 0.1,
+    },
+  },
 };
 
 const itemVariants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
-    y: 20
+    y: 20,
   },
-  show: { 
+  show: {
     opacity: 1,
     y: 0,
     transition: {
       type: "spring",
       stiffness: 300,
-      damping: 24
-    }
-  }
+      damping: 24,
+    },
+  },
 };
 
-export default function Search({ 
-  isOpen, 
+export default function Search({
+  isOpen,
   onClose,
-  type // Remove default value to handle undefined case
+  type, // Remove default value to handle undefined case
 }) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [selectedType, setSelectedType] = useState(type || 'package');
+  const [selectedType, setSelectedType] = useState(type || "package");
   const router = useRouter();
 
   const { data: searchResults, isLoading } = useSearch(searchQuery);
@@ -63,49 +63,49 @@ export default function Search({
       id: item.id,
       name: item.name,
       type: item.type,
-      country_id: item.type === 'country' ? item.id : item.country_id,
-      state_id: item.type === 'state' ? item.id : item.state_id,
-      destination_id: item.type === 'destination' ? item.id : null
+      country_id: item.type === "country" ? item.id : item.country_id,
+      state_id: item.type === "state" ? item.id : item.state_id,
+      destination_id: item.type === "destination" ? item.id : null,
     };
     localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
-    
+
     // Dispatch custom event to notify other components in the same window
     window.dispatchEvent(new CustomEvent("destinationChanged"));
 
-    if (selectedType === 'package') {
+    if (selectedType === "package") {
       let url;
-      
-      if (item.type === 'country') {
+
+      if (item.type === "country") {
         url = `/packages/${item.id}`;
-      } else if (item.type === 'state') {
+      } else if (item.type === "state") {
         url = `/packages/${item.country_id}?state=${item.id}`;
-      } else if (item.type === 'destination') {
+      } else if (item.type === "destination") {
         url = `/packages/${item.country_id}?state=${item.state_id}&destination=${item.id}`;
       }
-      
+
       if (url) {
         router.push(url);
         onClose();
       } else {
-        console.error('Invalid item type:', item);
+        console.error("Invalid item type:", item);
       }
-    } else if (selectedType === 'schedule') {
+    } else if (selectedType === "schedule") {
       // Use router.replace to update URL without full page refresh
-      router.replace('/scheduled', { scroll: false });
+      router.replace("/scheduled", { scroll: false });
       onClose();
     }
   };
 
   const getIcon = (type) => {
     switch (type) {
-      case 'country':
-        return 'fi-rr-globe';
-      case 'state':
-        return 'fi-rr-map';
-      case 'destination':
-        return 'fi-rr-map-marker';
+      case "country":
+        return "fi-rr-globe";
+      case "state":
+        return "fi-rr-map";
+      case "destination":
+        return "fi-rr-map-marker";
       default:
-        return 'fi-rr-map-marker';
+        return "fi-rr-map-marker";
     }
   };
 
@@ -123,56 +123,84 @@ export default function Search({
         <div className="p-4 flex-shrink-0">
           {/* Type Selection - Only show when type is not passed as prop */}
           {!type && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-3"
             >
               <div className="flex gap-2 bg-gray-50/80 p-1 rounded-xl">
                 <button
-                  onClick={() => setSelectedType('package')}
+                  onClick={() => setSelectedType("package")}
                   className={`flex-1 flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-                    selectedType === 'package'
-                      ? 'bg-primary-500'
-                      : 'hover:bg-white/50'
+                    selectedType === "package"
+                      ? "bg-primary-500"
+                      : "hover:bg-white/50"
                   }`}
                 >
-                  <div className={`flex items-center justify-center w-7 h-7 rounded-md ${
-                    selectedType === 'package' ? 'bg-white' : 'bg-white border border-gray-200'
-                  }`}>
-                    <i className={`fi fi-rr-umbrella-beach ${
-                      selectedType === 'package' ? 'text-primary-500' : 'text-gray-500'
-                    }`}></i>
+                  <div
+                    className={`flex items-center justify-center w-7 h-7 rounded-md ${
+                      selectedType === "package"
+                        ? "bg-white"
+                        : "bg-white border border-gray-200"
+                    }`}
+                  >
+                    <i
+                      className={`fi fi-rr-umbrella-beach ${
+                        selectedType === "package"
+                          ? "text-primary-500"
+                          : "text-gray-500"
+                      }`}
+                    ></i>
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    selectedType === 'package' ? 'text-white' : 'text-gray-600'
-                  }`}>Packages</span>
+                  <span
+                    className={`ml-2 text-sm font-medium ${
+                      selectedType === "package"
+                        ? "text-white"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    Packages
+                  </span>
                 </button>
 
                 <button
-                  onClick={() => setSelectedType('schedule')}
+                  onClick={() => setSelectedType("schedule")}
                   className={`flex-1 flex items-center px-3 py-2 rounded-lg transition-all duration-200 ${
-                    selectedType === 'schedule'
-                      ? 'bg-primary-500'
-                      : 'hover:bg-white/50'
+                    selectedType === "schedule"
+                      ? "bg-primary-500"
+                      : "hover:bg-white/50"
                   }`}
                 >
-                  <div className={`flex items-center justify-center w-7 h-7 rounded-md ${
-                    selectedType === 'schedule' ? 'bg-white' : 'bg-white border border-gray-200'
-                  }`}>
-                    <i className={`fi fi-rr-calendar ${
-                      selectedType === 'schedule' ? 'text-primary-500' : 'text-gray-500'
-                    }`}></i>
+                  <div
+                    className={`flex items-center justify-center w-7 h-7 rounded-md ${
+                      selectedType === "schedule"
+                        ? "bg-white"
+                        : "bg-white border border-gray-200"
+                    }`}
+                  >
+                    <i
+                      className={`fi fi-rr-calendar ${
+                        selectedType === "schedule"
+                          ? "text-primary-500"
+                          : "text-gray-500"
+                      }`}
+                    ></i>
                   </div>
-                  <span className={`ml-2 text-sm font-medium ${
-                    selectedType === 'schedule' ? 'text-white' : 'text-gray-600'
-                  }`}>Schedule</span>
+                  <span
+                    className={`ml-2 text-sm font-medium ${
+                      selectedType === "schedule"
+                        ? "text-white"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    Schedule
+                  </span>
                 </button>
               </div>
             </motion.div>
           )}
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="relative"
@@ -207,7 +235,9 @@ export default function Search({
                 <p className="mt-4 text-gray-500">Searching...</p>
               </motion.div>
             ) : searchQuery ? (
-              !searchResults?.data?.data || !Array.isArray(searchResults?.data?.data) || searchResults.data.data.length === 0 ? (
+              !searchResults?.data?.data ||
+              !Array.isArray(searchResults?.data?.data) ||
+              searchResults.data.data.length === 0 ? (
                 <motion.div
                   key="no-results"
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -219,7 +249,9 @@ export default function Search({
                     <i className="fi fi-rr-map-marker-cross text-gray-400 text-2xl"></i>
                   </div>
                   <p className="text-gray-500">No results found</p>
-                  <p className="text-sm text-gray-400 mt-1">Try a different search term</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Try a different search term
+                  </p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -239,7 +271,9 @@ export default function Search({
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden relative bg-gray-100 flex-shrink-0">
-                        {item.image && item.image !== "http://192.168.1.38:8000/images/destination" ? (
+                        {item.image &&
+                        item.image !==
+                          "http://192.168.1.38:8000/images/destination" ? (
                           <Image
                             src={item.image}
                             alt={item.name}
@@ -249,7 +283,11 @@ export default function Search({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <i className={`fi ${getIcon(item.type)} text-gray-500 text-xl z-10`}></i>
+                            <i
+                              className={`fi ${getIcon(
+                                item.type
+                              )} text-gray-500 text-xl z-10`}
+                            ></i>
                           </div>
                         )}
                       </div>
@@ -276,27 +314,36 @@ export default function Search({
                 animate="show"
                 className="space-y-6"
               >
-                <motion.div variants={itemVariants} className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-gray-900">Featured Destinations</h3>
+                <motion.div
+                  variants={itemVariants}
+                  className="flex items-center justify-between"
+                >
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Featured Destinations
+                  </h3>
                 </motion.div>
                 <div className="grid grid-cols-1 ">
                   {featuredData?.data?.map((destination) => (
                     <motion.button
                       key={destination.id}
                       variants={itemVariants}
-                      onClick={() => handleSelect({
-                        id: destination.id,
-                        type: 'destination',
-                        name: destination.name,
-                        state_id: destination.state_id,
-                        country_id: destination.state.country_id
-                      })}
+                      onClick={() =>
+                        handleSelect({
+                          id: destination.id,
+                          type: "destination",
+                          name: destination.name,
+                          state_id: destination.state_id,
+                          country_id: destination.state.country_id,
+                        })
+                      }
                       className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl group transition-colors"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden relative bg-gray-100 flex-shrink-0">
-                        {destination.thumb_image_url && destination.thumb_image_url !== "http://192.168.1.38:8000/images/destination" ? (
+                        {destination.thumb_image_url &&
+                        destination.thumb_image_url !==
+                          "http://192.168.1.38:8000/images/destination" ? (
                           <Image
                             src={destination.thumb_image_url}
                             alt={destination.name}
@@ -343,7 +390,8 @@ export default function Search({
               </div>
               <div>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  Search for countries, states, or destinations to explore available packages.
+                  Search for countries, states, or destinations to explore
+                  available packages.
                 </p>
               </div>
             </div>
@@ -352,4 +400,4 @@ export default function Search({
       </div>
     </Popup>
   );
-} 
+}

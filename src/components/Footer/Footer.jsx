@@ -66,14 +66,14 @@ export default function Footer() {
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-envelope text-primary-400"></i>
-                <a href="mailto:support@exploreworld.com" className="hover:text-white transition-colors">
-                  support@exploreworld.com
+                <a href="mailto:Info@exploreworld.com" className="hover:text-white transition-colors">
+                  Info@exploreworld.com
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-phone-call text-primary-400"></i>
-                <a href="tel:+911234567890" className="hover:text-white transition-colors">
-                  +91 123 456 7890
+                <a href="tel:8891363636" className="hover:text-white transition-colors">
+                  8891 36 36 36
                 </a>
               </div>
             </div>

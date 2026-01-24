@@ -47,7 +47,7 @@ export default function SupplierPage() {
                             </p>
 
                             <Link
-                                href="https://supplier.exploreworld.com/register"
+                                href="https://supplier.exploreworld.com/login"
                                 className="inline-flex items-center justify-center h-14 px-10 rounded-full bg-primary-600 text-white font-bold text-lg hover:bg-primary-700 transition-all hover:scale-105 shadow-xl shadow-primary-600/20 gap-2"
                             >
                                 Become a Supplier
@@ -360,7 +360,7 @@ export default function SupplierPage() {
                         transition={{ delay: 0.2 }}
                     >
                         <Link
-                            href="https://supplier.exploreworld.com/register"
+                            href="https://supplier.exploreworld.com/login"
                             className="bg-white text-primary-600 px-8 py-4 md:px-10 md:py-5 rounded-full font-bold text-lg md:text-xl hover:bg-gray-100 transition-all hover:scale-105 shadow-2xl inline-flex items-center gap-2"
                         >
                             Start Selling Today

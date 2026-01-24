@@ -100,6 +100,17 @@ export default function CheckoutPage() {
     setError(null);
   
     try {
+      // Validate minimum members requirement (infants are not counted as members)
+      const adultCount = parseInt(searchParams.get("adult_count") || "0");
+      const childCount = parseInt(searchParams.get("child_count") || "0");
+      const totalMembers = adultCount + childCount;
+      
+      if (packageDetails?.minimum_members && totalMembers < packageDetails.minimum_members) {
+        setError(`Minimum ${packageDetails.minimum_members} member(s) required for this package. You have selected ${totalMembers} member(s).`);
+        setIsLoading(false);
+        return;
+      }
+
       const bookingData = {
         package_id: searchParams.get("package_id"),
         stay_category_id: searchParams.get("stay_category_id"),

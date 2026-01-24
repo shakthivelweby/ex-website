@@ -102,6 +102,11 @@ const Form = ({
     title: "",
     message: "",
   });
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({
+    title: "",
+    message: "",
+  });
 
   // Extract package details
   const { total_days, total_nights, tour_type } = packageData.data;
@@ -321,6 +326,20 @@ const Form = ({
       }
     }
 
+    // Validate minimum members requirement (infants are not counted as members)
+    const totalMembers = adultCount + childCount;
+    const minimumMembers = packageData?.data?.minimum_members;
+    
+    if (minimumMembers && totalMembers < minimumMembers) {
+      setErrorMessage({
+        title: "Minimum Members Required",
+        message: `Minimum ${minimumMembers} member(s) required for this package. You have selected ${totalMembers} member(s).`,
+      });
+      setShowError(true);
+      setIsLoading(false);
+      return;
+    }
+
     // Prepare submission data
     const data = {
       package_id: packageData.data.id,
@@ -413,10 +432,11 @@ const Form = ({
       }
     } catch (error) {
       console.error(error);
-      alert(
-        error.response?.data?.message ||
-          "Something went wrong. Please try again."
-      );
+      setErrorMessage({
+        title: "Error",
+        message: error.response?.data?.message || "Something went wrong. Please try again.",
+      });
+      setShowError(true);
     } finally {
       setIsLoading(false);
     }
@@ -897,6 +917,92 @@ const Form = ({
         title={successMessage.title}
         message={successMessage.message}
       />
+
+      {/* Error popup */}
+      {showError && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 sm:min-h-screen">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300" 
+              onClick={() => setShowError(false)}
+            />
+
+            {/* Modal */}
+            <div className="relative w-full max-w-sm mx-auto transform rounded-2xl bg-white shadow-xl transition-all duration-300 animate-modal-pop z-10 my-auto">
+              {/* Background Decoration */}
+              <div className="absolute inset-0">
+                <div 
+                  className="absolute -right-10 -top-10 h-40 w-40 rounded-full" 
+                  style={{
+                    background: "radial-gradient(circle at center, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0) 70%)"
+                  }}
+                />
+                <div 
+                  className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full" 
+                  style={{
+                    background: "radial-gradient(circle at center, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0) 70%)"
+                  }}
+                />
+              </div>
+
+              {/* Content Container */}
+              <div className="relative px-6 pt-8 pb-6">
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowError(false)}
+                  className="absolute right-4 top-4 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <i className="fi fi-rr-cross text-base"></i>
+                </button>
+
+                {/* Error Icon */}
+                <div className="mb-6">
+                  <div className="relative w-20 h-20 mx-auto">
+                    <div 
+                      className="absolute inset-0 rounded-full opacity-25"
+                      style={{
+                        background: "radial-gradient(circle at center, #ef4444 0%, transparent 70%)"
+                      }}
+                    />
+                    <div className="absolute inset-2 rounded-full bg-red-100/50 animate-pulse" />
+                    <div className="relative h-full flex items-center justify-center">
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-red-100" />
+                        <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
+                          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="text-center space-y-2 mb-8">
+                  <h2 className="text-2xl font-bold text-gray-800 animate-fade-in">
+                    {errorMessage.title || "Error"}
+                  </h2>
+                  <p className="text-gray-600 animate-fade-in-delay">
+                    {errorMessage.message || "Something went wrong. Please try again."}
+                  </p>
+                </div>
+
+                {/* Action Button */}
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowError(false)}
+                    className="w-full h-12 bg-red-600 text-white font-medium rounded-full flex items-center justify-center hover:bg-red-700 transition-all duration-200 animate-fade-in-delay-2 shadow-lg shadow-red-600/20 hover:shadow-red-600/30"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

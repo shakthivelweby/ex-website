@@ -1414,15 +1414,13 @@ export default function HomePage() {
               </div>
 
               <div className="relative z-10 flex flex-wrap gap-4">
-                <a
-                  href="https://supplier.exploreworld.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/supplier"
                   className="px-8 py-4 bg-white text-gray-900 rounded-full font-bold hover:bg-gray-100 transition-all flex items-center gap-2 group"
                 >
                   Become a Partner
                   <i className="fi fi-rr-arrow-right group-hover:translate-x-1 transition-transform"></i>
-                </a>
+                </Link>
                 <a
                   href="https://supplier.exploreworld.com"
                   target="_blank"

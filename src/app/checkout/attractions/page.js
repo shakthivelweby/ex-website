@@ -118,18 +118,11 @@ export default function AttractionCheckoutPage() {
   };
 
   const getTotalPrice = () => {
-    let total = 0;
-    
+    // total_amount already includes guide rate from booking page
     if (selectedTickets.total_amount) {
-      total = selectedTickets.total_amount;
+      return selectedTickets.total_amount;
     }
-    
-    // Add guide charge if guide is needed
-    if (selectedTickets.need_guide && selectedTickets.guide_rate > 0) {
-      total += parseFloat(selectedTickets.guide_rate);
-    }
-    
-    return total;
+    return 0;
   };
 
   const getTicketDetails = () => {
@@ -173,10 +166,8 @@ export default function AttractionCheckoutPage() {
         return;
       }
 
-      // Calculate the correct total amount including guide charge
-      const baseAmount = selectedTickets.total_amount || 0;
-      const guideAmount = (selectedTickets.need_guide && selectedTickets.guide_rate) ? parseFloat(selectedTickets.guide_rate) : 0;
-      const finalTotalAmount = baseAmount + guideAmount;
+      // total_amount already includes guide rate from booking page
+      const finalTotalAmount = selectedTickets.total_amount || 0;
 
       // Calculate total adult and child counts from booking tickets
       const totalAdultCount = selectedTickets.bookingTickets?.reduce((sum, ticket) => {

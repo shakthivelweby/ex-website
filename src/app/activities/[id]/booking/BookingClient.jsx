@@ -6,6 +6,13 @@ import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import {
+  createActivityBooking,
+  createActivityOrder,
+  verifyActivityPayment,
+  activityPaymentFailed
+} from "../../service";
+import { initializeRazorpayPayment } from "@/sdk/razorpay";
 
 const BookingClient = ({ activityId }) => {
   const router = useRouter();
@@ -48,12 +55,12 @@ const BookingClient = ({ activityId }) => {
         const bookingDataStr = sessionStorage.getItem("bookingData");
         if (bookingDataStr) {
           const data = JSON.parse(bookingDataStr);
-          
+
           // Set activity details from sessionStorage or use defaults
           if (data.activityDetails) {
             setActivityDetails(data.activityDetails);
           }
-          
+
           setFormData((prev) => ({
             ...prev,
             selectedDate: data.selectedDate ? new Date(data.selectedDate) : null,
@@ -62,7 +69,7 @@ const BookingClient = ({ activityId }) => {
             childCount: data.childCount || 0,
           }));
           setSelectedTicket(data.selectedTicket);
-          
+
           // Mark that data was successfully loaded
           if (data.selectedDate || data.selectedTimeSlot) {
             setDataLoaded(true);
@@ -130,6 +137,15 @@ const BookingClient = ({ activityId }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Fetch user details
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -147,33 +163,120 @@ const BookingClient = ({ activityId }) => {
     try {
       setIsLoading(true);
 
-      // Here you would make an API call to create the booking
-      // For now, just simulate a delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Prepare booking tickets
+      const bookingTickets = [];
+      // If we have selectedTicket (from previous page), use its ID
+      // If none (default activity), we might not have a ticket ID. 
+      // Assuming selectedTicket is present if we came from details page with a selection.
+      // If not, we might need a fallback or fail.
 
-      // Store booking confirmation data
-      const bookingConfirmation = {
-        bookingId: `BK${Date.now()}`,
-        activityId,
-        ...formData,
-        totalPrice,
-        selectedTicket,
-        bookingDate: new Date().toISOString(),
+      if (!selectedTicket && !activityDetails.ticketOptions?.[0]) {
+        throw new Error("No ticket type selected");
+      }
+
+      const ticketId = selectedTicket?.id || activityDetails.ticketOptions?.[0]?.id;
+      const basePrice = selectedTicket?.price || activityDetails?.price || 0;
+
+      if (formData.adultCount > 0) {
+        bookingTickets.push({
+          activity_ticket_type_id: ticketId,
+          quantity: formData.adultCount,
+          unit_price: basePrice,
+          total_price: basePrice * formData.adultCount
+        });
+      }
+
+      if (formData.childCount > 0) {
+        const childPrice = selectedTicket?.child_price
+          ? selectedTicket.child_price
+          : (basePrice * 0.7); // 30% discount default if no child price
+
+        bookingTickets.push({
+          activity_ticket_type_id: ticketId,
+          quantity: formData.childCount,
+          unit_price: childPrice,
+          total_price: childPrice * formData.childCount
+        });
+      }
+
+      const apiBookingData = {
+        activity_id: activityId,
+        visit_date: formData.selectedDate.toISOString().split('T')[0],
+        total_amount: totalPrice,
+        discount_amount: 0,
+        adult_count: formData.adultCount,
+        child_count: formData.childCount,
+        include_guide: false,
+        bookingTickets: bookingTickets
       };
 
-      sessionStorage.setItem("bookingConfirmation", JSON.stringify(bookingConfirmation));
-      
-      // Clear booking data
-      sessionStorage.removeItem("bookingData");
+      // 1. Create Booking
+      const bookingResponse = await createActivityBooking(apiBookingData);
 
-      // Show success message
-      alert("Booking confirmed! Redirecting to confirmation page...");
-      
-      // Redirect to confirmation page (you can create this later)
-      router.push(`/activities/${activityId}/booking/confirmation`);
+      if (!bookingResponse?.success) {
+        throw new Error(bookingResponse?.message || "Booking creation failed");
+      }
+
+      const bookingId = bookingResponse.data.id;
+
+      // 2. Create Order
+      const orderResponse = await createActivityOrder({
+        activity_id: activityId,
+        activity_booking_id: bookingId,
+        amount: totalPrice
+      });
+
+      if (!orderResponse?.success) {
+        throw new Error(orderResponse?.message || "Payment order creation failed");
+      }
+
+      // 3. Initialize Razorpay
+      const paymentResponse = await initializeRazorpayPayment({
+        amount: totalPrice * 100,
+        currency: "INR",
+        name: "Explore World",
+        description: `Booking for ${activityDetails.title}`,
+        orderId: orderResponse.data.order_id,
+        email: user?.email || "",
+        contact: user?.phone || "",
+      });
+
+      if (!paymentResponse.status) {
+        await activityPaymentFailed({ activity_payment_id: orderResponse.data.activity_payment_id });
+        throw new Error("Payment initialization failed");
+      }
+
+      // 4. Verify Payment
+      const verifyResponse = await verifyActivityPayment({
+        payment_id: paymentResponse.data.razorpay_payment_id,
+        order_id: orderResponse.data.order_id,
+        signature: paymentResponse.data.razorpay_signature
+      });
+
+      if (verifyResponse?.success) {
+        sessionStorage.removeItem("bookingData");
+
+        // Store confirmation data for the confirmation page (optional)
+        const confirmationData = {
+          bookingId: bookingId,
+          paymentId: paymentResponse.data.razorpay_payment_id,
+          amount: totalPrice,
+          activity: activityDetails,
+          date: formData.selectedDate
+        };
+        sessionStorage.setItem("bookingConfirmation", JSON.stringify(confirmationData));
+
+        alert("Booking successful!");
+        // Redirect to my-bookings or confirmation
+        router.push(`/my-bookings`);
+      } else {
+        await activityPaymentFailed({ activity_payment_id: orderResponse.data.activity_payment_id });
+        throw new Error(verifyResponse?.message || "Payment verification failed");
+      }
+
     } catch (error) {
       console.error("Error creating booking:", error);
-      alert("Failed to create booking. Please try again.");
+      alert(error.message || "Failed to create booking. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -217,7 +320,7 @@ const BookingClient = ({ activityId }) => {
 
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* Booking Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -289,7 +392,7 @@ const BookingClient = ({ activityId }) => {
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                       <span>Select Date </span>
-                   
+
                     </label>
                     <div className="relative">
                       <DatePicker
@@ -298,13 +401,12 @@ const BookingClient = ({ activityId }) => {
                         minDate={new Date()}
                         dateFormat="dd/MM/yyyy"
                         placeholderText="Choose a date"
-                        className={`w-full px-4 py-3 pl-12 border ${
-                          errors.selectedDate
-                            ? "border-red-500"
-                            : formData.selectedDate
+                        className={`w-full px-4 py-3 pl-12 border ${errors.selectedDate
+                          ? "border-red-500"
+                          : formData.selectedDate
                             ? ""
                             : "border-gray-300"
-                        } rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
+                          } rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
                       />
                       <i className="fi fi-rr-calendar absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 text-lg pointer-events-none"></i>
                     </div>
@@ -325,13 +427,12 @@ const BookingClient = ({ activityId }) => {
                       onChange={(e) =>
                         handleInputChange("selectedTimeSlot", e.target.value)
                       }
-                      className={`w-full px-4 py-3 border ${
-                        errors.selectedTimeSlot
-                          ? "border-red-500"
-                          : formData.selectedTimeSlot
+                      className={`w-full px-4 py-3 border ${errors.selectedTimeSlot
+                        ? "border-red-500"
+                        : formData.selectedTimeSlot
                           ? ""
                           : "border-gray-300"
-                      } rounded-lg bg-transparent focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
+                        } rounded-lg bg-transparent focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
                     >
                       <option value="" className="text-gray-500 bg-white">Select a time slot</option>
                       {timeSlots.map((slot, index) => (
@@ -624,7 +725,7 @@ const BookingClient = ({ activityId }) => {
                       {(
                         (selectedTicket?.child_price ||
                           (selectedTicket?.price || activityDetails?.price || 0) *
-                            0.7) * formData.childCount
+                          0.7) * formData.childCount
                       ).toFixed(0)}
                     </span>
                   </div>

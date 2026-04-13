@@ -57,11 +57,11 @@ export const getUpcomingEvents = async () => {
 
 export const getPopularDestinations = async () => {
   try {
-    const response = await apiServerMiddleware.get("/destinations/popular");
+    const response = await apiServerMiddleware.get("/popular-destinations");
     return {
-      status: true,
-      data: response.data,
-      message: "Success"
+      status: response.data?.status ?? true,
+      data: response.data?.data ?? response.data ?? [],
+      message: response.data?.message || "Success"
     };
   } catch (error) {
     console.error('Error fetching popular destinations:', error);
@@ -137,7 +137,84 @@ export const getCurrentHomeData = async () => {
       status: true
     };
   } catch (error) {
-    return handleApiError(error, "Failed to fetch home page data");
+    console.error('Error fetching home page data:', error);
+    return {
+      status: false,
+      data: {},
+      message: error.message || "Failed to fetch home page data"
+    };
+  }
+};
+
+export const getTrendingPackages = async () => {
+  try {
+    const response = await apiServerMiddleware.get("/trending-packages");
+    return {
+      status: response.data?.status ?? true,
+      data: response.data?.data ?? response.data ?? [],
+      message: response.data?.message || "Success"
+    };
+  } catch (error) {
+    console.error('Error fetching trending packages:', error);
+    return {
+      status: false,
+      data: [],
+      message: error.message || "Failed to fetch trending packages"
+    };
+  }
+};
+
+export const getTrendingEvents = async () => {
+  try {
+    const response = await apiServerMiddleware.get("/trending-events");
+    return {
+      status: response.data?.status ?? true,
+      data: response.data?.data ?? response.data ?? [],
+      message: response.data?.message || "Success"
+    };
+  } catch (error) {
+    console.error('Error fetching trending events:', error);
+    return {
+      status: false,
+      data: [],
+      message: error.message || "Failed to fetch trending events"
+    };
+  }
+};
+
+export const getTrendingAttractions = async () => {
+  try {
+    const response = await apiServerMiddleware.get("/trending-attractions");
+    return {
+      status: response.data?.status ?? true,
+      data: response.data?.data ?? response.data ?? [],
+      message: response.data?.message || "Success"
+    };
+  } catch (error) {
+    console.error('Error fetching trending attractions:', error);
+    return {
+      status: false,
+      data: [],
+      message: error.message || "Failed to fetch trending attractions"
+    };
+  }
+};
+
+export const getHomeData = async () => {
+  try {
+    const response = await apiServerMiddleware.get("/home-data");
+    return {
+      status: response.data?.status ?? true,
+      data: response.data?.data ?? response.data ?? {},
+      message: response.data?.message || "Success"
+    };
+  } catch (error) {
+    console.error('Error fetching home data:', error);
+    return {
+      status: false,
+      data: {},
+      message: error.message || "Failed to fetch home data"
+    };
   }
 };
 

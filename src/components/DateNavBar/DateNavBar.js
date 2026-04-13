@@ -4,8 +4,8 @@ import React, { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-const DateNavBar = ({ onDateChange }) => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+const DateNavBar = ({ onDateChange, selectedDate: externalSelectedDate, openCalendarTrigger }) => {
+  const [selectedDate, setSelectedDate] = useState(externalSelectedDate || new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const calendarRef = useRef(null);
@@ -14,6 +14,34 @@ const DateNavBar = ({ onDateChange }) => {
   const lastScrollY = useRef(0);
   const [isMobile, setIsMobile] = useState(false);
   const navBarRef = useRef(null);
+
+  // Handle external trigger to open calendar
+  useEffect(() => {
+    if (openCalendarTrigger) {
+      setIsCalendarOpen(true);
+      setIsExpanded(true);
+    }
+  }, [openCalendarTrigger]);
+
+  // Sync with external selectedDate prop
+  useEffect(() => {
+    if (externalSelectedDate) {
+      const externalDate = new Date(externalSelectedDate);
+      // Check if externalDate is valid
+      if (!isNaN(externalDate.getTime())) {
+        const currentDate = selectedDate ? new Date(selectedDate) : null;
+        // Only update if dates are different (compare dates, not time)
+        if (
+          !currentDate ||
+          externalDate.getFullYear() !== currentDate.getFullYear() ||
+          externalDate.getMonth() !== currentDate.getMonth() ||
+          externalDate.getDate() !== currentDate.getDate()
+        ) {
+          setSelectedDate(externalDate);
+        }
+      }
+    }
+  }, [externalSelectedDate]); // Removed selectedDate from dependencies to prevent glitch loop
 
   // Notify parent component when date changes
   useEffect(() => {

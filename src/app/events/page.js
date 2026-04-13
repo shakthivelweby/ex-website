@@ -1,10 +1,11 @@
 import ClientWrapper from "./clientWrapper";
 import { getEventCategories, getLanguages, list } from "./service";
 
-export default async function Events({ searchParams }) {
-  const allCategories = await getEventCategories();
-  const allLanguages = await getLanguages();
+// Force dynamic rendering to prevent build-time API calls
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
+export default async function Events({ searchParams }) {
   // Await searchParams before accessing its properties
   const resolvedSearchParams = await searchParams;
 
@@ -19,7 +20,28 @@ export default async function Events({ searchParams }) {
     latitude: resolvedSearchParams.latitude || "",
   };
 
-  const eventsList = await list(filters);
+  // Fetch data with error handling
+  let allCategories = { data: [] };
+  let allLanguages = { data: [] };
+  let eventsList = { data: [] };
+
+  try {
+    allCategories = await getEventCategories();
+  } catch (error) {
+    console.error("Error fetching event categories:", error);
+  }
+
+  try {
+    allLanguages = await getLanguages();
+  } catch (error) {
+    console.error("Error fetching languages:", error);
+  }
+
+  try {
+    eventsList = await list(filters);
+  } catch (error) {
+    console.error("Error fetching events list:", error);
+  }
 
   // Transform events data server-side for SSR based on actual API response
   const transformedEvents = eventsList?.data?.map((event) => ({

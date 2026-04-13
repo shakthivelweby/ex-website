@@ -2,20 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { getExploreData, getFeaturedDestinations } from "./service";
+import { getExploreData, getFeaturedDestinations, getPackageCount } from "./service";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode } from 'swiper/modules';
+import { FreeMode, Navigation } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/free-mode';
+import 'swiper/css/navigation';
 
 export default function Explore() {
   const [mounted, setMounted] = useState(false);
   const [countries, setCountries] = useState([]);
   const [activeCountry, setActiveCountry] = useState(0);
+  const [packageCounts, setPackageCounts] = useState({});
 
   const { data: featuredDestinationsData } = useQuery({
     queryKey: ['featuredDestinations'],
@@ -31,6 +33,16 @@ export default function Explore() {
       const response = await getExploreData();
       setCountries(response.data);
       setMounted(true);
+      
+      // Fetch actual package counts for each country
+      const counts = {};
+      await Promise.all(
+        response.data.map(async (country) => {
+          const count = await getPackageCount(country.id);
+          counts[country.id] = count;
+        })
+      );
+      setPackageCounts(counts);
     };
     fetchData();
   }, []);
@@ -114,7 +126,7 @@ export default function Explore() {
                       Explore {country.name}
                     </h2>
                     <p className="text-gray-600 max-w-2xl">
-                      {country.state.length} States • {country.state.reduce((total, state) => total + (state.package_count || 0), 0)} Packages Available
+                      {country.state.length} States • {packageCounts[country.id] !== undefined ? packageCounts[country.id] : country.state.reduce((total, state) => total + (state.package_count || 0), 0)} Packages Available
                     </p>
                   </div>
                 </div>
@@ -248,16 +260,33 @@ export default function Explore() {
                   Discover our handpicked selection of India&apos;s most beloved travel destinations
                 </p>
               </div>
-             
+              
+              {/* Navigation Arrows */}
+              <div className="hidden md:flex items-center gap-3">
+                <button 
+                  className="featured-destinations-swiper-button-prev w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100"
+                >
+                  <i className="fi fi-rr-angle-left text-gray-600 group-hover:text-primary-500 transition-colors"></i>
+                </button>
+                <button 
+                  className="featured-destinations-swiper-button-next w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100"
+                >
+                  <i className="fi fi-rr-angle-right text-gray-600 group-hover:text-primary-500 transition-colors"></i>
+                </button>
+              </div>
             </div>
           </div>
 
           {featuredDestinations.length > 0 ? (
             <Swiper
-              modules={[FreeMode]}
+              modules={[FreeMode, Navigation]}
               spaceBetween={20}
               slidesPerView={1.2}
               freeMode={true}
+              navigation={{
+                prevEl: '.featured-destinations-swiper-button-prev',
+                nextEl: '.featured-destinations-swiper-button-next',
+              }}
               breakpoints={{
                 640: {
                   slidesPerView: 2,

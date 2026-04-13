@@ -1,0 +1,17 @@
+{
+  "folders": [
+    {
+      "path": "../../.."
+    },
+    {
+      "path": "../../../../explore-world-api"
+    },
+    {
+      "path": "../../../../ex-supplier"
+    },
+    {
+      "path": "../../../../ex-admin"
+    }
+  ],
+  "settings": {}
+}

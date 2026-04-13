@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,8 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import EventCard from "@/components/eventCard";
 import PackageCard from "@/components/PackageCard";
 import DestinationCard from "@/components/DestinationCard";
+import Search from "@/components/Search/Search";
+import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, FreeMode, Autoplay } from "swiper/modules";
 import {

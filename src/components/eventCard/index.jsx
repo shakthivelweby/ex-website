@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 const EventCard = ({ event }) => {
-  const { title, date, venue, type, image, price, promoted, interest_count } =
+  const { title, date, venue, type, image, price, popular, recommended, interest_count } =
     event;
 
   // Format date for display
@@ -26,13 +26,35 @@ const EventCard = ({ event }) => {
   return (
     <Link href={`/events/${event.id}`} className="block group">
       <div className="relative flex flex-col h-full overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-        {/* Promoted Tag */}
-        {promoted && (
-          <div className="absolute top-4 left-4 z-10">
-            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
-              <span>🔥</span>
-              <span>Featured</span>
-            </span>
+        {/* Status Badges */}
+        {(popular || recommended) && (
+          <div className="absolute top-4 left-4 z-10 pointer-events-none">
+            <div className="flex flex-row flex-wrap items-center gap-2">
+              {popular && (
+                <span className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="leading-none">Popular</span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
+                  />
+                </span>
+              )}
+
+              {recommended && (
+                <span
+                  title="ExploreWorld Recommended"
+                  className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[190px]"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
+                  <span className="leading-none truncate">ExploreWorld Recommended</span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
+                  />
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -56,8 +78,8 @@ const EventCard = ({ event }) => {
           {/* Interest Count Overlay */}
           {interest_count > 50 && (
             <div className="absolute bottom-4 left-4 z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-black/50 text-white backdrop-blur-sm">
-                <span>👍</span>
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-black/40 text-white backdrop-blur-md border border-white/15">
+                <span className="w-2 h-2 rounded-full bg-white/80" />
                 <span>{interest_count}+ people interested</span>
               </span>
             </div>

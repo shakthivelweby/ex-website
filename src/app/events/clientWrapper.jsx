@@ -2,7 +2,6 @@
 
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
-import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
@@ -14,8 +13,6 @@ const ClientWrapper = ({
   initialLanguages,
 }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(null);
   const [events, setEvents] = useState(initialEvents || []);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState(initialCategories || []);
@@ -34,7 +31,10 @@ const ClientWrapper = ({
     price_to: initialSearchParams.price_to || "",
     longitude: initialSearchParams.longitude || "",
     latitude: initialSearchParams.latitude || "",
+    location: initialSearchParams.location || "",
   };
+
+  const [filters, setFilters] = useState(initialFilters);
 
   // Mark component as client-side after mount
   useEffect(() => {
@@ -76,14 +76,15 @@ const ClientWrapper = ({
   }, [categories]);
 
   useEffect(() => {
-    if (initialFilters.longitude && initialFilters.latitude) {
-      setSelectedLocation("Selected Location");
+    if (!filters.location && filters.longitude && filters.latitude) {
+      setFilters((prev) => ({ ...prev, location: "Selected Location" }));
     }
-  }, [initialFilters.longitude, initialFilters.latitude]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.longitude, filters.latitude]);
 
   // Function to check if any filters are active
   const hasActiveFilters = () => {
-    return Object.values(initialFilters).some((value) => value);
+    return Object.values(filters).some((value) => value);
   };
 
   // Function to update URL with filters
@@ -131,27 +132,21 @@ const ClientWrapper = ({
       params.delete("latitude");
     }
 
+    // Optional: store location label for UX
+    if (newFilters.location) {
+      params.set("location", newFilters.location);
+    } else {
+      params.delete("location");
+    }
+
     // Update the URL without refreshing the page
     const newUrl = `${window.location.pathname}?${params.toString()}`;
     window.history.pushState({}, "", newUrl);
   };
 
-  // Handle location selection
-  const handlePlaceSelected = (place) => {
-    if (place) {
-      const locationName = place.name;
-      setSelectedLocation(locationName);
-      updateURL({
-        ...initialFilters,
-        longitude: place.geometry.location.lng(),
-        latitude: place.geometry.location.lat(),
-      });
-      setIsLocationOpen(false);
-    }
-  };
-
   // Function to handle filter changes immediately
   const handleFilterChange = async (newFilters) => {
+    setFilters(newFilters);
     updateURL(newFilters);
 
     // Refetch events with new filters
@@ -168,6 +163,8 @@ const ClientWrapper = ({
           venue: event.location,
           type: event.event_category_master?.name || "",
           image: event.thumb_image || event.cover_image,
+          popular: Boolean(event.popular),
+          recommended: Boolean(event.recommended),
           price: (() => {
             if (event.event_days && event.event_days.length > 0) {
               const prices = event.event_days
@@ -216,8 +213,7 @@ const ClientWrapper = ({
             }
             return event.starting_date || "";
           })(),
-          promoted: true,
-          interest_count: 245,
+          interest_count: Number(event.event_bookings_count || 0),
         }));
 
         setEvents(transformedEvents);
@@ -243,7 +239,7 @@ const ClientWrapper = ({
               <EventFilters
                 categories={categories}
                 languages={languages}
-                initialFilters={initialFilters}
+                initialFilters={filters}
                 onFilterChange={handleFilterChange}
               />
             </div>
@@ -257,7 +253,7 @@ const ClientWrapper = ({
                 <h2 className="text-sm sm:text-base font-medium text-gray-900">
                   Events in{" "}
                   <span className="text-primary-600">
-                    {selectedLocation || "Mumbai"}
+                    {filters.location || "Mumbai"}
                   </span>
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
@@ -275,7 +271,7 @@ const ClientWrapper = ({
                   >
                     <i className="fi fi-rr-settings-sliders text-[13px]"></i>
                     <span className="text-white">Filters</span>
-                    {Object.values(initialFilters).some((value) => value) && (
+                    {Object.values(filters).some((value) => value) && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary-500 rounded-full border-2 border-white"></span>
                     )}
                   </button>
@@ -319,19 +315,19 @@ const ClientWrapper = ({
                         key={category.id}
                         onClick={() =>
                           handleFilterChange({
-                            ...initialFilters,
+                            ...filters,
                             category: category.slug,
                           })
                         }
                         className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
-                          initialFilters.category === category.slug
+                          filters.category === category.slug
                             ? "text-primary-600"
                             : "text-gray-600 hover:text-primary-600"
                         }`}
                       >
                         <div
                           className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                            initialFilters.category === category.slug
+                            filters.category === category.slug
                               ? "bg-primary-50 shadow-sm"
                               : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
                           }`}
@@ -367,19 +363,19 @@ const ClientWrapper = ({
                       key={category.id}
                       onClick={() =>
                         handleFilterChange({
-                          ...initialFilters,
+                            ...filters,
                           category: category.slug,
                         })
                       }
                       className={`flex flex-col items-center gap-2 group ${
-                        initialFilters.category === category.slug
+                          filters.category === category.slug
                           ? "text-primary-600"
                           : "text-gray-600 hover:text-primary-600"
                       }`}
                     >
                       <div
                         className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
-                          initialFilters.category === category.slug
+                            filters.category === category.slug
                             ? "bg-primary-50"
                             : "bg-gray-50 group-hover:bg-primary-50"
                         }`}
@@ -458,17 +454,8 @@ const ClientWrapper = ({
           isMobile
           categories={categories}
           languages={languages}
-          initialFilters={initialFilters}
+          initialFilters={filters}
           onFilterChange={handleFilterChange}
-        />
-
-        {/* Location Picker Popup */}
-        <LocationSearchPopup
-          isOpen={isLocationOpen}
-          onClose={() => setIsLocationOpen(false)}
-          onPlaceSelected={handlePlaceSelected}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          title="Choose Location"
         />
       </div>
 

@@ -175,6 +175,15 @@ const ClientWrapper = ({
       if (attractionsResponse?.data?.data) {
         const transformedAttractions = attractionsResponse.data.data.map(
           (attraction) => ({
+            // Admin flags may come as "1"/"0" strings, integers, or booleans depending on API serialization
+            popular:
+              attraction.popular === "1" ||
+              attraction.popular === 1 ||
+              attraction.popular === true,
+            recommended:
+              attraction.recommended === "1" ||
+              attraction.recommended === 1 ||
+              attraction.recommended === true,
             id: attraction.id,
             title: attraction.name,
             description: attraction.description,
@@ -202,11 +211,13 @@ const ClientWrapper = ({
             promoted:
               attraction.promoted ||
               attraction.popular === "1" ||
+              attraction.popular === 1 ||
+              attraction.popular === true ||
               attraction.recommended === "1" ||
+              attraction.recommended === 1 ||
+              attraction.recommended === true ||
               attraction.rating >= 4.0 ||
               false,
-            popular: attraction.popular === "1",
-            recommended: attraction.recommended === "1",
             interest_count: attraction.interest_count || 0,
             openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
             address: attraction.address || "",

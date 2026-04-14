@@ -142,7 +142,7 @@ export default function AttractionCheckoutPage() {
     }
     
     // Add guide charge if guide is needed
-    if (selectedTickets.need_guide && selectedTickets.guide_rate > 0) {
+    if (selectedTickets.include_guide && selectedTickets.guide_rate > 0) {
       ticketDetails.push({
         ticketType: "Guide Service",
         quantity: 1,
@@ -197,7 +197,7 @@ export default function AttractionCheckoutPage() {
         adult_count: totalAdultCount, // Add required adult_count field
         child_count: totalChildCount, // Add required child_count field
         bookingTickets: enhancedBookingTickets,
-        need_guide: selectedTickets.need_guide || false,
+        include_guide: selectedTickets.include_guide || false,
         guide_rate: selectedTickets.guide_rate || 0,
       };
 
@@ -219,11 +219,12 @@ export default function AttractionCheckoutPage() {
         if (orderRes.status) {
           // Initialize Razorpay payment
           const paymentResponse = await initializeRazorpayPayment({
-            amount: paymentAmount * 100, // Razorpay expects amount in paise
+            amount: paymentAmount,
             currency: "INR",
             name: "Explore World",
             description: `Payment for ${attractionData?.attraction?.name || 'attraction'} tickets`,
             orderId: orderRes.data.order_id,
+            key: orderRes.data.key,
             email: formData.email,
             contact: formData.phone,
           });
@@ -254,8 +255,11 @@ export default function AttractionCheckoutPage() {
           } else {
             // Payment initialization failed - mark payment as failed
             const failRes = await paymentFailure(orderRes.data.attraction_payment_id);       
-            
-            setError("Payment initialization failed. Please try again.");
+            console.error("Razorpay init failed:", paymentResponse?.error);
+            setError(
+              paymentResponse?.error?.description ||
+                "Payment initialization failed. Please try again."
+            );
           }
         } else {
           setError(orderRes.message || "Failed to create payment order. Please try again.");

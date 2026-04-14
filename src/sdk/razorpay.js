@@ -1,8 +1,23 @@
 // Load Razorpay SDK
 export const loadRazorpayScript = () => {
   return new Promise((resolve) => {
+    // If already loaded, reuse it
+    if (typeof window !== "undefined" && window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const existingScript = document.getElementById("razorpay-checkout-js");
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(true));
+      existingScript.addEventListener("error", () => resolve(false));
+      return;
+    }
+
     const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v2/checkout.js";
+    // Official Razorpay checkout script
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.id = "razorpay-checkout-js";
     script.onload = () => {
       resolve(true);
     };
@@ -20,9 +35,20 @@ export const initializeRazorpayPayment = async ({
   name,
   description,
   orderId,
+  key,
   email,
   contact,
 }) => {
+  if (!orderId) {
+    return {
+      status: false,
+      error: {
+        code: "MISSING_ORDER_ID",
+        description: "Missing Razorpay order id.",
+      },
+    };
+  }
+
   const res = await loadRazorpayScript();
 
   if (!res) {
@@ -35,10 +61,32 @@ export const initializeRazorpayPayment = async ({
     };
   }
 
+  if (typeof window === "undefined" || !window.Razorpay) {
+    return {
+      status: false,
+      error: {
+        code: "RAZORPAY_NOT_AVAILABLE",
+        description: "Razorpay SDK loaded but window.Razorpay is not available.",
+      },
+    };
+  }
+
+  const resolvedKey = key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  if (!resolvedKey) {
+    return {
+      status: false,
+      error: {
+        code: "MISSING_KEY",
+        description: "Missing Razorpay key id.",
+      },
+    };
+  }
+
   return new Promise((resolve) => {
   const options = {
-    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-    amount: amount * 100, // Amount in smallest currency unit (paise for INR)
+    key: resolvedKey,
+    // Expect amount in major currency units (e.g., rupees) and convert to subunits (paise)
+    amount: Math.round(Number(amount || 0) * 100),
     currency,
       name,
       description,

@@ -32,9 +32,13 @@ apiMiddleware.interceptors.response.use(
     // You can handle specific error statuses globally here
     if (error.response) {
       if (error.response.status === 401) {
-        // e.g., redirect to login or clear tokens
+        // Clear token and trigger login UI (site uses modal, not /login route)
         localStorage.removeItem("token");
-        window.location.href = "/login";
+        try {
+          window.dispatchEvent(new CustomEvent("showLogin"));
+        } catch (_) {
+          // ignore
+        }
       }
     }
     return Promise.reject(error);

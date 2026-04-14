@@ -308,15 +308,22 @@ const AttractionBookings = () => {
                         </span>
                       </div>
                       {/* Ticket Type Breakdown */}
-                      {booking.booking_tickets &&
-                      booking.booking_tickets.length > 0 ? (
+                      {(() => {
+                        const tickets =
+                          booking.booking_tickets ||
+                          booking.attraction_booking_tickets ||
+                          booking.attractionBookingTickets ||
+                          booking.attraction_booking_tickets ||
+                          [];
+                        if (!tickets || tickets.length === 0) return null;
+                        return (
                         <>
                           <div className="mb-3">
                             <span className="text-sm font-semibold text-gray-800">
                               📋 Ticket Breakdown:
                             </span>
                           </div>
-                          {booking.booking_tickets.map((ticket, index) => {
+                          {tickets.map((ticket, index) => {
                             console.log(`Ticket ${index + 1}:`, {
                               ticket_type_name: ticket.ticket_type_name,
                               adult_quantity: ticket.adult_quantity,
@@ -335,29 +342,23 @@ const AttractionBookings = () => {
                                 <div className="flex justify-between items-center">
                                   <span className="font-semibold text-blue-600">
                                     {ticket.ticket_type_name ||
+                                      ticket?.attraction_ticket_type?.attraction_ticket_type_master?.name ||
+                                      ticket?.attractionTicketType?.attractionTicketTypeMaster?.name ||
                                       ticket.name ||
                                       `Ticket Type ${index + 1}`}
                                   </span>
                                   <span className="font-medium text-gray-800">
-                                    {parseInt(ticket.adult_quantity || 0)}{" "}
-                                    Adult(s) +{" "}
-                                    {parseInt(ticket.child_quantity || 0)}{" "}
-                                    Child(ren)
+                                    Qty: {parseInt(ticket.quantity || 0)}
                                   </span>
                                 </div>
-                                {(ticket.adult_price > 0 ||
-                                  ticket.child_price > 0) && (
+                                {(ticket.unit_price > 0 || ticket.total_price > 0) && (
                                   <div className="flex justify-between mt-2 text-xs">
                                     <span className="text-gray-600">Rate:</span>
                                     <span className="text-gray-700">
-                                      Adult: ₹
                                       {parseFloat(
-                                        ticket.adult_price || 0
+                                        ticket.unit_price || 0
                                       ).toFixed(2)}{" "}
-                                      | Child: ₹
-                                      {parseFloat(
-                                        ticket.child_price || 0
-                                      ).toFixed(2)}
+                                      (Total: ₹{parseFloat(ticket.total_price || 0).toFixed(2)})
                                     </span>
                                   </div>
                                 )}
@@ -375,7 +376,8 @@ const AttractionBookings = () => {
                             </span>
                           </div>
                         </>
-                      ) : (
+                        );
+                      })() || (
                         <>
                           <div className="flex justify-between">
                             <span>Adults:</span>

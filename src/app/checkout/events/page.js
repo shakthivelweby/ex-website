@@ -258,11 +258,12 @@ export default function EventCheckoutPage() {
         if (orderRes.status) {
           // Initialize Razorpay payment
           const paymentResponse = await initializeRazorpayPayment({
-            amount: paymentAmount * 100, // Razorpay expects amount in paise
+            amount: paymentAmount,
             currency: "INR",
             name: "Explore World",
             description: `Payment for ${eventData.name} tickets`,
             orderId: orderRes.data.order_id,
+            key: orderRes.data.key,
             email: formData.email,
             contact: formData.phone,
           });

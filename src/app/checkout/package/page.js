@@ -158,6 +158,7 @@ export default function CheckoutPage() {
             name: "Explore World",
             description: `Payment for ${packageDetails.package_name}`,
             orderId: orderRes.data.order_id,
+            key: orderRes.data.key,
             email: formData.email,
             contact: formData.phone,
           });

@@ -7,8 +7,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   attractionInfo,
-  getAttractionTickets,
-  getTicketPricesForDate,
+  getDetailsForBooking,
 } from "../service";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
@@ -85,96 +84,29 @@ const AttractionBookingPage = ({
       `attraction_${attractionId}_selectedDate`
     );
 
-    if (storedDate) {
-      setSelectedDate(storedDate);
-    }
+    if (storedDate) setSelectedDate(storedDate);
+    else setSelectedDate(new Date().toISOString().split("T")[0]);
   }, [attractionId]);
 
   useEffect(() => {
-    // Call API when date changes to get date-specific pricing
-    if (selectedDate && attractionId) {
-      fetchDateSpecificPricing();
-    }
-  }, [selectedDate]);
-
-  const fetchDateSpecificPricing = async () => {
-    try {
-      const response = await getTicketPricesForDate(attractionId, selectedDate);
-
-      if (response && response.data && response.data.ticket_prices) {
-        // Transform the new API response structure to match the expected format
-        const transformedData = {
-          attraction_ticket_type_prices: response.data.ticket_prices.map(
-            (ticket) => ({
-              id: ticket.ticket_type_id,
-              attraction_ticket_type_id: ticket.attraction_ticket_type_id,
-              attraction_ticket_type: {
-                attraction_ticket_type_master: {
-                  name: ticket.ticket_type_name,
-                },
-              },
-              adult_price: ticket.adult_price,
-              child_price: ticket.child_price,
-              full_rate: ticket.full_rate,
-              rate_type: ticket.rate_type,
-              guide_rate: ticket.guide_rate,
-              discount: ticket.discount,
-              description: ticket.description,
-              child_description: ticket.child_description,
-              maximum_allowed_bookings_per_user:
-                ticket.maximum_allowed_bookings_per_user,
-              pricing_type: ticket.pricing_type,
-              seasonal_period: ticket.seasonal_period,
-            })
-          ),
-        };
-
-        setTicketData(transformedData);
-
-        // Also update attraction data with image and other details from API response
-        if (response.data.attraction) {
-          setAttractionData((prevData) => {
-            const updatedAttractionData = {
-              ...(prevData || {}),
-              id: response.data.attraction.id || prevData?.id,
-              name: response.data.attraction.name || prevData?.name,
-              location: response.data.attraction.location || prevData?.location,
-              cover_image: (() => {
-                const coverImage =
-                  response.data.attraction.cover_image ||
-                  response.data.attraction.thumb_image;
-
-                // Clean up the URL if it has double paths
-                if (
-                  coverImage &&
-                  coverImage.includes(
-                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/"
-                  )
-                ) {
-                  const cleanedUrl = coverImage.replace(
-                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/",
-                    "http://127.0.0.1:8000/"
-                  );
-
-                  return cleanedUrl;
-                }
-
-                return coverImage;
-              })(),
-              start_time:
-                response.data.attraction.start_time || prevData?.start_time,
-              end_time: response.data.attraction.end_time || prevData?.end_time,
-              description:
-                response.data.attraction.description || prevData?.description,
-            };
-            return updatedAttractionData;
-          });
+    // Load available tickets for this attraction (independent of date)
+    const loadBookingDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await getDetailsForBooking(attractionId);
+        if (response?.data) {
+          setAttractionData(response.data);
+          setTicketData(response.data);
         }
+      } catch (error) {
+        console.error("Error fetching booking details:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching date-specific pricing:", error);
-    }
-  };
+    };
+
+    if (attractionId) loadBookingDetails();
+  }, [attractionId]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -412,7 +344,7 @@ const AttractionBookingPage = ({
       visit_date: selectedDate,
       total_amount: totalAmount,
       bookingTickets: formattedTickets,
-      need_guide: needGuide,
+      include_guide: needGuide,
       guide_rate: needGuide ? guideRate : 0,
     };
 

@@ -266,7 +266,7 @@ const ActivityFilters = ({
           )}
         </div>
         <div className="space-y-2">
-          <div className="hidden flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {["Today", "Tomorrow", "This Weekend"].map((option) => (
               <button
                 key={option}
@@ -313,7 +313,7 @@ const ActivityFilters = ({
       </div>
 
       {/* Rating Section */}
-      <div className="p-3 bg-gray-100 rounded-lg hidden">
+      <div className="p-3 bg-gray-100 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-star text-gray-400"></i>
@@ -357,7 +357,7 @@ const ActivityFilters = ({
       </div>
 
       {/* Activity Type Section */}
-      <div className="hidden p-3 bg-gray-100 rounded-lg">
+      <div className="p-3 bg-gray-100 rounded-lg">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-apps text-gray-400"></i>

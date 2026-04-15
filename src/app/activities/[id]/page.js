@@ -1,56 +1,33 @@
 import ActivityDetailClient from "./clientWrapper";
 import { getActivityDetails, getActivityGallery } from "../service";
 
-// Dummy/Mock Activity Data for testing
-const getDummyActivityData = (id) => {
-  const dummyActivities = {
-    1: {
-      id: 1,
-      name: "River Rafting Adventure",
-      description: `<p>Experience the thrill of white water rafting...</p>`,
-      location: "Jammu and Kashmir",
-      city: "Jammu and Kashmir",
-      address: "Rishikesh, Jammu and Kashmir, India",
-      activity_category_master: { name: "Adventure Sports", slug: "adventure-sports" },
-      cover_image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=1200",
-      thumb_image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800",
-      image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800",
-      price: { rate_type: "pax", adult_price: 2500, full_rate: 2500 },
-      rating: 4.8,
-      review_count: 342,
-      start_time: "09:00:00",
-      duration: "2-3 hours",
-      best_time_to_visit: "Morning (6 AM - 10 AM)",
-      opening_hours: "9:00 AM - 6:00 PM",
-      features: ["Safety Equipment", "Expert Guide", "Photography", "Refreshments", "Certificate"],
-      activity_highlights: [],
-      faqs: [],
-      terms_and_conditions: [],
-      latitude: 30.0869,
-      longitude: 78.2676,
-      map_link: "",
-      promoted: true,
-      popular: "1",
-      recommended: "0"
-    },
-    // Add other dummies or keep minimal for fallback
-  };
-  return dummyActivities[id] || dummyActivities[1];
-};
+// Force dynamic rendering to prevent build-time API calls
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const ActivityDetailPage = async ({ params }) => {
   const { id } = await params;
-  const activityResponse = await getActivityDetails(id);
-  const galleryResponse = await getActivityGallery(id);
+  let activityResponse = null;
+  let galleryResponse = null;
+
+  try {
+    activityResponse = await getActivityDetails(id);
+  } catch (error) {
+    console.error("Error fetching activity details:", error);
+  }
+
+  try {
+    galleryResponse = await getActivityGallery(id);
+  } catch (error) {
+    console.error("Error fetching activity gallery:", error);
+  }
 
   // Extract data from backend response structure: { success, data: { activity, current_pricing, ... } }
   let activityData = activityResponse?.data;
   let activity = activityData?.activity;
 
-  // Fallback to dummy if API fails
   if (!activity) {
-    console.log("API failed or returned no data, using dummy content");
-    activity = getDummyActivityData(parseInt(id) || 1);
+    return <div>Activity not found</div>;
   }
 
   // Gallery
@@ -89,7 +66,8 @@ const ActivityDetailPage = async ({ params }) => {
 
   // Map Ticket Options
   // API returns activity.activity_ticket_types with attached current_price
-  const ticketOptions = activity.activity_ticket_types ? activity.activity_ticket_types.map(ticket => {
+  const ticketOptions = Array.isArray(activity.activity_ticket_types)
+    ? activity.activity_ticket_types.map((ticket) => {
     const priceObj = ticket.current_price;
     const rateType = priceObj?.rate_type || 'pax';
     const price = rateType === 'full' ? priceObj?.full_rate : priceObj?.adult_price;
@@ -110,19 +88,20 @@ const ActivityDetailPage = async ({ params }) => {
       itinerary: ticket.itineraries ? ticket.itineraries.map(step => `<div><strong>${step.title}</strong>: ${step.description}</div>`).join('') : '',
       cancellationPolicy: '', // Placeholder or specific policy
     };
-  }) : [];
+  })
+    : [];
 
   const activityDetails = {
     id: activity.id,
     title: activity.name,
-    categories: [activity.activity_category?.name || "Activity"],
+    categories: [activity.activity_category?.name || activity.activityCategory?.name || "Activity"],
     location: activity.location || activity.city,
     address: activity.address || "",
     price: bestPrice > 0 ? `₹${bestPrice}` : 'Price TBA',
     image: activity.cover_image || activity.thumb_image || activity.image,
     description: activity.description || "",
     activityGuide: {
-      duration: activity.duration ? `${activity.duration} hours` : 'TBD', // Assuming duration is int hours
+      duration: activity.duration ? `${activity.duration} hours` : 'TBD',
       startTime: formatTime(activity.start_time), // Assuming start_time exists
       bestTimeToVisit: activity.best_time_to_visit || 'TBD',
       openingHours: activity.opening_hours || 'TBD',

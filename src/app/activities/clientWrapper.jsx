@@ -1,24 +1,12 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import ActivityCard from "@/components/activityCard";
 import ActivityFilters from "@/components/ActivityFilters/ActivityFilters";
-import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Popup from "@/components/Popup";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 // Router hooks removed to avoid SSR issues
-import {
-  getActivityCategories,
-  getActivityLocations,
-  list,
-  getActivities,
-} from "./service";
+import { getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Autoplay } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
 
 const ClientWrapper = ({
   searchParams: initialSearchParams,
@@ -26,20 +14,17 @@ const ClientWrapper = ({
   initialCategories,
   initialLocations,
 }) => {
-  const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState(null);
   const [activities, setActivities] = useState(initialActivities || []);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState(initialCategories || []);
   const [locations, setLocations] = useState(initialLocations || []);
-  const [isClient, setIsClient] = useState(false);
-  const [featuredActivities, setFeaturedActivities] = useState([]);
+  const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Get initial filters from server-side search params - Make it reactive state
-  const [initialFilters, setInitialFilters] = useState({
+  // Get initial filters from server-side search params
+  const initialFilters = {
     date: initialSearchParams.date || "",
     location: initialSearchParams.location || "",
     category: initialSearchParams.category || "",
@@ -48,32 +33,13 @@ const ClientWrapper = ({
     price_to: initialSearchParams.price_to || "",
     longitude: initialSearchParams.longitude || "",
     latitude: initialSearchParams.latitude || "",
-  });
+  };
 
-  // Mark component as client-side after mount
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (initialFilters.longitude && initialFilters.latitude) {
-      setSelectedLocation("Selected Location");
-    }
-  }, [initialFilters.longitude, initialFilters.latitude]);
-
-  // Filter featured activities
-  useEffect(() => {
-    if (activities.length > 0) {
-      const featured = activities
-        .filter((activity) => activity.promoted || activity.rating >= 4.5)
-        .slice(0, 5);
-      setFeaturedActivities(featured);
-    }
-  }, [activities]);
+  const [filters, setFilters] = useState(initialFilters);
 
   // Function to check if any filters are active
   const hasActiveFilters = () => {
-    return Object.values(initialFilters).some((value) => value);
+    return Object.values(filters).some((value) => value);
   };
 
   // Function to update URL with filters
@@ -133,20 +99,6 @@ const ClientWrapper = ({
     window.history.pushState({}, "", newUrl);
   };
 
-  // Handle location selection
-  const handlePlaceSelected = (place) => {
-    if (place) {
-      const locationName = place.name;
-      setSelectedLocation(locationName);
-      updateURL({
-        ...initialFilters,
-        longitude: place.geometry.location.lng(),
-        latitude: place.geometry.location.lat(),
-      });
-      setIsLocationOpen(false);
-    }
-  };
-
   // Function to toggle filter popup
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
@@ -161,10 +113,8 @@ const ClientWrapper = ({
   // Function to handle filter changes immediately
 
   const handleFilterChange = async (newFilters) => {
+    setFilters(newFilters);
     updateURL(newFilters);
-
-    // Update initialFilters state so it's passed down to child components
-    setInitialFilters(newFilters);
 
     // Refetch activities with new filters
     try {
@@ -229,213 +179,173 @@ const ClientWrapper = ({
     }
   };
 
-  // Category scroll functions
-  const scrollCategories = (direction) => {
-    const container = document.getElementById("categoryScrollContainer");
-    if (container) {
-      const scrollAmount = 200;
-      const newScrollLeft =
-        container.scrollLeft +
-        (direction === "left" ? -scrollAmount : scrollAmount);
-      container.scrollTo({
-        left: newScrollLeft,
-        behavior: "smooth",
-      });
-    }
-  };
-
-  // Check scroll position
   const checkScrollPosition = () => {
-    const container = document.getElementById("categoryScrollContainer");
-    if (container) {
-      const { scrollLeft, scrollWidth, clientWidth } = container;
+    if (scrollContainerRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
       setCanScrollLeft(scrollLeft > 0);
       setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
     }
   };
 
-  // Initialize scroll position check
-  useEffect(() => {
-    if (isClient) {
-      checkScrollPosition();
-      const container = document.getElementById("categoryScrollContainer");
-      if (container) {
-        container.addEventListener("scroll", checkScrollPosition);
-        return () =>
-          container.removeEventListener("scroll", checkScrollPosition);
-      }
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -200, behavior: "smooth" });
     }
-  }, [isClient, categories]);
+  };
+
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 200, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    checkScrollPosition();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories]);
 
   return (
     <main className="min-h-screen bg-white">
-      {/* Banner Section */}
-      <div className="relative bg-[url('/images/activity-bg.jpg')] bg-cover bg-center bg-no-repeat h-[50vh] md:h-[50vh] w-full overflow-hidden">
-        {/* Dark Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60 z-10"></div>
-        
-        {/* Content at Bottom */}
-        <div className="relative h-full z-20 flex items-end">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full pb-8 sm:pb-12 lg:pb-16">
-            <div className="max-w-3xl">
-                <div className="text-xs sm:text-sm text-white/90 font-normal uppercase mb-2">
-                  {activities.length} activities available
-                </div>
-              <h1 className="text-4xl lg:text-5xl font-medium text-white leading-[1.1] tracking-tight">
-                Explore Our Exciting Activities
-              </h1>
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* Filters Section - Desktop */}
+          <div className="hidden lg:block lg:w-1/4 xl:w-1/5 shrink-0">
+            <div className="sticky top-24">
+              <ActivityFilters
+                categories={categories}
+                locations={locations}
+                initialFilters={filters}
+                onFilterChange={handleFilterChange}
+                layout="sidebar"
+              />
             </div>
           </div>
-        </div>
-      </div>
 
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Main Content */}
-        <div className="">
-          {/* Top Bar with Heading and Filters */}
-          <div className="mb-4 sm:mb-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-end gap-4 mb-4">
-              {/* Left Side - Heading and Count */}
-              <div className="hidden items-center gap-3 sm:gap-4">
-                <h2 className="text-xl sm:text-2xl lg:text-[28px] font-semibold text-gray-800 tracking-tight">
-                Explore Our Exciting Activities{" "}
-                  {/* <span className="text-primary-600">
-                    {selectedLocation || "Mumbai"}
-                  </span> */}
+          {/* Activities Content */}
+          <div className="flex-grow">
+            {/* Top Bar */}
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <h2 className="text-sm sm:text-base font-medium text-gray-900">
+                  Activities in{" "}
+                  <span className="text-primary-600">
+                    {filters.location || "Mumbai"}
+                  </span>
                 </h2>
-                <div className="text-xs sm:text-sm text-gray-500">
+                <span className="text-xs sm:text-sm text-gray-500">
                   {activities.length} activities available
-                </div>
+                </span>
               </div>
 
-              {/* Desktop Filters - Same line as heading */}
-              <div className="hidden lg:flex lg:items-center lg:gap-3">
-                <ActivityFilters
-                  categories={categories}
-                  locations={locations}
-                  initialFilters={initialFilters}
-                  onFilterChange={handleFilterChange}
-                  layout="top"
-                />
-              </div>
-
-              {/* Mobile Filter Button - Sticky Fixed */}
-              <div className="lg:hidden fixed bottom-[80px] right-6 z-40">
+              {/* Mobile Filter Button */}
+              <div className="lg:hidden">
                 <button
-                  onClick={toggleFilter}
-                  className="relative flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-gray-900 text-white hover:bg-primary-600 transition-all duration-300 hover:shadow-xl hover:scale-105 text-sm font-semibold shadow-lg"
+                  onClick={() => setIsFilterOpen(true)}
+                  className="relative flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 text-white shadow-sm hover:bg-black transition-colors text-sm"
                 >
-                  <i className="fi fi-rr-settings-sliders text-sm"></i>
-                  <span>Filters</span>
+                  <i className="fi fi-rr-settings-sliders text-[13px]"></i>
+                  <span className="text-white">Filters</span>
                   {hasActiveFilters() && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">
-                        {
-                          Object.values(initialFilters).filter((value) => value)
-                            .length
-                        }
-                      </span>
-                    </span>
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary-500 rounded-full border-2 border-white"></span>
                   )}
                 </button>
               </div>
             </div>
-          </div>
-          
-          {/* Activities Content */}
-          <div className="flex-grow">
 
             {/* Category Grid */}
-            <div className="">
-              {/* Desktop Grid */}
-              <div className="hidden lg:grid grid-cols-8 xl:grid-cols-12 gap-4">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() =>
-                      handleFilterChange({
-                        ...initialFilters,
-                        category: category.slug,
-                      })
-                    }
-                    className={`flex flex-col items-center gap-2 group ${
-                      initialFilters.category === category.slug
-                        ? "text-primary-600"
-                        : "text-gray-600 hover:text-primary-600"
-                    }`}
-                  >
-                    <div
-                      className={`w-16 h-16 p-2 rounded-lg flex items-center justify-center transition-colors ${
-                        initialFilters.category === category.slug
-                          ? "bg-primary-50"
-                          : "bg-gray-50 group-hover:bg-primary-50"
-                      }`}
+            <div className="mb-8">
+              {/* Mobile & Tablet: Horizontal Scroll with Navigation */}
+              <div className="lg:hidden">
+                <div className="relative">
+                  {canScrollLeft && (
+                    <button
+                      onClick={scrollLeft}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
                     >
-                      {category.image ? (
-                        <img
-                          src={category.image}
-                          alt={category.name}
-                          className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                        />
-                      ) : (
-                        <i className="fi fi-rr-tag text-gray-400 text-xl"></i>
-                      )}
-                    </div>
-                    <span className="text-xs font-medium text-center leading-tight">
-                      {category.name}
-                    </span>
-                  </button>
-                ))}
+                      <i className="fi fi-rr-angle-left text-gray-600 text-sm"></i>
+                    </button>
+                  )}
+                  {canScrollRight && (
+                    <button
+                      onClick={scrollRight}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                    >
+                      <i className="fi fi-rr-angle-right text-gray-600 text-sm"></i>
+                    </button>
+                  )}
+
+                  <div
+                    ref={scrollContainerRef}
+                    onScroll={checkScrollPosition}
+                    className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 px-1 -mx-1"
+                  >
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        onClick={() =>
+                          handleFilterChange({
+                            ...filters,
+                            category: category.slug,
+                          })
+                        }
+                        className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
+                          filters.category === category.slug
+                            ? "text-primary-600"
+                            : "text-gray-600 hover:text-primary-600"
+                        }`}
+                      >
+                        <div
+                          className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                            filters.category === category.slug
+                              ? "bg-primary-50 shadow-sm"
+                              : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
+                          }`}
+                        >
+                          {category.image ? (
+                            <img
+                              src={category.image}
+                              alt={category.name}
+                              className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                            />
+                          ) : (
+                            <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
+                          {category.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
+                </div>
               </div>
 
-              {/* Mobile/Tablet Horizontal Scroll */}
-              <div className="lg:hidden relative">
-                {/* Left Arrow */}
-                {canScrollLeft && (
-                  <button
-                    onClick={() => scrollCategories("left")}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all duration-200"
-                  >
-                    <i className="fi fi-rr-angle-left text-gray-600 text-sm"></i>
-                  </button>
-                )}
-
-                {/* Right Arrow */}
-                {canScrollRight && (
-                  <button
-                    onClick={() => scrollCategories("right")}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-all duration-200"
-                  >
-                    <i className="fi fi-rr-angle-right text-gray-600 text-sm"></i>
-                  </button>
-                )}
-
-                {/* Scrollable Container */}
-                <div
-                  id="categoryScrollContainer"
-                  className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar px-2"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
+              {/* Desktop: Grid Layout */}
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-6 xl:grid-cols-8 gap-4">
                   {categories.map((category) => (
                     <button
                       key={category.id}
                       onClick={() =>
                         handleFilterChange({
-                          ...initialFilters,
+                          ...filters,
                           category: category.slug,
                         })
                       }
-                      className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
-                        initialFilters.category === category.slug
+                      className={`flex flex-col items-center gap-2 group ${
+                        filters.category === category.slug
                           ? "text-primary-600"
                           : "text-gray-600 hover:text-primary-600"
                       }`}
                     >
                       <div
-                        className={`w-20 h-20 p-2 rounded-xl flex items-center justify-center transition-colors ${
-                          initialFilters.category === category.slug
-                            ? "bg-primary-50 border-2 border-primary-200"
-                            : "bg-gray-50 group-hover:bg-primary-50 border-2 border-transparent"
+                        className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
+                          filters.category === category.slug
+                            ? "bg-primary-50"
+                            : "bg-gray-50 group-hover:bg-primary-50"
                         }`}
                       >
                         {category.image ? (
@@ -445,7 +355,7 @@ const ClientWrapper = ({
                             className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
                           />
                         ) : (
-                          <i className="fi fi-rr-tag text-gray-400 text-2xl"></i>
+                          <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
                         )}
                       </div>
                       <span className="text-xs font-medium text-center leading-tight">
@@ -487,7 +397,7 @@ const ClientWrapper = ({
                 </div>
               </div>
             ) : activities.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
                 {activities.map((activity) => (
                   <ActivityCard key={activity.id} activity={activity} />
                 ))}
@@ -518,39 +428,13 @@ const ClientWrapper = ({
             <ActivityFilters
               categories={categories}
               locations={locations}
-              initialFilters={initialFilters}
+              initialFilters={filters}
               onFilterChange={handleFilterChange}
               layout="mobile"
               onClose={toggleFilter}
             />
           </div>
         </Popup>
-
-        {/* Location Picker Popup */}
-        <LocationSearchPopup
-          isOpen={isLocationOpen}
-          onClose={() => setIsLocationOpen(false)}
-          onPlaceSelected={handlePlaceSelected}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          title="Choose Location"
-        />
-      </div>
-
-      {/* Floating Filter Button - Mobile Only */}
-      <div className="fixed bottom-6 right-6 z-40 hidden">
-        <button
-          onClick={toggleFilter}
-          className="relative w-14 h-14 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full shadow-lg hover:from-primary-600 hover:to-primary-700 transition-all duration-300 hover:shadow-xl hover:scale-110 flex items-center justify-center"
-        >
-          <i className="fi fi-rr-settings-sliders text-lg"></i>
-          {hasActiveFilters() && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center">
-              <span className="text-white text-xs font-bold">
-                {Object.values(initialFilters).filter((value) => value).length}
-              </span>
-            </span>
-          )}
-        </button>
       </div>
 
       <style jsx global>{`
@@ -560,24 +444,6 @@ const ClientWrapper = ({
         }
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
-        }
-
-        /* Swiper Navigation Styling */
-        .banner-swiper .swiper-button-next,
-        .banner-swiper .swiper-button-prev {
-          display: none !important;
-        }
-
-        .banner-swiper .swiper-pagination {
-          display: none !important;
-        }
-
-        .banner-swiper {
-          height: auto !important;
-        }
-
-        .banner-swiper .swiper-slide {
-          height: auto !important;
         }
       `}</style>
     </main>

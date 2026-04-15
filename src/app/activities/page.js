@@ -2,13 +2,11 @@ import ClientWrapper from "./clientWrapper";
 import { getActivityCategories, getActivityLocations, list, getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
+// Force dynamic rendering to prevent build-time API calls
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function Activities({ searchParams }) {
-  const allCategories = await getActivityCategories();
-
-  // console.log("Page.js - allCategories.data:", allCategories?.data);
-  
-  const allLocations = await getActivityLocations();
-
   // Await searchParams before accessing its properties
   const resolvedSearchParams = await searchParams;
 
@@ -24,15 +22,30 @@ export default async function Activities({ searchParams }) {
     latitude: resolvedSearchParams.latitude || "",
   };
 
-  const activitiesList = await list(filters);
-  
-  // Test the new getActivities API
-  const activitiesFromAPI = await getActivities(filters); 
-  
-  // Use the API data instead of mock data
-  const activitiesArray = activitiesFromAPI?.data?.data || [];
+  // Fetch data with error handling
+  let allCategories = { data: [] };
+  let allLocations = { data: [] };
+  let activitiesFromAPI = { data: { data: [] } };
 
-  console.log("Server-side: Checking activities for start_time", activitiesArray);
+  try {
+    allCategories = await getActivityCategories();
+  } catch (error) {
+    console.error("Error fetching activity categories:", error);
+  }
+
+  try {
+    allLocations = await getActivityLocations();
+  } catch (error) {
+    console.error("Error fetching activity locations:", error);
+  }
+
+  try {
+    activitiesFromAPI = await getActivities(filters);
+  } catch (error) {
+    console.error("Error fetching activities list:", error);
+  }
+
+  const activitiesArray = activitiesFromAPI?.data?.data || [];
 
   
 

@@ -506,6 +506,68 @@ const ActivityDetailPage = ({ activityDetails }) => {
       {/* Hero Section */}
       <div className="w-full bg-white">
         <div className="max-w-7xl mx-auto px-4 py-6 mt-10">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
+                    {activityDetails.title || "Untitled Activity"}
+                  </h1>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(activityDetails.categories || []).map((c, idx) => (
+                      <span
+                        key={`${c}-${idx}`}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                      >
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {(activityDetails.popular || activityDetails.recommended) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activityDetails.popular && (
+                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Popular
+                      </span>
+                    )}
+                    {activityDetails.recommended && (
+                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[220px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
+                        <span className="truncate">ExploreWorld Recommended</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                {(activityDetails.location || activityDetails.address) && (
+                  <div className="flex items-center gap-2">
+                    <i className="fi fi-rr-marker text-gray-400 text-sm"></i>
+                    <span className="line-clamp-1">
+                      {activityDetails.location || activityDetails.address}
+                    </span>
+                  </div>
+                )}
+                {Number(activityDetails.rating) > 0 && (
+                  <div className="flex items-center gap-2">
+                    <i className="fi fi-sr-star text-yellow-400 text-sm"></i>
+                    <span className="font-medium text-gray-800">
+                      {Number(activityDetails.rating).toFixed(1)}
+                    </span>
+                    <span className="text-gray-500">
+                      ({Number(activityDetails.reviewCount || 0)} reviews)
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Image Gallery */}
           <div className="w-full mb-8">
             {/* Mobile Carousel - Hidden on desktop */}
@@ -585,7 +647,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
             </div>
 
             {/* Desktop Grid - Hidden on mobile */}
-            <div className="hidden lg:grid grid-cols-3 gap-2 h-[600px]">
+            <div className="hidden lg:grid grid-cols-3 gap-2 h-[500px]">
               {/* Main Large Image - Left Side (2/3 width) */}
               <div 
                 className="relative col-span-2 rounded-l-xl overflow-hidden cursor-pointer group"
@@ -715,7 +777,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
                 {/* Gallery Section */}
                 {activityDetails.gallery && activityDetails.gallery.length > 0 && (
-                  <div className="bg-white rounded-xl mb-14 hidden">
+                  <div className="bg-white rounded-xl mb-14">
                     <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
                       Activity Gallery
                     </h2>

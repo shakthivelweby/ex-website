@@ -7,6 +7,109 @@ import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+function formatTime(timeString) {
+  if (!timeString) return "TBD";
+  try {
+    const [hoursStr, minutes] = String(timeString).split(":");
+    const hour = parseInt(hoursStr, 10);
+    if (!Number.isFinite(hour)) return "TBD";
+    const period = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes || "00"} ${period}`;
+  } catch {
+    return "TBD";
+  }
+}
+
+function toYmd(date) {
+  try {
+    return new Date(date).toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
+}
+
+function isDateInRange(ymd, start, end) {
+  if (!ymd || !start || !end) return false;
+  return ymd >= start && ymd <= end;
+}
+
+function getSeasonalPriceForTicket(seasonalDates, ticketTypeId, ymd) {
+  if (!Array.isArray(seasonalDates) || !ticketTypeId || !ymd) return null;
+  const row = seasonalDates.find((r) => {
+    const rid =
+      r.activity_ticket_type_id ??
+      r.activityTicketTypeId ??
+      r.ticket_type_id ??
+      r.ticketTypeId ??
+      r.activity_ticket_type?.id;
+    const start = r.start_date ?? r.startDate;
+    const end = r.end_date ?? r.endDate;
+    return String(rid) === String(ticketTypeId) && isDateInRange(ymd, start, end);
+  });
+  return row || null;
+}
+
+function isCloseoutDate(closeouts, ymd, weekdayName) {
+  if (!Array.isArray(closeouts) || !ymd) return false;
+  return closeouts.some((c) => {
+    const start = c.start_date ?? c.startDate;
+    const end = c.end_date ?? c.endDate;
+    if (!isDateInRange(ymd, start, end)) return false;
+
+    const days = c.applicable_days || c.applicableDays || [];
+    if (!Array.isArray(days) || days.length === 0) return true;
+
+    // Try to match weekday
+    const dayNames = days
+      .map((d) => d.day_name || d.day || d.name || d.weekday)
+      .filter(Boolean)
+      .map((s) => String(s).toLowerCase());
+    if (dayNames.length === 0) return true;
+    return dayNames.includes(String(weekdayName || "").toLowerCase());
+  });
+}
+
+function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
+  const amount = Number(amountRaw || 0);
+  const discount = Number(discountRaw || 0);
+  const admin = Number(adminChargeRaw || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+  const discounted = amount - (amount * Math.max(0, discount)) / 100;
+  const withAdmin = discounted + (discounted * Math.max(0, admin)) / 100;
+  return Number.isFinite(withAdmin) ? withAdmin : 0;
+}
+
+function pickNumber(obj, keys, fallback = 0) {
+  for (const k of keys) {
+    if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== "") {
+      const n = Number(obj[k]);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return fallback;
+}
+
+function normalizeRateType(rateTypeRaw, { adultPrice, childPrice, fullRate } = {}) {
+  const rt = String(rateTypeRaw || "pax").toLowerCase();
+  const adult = Number(adultPrice || 0);
+  const child = Number(childPrice || 0);
+  const full = Number(fullRate || 0);
+
+  // If backend explicitly says full and full price exists, treat as full.
+  // Only fall back to pax if full price is missing but pax fields exist.
+  if (rt === "full") {
+    if (full > 0) return "full";
+    if (adult > 0 || child > 0) return "pax";
+    return "full";
+  }
+
+  // For pax/other: if pax fields exist, treat as pax.
+  if (adult > 0 || child > 0) return "pax";
+  return "pax";
+}
+
 const Form = ({
   activityDetails,
   isMobilePopup = false,
@@ -19,33 +122,190 @@ const Form = ({
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [adultCount, setAdultCount] = useState(1);
   const [childCount, setChildCount] = useState(0);
+  const [ticketCount, setTicketCount] = useState(1);
+  const [includeGuide, setIncludeGuide] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Dummy time slots
-  const timeSlots = [
-    "9:00 AM",
-    "10:00 AM",
-    "11:00 AM",
-    "12:00 PM",
-    "1:00 PM",
-    "2:00 PM",
-    "3:00 PM",
-    "4:00 PM",
-  ];
+  const isSlotBased = Boolean(activityDetails?.time_slot_based);
+  const selectedYmd = selectedDate ? toYmd(selectedDate) : "";
+
+  const slotOptions = Array.isArray(activityDetails?.time_slot_pricing)
+    ? activityDetails.time_slot_pricing.map((slot) => {
+        const label = `${formatTime(slot.start_time)} - ${formatTime(
+          slot.end_time
+        )}`;
+        return {
+          id: String(slot.id),
+          label,
+          raw: slot,
+        };
+      })
+    : [];
+
+  const getSlotTicketUnitPrices = () => {
+    if (!isSlotBased || !selectedTicket || !selectedTimeSlot) return null;
+    const slot = slotOptions.find((s) => s.id === String(selectedTimeSlot))?.raw;
+    if (!slot) return null;
+    const ticketPriceRow = Array.isArray(slot.ticket_prices || slot.ticketPrices)
+      ? (slot.ticket_prices || slot.ticketPrices).find(
+          (p) => String(p.activity_ticket_type_id) === String(selectedTicket.id)
+        )
+      : null;
+    if (!ticketPriceRow) return null;
+
+    const rateType = normalizeRateType(ticketPriceRow.rate_type || selectedTicket.rateType, {
+      adultPrice: ticketPriceRow.adult_price,
+      childPrice: ticketPriceRow.child_price,
+      fullRate: ticketPriceRow.full_rate,
+    });
+    // discount/admin charge are stored on ticket base pricing, not per-slot ticket price rows
+    const discountPct = pickNumber(selectedTicket, ["discount"], 0);
+    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0);
+
+    const adultUnitBase =
+      rateType === "full"
+        ? Number(ticketPriceRow.full_rate || 0)
+        : Number(ticketPriceRow.adult_price || 0);
+    const childUnitBase = Number(ticketPriceRow.child_price || 0);
+
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+
+    return { rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
+  };
+
+  const getEffectiveTicketUnitPrices = () => {
+    if (!selectedTicket) return null;
+
+    const seasonalRow = getSeasonalPriceForTicket(
+      activityDetails?.seasonal_dates,
+      selectedTicket.id,
+      selectedYmd
+    );
+
+    // Seasonal overrides everything when present for the date
+    if (seasonalRow) {
+      const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
+        adultPrice: seasonalRow.adult_price,
+        childPrice: seasonalRow.child_price,
+        fullRate: seasonalRow.full_rate,
+      });
+      const discountPct = pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"]);
+      const adminChargePct = pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+
+      const adultUnitBase =
+        rateType === "full"
+          ? Number(seasonalRow.full_rate || 0)
+          : Number(seasonalRow.adult_price || 0);
+      const childUnitBase = Number(seasonalRow.child_price || 0);
+
+      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+
+      return { source: "seasonal", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
+    }
+
+    const slotUnit = getSlotTicketUnitPrices();
+    if (slotUnit) return { source: "slot", ...slotUnit };
+
+    const rateType = normalizeRateType(selectedTicket.rateType, {
+      adultPrice: selectedTicket.adult_price,
+      childPrice: selectedTicket.child_price,
+      fullRate: selectedTicket.full_rate ?? selectedTicket.price,
+    });
+    const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
+    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+
+    const adultUnitBase =
+      rateType === "full"
+        ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
+        : Number(selectedTicket.price || selectedTicket.adult_price || 0);
+    const childUnitBase = Number(selectedTicket.child_price || 0);
+
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+
+    return { source: "base", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
+  };
+
+  const getTotalParts = () => {
+    if (!selectedTicket) return null;
+    const effective = getEffectiveTicketUnitPrices();
+    if (!effective) return null;
+
+    const discountPct = Number(effective.discountPct || 0);
+    const adminChargePct = Number(effective.adminChargePct || 0);
+
+    const originalAdultUnit = applyDiscountAndAdminCharge(effective.adultUnitBase ?? effective.adultUnit, 0, adminChargePct);
+    const originalChildUnit = applyDiscountAndAdminCharge(effective.childUnitBase ?? effective.childUnit, 0, adminChargePct);
+    const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
+
+    if (effective.rateType === "full") {
+      const qty = Math.max(1, Number(ticketCount) || 1);
+      const originalTotal = Number(originalAdultUnit || 0) * qty;
+      const finalTotal = Number(effective.adultUnit || 0) * qty;
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      return {
+        originalTotal: originalTotal + guideTotal,
+        finalTotal: finalTotal + guideTotal,
+        hasDiscount: discountPct > 0,
+        guideTotal,
+      };
+    }
+
+    const adultTotal = Number(effective.adultUnit || 0) * adultCount;
+    const childUnit = Number(effective.childUnit || 0);
+    const childTotal =
+      childUnit > 0
+        ? childUnit * childCount
+        : Number(effective.adultUnit || 0) * 0.7 * childCount;
+    const finalTotal = adultTotal + childTotal;
+
+    const originalAdultTotal = Number(originalAdultUnit || 0) * adultCount;
+    const originalChildUnitAdj = Number(originalChildUnit || 0);
+    const originalChildTotal =
+      originalChildUnitAdj > 0
+        ? originalChildUnitAdj * childCount
+        : Number(originalAdultUnit || 0) * 0.7 * childCount;
+    const originalTotal = originalAdultTotal + originalChildTotal;
+
+    const paxQty = adultCount + childCount;
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    return {
+      originalTotal: originalTotal + guideTotal,
+      finalTotal: finalTotal + guideTotal,
+      hasDiscount: discountPct > 0,
+      guideTotal,
+    };
+  };
 
   // Calculate total price based on selected ticket and counts
   const calculateTotalPrice = () => {
     if (!selectedTicket) {
       return activityDetails.price || "Price TBA";
     }
-    
-    const ticketPrice = selectedTicket.price || selectedTicket.adult_price || 0;
-    const adultPrice = ticketPrice * adultCount;
-    const childPrice = selectedTicket.child_price 
-      ? selectedTicket.child_price * childCount 
-      : (ticketPrice * 0.7) * childCount; // 30% discount for children if not specified
-    
-    const total = adultPrice + childPrice;
+
+    const effective = getEffectiveTicketUnitPrices();
+    if (!effective) return activityDetails.price || "Price TBA";
+
+    if (effective.rateType === "full") {
+      const qty = Math.max(1, Number(ticketCount) || 1);
+      const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      const total = Number(effective.adultUnit || 0) * qty + guideTotal;
+      return total > 0 ? `₹${total.toFixed(0)}` : activityDetails.price || "Price TBA";
+    }
+
+    const adultTotal = Number(effective.adultUnit || 0) * adultCount;
+    const childUnit = Number(effective.childUnit || 0);
+    const childTotal =
+      childUnit > 0
+        ? childUnit * childCount
+        : Number(effective.adultUnit || 0) * 0.7 * childCount;
+    const paxQty = adultCount + childCount;
+    const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    const total = adultTotal + childTotal + guideTotal;
     return total > 0 ? `₹${total.toFixed(0)}` : activityDetails.price || "Price TBA";
   };
 
@@ -53,17 +313,42 @@ const Form = ({
     ? calculateTotalPrice()
     : activityDetails.price || "Price TBA";
 
+  const effectivePricing = getEffectiveTicketUnitPrices();
+  const currentPricing = activityDetails?.current_pricing;
+  const uiRateType = selectedTicket
+    ? normalizeRateType(effectivePricing?.rateType || selectedTicket?.rateType, {
+        adultPrice: effectivePricing?.adultUnit,
+        childPrice: effectivePricing?.childUnit,
+        fullRate: effectivePricing?.adultUnit,
+      })
+    : normalizeRateType(currentPricing?.rate_type, {
+        adultPrice: currentPricing?.adult_price,
+        childPrice: currentPricing?.child_price,
+        fullRate: currentPricing?.full_rate,
+      });
+  const totalPaxCount = adultCount + childCount;
+
   const validateForm = () => {
     const newErrors = {};
     
-    if (!selectedDate) {
-      newErrors.date = "Please select a date";
+    if (!selectedTicket) {
+      newErrors.ticket = "Please select a ticket option";
+    } else {
+      if (!selectedDate) {
+        newErrors.date = "Please select a date";
+      }
+
+      if (isSlotBased && !selectedTimeSlot) {
+        newErrors.timeSlot = "Please select a time slot";
+      }
+
+      if (uiRateType === "full") {
+        if (!ticketCount || Number(ticketCount) < 1) {
+          newErrors.ticketCount = "Please select ticket count";
+        }
+      }
     }
-    
-    if (!selectedTimeSlot) {
-      newErrors.timeSlot = "Please select a time slot";
-    }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -81,18 +366,29 @@ const Form = ({
     }
 
     // Store booking data in sessionStorage
+    const effective = getEffectiveTicketUnitPrices();
     const bookingData = {
       selectedDate,
-      selectedTimeSlot,
+      selectedTimeSlot: isSlotBased ? selectedTimeSlot : "",
+      selectedTimeSlotLabel: isSlotBased
+        ? slotOptions.find((s) => s.id === String(selectedTimeSlot))?.label || ""
+        : "",
       adultCount,
       childCount,
+      ticketCount,
+      includeGuide,
       selectedTicket,
+      rateType: effective?.rateType || selectedTicket?.rateType || "pax",
       activityDetails: {
         id: activityDetails.id,
         title: activityDetails.title,
         location: activityDetails.location,
         price: activityDetails.price,
         duration: activityDetails.activityGuide.duration,
+        time_slot_based: isSlotBased,
+        time_slot_pricing: activityDetails.time_slot_pricing || [],
+        seasonal_dates: activityDetails.seasonal_dates || [],
+        closeout_dates: activityDetails.closeout_dates || [],
       },
     };
     sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
@@ -203,10 +499,46 @@ const Form = ({
         <div className="bg-white rounded-xl p-4">
           {/* Price Display */}
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
-            <span className="text-gray-700 text-sm font-medium">Starting from</span>
-            <span className="text-xl lg:text-2xl font-semibold text-gray-800">
-              {displayPrice} <span className="text-sm text-gray-500 font-normal">per person</span>
+            <span className="text-gray-700 text-sm font-medium">
+              {selectedTicket && selectedDate && (!isSlotBased || selectedTimeSlot)
+                ? "Total price"
+                : "Starting from"}
             </span>
+            {(() => {
+              const parts = getTotalParts();
+              const unitLabel = !selectedTicket
+                ? "per person"
+                : uiRateType === "full"
+                  ? `× ${ticketCount}`
+                  : `for ${totalPaxCount} pax`;
+
+              if (!parts) {
+                return (
+                  <span className="text-xl lg:text-2xl font-semibold text-gray-800">
+                    {displayPrice}{" "}
+                    <span className="text-sm text-gray-500 font-normal">
+                      {unitLabel}
+                    </span>
+                  </span>
+                );
+              }
+
+              return (
+                <div className="text-right">
+                  {parts.hasDiscount && parts.originalTotal > parts.finalTotal ? (
+                    <div className="text-sm text-gray-500 line-through">
+                      ₹{parts.originalTotal.toFixed(0)}
+                    </div>
+                  ) : null}
+                  <div className="text-xl lg:text-2xl font-semibold text-gray-800">
+                    ₹{parts.finalTotal.toFixed(0)}{" "}
+                    <span className="text-sm text-gray-500 font-normal">
+                      {unitLabel}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Date Picker */}
@@ -224,102 +556,193 @@ const Form = ({
                   }
                 }}
                 minDate={new Date()}
+                filterDate={(date) => {
+                  const ymd = toYmd(date);
+                  const weekdayName = new Date(date).toLocaleDateString("en-US", { weekday: "long" });
+                  return !isCloseoutDate(activityDetails?.closeout_dates, ymd, weekdayName);
+                }}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="Choose a date"
-                className={`w-full px-4 py-3 pl-12 text-gray-800 border cursor-pointer ${errors.date ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 outline-none`}
-                required
+                className={`w-full px-4 py-3 pl-12 text-gray-800 border ${
+                  !selectedTicket ? "bg-gray-50 cursor-not-allowed" : "cursor-pointer"
+                } ${errors.date ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 outline-none`}
+                disabled={!selectedTicket}
               />
               <i className="fi fi-rr-calendar absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
             </div>
             {errors.date && (
               <p className="text-red-500 text-xs mt-1">{errors.date}</p>
             )}
-          </div>
-
-          {/* Time Slot Selection */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Time Slot 
-            </label>
-            <select
-              value={selectedTimeSlot}
-              onChange={(e) => {
-                setSelectedTimeSlot(e.target.value);
-                if (errors.timeSlot) {
-                  setErrors({ ...errors, timeSlot: null });
-                }
-              }}
-              className={`w-full px-4 py-3 text-gray-800 bg-transparent border ${errors.timeSlot ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 outline-none`}
-              required
-            >
-              <option value="" className="text-gray-500 bg-white">Select a time slot</option>
-              {timeSlots.map((slot, index) => (
-                <option key={index} value={slot} className="text-gray-500 bg-white">
-                  {slot}
-                </option>
-              ))}
-            </select>
-            {errors.timeSlot && (
-              <p className="text-red-500 text-xs mt-1">{errors.timeSlot}</p>
+            {!selectedTicket && (
+              <p className="text-gray-500 text-xs mt-1">
+                Select a ticket option to choose date.
+              </p>
             )}
           </div>
 
-          {/* Adult Count */}
-          <div className="mb-4">
-            <div className="block text-sm font-medium text-gray-700 mb-2">
-               <div className="flex items-center justify-between">
-                  <div>Adults</div>
-                  <div className="flex items-center gap-3">
+          {/* Time Slot Selection */}
+          {isSlotBased && selectedTicket && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Time Slot
+              </label>
+              <select
+                value={selectedTimeSlot}
+                onChange={(e) => {
+                  setSelectedTimeSlot(e.target.value);
+                  if (errors.timeSlot) {
+                    setErrors({ ...errors, timeSlot: null });
+                  }
+                }}
+                className={`w-full px-4 py-3 text-gray-800 bg-transparent border ${
+                  errors.timeSlot ? "border-red-500" : "border-gray-300"
+                } rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 outline-none`}
+              >
+                <option value="" className="text-gray-500 bg-white">
+                  Select a time slot
+                </option>
+                {slotOptions.map((slot) => (
+                  <option
+                    key={slot.id}
+                    value={slot.id}
+                    className="text-gray-700 bg-white"
+                  >
+                    {slot.label}
+                  </option>
+                ))}
+              </select>
+              {errors.timeSlot && (
+                <p className="text-red-500 text-xs mt-1">{errors.timeSlot}</p>
+              )}
+            </div>
+          )}
+
+          {uiRateType === "full" ? (
+            <div className="mb-4">
+              <div className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="flex items-center justify-between">
+                  <div>Ticket Count</div>
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => setAdultCount(Math.max(1, adultCount - 1))}
+                      onClick={() => setTicketCount(Math.max(1, Number(ticketCount) - 1))}
+                      disabled={!selectedTicket}
                       className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
                     >
                       <i className="fi fi-rr-minus text-sm text-gray-500 group-focus:text-primary-700"></i>
                     </button>
-                    <span className="flex-1 text-center text-lg font-medium text-gray-800">
-                      {adultCount}
+                    <span className="min-w-10 text-center text-lg font-medium text-gray-800">
+                      {ticketCount}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setAdultCount(adultCount + 1)}
+                      onClick={() => setTicketCount(Number(ticketCount) + 1)}
+                      disabled={!selectedTicket}
                       className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
                     >
                       <i className="fi fi-rr-plus text-sm text-gray-500 group-focus:text-primary-700"></i>
                     </button>
                   </div>
-               </div>
-            </div>
-           
-          </div>
-
-          {/* Child Count */}
-          <div className="mb-4">
-            <div className="block text-sm font-medium text-gray-700 mb-2">
-              <div className="flex items-center justify-between">
-                <div>Children</div>
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setChildCount(Math.max(0, childCount - 1))}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
-                  >
-                    <i className="fi fi-rr-minus text-sm text-gray-500 group-focus:text-primary-700"></i>
-                  </button>
-                  <span className="flex-1 text-center text-lg font-medium text-gray-800">
-                    {childCount}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setChildCount(childCount + 1)}
-                    className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
-                  >
-                    <i className="fi fi-rr-plus text-sm text-gray-500 group-focus:text-primary-700"></i>
-                  </button>
                 </div>
               </div>
+              {errors.ticketCount && (
+                <p className="text-red-500 text-xs mt-1">{errors.ticketCount}</p>
+              )}
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Adult Count */}
+              <div className="mb-4">
+                <div className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center justify-between">
+                    <div>Adults</div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setAdultCount(Math.max(1, adultCount - 1))}
+                        disabled={!selectedTicket}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
+                      >
+                        <i className="fi fi-rr-minus text-sm text-gray-500 group-focus:text-primary-700"></i>
+                      </button>
+                      <span className="flex-1 text-center text-lg font-medium text-gray-800">
+                        {adultCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAdultCount(adultCount + 1)}
+                        disabled={!selectedTicket}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
+                      >
+                        <i className="fi fi-rr-plus text-sm text-gray-500 group-focus:text-primary-700"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Child Count */}
+              <div className="mb-4">
+                <div className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="flex items-center justify-between">
+                    <div>Children</div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setChildCount(Math.max(0, childCount - 1))}
+                        disabled={!selectedTicket}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
+                      >
+                        <i className="fi fi-rr-minus text-sm text-gray-500 group-focus:text-primary-700"></i>
+                      </button>
+                      <span className="flex-1 text-center text-lg font-medium text-gray-800">
+                        {childCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setChildCount(childCount + 1)}
+                        disabled={!selectedTicket}
+                        className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-0 focus:ring-primary-500 focus:ring-offset-0 focus:border-primary-500 focus:bg-primary-50 group"
+                      >
+                        <i className="fi fi-rr-plus text-sm text-gray-500 group-focus:text-primary-700"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedTicket && pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) > 0 ? (
+            <div className="mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">Need Guide</div>
+                  <div className="text-xs text-gray-500">
+                    +₹{(
+                      pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) *
+                      (uiRateType === "full" ? Math.max(1, Number(ticketCount) || 1) : totalPaxCount)
+                    ).toFixed(0)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIncludeGuide((v) => !v)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    includeGuide ? "bg-primary-600" : "bg-gray-300"
+                  }`}
+                  aria-pressed={includeGuide}
+                  aria-label="Toggle guide"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      includeGuide ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {/* Action buttons */}
           {isMobilePopup ? (

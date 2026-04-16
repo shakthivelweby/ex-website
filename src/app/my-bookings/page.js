@@ -1,17 +1,22 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from "next/navigation";
 import PackageBookings from './package/PackageBookings';
 import EventBookings from './event/EventBookings';
 import AttractionBookings from './attraction/AttractionBookings';
+import ActivityBookings from './activity/ActivityBookings';
 
 const MyBookings = () => {
-    const [activeTab, setActiveTab] = useState('packages');
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get("tab") || "packages";
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     const tabs = [
         { id: 'packages', label: 'Packages' },
         { id: 'events', label: 'Events' },
-        { id: 'attractions', label: 'Attractions' }
+        { id: 'attractions', label: 'Attractions' },
+        { id: 'activities', label: 'Activities' },
     ];
 
     const renderTabContent = () => {
@@ -22,6 +27,8 @@ const MyBookings = () => {
                 return <EventBookings />;
             case 'attractions':
                 return <AttractionBookings />;
+            case 'activities':
+                return <ActivityBookings />;
             default:
                 return null;
         }

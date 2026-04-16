@@ -81,6 +81,9 @@ const ActivityDetailPage = async ({ params }) => {
       originalPrice: 0, // Backend doesn't seem to have original price separate yet
       rateType: rateType,
       child_price: priceObj?.child_price || 0,
+      discount: priceObj?.discount ?? 0,
+      admin_charge: priceObj?.admin_charge ?? 0,
+      guide_rate: priceObj?.guide_rate ?? 0,
       features: [], // derived from inclusions?
       briefDetails: ticket.description,
       inclusions: Array.isArray(ticket.inclusions) ? ticket.inclusions.map((i) => i.inclusion).filter(Boolean) : [],
@@ -130,6 +133,12 @@ const ActivityDetailPage = async ({ params }) => {
     popular: activity.popular === "1" || activity.popular === 1,
     recommended: activity.recommended === "1" || activity.recommended === 1,
     ticketOptions: ticketOptions.length > 0 ? ticketOptions : [],
+    time_slot_based: activity.time_slot_based === 1 || activity.time_slot_based === "1" || activity.time_slot_based === true,
+    time_slot_pricing: Array.isArray(activityData?.time_slot_pricing) ? activityData.time_slot_pricing : [],
+    seasonal_dates: Array.isArray(activityData?.seasonal_dates) ? activityData.seasonal_dates : [],
+    closeout_dates: Array.isArray(activityData?.closeout_dates) ? activityData.closeout_dates : [],
+    current_pricing: activityData?.current_pricing || null,
+    cancellation_policies: Array.isArray(activityData?.cancellation_policies) ? activityData.cancellation_policies : [],
   };
 
   return <ActivityDetailClient activityDetails={activityDetails} />;

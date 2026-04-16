@@ -83,9 +83,16 @@ const ActivityDetailPage = async ({ params }) => {
       child_price: priceObj?.child_price || 0,
       features: [], // derived from inclusions?
       briefDetails: ticket.description,
-      inclusion: ticket.inclusions ? ticket.inclusions.map(i => i.name) : [],
-      exclusion: ticket.exclusions ? ticket.exclusions.map(e => e.name) : [],
-      itinerary: ticket.itineraries ? ticket.itineraries.map(step => `<div><strong>${step.title}</strong>: ${step.description}</div>`).join('') : '',
+      inclusions: Array.isArray(ticket.inclusions) ? ticket.inclusions.map((i) => i.inclusion).filter(Boolean) : [],
+      exclusions: Array.isArray(ticket.exclusions) ? ticket.exclusions.map((e) => e.exclusion).filter(Boolean) : [],
+      itineraries: Array.isArray(ticket.itineraries)
+        ? ticket.itineraries.map((s) => ({
+            step_number: s.step_number,
+            title: s.title,
+            time: s.time,
+            description: s.description,
+          }))
+        : [],
       cancellationPolicy: '', // Placeholder or specific policy
     };
   })

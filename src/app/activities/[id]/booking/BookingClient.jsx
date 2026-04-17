@@ -59,7 +59,19 @@ function formatTime(timeString) {
 
 function toYmd(date) {
   try {
-    return new Date(date).toISOString().split("T")[0];
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return "";
+    // Force Indian timezone (Asia/Kolkata) so close-out/season dates match backend.
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    return y && m && day ? `${y}-${m}-${day}` : "";
   } catch {
     return "";
   }
@@ -289,14 +301,20 @@ const BookingClient = ({ activityId }) => {
         childPrice: seasonalRow.child_price,
         fullRate: seasonalRow.full_rate,
       });
-      const discountPct = pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"]);
-      const adminChargePct = pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+      const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
+      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+
+      const baseAdultOrFull =
+        rateType === "full"
+          ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
+          : Number(selectedTicket.price || selectedTicket.adult_price || 0);
+      const baseChild = Number(selectedTicket.child_price || 0);
 
       const adultUnitBase =
         rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
+          ? baseAdultOrFull + Number(seasonalRow.full_rate || 0)
+          : baseAdultOrFull + Number(seasonalRow.adult_price || 0);
+      const childUnitBase = baseChild + Number(seasonalRow.child_price || 0);
 
       const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
       const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
@@ -341,7 +359,7 @@ const BookingClient = ({ activityId }) => {
       const qty = Math.max(1, Number(ticketCount) || 1);
       const originalTotal = Number(originalAdultUnit || 0) * qty;
       const finalTotal = Number(effective.adultUnit || 0) * qty;
-      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
       return {
         originalTotal: originalTotal + guideTotal,
         finalTotal: finalTotal + guideTotal,
@@ -366,8 +384,7 @@ const BookingClient = ({ activityId }) => {
         : Number(originalAdultUnit || 0) * 0.7 * formData.childCount;
     const originalTotal = originalAdultTotal + originalChildTotal;
 
-    const paxQty = formData.adultCount + formData.childCount;
-    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
     return {
       originalTotal: originalTotal + guideTotal,
       finalTotal: finalTotal + guideTotal,
@@ -390,7 +407,7 @@ const BookingClient = ({ activityId }) => {
 
     if (effective?.rateType === "full") {
       const qty = Math.max(1, Number(ticketCount) || 1);
-      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
       return Number(basePrice || 0) * qty + guideTotal;
     }
 
@@ -401,13 +418,13 @@ const BookingClient = ({ activityId }) => {
         ? childUnitPrice * formData.childCount
         : Number(basePrice || 0) * 0.7 * formData.childCount;
 
-    const paxQty = formData.adultCount + formData.childCount;
-    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
     return adultPrice + childPrice + guideTotal;
   };
 
   const totalPrice = calculateTotalPrice();
   const effectivePricing = getEffectiveTicketUnitPrices();
+  const showSeasonAddonNote = Boolean(effectivePricing?.source === "seasonal");
   const totalPaxCount = formData.adultCount + formData.childCount;
   const summaryCountLabel =
     effectivePricing?.rateType === "full"
@@ -543,11 +560,13 @@ const BookingClient = ({ activityId }) => {
         throw new Error("Booking creation failed (missing booking id)");
       }
 
+      const payableAmount = Math.round(Number(totalPrice || 0));
+
       // 2. Create Order
       const orderResponse = await createActivityOrder({
         activity_id: activityId,
         activity_booking_id: bookingId,
-        amount: totalPrice
+        amount: payableAmount
       });
 
       if (!isApiOk(orderResponse)) {
@@ -558,7 +577,7 @@ const BookingClient = ({ activityId }) => {
 
       // 3. Initialize Razorpay
       const paymentResponse = await initializeRazorpayPayment({
-        amount: totalPrice,
+        amount: payableAmount,
         currency: "INR",
         name: "Explore World",
         description: `Booking for ${activityDetails.title}`,
@@ -590,7 +609,7 @@ const BookingClient = ({ activityId }) => {
           bookingId: bookingId,
           bookingReference: bookingData.booking_reference || null,
           paymentId: paymentResponse.data.razorpay_payment_id,
-          amount: totalPrice,
+            amount: payableAmount,
           activity: activityDetails,
           date: formData.selectedDate
         };
@@ -923,12 +942,7 @@ const BookingClient = ({ activityId }) => {
                       <div>
                         <div className="text-sm font-medium text-gray-700">Need Guide</div>
                         <div className="text-xs text-gray-500">
-                          +₹{(
-                            pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) *
-                            (effectivePricing?.rateType === "full"
-                              ? Math.max(1, Number(ticketCount) || 1)
-                              : (Number(formData.adultCount || 0) + Number(formData.childCount || 0)))
-                          ).toFixed(0)}
+                          +₹{pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0).toFixed(0)}
                         </div>
                       </div>
                       <button
@@ -1104,10 +1118,7 @@ const BookingClient = ({ activityId }) => {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Guide</span>
                         <span className="text-gray-900 font-medium">
-                          ₹{(
-                            pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) *
-                            Math.max(1, Number(ticketCount) || 1)
-                          ).toFixed(0)}
+                          ₹{pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0).toFixed(0)}
                         </span>
                       </div>
                     ) : null}
@@ -1146,10 +1157,7 @@ const BookingClient = ({ activityId }) => {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Guide</span>
                         <span className="text-gray-900 font-medium">
-                          ₹{(
-                            pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) *
-                            (Number(formData.adultCount || 0) + Number(formData.childCount || 0))
-                          ).toFixed(0)}
+                          ₹{pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0).toFixed(0)}
                         </span>
                       </div>
                     ) : null}
@@ -1173,13 +1181,25 @@ const BookingClient = ({ activityId }) => {
                         <div className="text-2xl font-bold text-primary-500">
                           ₹{parts.finalTotal.toFixed(0)}
                         </div>
+                        {showSeasonAddonNote ? (
+                          <div className="text-xs text-blue-700 mt-1">
+                            Season/special price add-on applied
+                          </div>
+                        ) : null}
                       </div>
                     );
                   }
                   return (
-                    <span className="text-2xl font-bold text-primary-500">
-                      ₹{totalPrice.toFixed(0)}
-                    </span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary-500">
+                        ₹{totalPrice.toFixed(0)}
+                      </div>
+                      {showSeasonAddonNote ? (
+                        <div className="text-xs text-blue-700 mt-1">
+                          Season/special price add-on applied
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })()}
               </div>

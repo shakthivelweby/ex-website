@@ -23,7 +23,19 @@ function formatTime(timeString) {
 
 function toYmd(date) {
   try {
-    return new Date(date).toISOString().split("T")[0];
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return "";
+    // Force Indian timezone (Asia/Kolkata) so close-out/season dates match backend.
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const day = parts.find((p) => p.type === "day")?.value;
+    return y && m && day ? `${y}-${m}-${day}` : "";
   } catch {
     return "";
   }
@@ -183,21 +195,27 @@ const Form = ({
       selectedYmd
     );
 
-    // Seasonal overrides everything when present for the date
+    // Seasonal pricing is an add-on (base + seasonal)
     if (seasonalRow) {
       const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
         adultPrice: seasonalRow.adult_price,
         childPrice: seasonalRow.child_price,
         fullRate: seasonalRow.full_rate,
       });
-      const discountPct = pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"]);
-      const adminChargePct = pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+      const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
+      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+
+      const baseAdultOrFull =
+        rateType === "full"
+          ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
+          : Number(selectedTicket.price || selectedTicket.adult_price || 0);
+      const baseChild = Number(selectedTicket.child_price || 0);
 
       const adultUnitBase =
         rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
+          ? baseAdultOrFull + Number(seasonalRow.full_rate || 0)
+          : baseAdultOrFull + Number(seasonalRow.adult_price || 0);
+      const childUnitBase = baseChild + Number(seasonalRow.child_price || 0);
 
       const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
       const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
@@ -244,7 +262,7 @@ const Form = ({
       const qty = Math.max(1, Number(ticketCount) || 1);
       const originalTotal = Number(originalAdultUnit || 0) * qty;
       const finalTotal = Number(effective.adultUnit || 0) * qty;
-      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
       return {
         originalTotal: originalTotal + guideTotal,
         finalTotal: finalTotal + guideTotal,
@@ -269,8 +287,7 @@ const Form = ({
         : Number(originalAdultUnit || 0) * 0.7 * childCount;
     const originalTotal = originalAdultTotal + originalChildTotal;
 
-    const paxQty = adultCount + childCount;
-    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
     return {
       originalTotal: originalTotal + guideTotal,
       finalTotal: finalTotal + guideTotal,
@@ -291,7 +308,7 @@ const Form = ({
     if (effective.rateType === "full") {
       const qty = Math.max(1, Number(ticketCount) || 1);
       const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
-      const guideTotal = includeGuide && guideRate > 0 ? guideRate * qty : 0;
+      const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
       const total = Number(effective.adultUnit || 0) * qty + guideTotal;
       return total > 0 ? `₹${total.toFixed(0)}` : activityDetails.price || "Price TBA";
     }
@@ -302,9 +319,8 @@ const Form = ({
       childUnit > 0
         ? childUnit * childCount
         : Number(effective.adultUnit || 0) * 0.7 * childCount;
-    const paxQty = adultCount + childCount;
     const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
-    const guideTotal = includeGuide && guideRate > 0 ? guideRate * paxQty : 0;
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
     const total = adultTotal + childTotal + guideTotal;
     return total > 0 ? `₹${total.toFixed(0)}` : activityDetails.price || "Price TBA";
   };
@@ -327,6 +343,7 @@ const Form = ({
         fullRate: currentPricing?.full_rate,
       });
   const totalPaxCount = adultCount + childCount;
+  const showSeasonAddonNote = Boolean(effectivePricing?.source === "seasonal");
 
   const validateForm = () => {
     const newErrors = {};
@@ -536,6 +553,11 @@ const Form = ({
                       {unitLabel}
                     </span>
                   </div>
+                  {showSeasonAddonNote ? (
+                    <div className="text-xs text-blue-700 mt-1">
+                      Season/special price add-on applied
+                    </div>
+                  ) : null}
                 </div>
               );
             })()}
@@ -719,10 +741,7 @@ const Form = ({
                 <div>
                   <div className="text-sm font-medium text-gray-700">Need Guide</div>
                   <div className="text-xs text-gray-500">
-                    +₹{(
-                      pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) *
-                      (uiRateType === "full" ? Math.max(1, Number(ticketCount) || 1) : totalPaxCount)
-                    ).toFixed(0)}
+                    +₹{pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0).toFixed(0)}
                   </div>
                 </div>
                 <button

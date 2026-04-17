@@ -6,6 +6,84 @@ import { useQuery } from "@tanstack/react-query";
 import Button from "@/components/common/Button";
 import { getActivityBookings } from "./service";
 
+function ticketTypeId(row) {
+  return row?.activity_ticket_type_id ?? row?.activityTicketTypeId;
+}
+
+function sortTicketRows(rows) {
+  return [...(rows || [])].sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
+}
+
+/**
+ * Labels each stored ticket row for per-pax bookings (adult line + child line from website).
+ * Full-rate bookings are usually a single row whose quantity is "ticket count", not adult_count.
+ */
+function getActivityTicketRowTitle(row, booking, sortedRows) {
+  const baseName =
+    row?.activity_ticket_type?.name || row?.activityTicketType?.name || "Ticket";
+  const adults = Number(booking?.adult_count ?? 0);
+  const children = Number(booking?.child_count ?? 0);
+  const qty = Number(row?.quantity ?? 0);
+  const unit = Number(row?.unit_price ?? 0);
+  const rows = sortedRows || [];
+
+  if (!rows.length) return baseName;
+
+  const sameTypeRows = rows.filter((r) => ticketTypeId(r) === ticketTypeId(row));
+  const distinctUnitPrices = new Set(
+    sameTypeRows.map((r) => Number(r.unit_price || 0).toFixed(2))
+  );
+  const looksLikeSplitPax =
+    children > 0 || (sameTypeRows.length >= 2 && distinctUnitPrices.size > 1);
+
+  if (looksLikeSplitPax && sameTypeRows.length >= 2) {
+    const byPrice = [...sameTypeRows].sort(
+      (a, b) => Number(b.unit_price) - Number(a.unit_price)
+    );
+    const hi = Number(byPrice[0]?.unit_price || 0);
+    const lo = Number(byPrice[byPrice.length - 1]?.unit_price || 0);
+
+    if (adults > 0 && qty === adults) {
+      if (children === 0 || Math.abs(unit - hi) <= 0.02) return `Adult · ${baseName}`;
+    }
+    if (children > 0 && qty === children) {
+      if (adults === 0 || Math.abs(unit - lo) <= 0.02) return `Child · ${baseName}`;
+    }
+    if (adults > 0 && children > 0 && qty === adults && qty === children) {
+      return Math.abs(unit - hi) <= Math.abs(unit - lo)
+        ? `Adult · ${baseName}`
+        : `Child · ${baseName}`;
+    }
+    const idx = rows.findIndex((r) => r.id === row.id);
+    if (adults > 0 && idx === 0) return `Adult · ${baseName}`;
+    if (children > 0 && idx === 1) return `Child · ${baseName}`;
+  }
+
+  if (rows.length === 1 && children === 0 && adults > 0 && qty === adults) {
+    return `Adult · ${baseName}`;
+  }
+
+  return baseName;
+}
+
+function getPaxGuestSummary(booking, sortedRows) {
+  const adults = Number(booking?.adult_count ?? 0);
+  const children = Number(booking?.child_count ?? 0);
+  const rows = sortedRows || [];
+  if (adults <= 0 && children <= 0) return null;
+
+  const distinctUnitPrices = new Set(rows.map((r) => Number(r.unit_price || 0).toFixed(2)));
+  const splitPax = children > 0 || (rows.length >= 2 && distinctUnitPrices.size > 1);
+  const adultsOnlyPax = rows.length === 1 && children === 0 && adults > 0;
+
+  if (!splitPax && !adultsOnlyPax) return null;
+
+  const parts = [];
+  if (adults > 0) parts.push(`${adults} Adult${adults === 1 ? "" : "s"}`);
+  if (children > 0) parts.push(`${children} Child${children === 1 ? "" : "ren"}`);
+  return parts.join(", ");
+}
+
 const ActivityBookings = () => {
   const router = useRouter();
   const [expandedBooking, setExpandedBooking] = useState(null);
@@ -119,9 +197,17 @@ const ActivityBookings = () => {
             booking.activity_booking_tickets ||
             booking.activityBookingTickets ||
             [];
+          const sortedTicketRows = sortTicketRows(ticketRows);
           const ticketCount = Array.isArray(ticketRows)
             ? ticketRows.reduce((sum, t) => sum + Number(t.quantity || 0), 0)
             : Number(booking.total_count || 0);
+          const paxGuestSummary = getPaxGuestSummary(booking, sortedTicketRows);
+          const guideAmount = Number(booking.guide_amount ?? booking.guideAmount ?? 0);
+          const includeGuide =
+            booking.include_guide === true ||
+            booking.include_guide === 1 ||
+            booking.include_guide === "1" ||
+            guideAmount > 0;
 
           return (
             <div
@@ -143,7 +229,7 @@ const ActivityBookings = () => {
                       </span>
                       <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
                         <i className="fi fi-rr-users text-blue-500"></i>
-                        {ticketCount} Tickets
+                        {paxGuestSummary || `${ticketCount} Tickets`}
                       </span>
                       {booking.activity?.location && (
                         <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
@@ -233,6 +319,42 @@ const ActivityBookings = () => {
                           <span>Tickets:</span>
                           <span className="font-medium">{ticketCount}</span>
                         </div>
+                        {paxGuestSummary ? (
+                          <>
+                            {Number(booking.adult_count ?? 0) > 0 ? (
+                              <div className="flex justify-between">
+                                <span>Adults:</span>
+                                <span className="font-medium">
+                                  {Number(booking.adult_count ?? 0)}
+                                </span>
+                              </div>
+                            ) : null}
+                            {Number(booking.child_count ?? 0) > 0 ? (
+                              <div className="flex justify-between">
+                                <span>Children:</span>
+                                <span className="font-medium">
+                                  {Number(booking.child_count ?? 0)}
+                                </span>
+                              </div>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {includeGuide ? (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Guide:</span>
+                              <span className="font-medium text-primary-700">Yes</span>
+                            </div>
+                            {guideAmount > 0 ? (
+                              <div className="flex justify-between">
+                                <span>Guide charge:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(guideAmount)}
+                                </span>
+                              </div>
+                            ) : null}
+                          </>
+                        ) : null}
                       </div>
                     </div>
 
@@ -263,21 +385,30 @@ const ActivityBookings = () => {
                         Ticket Breakdown
                       </h4>
                       <div className="space-y-2">
-                        {ticketRows.map((t, idx) => (
+                        {sortedTicketRows.map((t, idx) => (
                           <div
                             key={t.id || idx}
                             className="flex items-center justify-between text-sm bg-gray-50 border border-gray-100 rounded-xl p-3"
                           >
                             <span className="text-gray-700 font-medium">
-                              {t.activity_ticket_type?.name ||
-                                t.activityTicketType?.name ||
-                                "Ticket"}
+                              {getActivityTicketRowTitle(t, booking, sortedTicketRows)}
                             </span>
                             <span className="text-gray-700">
                               Qty: {t.quantity} • {formatCurrency(t.total_price || 0)}
                             </span>
                           </div>
                         ))}
+                        {includeGuide && guideAmount > 0 ? (
+                          <div className="flex items-center justify-between text-sm bg-primary-50/60 border border-primary-100 rounded-xl p-3">
+                            <span className="text-gray-700 font-medium">
+                              <i className="fi fi-rr-user-skill mr-1.5 text-primary-600"></i>
+                              Guide service
+                            </span>
+                            <span className="text-gray-700 font-medium">
+                              {formatCurrency(guideAmount)}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}

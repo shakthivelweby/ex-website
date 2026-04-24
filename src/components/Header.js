@@ -77,12 +77,12 @@ const navLinks = [
     icon: "fi fi-rr-hiking",
     matchPath: (path) => path === "/activities"
   },
-  // { 
-  //   name: "Rentals", 
-  //   href: "#", 
-  //   icon: "fi fi-rr-biking",
-  //   matchPath: (path) => path === "/rentals"
-  // },
+  {
+    name: "Rentals",
+    href: "/rentals",
+    icon: "fi fi-rr-car",
+    matchPath: (path) => path === "/rentals" || path.startsWith("/rentals/")
+  },
 ];
 
 export default function Header() {

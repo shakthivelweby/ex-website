@@ -13,6 +13,7 @@ const AttractionFilters = ({
   locations,
   layout = "inline", // "inline", "sidebar", or "mobile"
   onClose, // For mobile popup close functionality
+  categoryTitle = "Attraction Type",
 }) => {
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -363,7 +364,7 @@ const AttractionFilters = ({
           <div className="flex items-center gap-2">
             <i className="fi fi-rr-calendar text-gray-400"></i>
             <span className="text-sm font-medium text-gray-700">
-              Attraction Type
+              {categoryTitle}
             </span>
           </div>
           {tempFilters.category && (

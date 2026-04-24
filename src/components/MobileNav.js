@@ -32,7 +32,13 @@ const navLinks = [
     matchPath: (path) => path.startsWith("/scheduled")
   },
 
-  
+  {
+    name: "Rentals",
+    href: "/rentals",
+    icon: "fi fi-rr-car",
+    matchPath: (path) => path.startsWith("/rentals")
+  },
+
   { 
     name: "Search", 
     href: "#",

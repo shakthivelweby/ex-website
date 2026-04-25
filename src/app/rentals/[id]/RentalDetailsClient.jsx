@@ -379,8 +379,11 @@ export default function RentalDetailsClient({ rental }) {
               </div>
 
               {(pricing.price_per_week != null && pricing.price_per_week !== "") ||
+              (pricing.price_per_month != null && pricing.price_per_month !== "") ||
               (pricing.price_per_hour != null && pricing.price_per_hour !== "") ||
-              (pricing.price_per_km != null && pricing.price_per_km !== "") ? (
+              (pricing.price_per_km != null && pricing.price_per_km !== "") ||
+              (pricing.advance_amount != null && pricing.advance_amount !== "") ||
+              (pricing.discount_type && pricing.discount_value != null && pricing.discount_value !== "") ? (
                 <div className="bg-white rounded-xl p-4">
                   <div className="text-sm font-medium text-gray-800 mb-3">Other rates</div>
                   <div className="space-y-2 text-sm text-gray-700">
@@ -388,6 +391,12 @@ export default function RentalDetailsClient({ rental }) {
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500">Per week</span>
                         <span className="font-medium">₹{formatMoney(pricing.price_per_week)}</span>
+                      </div>
+                    )}
+                    {pricing.price_per_month != null && pricing.price_per_month !== "" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Per month</span>
+                        <span className="font-medium">₹{formatMoney(pricing.price_per_month)}</span>
                       </div>
                     )}
                     {pricing.price_per_hour != null && pricing.price_per_hour !== "" && (
@@ -402,6 +411,24 @@ export default function RentalDetailsClient({ rental }) {
                         <span className="font-medium">₹{formatMoney(pricing.price_per_km)}</span>
                       </div>
                     )}
+                    {pricing.advance_amount != null && pricing.advance_amount !== "" && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500">Advance</span>
+                        <span className="font-medium">₹{formatMoney(pricing.advance_amount)}</span>
+                      </div>
+                    )}
+                    {pricing.discount_type &&
+                      pricing.discount_value != null &&
+                      pricing.discount_value !== "" && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-500">Discount</span>
+                          <span className="font-medium">
+                            {pricing.discount_type === "percent"
+                              ? `${formatMoney(pricing.discount_value)}%`
+                              : `₹${formatMoney(pricing.discount_value)}`}
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
               ) : null}

@@ -249,10 +249,12 @@ export default function RentalDetailsClient({ rental }) {
             {/* About */}
             <div className="space-y-4">
               <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">About</h2>
-              <div className="prose prose-gray max-w-none">
-                <p className="text-gray-700 leading-relaxed text-sm whitespace-pre-line">
-                  {rental.description || "No description added."}
-                </p>
+              <div className="prose prose-gray max-w-none text-sm text-gray-700">
+                {rental.description ? (
+                  <div dangerouslySetInnerHTML={{ __html: rental.description }} />
+                ) : (
+                  <p className="text-gray-700 leading-relaxed">No description added.</p>
+                )}
               </div>
             </div>
 
@@ -286,8 +288,12 @@ export default function RentalDetailsClient({ rental }) {
                 Terms &amp; Conditions
               </h2>
               <div className="bg-white rounded-xl p-4 border border-gray-200">
-                <div className="text-sm text-gray-700 whitespace-pre-line">
-                  {termsContent || "No terms added."}
+                <div className="prose prose-gray max-w-none text-sm text-gray-700">
+                  {termsContent ? (
+                    <div dangerouslySetInnerHTML={{ __html: termsContent }} />
+                  ) : (
+                    <p>No terms added.</p>
+                  )}
                 </div>
               </div>
             </div>

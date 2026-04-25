@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { getRentalDetails } from "../../rentals/service";
+import { checkRentalAvailability } from "../../rentals/clientService";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure } from "./service";
@@ -45,6 +46,7 @@ export default function RentalCheckoutPage() {
   const [documentFile, setDocumentFile] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", message: "" });
+  const [pricingQuote, setPricingQuote] = useState(null);
 
   useEffect(() => {
     const run = async () => {
@@ -79,15 +81,66 @@ export default function RentalCheckoutPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!rentalItemId || !start_date || !end_date || !pickup_time || !dropoff_time) {
+      setPricingQuote(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await checkRentalAvailability(rentalItemId, {
+          pickup_location: pickup_location?.trim() || "—",
+          dropoff_location: dropoff_location?.trim() || "—",
+          start_date,
+          end_date,
+          pickup_time,
+          dropoff_time,
+        });
+        const inner = res?.data;
+        if (!cancelled && inner?.pricing_quote) {
+          setPricingQuote(inner.pricing_quote);
+        }
+      } catch {
+        if (!cancelled) setPricingQuote(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rentalItemId, start_date, end_date, pickup_time, dropoff_time, pickup_location, dropoff_location]);
+
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
 
   const startISO = start_date && pickup_time ? `${start_date}T${pickup_time}:00` : "";
   const endISO = end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
   const totalDays = diffDaysCeil(startISO, endISO);
   const perDay = Number(pricing.price_per_day || 0) || 0;
-  const depositAmount = Number(pricing.security_deposit || 0) || 0;
-  // Booking amount is the deposit (not days × per-day).
-  const totalAmount = depositAmount;
+  const perWeek = Number(pricing.price_per_week || 0) || 0;
+  const effectiveAvgPerDay =
+    pricingQuote?.billing_days > 0
+      ? Number(pricingQuote.estimated_rental_subtotal || 0) / Number(pricingQuote.billing_days)
+      : perDay;
+  const advanceAmount = Number(pricing.advance_amount || 0) || 0;
+  const depositAmount = Number(pricing.security_deposit || 0) || 0; // display only
+
+  const expectedRentTotal = useMemo(() => {
+    const days = Number(pricingQuote?.billing_days ?? totalDays) || 0;
+    if (days <= 0) return 0;
+
+    // Rule requested:
+    // - if > 7 days: weeks * per_week + extra_days * per_day
+    // - else: days * per_day
+    if (days > 7 && perWeek > 0) {
+      const weeks = Math.floor(days / 7);
+      const extra = days % 7;
+      return weeks * perWeek + extra * perDay;
+    }
+    return days * perDay;
+  }, [pricingQuote?.billing_days, totalDays, perWeek, perDay]);
+
+  // Booking payment is advance amount (fallback to deposit if advance not set).
+  const totalAmount = advanceAmount > 0 ? advanceAmount : depositAmount;
 
   const summary = useMemo(() => {
     return {
@@ -335,10 +388,17 @@ export default function RentalCheckoutPage() {
                 {[rental.brand, rental.subtitle].filter(Boolean).join(" • ")}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Price/day: <span className="font-semibold text-gray-900">₹{money(perDay)}</span>
+                Regular ₹/day: <span className="font-semibold text-gray-900">₹{money(perDay)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Deposit: <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
+                Expected total:{" "}
+                <span className="font-semibold text-gray-900">₹{money(expectedRentTotal)}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Advance: <span className="font-semibold text-gray-900">₹{money(advanceAmount)}</span>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Deposit (ref): <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
               </div>
             </div>
           </div>
@@ -368,11 +428,15 @@ export default function RentalCheckoutPage() {
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">Total days</span>
-                <span className="text-gray-900 font-semibold text-right">{totalDays || "-"}</span>
+                <span className="text-gray-900 font-semibold text-right">
+                  {(pricingQuote?.billing_days ?? totalDays) || "-"}
+                </span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">Booking amount</span>
-                <span className="text-gray-900 font-semibold text-right">Deposit</span>
+                <span className="text-gray-900 font-semibold text-right">
+                  {advanceAmount > 0 ? "Advance" : "Deposit"}
+                </span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-gray-900 font-bold">Total amount</span>

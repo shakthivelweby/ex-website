@@ -22,13 +22,14 @@ const RentalCard = ({ rental, userCoords }) => {
     location,
     quantity,
     units,
-    seats,
-    fuel_type,
-    transmission,
   } = rental || {};
 
   const pricing = pricing_rule || pricingRule || {};
   const pricePerDay = pricing?.price_per_day ?? null;
+  const primaryUnit = Array.isArray(units) && units.length ? units[0] : null;
+  const transmission = primaryUnit?.transmission;
+  const fuel_type = primaryUnit?.fuel_type;
+  const seats = primaryUnit?.seats;
   const specParts = [
     transmission ? String(transmission).trim() : null,
     fuel_type ? String(fuel_type).trim() : null,

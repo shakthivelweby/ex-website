@@ -5,6 +5,8 @@ export const getRentals = async (filters = {}) => {
     const params = new URLSearchParams();
     if (filters.search && String(filters.search).trim()) params.append("search", String(filters.search).trim());
     if (filters.location && String(filters.location).trim()) params.append("location", String(filters.location).trim());
+    if (filters.latitude !== "" && filters.latitude !== undefined && filters.latitude !== null) params.append("latitude", String(filters.latitude));
+    if (filters.longitude !== "" && filters.longitude !== undefined && filters.longitude !== null) params.append("longitude", String(filters.longitude));
     if (filters.category && String(filters.category).trim()) params.append("category", String(filters.category).trim()); // slug
     if (filters.sub_category && String(filters.sub_category).trim()) params.append("sub_category", String(filters.sub_category).trim()); // slug
     if (filters.price_from !== "" && filters.price_from !== undefined && filters.price_from !== null) params.append("price_from", String(filters.price_from));

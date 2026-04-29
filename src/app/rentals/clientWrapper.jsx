@@ -18,6 +18,8 @@ const ClientWrapper = ({ searchParams: initialSearchParams, initialRentals, init
     location: initialSearchParams.location || "",
     category: initialSearchParams.category || "",
     sub_category: initialSearchParams.sub_category || "",
+    transmission: initialSearchParams.transmission || "",
+    fuel_type: initialSearchParams.fuel_type || "",
     rating: initialSearchParams.rating || "",
     price_from: initialSearchParams.price_from || "",
     price_to: initialSearchParams.price_to || "",
@@ -37,6 +39,8 @@ const ClientWrapper = ({ searchParams: initialSearchParams, initialRentals, init
     setOrDelete("location", newFilters.location);
     setOrDelete("category", newFilters.category);
     setOrDelete("sub_category", newFilters.sub_category);
+    setOrDelete("transmission", newFilters.transmission);
+    setOrDelete("fuel_type", newFilters.fuel_type);
     setOrDelete("rating", newFilters.rating);
     if (newFilters.price_from && newFilters.price_to) {
       params.set("price_from", newFilters.price_from);
@@ -99,7 +103,6 @@ const ClientWrapper = ({ searchParams: initialSearchParams, initialRentals, init
     <div className="container mx-auto px-4 pt-28 pb-10">
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rentals</h1>
-        <p className="text-gray-600 mt-1">Browse rental items approved by admin.</p>
       </div>
 
       {/* Mobile filter bar */}

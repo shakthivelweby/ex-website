@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { getRentalDetails } from "../../service";
-import { checkRentalAvailability } from "../../clientService";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { checkRentalAvailability, getRentalUnavailableDates } from "../../clientService";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -26,37 +27,105 @@ const initialBooking = {
 
 export default function RentalBookingPage({ params }) {
   const router = useRouter();
-  const rentalId = params?.id;
+  const routeParams = useParams();
+  const rentalId = routeParams?.id;
 
   const [rental, setRental] = useState(null);
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(initialBooking);
-  const [pickupPopupOpen, setPickupPopupOpen] = useState(false);
-  const [dropoffPopupOpen, setDropoffPopupOpen] = useState(false);
   const [checking, setChecking] = useState(false);
   const [avail, setAvail] = useState(null);
   const [error, setError] = useState("");
-
-  const [filterFuel, setFilterFuel] = useState("");
-  const [filterTransmission, setFilterTransmission] = useState("");
-  const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [unavailable, setUnavailable] = useState({ bookings: [], blocked: [] });
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
-  const perDay = Number(pricing.price_per_day || 0) || 0;
-  const perWeek = Number(pricing.price_per_week || 0) || 0;
-  const advanceAmount = Number(pricing.advance_amount || 0) || 0;
-  const depositAmount = Number(pricing.security_deposit || 0) || 0;
+  const basePerHour = Number(pricing.price_per_hour || 0) || 0;
 
-  const expectedRentTotal = useMemo(() => {
-    const days = Number(avail?.pricing_quote?.billing_days || 0) || 0;
-    if (days <= 0) return 0;
-    if (days > 7 && perWeek > 0) {
-      const weeks = Math.floor(days / 7);
-      const extra = days % 7;
-      return weeks * perWeek + extra * perDay;
+  const effectivePerHour = useMemo(() => {
+    const fromQuote = avail?.pricing_quote?.effective_rates?.price_per_hour;
+    if (fromQuote !== undefined && fromQuote !== null && String(fromQuote) !== "") {
+      const n = Number(fromQuote);
+      if (Number.isFinite(n) && n > 0) return n;
     }
-    return days * perDay;
-  }, [avail?.pricing_quote?.billing_days, perWeek, perDay]);
+
+    if (booking.start_date) {
+      const d = new Date(`${booking.start_date}T12:00:00`);
+      if (Number.isFinite(d.getTime())) {
+        const dow = d.getDay();
+        const rows = rental?.weekday_prices || rental?.weekdayPrices || [];
+        if (Array.isArray(rows) && rows.length) {
+          const match = rows.find((r) => Number(r?.day_of_week) === dow);
+          const v = match?.price_per_hour;
+          if (v !== undefined && v !== null && String(v) !== "") {
+            const n = Number(v);
+            if (Number.isFinite(n) && n > 0) return n;
+          }
+        }
+      }
+    }
+
+    return basePerHour;
+  }, [avail, rental, booking.start_date, basePerHour]);
+  const advanceType = pricing.advance_type || null;
+  const advanceValueRaw = pricing.advance_value;
+  const advanceValue =
+    advanceValueRaw === "" || advanceValueRaw === null || advanceValueRaw === undefined
+      ? null
+      : Number(advanceValueRaw);
+  const legacyAdvanceAmount = Number(pricing.advance_amount || 0) || 0;
+  const depositAmount = Number(pricing.security_deposit || 0) || 0;
+  const adminChargeType = pricing.admin_charge_type || null;
+  const adminChargeValueRaw = pricing.admin_charge_value;
+  const adminChargeValue =
+    adminChargeValueRaw === "" || adminChargeValueRaw === null || adminChargeValueRaw === undefined
+      ? null
+      : Number(adminChargeValueRaw);
+
+  // Compute hours purely from chosen date+time so UI is always correct.
+  const effectiveHours = useMemo(() => {
+    if (!booking.start_date || !booking.end_date || !booking.pickup_time || !booking.dropoff_time) return 0;
+    const start = new Date(`${booking.start_date}T${booking.pickup_time}:00`);
+    const end = new Date(`${booking.end_date}T${booking.dropoff_time}:00`);
+    const ms = end.getTime() - start.getTime();
+    if (!Number.isFinite(ms) || ms <= 0) return 0;
+    return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
+  }, [booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time]);
+
+  const rentSubtotal = useMemo(() => {
+    if (effectiveHours <= 0) return 0;
+    return effectiveHours * effectivePerHour;
+  }, [effectiveHours, effectivePerHour]);
+
+  const adminChargeAmount = useMemo(() => {
+    if (!adminChargeType || adminChargeValue === null || !Number.isFinite(adminChargeValue)) return 0;
+    if (adminChargeType === "percent") {
+      return (rentSubtotal * adminChargeValue) / 100;
+    }
+    return adminChargeValue;
+  }, [adminChargeType, adminChargeValue, rentSubtotal]);
+
+  const totalWithAdminCharge = useMemo(() => {
+    return rentSubtotal + adminChargeAmount;
+  }, [rentSubtotal, adminChargeAmount]);
+
+  const totalCostIncludingDeposit = useMemo(() => {
+    return totalWithAdminCharge + depositAmount;
+  }, [totalWithAdminCharge, depositAmount]);
+
+  const payAdvanceAmount = useMemo(() => {
+    // Preferred: advance_type/value
+    if (advanceType && advanceValue != null && Number.isFinite(advanceValue)) {
+      if (advanceType === "percent") {
+        return (totalWithAdminCharge * advanceValue) / 100;
+      }
+      return Math.min(advanceValue, totalWithAdminCharge || advanceValue);
+    }
+    // Backward compatibility: legacy flat advance_amount
+    if (legacyAdvanceAmount > 0) return Math.min(legacyAdvanceAmount, totalWithAdminCharge || legacyAdvanceAmount);
+    return 0;
+  }, [advanceType, advanceValue, totalWithAdminCharge, legacyAdvanceAmount]);
+
+  const vehicleLocation = (rental?.location || "").toString().trim();
 
   useEffect(() => {
     if (!rentalId) return;
@@ -65,7 +134,16 @@ export default function RentalBookingPage({ params }) {
       setLoading(true);
       const res = await getRentalDetails(rentalId);
       if (!cancelled) {
-        setRental(res?.data || null);
+        const r = res?.data || null;
+        setRental(r);
+        const loc = (r?.location || "").toString().trim();
+        if (loc) {
+          setBooking((p) => ({
+            ...p,
+            pickup_location: loc,
+            dropoff_location: loc,
+          }));
+        }
         setLoading(false);
       }
     })();
@@ -74,35 +152,72 @@ export default function RentalBookingPage({ params }) {
     };
   }, [rentalId]);
 
+  // Fetch booked/blocked ranges for disabling calendar dates.
+  useEffect(() => {
+    if (!rentalId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getRentalUnavailableDates(rentalId);
+        if (cancelled) return;
+        const payload = res?.data || {};
+        setUnavailable({
+          bookings: Array.isArray(payload.bookings) ? payload.bookings : [],
+          blocked: Array.isArray(payload.blocked) ? payload.blocked : [],
+        });
+      } catch (_) {
+        if (!cancelled) setUnavailable({ bookings: [], blocked: [] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rentalId]);
+
+  const isDateUnavailable = (dateObj) => {
+    if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return false;
+    const dayStart = new Date(dateObj);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dateObj);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const overlaps = (startISO, endISO) => {
+      const s = new Date(startISO);
+      const e = new Date(endISO);
+      if (!Number.isFinite(s.getTime()) || !Number.isFinite(e.getTime())) return false;
+      return s <= dayEnd && e >= dayStart;
+    };
+
+    for (const b of unavailable.bookings || []) {
+      if (b?.start_datetime && b?.end_datetime && overlaps(b.start_datetime, b.end_datetime)) return true;
+    }
+    for (const r of unavailable.blocked || []) {
+      if (r?.start_datetime && r?.end_datetime && overlaps(r.start_datetime, r.end_datetime)) return true;
+    }
+    return false;
+  };
+
+  const parseYmdToDate = (ymd) => {
+    if (!ymd) return null;
+    const d = new Date(`${ymd}T00:00:00`);
+    return Number.isFinite(d.getTime()) ? d : null;
+  };
+  const formatDateYmd = (d) => {
+    if (!(d instanceof Date) || !Number.isFinite(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   const updateBooking = (k, v) => {
     setBooking((p) => ({ ...p, [k]: v }));
     setError("");
     setAvail(null);
-    setSelectedUnitId(null);
-  };
-
-  const applyPlaceToField = (field) => (place) => {
-    if (!place) return;
-    const locationName = place.name || place.formatted_address || place.vicinity || "";
-    const lat =
-      typeof place.geometry?.location?.lat === "function"
-        ? place.geometry.location.lat()
-        : place.geometry?.location?.lat;
-    const lng =
-      typeof place.geometry?.location?.lng === "function"
-        ? place.geometry.location.lng()
-        : place.geometry?.location?.lng;
-    updateBooking(field, locationName);
-    if (field === "pickup_location") {
-      updateBooking("pickup_lat", lat || "");
-      updateBooking("pickup_lng", lng || "");
-    }
   };
 
   const validateBooking = () => {
     const required = [
-      "pickup_location",
-      "dropoff_location",
       "start_date",
       "end_date",
       "pickup_time",
@@ -111,79 +226,56 @@ export default function RentalBookingPage({ params }) {
     for (const k of required) {
       if (!String(booking[k] || "").trim()) return `Please fill ${k.replaceAll("_", " ")}.`;
     }
+    if (!String(booking.pickup_location || "").trim()) return "Vehicle location is missing.";
+    if (!String(booking.dropoff_location || "").trim()) return "Vehicle location is missing.";
     return "";
   };
 
-  const onCheckAvailability = async () => {
+  // Auto-check availability whenever the user completes date/time selection.
+  useEffect(() => {
+    const msg = validateBooking();
+    if (msg) return;
+    if (!rentalId) return;
+    let cancelled = false;
+    const run = async () => {
+      setChecking(true);
+      setError("");
+      try {
+        const res = await checkRentalAvailability(rentalId, booking);
+        const d = res?.data || null;
+        if (cancelled) return;
+        setAvail(d);
+        if (d?.is_available === false) {
+          setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
+        }
+      } catch (e) {
+        if (!cancelled) setError(e?.response?.data?.message || "Failed to check availability.");
+      } finally {
+        if (!cancelled) setChecking(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rentalId, booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time, booking.pickup_location, booking.dropoff_location]);
+
+  const onContinue = () => {
     const msg = validateBooking();
     if (msg) {
       setError(msg);
       return;
     }
-    if (!rentalId) return;
-    setChecking(true);
-    setError("");
-    try {
-      const res = await checkRentalAvailability(rentalId, booking);
-      const d = res?.data || null;
-      setAvail(d);
-      const ids = Array.isArray(d?.available_unit_ids) ? d.available_unit_ids : [];
-      setSelectedUnitId(d?.suggested_unit_id || ids[0] || null);
-      if (d?.is_available === false) {
-        setError("No cars available for the selected location/date/time.");
-      }
-    } catch (e) {
-      setError(e?.response?.data?.message || "Failed to check availability.");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const availableUnits = useMemo(() => {
-    const units = Array.isArray(rental?.units) ? rental.units : [];
-    const ids = new Set((avail?.available_unit_ids || []).map((x) => String(x)));
-    const filtered = units.filter((u) => ids.has(String(u?.id)));
-    return filtered;
-  }, [rental?.units, avail?.available_unit_ids]);
-
-  const fuelOptions = useMemo(() => {
-    const s = new Set();
-    availableUnits.forEach((u) => {
-      const v = (u?.fuel_type || "").toString().trim();
-      if (v) s.add(v);
-    });
-    return Array.from(s);
-  }, [availableUnits]);
-
-  const transmissionOptions = useMemo(() => {
-    const s = new Set();
-    availableUnits.forEach((u) => {
-      const v = (u?.transmission || "").toString().trim();
-      if (v) s.add(v);
-    });
-    return Array.from(s);
-  }, [availableUnits]);
-
-  const shownUnits = useMemo(() => {
-    return availableUnits.filter((u) => {
-      if (filterFuel && String(u?.fuel_type || "").trim() !== filterFuel) return false;
-      if (filterTransmission && String(u?.transmission || "").trim() !== filterTransmission) return false;
-      return true;
-    });
-  }, [availableUnits, filterFuel, filterTransmission]);
-
-  const onContinue = () => {
-    if (!avail || avail?.is_available === false) {
-      setError("Please check availability first.");
-      return;
-    }
-    if (!selectedUnitId) {
-      setError("Please select a vehicle/unit.");
+    if (checking) return;
+    if (avail?.is_available === false) {
+      setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
       return;
     }
     const params = new URLSearchParams({
       rental_item_id: String(rentalId),
-      rental_item_unit_id: String(selectedUnitId),
+      // Unit-level inventory removed; keep key for backward compatibility with checkout route.
+      rental_item_unit_id: String(0),
       pickup_location: booking.pickup_location,
       dropoff_location: booking.dropoff_location,
       start_date: booking.start_date,
@@ -229,58 +321,48 @@ export default function RentalBookingPage({ params }) {
         <div className="lg:col-span-7 bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
           <div>
             <div className="text-lg font-bold text-gray-900">Booking details</div>
-            <div className="text-sm text-gray-500">Pickup/Dropoff, date and time</div>
+            <div className="text-sm text-gray-500">Vehicle location, date and time</div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-600">Pickup location *</label>
-              <button
-                type="button"
-                onClick={() => setPickupPopupOpen(true)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-left text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              >
-                {booking.pickup_location ? (
-                  <span>{booking.pickup_location}</span>
-                ) : (
-                  <span className="text-gray-400">Choose pickup location</span>
-                )}
-              </button>
+              <label className="text-xs font-semibold text-gray-600">Vehicle location</label>
+              <div className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 text-gray-900">
+                {vehicleLocation || "—"}
+              </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600">Dropoff location *</label>
-              <button
-                type="button"
-                onClick={() => setDropoffPopupOpen(true)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-left text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              >
-                {booking.dropoff_location ? (
-                  <span>{booking.dropoff_location}</span>
-                ) : (
-                  <span className="text-gray-400">Choose dropoff location</span>
-                )}
-              </button>
+              <label className="text-xs font-semibold text-gray-600">&nbsp;</label>
+              <div className="mt-1 w-full border border-transparent rounded-xl px-3 py-2 text-sm bg-transparent" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-gray-600">Start date *</label>
-              <input
-                type="date"
-                value={booking.start_date}
-                onChange={(e) => updateBooking("start_date", e.target.value)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              />
+              <div className="mt-1">
+                <DatePicker
+                  selected={parseYmdToDate(booking.start_date)}
+                  onChange={(d) => updateBooking("start_date", formatDateYmd(d))}
+                  filterDate={(d) => !isDateUnavailable(d)}
+                  minDate={new Date()}
+                  placeholderText="Select start date"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                />
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600">End date *</label>
-              <input
-                type="date"
-                value={booking.end_date}
-                onChange={(e) => updateBooking("end_date", e.target.value)}
-                className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-              />
+              <div className="mt-1">
+                <DatePicker
+                  selected={parseYmdToDate(booking.end_date)}
+                  onChange={(d) => updateBooking("end_date", formatDateYmd(d))}
+                  filterDate={(d) => !isDateUnavailable(d)}
+                  minDate={parseYmdToDate(booking.start_date) || new Date()}
+                  placeholderText="Select end date"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                />
+              </div>
             </div>
           </div>
 
@@ -310,103 +392,17 @@ export default function RentalBookingPage({ params }) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={onCheckAvailability}
-              disabled={checking}
-              className="px-4 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold disabled:opacity-60"
-            >
-              {checking ? "Checking..." : "Check availability"}
-            </button>
-            <button
-              type="button"
               onClick={onContinue}
-              disabled={!avail?.is_available || !selectedUnitId}
+              disabled={checking || avail?.is_available === false}
               className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
             >
-              Continue
+              {checking ? "Checking..." : "Continue"}
             </button>
           </div>
 
-          {avail && (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm space-y-2">
-              <div className="font-semibold text-gray-900">Availability</div>
-              <div className="text-gray-700">
-                Available now: <span className="font-semibold">{avail.available_units ?? 0}</span>
-              </div>
-              {avail.pricing_quote ? (
-                <div className="text-xs text-gray-700">
-                  Est. rent (sum of daily rates):{" "}
-                  <span className="font-semibold">₹{money(avail.pricing_quote.estimated_rental_subtotal)}</span>
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          {avail?.is_available ? (
-            <div className="border-t border-gray-100 pt-4 space-y-3">
-              <div className="text-sm font-bold text-gray-900">Select available vehicle type</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Transmission</label>
-                  <select
-                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                    value={filterTransmission}
-                    onChange={(e) => setFilterTransmission(e.target.value)}
-                  >
-                    <option value="">All</option>
-                    {transmissionOptions.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-600">Fuel type</label>
-                  <select
-                    className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
-                    value={filterFuel}
-                    onChange={(e) => setFilterFuel(e.target.value)}
-                  >
-                    <option value="">All</option>
-                    {fuelOptions.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {shownUnits.length ? (
-                  shownUnits.map((u) => (
-                    <label
-                      key={u.id}
-                      className={`flex items-center justify-between gap-3 p-3 rounded-xl border cursor-pointer ${
-                        String(selectedUnitId) === String(u.id) ? "border-primary bg-primary/5" : "border-gray-200 bg-white"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="unit"
-                          checked={String(selectedUnitId) === String(u.id)}
-                          onChange={() => setSelectedUnitId(u.id)}
-                        />
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">
-                            {u.unit_code || `Unit #${(u.sort_order ?? 0) + 1}`}
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            {(u.transmission || "—")} • {(u.fuel_type || "—")} • {u.seats ? `${u.seats} seats` : "—"}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500 text-right">
-                        Price/day: <span className="font-semibold text-gray-900">₹{money(pricing.price_per_day)}</span>
-                      </div>
-                    </label>
-                  ))
-                ) : (
-                  <div className="text-sm text-gray-500">No units match the filters.</div>
-                )}
-              </div>
+          {avail?.is_available === true ? (
+            <div className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-xl p-3">
+              Slot available.
             </div>
           ) : null}
         </div>
@@ -414,50 +410,26 @@ export default function RentalBookingPage({ params }) {
         <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-5">
           <div className="text-lg font-bold text-gray-900">{rental.title}</div>
           <div className="text-sm text-gray-500 mt-1">
-            Regular ₹/day: <span className="font-semibold text-gray-900">₹{money(pricing.price_per_day)}</span>
-          </div>
-          <div className="text-sm text-gray-500 mt-1">
-            Expected total:{" "}
+            Total hours:{" "}
             <span className="font-semibold text-gray-900">
-              ₹{money(avail?.pricing_quote ? expectedRentTotal : 0)}
+              {effectiveHours || 0}
             </span>
           </div>
           <div className="text-sm text-gray-500 mt-1">
-            Advance: <span className="font-semibold text-gray-900">₹{money(advanceAmount)}</span>
+            Advance amount: <span className="font-semibold text-gray-900">₹{money(payAdvanceAmount)}</span>
           </div>
-          <div className="text-xs text-gray-400 mt-1">
-            Deposit (ref): <span className="font-semibold text-gray-500">₹{money(depositAmount)}</span>
+          <div className="text-sm text-gray-500 mt-1">
+            Deposit: <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
+          </div>
+          <div className="text-sm text-gray-700 mt-1">
+            Total cost: <span className="font-bold text-gray-900">₹{money(totalCostIncludingDeposit)}</span>
           </div>
           <div className="mt-4 text-xs text-gray-500">
-            You’ll pay the advance on checkout. Rent is estimated by your selected days.
+            Total amount includes deposit. The deposit amount will be refunded.
           </div>
         </div>
       </div>
 
-      <LocationSearchPopup
-        isOpen={pickupPopupOpen}
-        onClose={() => setPickupPopupOpen(false)}
-        onPlaceSelected={(place) => {
-          applyPlaceToField("pickup_location")(place);
-          setPickupPopupOpen(false);
-        }}
-        onClear={() => updateBooking("pickup_location", "")}
-        initialValue={booking.pickup_location}
-        googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        title="Choose pickup location"
-      />
-      <LocationSearchPopup
-        isOpen={dropoffPopupOpen}
-        onClose={() => setDropoffPopupOpen(false)}
-        onPlaceSelected={(place) => {
-          applyPlaceToField("dropoff_location")(place);
-          setDropoffPopupOpen(false);
-        }}
-        onClear={() => updateBooking("dropoff_location", "")}
-        initialValue={booking.dropoff_location}
-        googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        title="Choose dropoff location"
-      />
     </div>
   );
 }

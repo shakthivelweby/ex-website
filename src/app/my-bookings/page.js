@@ -4,6 +4,7 @@ import { useState } from 'react';
 import PackageBookings from './package/PackageBookings';
 import EventBookings from './event/EventBookings';
 import AttractionBookings from './attraction/AttractionBookings';
+import RentalBookings from './rental/RentalBookings';
 
 const MyBookings = () => {
     const [activeTab, setActiveTab] = useState('packages');
@@ -11,7 +12,8 @@ const MyBookings = () => {
     const tabs = [
         { id: 'packages', label: 'Packages' },
         { id: 'events', label: 'Events' },
-        { id: 'attractions', label: 'Attractions' }
+        { id: 'attractions', label: 'Attractions' },
+        { id: 'rentals', label: 'Rentals' }
     ];
 
     const renderTabContent = () => {
@@ -22,6 +24,8 @@ const MyBookings = () => {
                 return <EventBookings />;
             case 'attractions':
                 return <AttractionBookings />;
+            case 'rentals':
+                return <RentalBookings />;
             default:
                 return null;
         }

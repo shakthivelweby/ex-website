@@ -22,32 +22,36 @@ const RentalCard = ({ rental, userCoords }) => {
     location,
     quantity,
     units,
+    latitude,
+    longitude,
+    transmission,
+    fuel_type,
+    seats,
   } = rental || {};
 
   const pricing = pricing_rule || pricingRule || {};
-  const pricePerDay = pricing?.price_per_day ?? null;
+  const pricePerHour = pricing?.price_per_hour ?? null;
   const primaryUnit = Array.isArray(units) && units.length ? units[0] : null;
-  const transmission = primaryUnit?.transmission;
-  const fuel_type = primaryUnit?.fuel_type;
-  const seats = primaryUnit?.seats;
+  const effectiveTransmission = transmission ?? primaryUnit?.transmission;
+  const effectiveFuelType = fuel_type ?? primaryUnit?.fuel_type;
+  const effectiveSeats = seats ?? primaryUnit?.seats;
   const specParts = [
-    transmission ? String(transmission).trim() : null,
-    fuel_type ? String(fuel_type).trim() : null,
-    seats ? `${seats} Seats` : null,
+    effectiveTransmission ? String(effectiveTransmission).trim() : null,
+    effectiveFuelType ? String(effectiveFuelType).trim() : null,
+    effectiveSeats ? `${effectiveSeats} Seats` : null,
   ].filter(Boolean);
 
-  const unitWithCoords = (units || []).find(
-    (u) => u?.location_lat !== null && u?.location_lat !== undefined && u?.location_lng !== null && u?.location_lng !== undefined
-  );
   const userLat = userCoords?.latitude;
   const userLng = userCoords?.longitude;
+  const itemLat = latitude ?? primaryUnit?.location_lat;
+  const itemLng = longitude ?? primaryUnit?.location_lng;
   const distanceKm =
-    userLat && userLng && unitWithCoords
+    userLat && userLng && itemLat !== null && itemLat !== undefined && itemLng !== null && itemLng !== undefined
       ? haversineKm(
           Number(userLat),
           Number(userLng),
-          Number(unitWithCoords.location_lat),
-          Number(unitWithCoords.location_lng)
+          Number(itemLat),
+          Number(itemLng)
         )
       : null;
 
@@ -105,10 +109,10 @@ const RentalCard = ({ rental, userCoords }) => {
           <div className="mt-auto pt-1 flex items-start justify-between gap-2">
             <div className="flex items-baseline flex-shrink-0">
               <span className="text-gray-900 font-bold text-lg leading-none">
-                ₹{pricePerDay ?? 0}
+                ₹{pricePerHour ?? 0}
               </span>
               <span className="text-gray-500 text-xs font-normal ml-1 leading-none">
-                / day
+                / hour
               </span>
             </div>
             <div className="text-xs text-gray-500">

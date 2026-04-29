@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
@@ -10,6 +10,15 @@ const formatMoney = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0";
   return n.toFixed(2);
+};
+
+const linesToList = (value) => {
+  if (!value) return [];
+  return String(value)
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((s) => s.replace(/^\s*-\s*/, "").trim())
+    .filter(Boolean);
 };
 
 export default function RentalDetailsClient({ rental }) {
@@ -21,6 +30,11 @@ export default function RentalDetailsClient({ rental }) {
 
   const faqs = Array.isArray(rental?.faqs) ? rental.faqs : [];
   const termsContent = rental?.terms_and_condition?.content || "";
+  const features = Array.isArray(rental?.features) ? rental.features : [];
+  const inclusions = linesToList(rental?.inclusions);
+  const exclusions = linesToList(rental?.exclusions);
+
+  const [activeTab, setActiveTab] = useState("features");
 
   const chips = useMemo(() => {
     const out = [];
@@ -99,6 +113,15 @@ export default function RentalDetailsClient({ rental }) {
       // ignore
     }
   };
+
+  const tabs = useMemo(() => {
+    return [
+      { id: "features", label: "Features" },
+      { id: "inclusions_exclusions", label: "Inclusions/Exclusions" },
+      { id: "faqs", label: "FAQs" },
+      { id: "terms", label: "Terms & Conditions" },
+    ];
+  }, []);
 
 
   return (
@@ -187,36 +210,110 @@ export default function RentalDetailsClient({ rental }) {
               </div>
             )}
 
-            {/* Terms */}
-            <div className="space-y-4">
-              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                Terms &amp; Conditions
-              </h2>
-              <div className="bg-white rounded-xl p-4 border border-gray-200">
-                <div className="prose prose-gray max-w-none text-sm text-gray-700">
-                  {termsContent ? (
-                    <div dangerouslySetInnerHTML={{ __html: termsContent }} />
-                  ) : (
-                    <p>No terms added.</p>
-                  )}
+            {/* Tabs: Features / Inclusions-Exclusions / FAQs / Terms */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <div className="px-4 sm:px-6 pt-4">
+                <div className="flex items-center gap-6 overflow-x-auto border-b border-gray-100">
+                  {tabs.map((t) => {
+                    const isActive = activeTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setActiveTab(t.id)}
+                        className={`relative pb-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                          isActive ? "text-primary" : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        {t.label}
+                        {isActive ? (
+                          <span className="absolute left-0 right-0 -bottom-[1px] h-[2px] bg-primary rounded-full" />
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
 
-            {/* FAQs */}
-            <div className="space-y-4">
-              <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">FAQs</h2>
-              {faqs.length ? (
-                <div className="space-y-3">
-                  {faqs.map((f) => (
-                    <Accordion key={f.id} title={f.question} defaultOpen={false}>
-                      <div className="text-sm text-gray-700 whitespace-pre-line">{f.answer}</div>
-                    </Accordion>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-gray-500">No FAQs added.</div>
-              )}
+              <div className="p-4 sm:p-6">
+                {activeTab === "features" && (
+                  <div className="space-y-3">
+                    {features.length ? (
+                      <div className="flex flex-wrap gap-2">
+                        {features.map((f) => (
+                          <span
+                            key={f.id || f.name}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f7f7f7] text-gray-700 border border-gray-200"
+                          >
+                            {f.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">No features added.</div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "inclusions_exclusions" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <div className="text-sm font-medium text-gray-800 mb-2">Inclusions</div>
+                      {inclusions.length ? (
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          {inclusions.map((v, idx) => (
+                            <li key={`${v}-${idx}`} className="flex gap-2">
+                              <span className="mt-1.5 w-2 h-2 rounded-full bg-primary/60" />
+                              <span>{v}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="text-sm text-gray-500">No inclusions added.</div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-800 mb-2">Exclusions</div>
+                      {exclusions.length ? (
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          {exclusions.map((v, idx) => (
+                            <li key={`${v}-${idx}`} className="flex gap-2">
+                              <span className="mt-1.5 w-2 h-2 rounded-full bg-primary/60" />
+                              <span>{v}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="text-sm text-gray-500">No exclusions added.</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "faqs" && (
+                  <div className="space-y-3">
+                    {faqs.length ? (
+                      faqs.map((f) => (
+                        <Accordion key={f.id} title={f.question} defaultOpen={false}>
+                          <div className="text-sm text-gray-700 whitespace-pre-line">{f.answer}</div>
+                        </Accordion>
+                      ))
+                    ) : (
+                      <div className="text-sm text-gray-500">No FAQs added.</div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === "terms" && (
+                  <div className="prose prose-gray max-w-none text-sm text-gray-700">
+                    {termsContent ? (
+                      <div dangerouslySetInnerHTML={{ __html: termsContent }} />
+                    ) : (
+                      <p>No terms added.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -248,8 +345,8 @@ export default function RentalDetailsClient({ rental }) {
                       <i className="fi fi-rr-indian-rupee-sign text-base text-primary-500"></i>
                     </div>
                     <div>
-                      <p className="text-gray-500 text-xs">Price / Day</p>
-                      <p className="text-gray-700 font-medium">₹{formatMoney(pricing.price_per_day)}</p>
+                      <p className="text-gray-500 text-xs">Price / Hour</p>
+                      <p className="text-gray-700 font-medium">₹{formatMoney(pricing.price_per_hour)}</p>
                     </div>
                   </div>
 
@@ -285,8 +382,6 @@ export default function RentalDetailsClient({ rental }) {
 
               {(pricing.price_per_week != null && pricing.price_per_week !== "") ||
               (pricing.price_per_month != null && pricing.price_per_month !== "") ||
-              (pricing.price_per_hour != null && pricing.price_per_hour !== "") ||
-              (pricing.price_per_km != null && pricing.price_per_km !== "") ||
               (pricing.advance_amount != null && pricing.advance_amount !== "") ||
               (pricing.discount_type && pricing.discount_value != null && pricing.discount_value !== "") ? (
                 <div className="bg-white rounded-xl p-4">
@@ -302,18 +397,6 @@ export default function RentalDetailsClient({ rental }) {
                       <div className="flex items-center justify-between">
                         <span className="text-gray-500">Per month</span>
                         <span className="font-medium">₹{formatMoney(pricing.price_per_month)}</span>
-                      </div>
-                    )}
-                    {pricing.price_per_hour != null && pricing.price_per_hour !== "" && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500">Per hour</span>
-                        <span className="font-medium">₹{formatMoney(pricing.price_per_hour)}</span>
-                      </div>
-                    )}
-                    {pricing.price_per_km != null && pricing.price_per_km !== "" && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500">Per km</span>
-                        <span className="font-medium">₹{formatMoney(pricing.price_per_km)}</span>
                       </div>
                     )}
                     {pricing.advance_amount != null && pricing.advance_amount !== "" && (

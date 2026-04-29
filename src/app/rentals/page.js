@@ -9,6 +9,8 @@ export default async function RentalsPage({ searchParams }) {
     location: resolvedSearchParams.location || "",
     category: resolvedSearchParams.category || "",
     sub_category: resolvedSearchParams.sub_category || "",
+    transmission: resolvedSearchParams.transmission || "",
+    fuel_type: resolvedSearchParams.fuel_type || "",
     rating: resolvedSearchParams.rating || "",
     price_from: resolvedSearchParams.price_from || "",
     price_to: resolvedSearchParams.price_to || "",

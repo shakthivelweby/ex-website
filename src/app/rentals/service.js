@@ -9,6 +9,8 @@ export const getRentals = async (filters = {}) => {
     if (filters.longitude !== "" && filters.longitude !== undefined && filters.longitude !== null) params.append("longitude", String(filters.longitude));
     if (filters.category && String(filters.category).trim()) params.append("category", String(filters.category).trim()); // slug
     if (filters.sub_category && String(filters.sub_category).trim()) params.append("sub_category", String(filters.sub_category).trim()); // slug
+    if (filters.transmission && String(filters.transmission).trim()) params.append("transmission", String(filters.transmission).trim());
+    if (filters.fuel_type && String(filters.fuel_type).trim()) params.append("fuel_type", String(filters.fuel_type).trim());
     if (filters.price_from !== "" && filters.price_from !== undefined && filters.price_from !== null) params.append("price_from", String(filters.price_from));
     if (filters.price_to !== "" && filters.price_to !== undefined && filters.price_to !== null) params.append("price_to", String(filters.price_to));
     if (filters.per_page) params.append("per_page", String(filters.per_page));

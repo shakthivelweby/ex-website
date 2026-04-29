@@ -16,13 +16,13 @@ const money = (v) => {
   return n.toFixed(2);
 };
 
-const diffDaysCeil = (startISO, endISO) => {
+const diffHoursCeil = (startISO, endISO) => {
   const start = new Date(startISO);
   const end = new Date(endISO);
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return 0;
   const ms = end.getTime() - start.getTime();
   if (ms <= 0) return 0;
-  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
 };
 
 export default function RentalCheckoutPage() {
@@ -41,6 +41,7 @@ export default function RentalCheckoutPage() {
   const [rental, setRental] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
+  const [payChoice, setPayChoice] = useState("advance"); // "advance" | "full"
   const [isPaying, setIsPaying] = useState(false);
   const [error, setError] = useState("");
   const [documentFile, setDocumentFile] = useState(null);
@@ -81,6 +82,7 @@ export default function RentalCheckoutPage() {
     }
   }, []);
 
+  // Availability quote kept for compatibility, but totals are computed on UI.
   useEffect(() => {
     if (!rentalItemId || !start_date || !end_date || !pickup_time || !dropoff_time) {
       setPricingQuote(null);
@@ -114,33 +116,69 @@ export default function RentalCheckoutPage() {
 
   const startISO = start_date && pickup_time ? `${start_date}T${pickup_time}:00` : "";
   const endISO = end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
-  const totalDays = diffDaysCeil(startISO, endISO);
-  const perDay = Number(pricing.price_per_day || 0) || 0;
-  const perWeek = Number(pricing.price_per_week || 0) || 0;
-  const effectiveAvgPerDay =
-    pricingQuote?.billing_days > 0
-      ? Number(pricingQuote.estimated_rental_subtotal || 0) / Number(pricingQuote.billing_days)
-      : perDay;
-  const advanceAmount = Number(pricing.advance_amount || 0) || 0;
-  const depositAmount = Number(pricing.security_deposit || 0) || 0; // display only
+  const basePerHour = Number(pricing.price_per_hour || 0) || 0;
 
-  const expectedRentTotal = useMemo(() => {
-    const days = Number(pricingQuote?.billing_days ?? totalDays) || 0;
-    if (days <= 0) return 0;
-
-    // Rule requested:
-    // - if > 7 days: weeks * per_week + extra_days * per_day
-    // - else: days * per_day
-    if (days > 7 && perWeek > 0) {
-      const weeks = Math.floor(days / 7);
-      const extra = days % 7;
-      return weeks * perWeek + extra * perDay;
+  const effectivePerHour = useMemo(() => {
+    const fromQuote = pricingQuote?.effective_rates?.price_per_hour;
+    if (fromQuote !== undefined && fromQuote !== null && String(fromQuote) !== "") {
+      const n = Number(fromQuote);
+      if (Number.isFinite(n) && n > 0) return n;
     }
-    return days * perDay;
-  }, [pricingQuote?.billing_days, totalDays, perWeek, perDay]);
 
-  // Booking payment is advance amount (fallback to deposit if advance not set).
-  const totalAmount = advanceAmount > 0 ? advanceAmount : depositAmount;
+    // Match backend: weekday override by pickup day-of-week (0=Sun..6=Sat)
+    if (start_date) {
+      const d = new Date(`${start_date}T12:00:00`);
+      if (Number.isFinite(d.getTime())) {
+        const dow = d.getDay();
+        const rows = rental?.weekday_prices || rental?.weekdayPrices || [];
+        if (Array.isArray(rows) && rows.length) {
+          const match = rows.find((r) => Number(r?.day_of_week) === dow);
+          const v = match?.price_per_hour;
+          if (v !== undefined && v !== null && String(v) !== "") {
+            const n = Number(v);
+            if (Number.isFinite(n) && n > 0) return n;
+          }
+        }
+      }
+    }
+
+    return basePerHour;
+  }, [pricingQuote, rental, start_date, basePerHour]);
+  const advanceType = pricing.advance_type || null;
+  const advanceValueRaw = pricing.advance_value;
+  const advanceValue =
+    advanceValueRaw === "" || advanceValueRaw === null || advanceValueRaw === undefined
+      ? null
+      : Number(advanceValueRaw);
+  const legacyAdvanceAmount = Number(pricing.advance_amount || 0) || 0;
+  const depositAmount = Number(pricing.security_deposit || 0) || 0;
+
+  const totalHours = useMemo(() => diffHoursCeil(startISO, endISO), [startISO, endISO]);
+  const rentSubtotal = useMemo(() => (totalHours > 0 ? totalHours * effectivePerHour : 0), [totalHours, effectivePerHour]);
+  const totalFullAmount = useMemo(() => rentSubtotal + depositAmount, [rentSubtotal, depositAmount]);
+
+  const payAdvanceAmount = useMemo(() => {
+    // Preferred: advance_type/value
+    if (advanceType && advanceValue != null && Number.isFinite(advanceValue)) {
+      if (advanceType === "percent") {
+        // percentage of FULL total (including deposit)
+        return (totalFullAmount * advanceValue) / 100;
+      }
+      // flat amount (cap at full total)
+      return Math.min(advanceValue, totalFullAmount || advanceValue);
+    }
+    // Backward compatibility: legacy advance_amount as flat amount (cap at full total)
+    if (legacyAdvanceAmount > 0) return Math.min(legacyAdvanceAmount, totalFullAmount || legacyAdvanceAmount);
+    return 0;
+  }, [advanceType, advanceValue, totalFullAmount, legacyAdvanceAmount]);
+
+  const canPayAdvance = payAdvanceAmount > 0;
+  const selectedPayAmount =
+    payChoice === "full" ? totalFullAmount : (canPayAdvance ? payAdvanceAmount : totalFullAmount);
+  const balanceAmount =
+    payChoice === "advance" && canPayAdvance
+      ? Math.max(0, totalFullAmount - payAdvanceAmount)
+      : 0;
 
   const summary = useMemo(() => {
     return {
@@ -164,8 +202,8 @@ export default function RentalCheckoutPage() {
       setError("Selected payment method is not available yet.");
       return;
     }
-    if (!rentalItemUnitId) {
-      setError("No car/unit selected for payment. Please go back and check availability again.");
+    if (!rentalItemId) {
+      setError("Missing rental item. Please go back and try again.");
       return;
     }
     if (!start_datetime || !end_datetime) {
@@ -176,12 +214,14 @@ export default function RentalCheckoutPage() {
     setIsPaying(true);
     try {
       const fd = new FormData();
-      fd.append("rental_item_unit_id", String(Number(rentalItemUnitId)));
+      fd.append("rental_item_id", String(Number(rentalItemId)));
+      // Backward compatibility only (API currently validates rental_item_id).
+      if (rentalItemUnitId) fd.append("rental_item_unit_id", String(Number(rentalItemUnitId)));
       fd.append("pickup_location", pickup_location);
       fd.append("dropoff_location", dropoff_location);
       fd.append("start_datetime", start_datetime);
       fd.append("end_datetime", end_datetime);
-      fd.append("amount", String(totalAmount));
+      fd.append("amount", String(selectedPayAmount));
       if (documentFile) {
         fd.append("document", documentFile);
       }
@@ -193,7 +233,7 @@ export default function RentalCheckoutPage() {
       }
 
       const payRes = await initializeRazorpayPayment({
-        amount: totalAmount,
+        amount: selectedPayAmount,
         currency: "INR",
         name: "Explore World",
         description: `Rental booking for ${rental?.title || "rental"}`,
@@ -314,6 +354,60 @@ export default function RentalCheckoutPage() {
             Choose your payment method to continue.
           </div>
 
+          <div className="mt-4 bg-gray-50 border border-gray-200 rounded-2xl p-4">
+            <div className="text-sm font-bold text-gray-900">Choose payment option</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Pay full amount, or pay advance now and balance later.
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-white cursor-pointer">
+                <input
+                  type="radio"
+                  name="payChoice"
+                  value="full"
+                  checked={payChoice === "full"}
+                  onChange={() => setPayChoice("full")}
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-gray-900">Pay full amount</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    ₹{money(totalFullAmount)} (includes deposit)
+                  </div>
+                </div>
+              </label>
+
+              <label
+                className={`flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-white ${
+                  canPayAdvance ? "cursor-pointer" : "opacity-60 cursor-not-allowed"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="payChoice"
+                  value="advance"
+                  disabled={!canPayAdvance}
+                  checked={payChoice === "advance"}
+                  onChange={() => setPayChoice("advance")}
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-gray-900">Pay advance</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    Pay now: ₹{money(payAdvanceAmount)}
+                    {canPayAdvance ? (
+                      <>
+                        {" "}
+                        · Balance: ₹{money(balanceAmount)}
+                      </>
+                    ) : (
+                      <> (advance not set for this rental)</>
+                    )}
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <div className="mt-4 space-y-3">
             <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer">
               <input
@@ -388,17 +482,14 @@ export default function RentalCheckoutPage() {
                 {[rental.brand, rental.subtitle].filter(Boolean).join(" • ")}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Regular ₹/day: <span className="font-semibold text-gray-900">₹{money(perDay)}</span>
+                ₹/hour (effective):{" "}
+                <span className="font-semibold text-gray-900">₹{money(effectivePerHour)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Expected total:{" "}
-                <span className="font-semibold text-gray-900">₹{money(expectedRentTotal)}</span>
+                Advance: <span className="font-semibold text-gray-900">₹{money(payAdvanceAmount)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Advance: <span className="font-semibold text-gray-900">₹{money(advanceAmount)}</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Deposit (ref): <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
+                Deposit: <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
               </div>
             </div>
           </div>
@@ -427,24 +518,38 @@ export default function RentalCheckoutPage() {
 
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Total days</span>
+                <span className="text-gray-500">Total hours</span>
                 <span className="text-gray-900 font-semibold text-right">
-                  {(pricingQuote?.billing_days ?? totalDays) || "-"}
+                  {totalHours || "-"}
                 </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500">Rent subtotal</span>
+                <span className="text-gray-900 font-semibold text-right">₹{money(rentSubtotal)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="text-gray-500">Deposit</span>
+                <span className="text-gray-900 font-semibold text-right">₹{money(depositAmount)}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">Booking amount</span>
                 <span className="text-gray-900 font-semibold text-right">
-                  {advanceAmount > 0 ? "Advance" : "Deposit"}
+                  {payChoice === "full" ? "Full amount" : "Advance"}
                 </span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-gray-900 font-bold">Total amount</span>
                 <span className="text-gray-900 font-bold text-right">
-                  ₹{money(totalAmount)}
+                  ₹{money(selectedPayAmount)}
                 </span>
               </div>
-              {totalDays === 0 && (
+              {payChoice === "advance" && canPayAdvance && (
+                <div className="flex justify-between gap-3 text-xs">
+                  <span className="text-gray-500">Balance due later</span>
+                  <span className="text-gray-900 font-semibold text-right">₹{money(balanceAmount)}</span>
+                </div>
+              )}
+              {totalHours === 0 && (
                 <div className="text-xs text-red-600">
                   Invalid start/end date &amp; time (still showing deposit as booking amount).
                 </div>

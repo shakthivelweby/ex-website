@@ -216,6 +216,8 @@ export default function RentalBookingPage({ params }) {
     setAvail(null);
   };
 
+  const timeRe = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
   const validateBooking = () => {
     const required = [
       "start_date",
@@ -226,8 +228,19 @@ export default function RentalBookingPage({ params }) {
     for (const k of required) {
       if (!String(booking[k] || "").trim()) return `Please fill ${k.replaceAll("_", " ")}.`;
     }
-    if (!String(booking.pickup_location || "").trim()) return "Vehicle location is missing.";
-    if (!String(booking.dropoff_location || "").trim()) return "Vehicle location is missing.";
+    if (!timeRe.test(String(booking.pickup_time || "").trim())) {
+      return "Pickup time must be in HH:MM format (24h).";
+    }
+    if (!timeRe.test(String(booking.dropoff_time || "").trim())) {
+      return "Dropoff time must be in HH:MM format (24h).";
+    }
+    const pu = String(booking.pickup_location || "").trim();
+    const du = String(booking.dropoff_location || "").trim();
+    if (!pu) return "Pickup location is required.";
+    if (!du) return "Dropoff location is required.";
+    if (pu.length > 255 || du.length > 255) {
+      return "Pickup and dropoff locations must be at most 255 characters each.";
+    }
     return "";
   };
 

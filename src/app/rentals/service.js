@@ -4,9 +4,23 @@ export const getRentals = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     if (filters.search && String(filters.search).trim()) params.append("search", String(filters.search).trim());
-    if (filters.location && String(filters.location).trim()) params.append("location", String(filters.location).trim());
+    const hasCoords =
+      filters.latitude !== "" &&
+      filters.latitude !== undefined &&
+      filters.latitude !== null &&
+      filters.longitude !== "" &&
+      filters.longitude !== undefined &&
+      filters.longitude !== null;
+    // If we have coordinates, prefer radius-based filtering over string matching (so nearby vehicles show up).
+    if (!hasCoords && filters.location && String(filters.location).trim()) {
+      params.append("location", String(filters.location).trim());
+    }
     if (filters.latitude !== "" && filters.latitude !== undefined && filters.latitude !== null) params.append("latitude", String(filters.latitude));
     if (filters.longitude !== "" && filters.longitude !== undefined && filters.longitude !== null) params.append("longitude", String(filters.longitude));
+    if (hasCoords) {
+      const r = filters.radius_km !== undefined && filters.radius_km !== null && String(filters.radius_km) !== "" ? String(filters.radius_km) : "5";
+      params.append("radius_km", r);
+    }
     if (filters.category && String(filters.category).trim()) params.append("category", String(filters.category).trim()); // slug
     if (filters.sub_category && String(filters.sub_category).trim()) params.append("sub_category", String(filters.sub_category).trim()); // slug
     if (filters.transmission && String(filters.transmission).trim()) params.append("transmission", String(filters.transmission).trim());

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
@@ -35,6 +35,44 @@ export default function RentalDetailsClient({ rental }) {
   const exclusions = linesToList(rental?.exclusions);
 
   const [activeTab, setActiveTab] = useState("features");
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  const gallery = useMemo(() => {
+    const out = [];
+
+    // Prefer explicit gallery images (supplier uploads)
+    const imgs = Array.isArray(rental?.gallery_images) ? rental.gallery_images : [];
+    const sorted = imgs
+      .slice()
+      .sort((a, b) => Number(Boolean(b?.is_primary)) - Number(Boolean(a?.is_primary)));
+    for (const g of sorted) {
+      const url = g?.image_url || g?.imageUrl || g?.url;
+      if (url) out.push({ url, id: g?.id ?? url, is_primary: Boolean(g?.is_primary) });
+    }
+
+    // Fallback to thumbnail if gallery is empty
+    if (!out.length && rental?.thumbnail_image_url) {
+      out.push({ url: rental.thumbnail_image_url, id: "thumb" });
+    }
+
+    // De-dupe by URL
+    const seen = new Set();
+    return out.filter((x) => {
+      if (!x?.url) return false;
+      if (seen.has(x.url)) return false;
+      seen.add(x.url);
+      return true;
+    });
+  }, [rental]);
+
+  // Default main image: primary gallery image if set, otherwise first.
+  // Also reset when switching rentals / when gallery list changes.
+  useEffect(() => {
+    const primaryIdx = gallery.findIndex((g) => Boolean(g?.is_primary));
+    setActiveImageIdx(primaryIdx >= 0 ? primaryIdx : 0);
+  }, [rental?.id, gallery]);
+
+  const activeImage = gallery[activeImageIdx]?.url || rental?.thumbnail_image_url || "";
 
   const chips = useMemo(() => {
     const out = [];
@@ -158,9 +196,9 @@ export default function RentalDetailsClient({ rental }) {
             {/* Hero image */}
             <div className="relative">
               <div className="aspect-video rounded-2xl overflow-hidden bg-gray-200">
-                {rental.thumbnail_image_url ? (
+                {activeImage ? (
                   <Image
-                    src={rental.thumbnail_image_url}
+                    src={activeImage}
                     alt={rental.title || "Rental"}
                     width={800}
                     height={450}
@@ -173,6 +211,33 @@ export default function RentalDetailsClient({ rental }) {
                 )}
               </div>
             </div>
+
+            {/* Gallery thumbnails */}
+            {gallery.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {gallery.map((img, idx) => (
+                  <button
+                    key={img.id ?? img.url}
+                    type="button"
+                    onClick={() => setActiveImageIdx(idx)}
+                    className={`shrink-0 w-28 h-20 rounded-xl overflow-hidden border transition-colors ${
+                      idx === activeImageIdx
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                    aria-label={`View image ${idx + 1}`}
+                  >
+                    <Image
+                      src={img.url}
+                      alt={`${rental?.title || "Rental"} image ${idx + 1}`}
+                      width={224}
+                      height={160}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* About */}
             <div className="space-y-4">

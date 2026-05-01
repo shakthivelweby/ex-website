@@ -8,8 +8,11 @@ export default async function RentalDetailsPage({ params }) {
 
   if (!rental) {
     return (
-      <div className="container mx-auto px-4 pt-28 pb-10 text-gray-500">
-        Rental not found.
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center px-4">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Rental not found</h1>
+          <p className="text-gray-600">The rental you are looking for could not be found.</p>
+        </div>
       </div>
     );
   }

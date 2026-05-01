@@ -27,6 +27,17 @@ const formatDateTime = (dateString) => {
 
 const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`;
 
+/** One line for UI: same pickup/dropoff collapsed; otherwise both without separate labels. */
+const displayRentalLocation = (b) => {
+  const p = String(b?.pickup_location || "").trim();
+  const d = String(b?.dropoff_location || "").trim();
+  const itemLoc = String(b?.item?.location || "").trim();
+  if (p && d && p !== d) return `${p} · ${d}`;
+  if (p) return p;
+  if (d) return d;
+  return itemLoc || "-";
+};
+
 const statusPill = (status) => {
   const s = String(status || "").toLowerCase();
   if (s === "confirmed") return "bg-green-50 text-green-700";
@@ -206,6 +217,7 @@ export default function RentalBookings() {
           const full = parseFloat(b.total_full_amount || 0);
           const paid = parseFloat(b.total_paid || 0);
           const balance = parseFloat(b.balance || 0);
+          const locationLabel = displayRentalLocation(b);
           return (
             <div
               key={b.id}
@@ -224,10 +236,10 @@ export default function RentalBookings() {
                         <i className="fi fi-rr-calendar text-blue-500"></i>
                         {formatDateTime(b.end_datetime)}
                       </span>
-                      {b.pickup_location ? (
+                      {locationLabel !== "-" ? (
                         <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
                           <i className="fi fi-rr-marker"></i>
-                          {b.pickup_location}
+                          {locationLabel}
                         </span>
                       ) : null}
                     </div>
@@ -305,12 +317,8 @@ export default function RentalBookings() {
                       <span className="font-medium text-gray-900">#{b.id}</span>
                     </div>
                     <div className="flex justify-between gap-3">
-                      <span>Pickup:</span>
-                      <span className="font-medium text-gray-900 text-right">{b.pickup_location || "-"}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span>Dropoff:</span>
-                      <span className="font-medium text-gray-900 text-right">{b.dropoff_location || "-"}</span>
+                      <span>Location:</span>
+                      <span className="font-medium text-gray-900 text-right">{locationLabel}</span>
                     </div>
                     <div className="flex justify-between gap-3">
                       <span>Start:</span>

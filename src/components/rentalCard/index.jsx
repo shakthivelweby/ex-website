@@ -58,30 +58,30 @@ const RentalCard = ({ rental, userCoords }) => {
   return (
     <Link
       href={`/rentals/${id}`}
-      className="block group overflow-hidden transition-all duration-300"
+      className="block group transition-all duration-300"
     >
-      <div className="flex flex-col h-full">
-        <div className="relative w-full h-[400px] rounded-2xl overflow-hidden">
+      <div className="flex flex-col h-full rounded-2xl bg-gray-50 border border-gray-100 p-4 shadow-sm hover:shadow-md hover:border-gray-200">
+        <div className="relative w-full aspect-[5/3] rounded-xl overflow-hidden bg-gray-100">
           {thumbnail_image_url ? (
             <Image
               src={thumbnail_image_url}
               alt={title || "Rental"}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-contain object-center transition-transform duration-700 group-hover:scale-[1.02]"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 34vw"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
               <i className="fi fi-rr-car text-gray-400 text-4xl"></i>
             </div>
           )}
         </div>
 
-        <div className="flex flex-col flex-grow pt-2">
+        <div className="flex flex-col flex-grow pt-4">
           <div className="flex items-center justify-between gap-3 mb-2">
             {location ? (
-              <div className="flex items-start text-primary-600 font-medium text-xs capitalize tracking-wide">
-                <i className="fi fi-rr-marker mr-1.5"></i>
+              <div className="flex items-start text-primary-600 font-medium text-sm capitalize tracking-wide">
+                <i className="fi fi-rr-marker mr-1.5 mt-0.5"></i>
                 <span className="leading-tight break-words">{location}</span>
               </div>
             ) : (
@@ -89,33 +89,33 @@ const RentalCard = ({ rental, userCoords }) => {
             )}
 
             {Number.isFinite(distanceKm) && (
-              <div className="flex items-center gap-1 text-xs text-gray-700 whitespace-nowrap">
+              <div className="flex items-center gap-1 text-sm text-gray-700 whitespace-nowrap">
                 <i className="fi fi-rr-location-arrow text-gray-500"></i>
                 <span>{distanceKm.toFixed(1)} km away</span>
               </div>
             )}
           </div>
 
-          <h3 className="font-semibold text-base text-gray-900 leading-tight mb-2 line-clamp-2">
+          <h3 className="font-semibold text-lg text-gray-900 leading-snug mb-2 line-clamp-2">
             {title || "Rental"}
           </h3>
 
           {specParts.length > 0 && (
-            <div className="text-xs text-gray-600 mb-2">
+            <div className="text-sm text-gray-600 mb-2">
               {specParts.join(" · ")}
             </div>
           )}
 
-          <div className="mt-auto pt-1 flex items-start justify-between gap-2">
+          <div className="mt-auto pt-2 flex items-start justify-between gap-2">
             <div className="flex items-baseline flex-shrink-0">
-              <span className="text-gray-900 font-bold text-lg leading-none">
+              <span className="text-gray-900 font-bold text-xl leading-none">
                 ₹{pricePerHour ?? 0}
               </span>
-              <span className="text-gray-500 text-xs font-normal ml-1 leading-none">
+              <span className="text-gray-500 text-sm font-normal ml-1 leading-none">
                 / hour
               </span>
             </div>
-            <div className="text-xs text-gray-500">
+            <div className="text-sm text-gray-500">
               {quantity ? `${quantity} units` : ""}
             </div>
           </div>

@@ -1,22 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from "next/navigation";
 import PackageBookings from './package/PackageBookings';
 import EventBookings from './event/EventBookings';
 import AttractionBookings from './attraction/AttractionBookings';
 import ActivityBookings from './activity/ActivityBookings';
+import RentalBookings from './rental/RentalBookings';
+
+const ALLOWED_TABS = ['packages', 'events', 'attractions', 'activities', 'rentals'];
 
 const MyBookings = () => {
+    const router = useRouter();
     const searchParams = useSearchParams();
-    const initialTab = searchParams.get("tab") || "packages";
+    const tabFromUrl = searchParams.get("tab");
+    const initialTab = ALLOWED_TABS.includes(tabFromUrl) ? tabFromUrl : "packages";
     const [activeTab, setActiveTab] = useState(initialTab);
+
+    useEffect(() => {
+        const t = searchParams.get("tab");
+        if (t && ALLOWED_TABS.includes(t)) setActiveTab(t);
+    }, [searchParams]);
 
     const tabs = [
         { id: 'packages', label: 'Packages' },
         { id: 'events', label: 'Events' },
         { id: 'attractions', label: 'Attractions' },
         { id: 'activities', label: 'Activities' },
+        { id: 'rentals', label: 'Rentals' },
     ];
 
     const renderTabContent = () => {
@@ -29,8 +40,10 @@ const MyBookings = () => {
                 return <AttractionBookings />;
             case 'activities':
                 return <ActivityBookings />;
+            case 'rentals':
+                return <RentalBookings />;
             default:
-                return null;
+                return <PackageBookings />;
         }
     };
 
@@ -50,7 +63,11 @@ const MyBookings = () => {
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
+                                    type="button"
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        router.replace(`/my-bookings?tab=${tab.id}`, { scroll: false });
+                                    }}
                                     className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
                                         activeTab === tab.id
                                             ? 'border-blue-500 text-blue-600'

@@ -8,7 +8,7 @@ import { getRentalDetails } from "../../rentals/service";
 import { checkRentalAvailability } from "../../rentals/clientService";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
-import { createOrder, verifyPayment, paymentFailure } from "./service";
+import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -40,7 +40,6 @@ export default function RentalCheckoutPage() {
 
   const [rental, setRental] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState("razorpay");
   const [payChoice, setPayChoice] = useState("advance"); // "advance" | "full"
   const [isPaying, setIsPaying] = useState(false);
   const [error, setError] = useState("");
@@ -48,6 +47,7 @@ export default function RentalCheckoutPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: "", message: "" });
   const [pricingQuote, setPricingQuote] = useState(null);
+  const [reservationBookingId, setReservationBookingId] = useState(null);
 
   useEffect(() => {
     const run = async () => {
@@ -196,12 +196,64 @@ export default function RentalCheckoutPage() {
   const end_datetime =
     end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
 
-  const handleContinue = async () => {
-    setError("");
-    if (paymentMethod !== "razorpay") {
-      setError("Selected payment method is not available yet.");
+  const reservationKey = useMemo(() => {
+    if (!rentalItemId || !start_datetime || !end_datetime) return "";
+    return `rental_reservation_${rentalItemId}_${start_datetime}_${end_datetime}`;
+  }, [rentalItemId, start_datetime, end_datetime]);
+
+  const reserveSlot = async () => {
+    if (!rentalItemId || !start_datetime || !end_datetime) return null;
+    const res = await reserveRentalSlot({
+      rental_item_id: Number(rentalItemId),
+      pickup_location: pickup_location || "—",
+      dropoff_location: dropoff_location || "—",
+      start_datetime,
+      end_datetime,
+    });
+    const bookingId = res?.data?.rental_booking_id;
+    if (bookingId && reservationKey) {
+      try {
+        sessionStorage.setItem(reservationKey, String(bookingId));
+      } catch (_) {}
+      setReservationBookingId(String(bookingId));
+    }
+    return bookingId ? String(bookingId) : null;
+  };
+
+  // Reserve slot as soon as user lands on checkout (temporary block).
+  useEffect(() => {
+    if (!rentalItemId || !start_datetime || !end_datetime) return;
+    const existing = reservationKey ? sessionStorage.getItem(reservationKey) : null;
+    if (existing) {
+      setReservationBookingId(existing);
       return;
     }
+    let cancelled = false;
+    (async () => {
+      try {
+        const bookingId = await reserveSlot();
+        if (cancelled) return;
+        if (!bookingId) return;
+      } catch (e) {
+        // If reservation fails (already reserved), show message and prevent paying.
+        if (!cancelled) {
+          // Clear any stale reservation and show error.
+          try {
+            if (reservationKey) sessionStorage.removeItem(reservationKey);
+          } catch (_) {}
+          setReservationBookingId(null);
+          setError(e?.response?.data?.message || "Unable to reserve this slot. Please go back and choose another time.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rentalItemId, start_datetime, end_datetime, reservationKey]);
+
+  const handleContinue = async () => {
+    setError("");
     if (!rentalItemId) {
       setError("Missing rental item. Please go back and try again.");
       return;
@@ -213,20 +265,39 @@ export default function RentalCheckoutPage() {
 
     setIsPaying(true);
     try {
-      const fd = new FormData();
-      fd.append("rental_item_id", String(Number(rentalItemId)));
-      // Backward compatibility only (API currently validates rental_item_id).
-      if (rentalItemUnitId) fd.append("rental_item_unit_id", String(Number(rentalItemUnitId)));
-      fd.append("pickup_location", pickup_location);
-      fd.append("dropoff_location", dropoff_location);
-      fd.append("start_datetime", start_datetime);
-      fd.append("end_datetime", end_datetime);
-      fd.append("amount", String(selectedPayAmount));
-      if (documentFile) {
-        fd.append("document", documentFile);
-      }
+      const buildFormData = (bookingId) => {
+        const fd = new FormData();
+        if (bookingId) fd.append("rental_booking_id", String(Number(bookingId)));
+        fd.append("rental_item_id", String(Number(rentalItemId)));
+        // Backward compatibility only (API currently validates rental_item_id).
+        if (rentalItemUnitId) fd.append("rental_item_unit_id", String(Number(rentalItemUnitId)));
+        fd.append("pickup_location", pickup_location);
+        fd.append("dropoff_location", dropoff_location);
+        fd.append("start_datetime", start_datetime);
+        fd.append("end_datetime", end_datetime);
+        fd.append("amount", String(selectedPayAmount));
+        if (documentFile) fd.append("document", documentFile);
+        return fd;
+      };
 
-      const orderRes = await createOrder(fd);
+      let orderRes = await createOrder(buildFormData(reservationBookingId));
+
+      // If reservation expired / became invalid, clear and retry reserve+order once.
+      if (!orderRes?.status) {
+        const msg = String(orderRes?.message || "");
+        const shouldRetry =
+          msg.toLowerCase().includes("expired") ||
+          msg.toLowerCase().includes("not in a reservable state") ||
+          msg.toLowerCase().includes("booking not found");
+        if (shouldRetry) {
+          try {
+            if (reservationKey) sessionStorage.removeItem(reservationKey);
+          } catch (_) {}
+          setReservationBookingId(null);
+          const newBookingId = await reserveSlot();
+          orderRes = await createOrder(buildFormData(newBookingId));
+        }
+      }
 
       if (!orderRes?.status) {
         throw new Error(orderRes?.message || "Failed to create payment order.");
@@ -328,15 +399,15 @@ export default function RentalCheckoutPage() {
         show={showSuccess}
         onClose={() => {
           setShowSuccess(false);
-          router.push("/rentals");
+          router.push("/my-bookings?tab=rentals");
         }}
         title={successMessage.title}
         message={successMessage.message}
         actionButton={{
-          label: "Back to rentals",
+          label: "My bookings",
           onClick: () => {
             setShowSuccess(false);
-            router.push("/rentals");
+            router.push("/my-bookings?tab=rentals");
           },
         }}
       />
@@ -408,41 +479,17 @@ export default function RentalCheckoutPage() {
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer">
-              <input
-                type="radio"
-                name="pm"
-                value="razorpay"
-                checked={paymentMethod === "razorpay"}
-                onChange={() => setPaymentMethod("razorpay")}
-              />
+          <div className="mt-4">
+            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Online payment
+            </div>
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-white">
+              <i className="fi fi-rr-credit-card text-primary-500 text-lg shrink-0" />
               <div>
                 <div className="text-sm font-semibold text-gray-900">Razorpay</div>
-                <div className="text-xs text-gray-500">
-                  Card / UPI / Netbanking
-                </div>
+                <div className="text-xs text-gray-500">Card / UPI / Netbanking</div>
               </div>
-            </label>
-
-            <label className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 cursor-pointer opacity-60">
-              <input
-                type="radio"
-                name="pm"
-                value="cod"
-                disabled
-                checked={paymentMethod === "cod"}
-                onChange={() => setPaymentMethod("cod")}
-              />
-              <div>
-                <div className="text-sm font-semibold text-gray-900">
-                  Pay later
-                </div>
-                <div className="text-xs text-gray-500">
-                  (Not available yet)
-                </div>
-              </div>
-            </label>
+            </div>
           </div>
 
           <div className="mt-5 flex gap-3">
@@ -496,12 +543,12 @@ export default function RentalCheckoutPage() {
 
           <div className="mt-4 border-t border-gray-100 pt-4 space-y-2 text-sm">
             <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Pickup</span>
-              <span className="text-gray-900 font-semibold text-right">{pickup_location || "-"}</span>
-            </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Dropoff</span>
-              <span className="text-gray-900 font-semibold text-right">{dropoff_location || "-"}</span>
+              <span className="text-gray-500">Location</span>
+              <span className="text-gray-900 font-semibold text-right max-w-[65%]">
+                {String(pickup_location || "").trim() === String(dropoff_location || "").trim()
+                  ? pickup_location || dropoff_location || "-"
+                  : `${pickup_location || "-"} → ${dropoff_location || "-"}`}
+              </span>
             </div>
             <div className="flex justify-between gap-3">
               <span className="text-gray-500">Start</span>

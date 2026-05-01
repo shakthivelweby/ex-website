@@ -7,14 +7,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // ✅ Your custom config (not used by Next.js)
-  customConfig: {
-    allowedDevOrigins: [
-      `http://${mobileIp}:3000`,
-      'http://localhost:3000',
-      'https://api.exploreworld.com',
-    ],
-  },
+  // NOTE: Next.js doesn't accept arbitrary config keys. Keep non-Next settings out of this file.
 
   // ✅ Configure remote images
   images: {
@@ -43,10 +36,7 @@ const nextConfig = {
     ],
   },
 
-  // ✅ Optional performance improvements
-  experimental: {
-    turbo: true, // enables Rust-based turbo compilation for dev speed
-  },
+  // Turbopack is stable; no experimental.turbo needed (and it breaks config validation in v15).
 };
 
 export default nextConfig;

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
@@ -13,7 +13,11 @@ const ActivityDetailPage = ({ activityDetails }) => {
   const router = useRouter();
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  const [expandedTicketType, setExpandedTicketType] = useState(null);
+  // selectedTicketId = ticket chosen for booking/price
+  // expandedTicketId = ticket whose details panel is open (tabs)
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [expandedTicketId, setExpandedTicketId] = useState(null);
+  const [ticketTabs, setTicketTabs] = useState({});
   const [showMoreFeatures, setShowMoreFeatures] = useState({});
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showTicketDetailsPopup, setShowTicketDetailsPopup] = useState(false);
@@ -298,6 +302,19 @@ const ActivityDetailPage = ({ activityDetails }) => {
     </div>`;
   };
 
+  const getActiveTicketTab = (ticketId) => ticketTabs[ticketId] || "inclusions";
+
+  const setActiveTicketTab = (ticketId, tab) => {
+    setTicketTabs((prev) => ({ ...prev, [ticketId]: tab }));
+  };
+
+  // By default, expand the first ticket (once data is available)
+  useEffect(() => {
+    const firstId = activityDetails?.ticketOptions?.[0]?.id;
+    if (!firstId) return;
+    setExpandedTicketId((prev) => prev ?? firstId);
+  }, [activityDetails?.ticketOptions]);
+
   const getDummyCancellationPolicy = (ticket) => {
     return `<div class="space-y-3">
       <div class="">
@@ -358,7 +375,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
             enquireOnly={enquireOnly}
             selectedTicket={
               activityDetails.ticketOptions?.find(
-                ticket => ticket.id === expandedTicketType
+                ticket => ticket.id === selectedTicketId
               ) || null
             }
           />
@@ -482,20 +499,16 @@ const ActivityDetailPage = ({ activityDetails }) => {
                 {/* Select Button */}
                 <button
                   onClick={() => {
-                    if (expandedTicketType === selectedTicketForDetails.id) {
-                      setExpandedTicketType(null);
-                    } else {
-                      setExpandedTicketType(selectedTicketForDetails.id);
-                    }
+                    setSelectedTicketId(selectedTicketForDetails.id);
                     setShowTicketDetailsPopup(false);
                   }}
                   className={`px-8 py-3 rounded-full font-medium text-sm transition-all duration-200 ${
-                    expandedTicketType === selectedTicketForDetails.id
+                    selectedTicketId === selectedTicketForDetails.id
                       ? "bg-primary-600 text-white hover:bg-primary-700"
                       : "bg-primary-500 text-white hover:bg-primary-600"
                   }`}
                 >
-                  {expandedTicketType === selectedTicketForDetails.id ? "Selected" : "Select"}
+                  {selectedTicketId === selectedTicketForDetails.id ? "Selected" : "Select"}
                 </button>
               </div>
             </div>
@@ -506,6 +519,50 @@ const ActivityDetailPage = ({ activityDetails }) => {
       {/* Hero Section */}
       <div className="w-full bg-white">
         <div className="max-w-7xl mx-auto px-4 py-6 mt-10">
+          {/* Header */}
+          <div className="mb-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
+                    {activityDetails.title || "Untitled Activity"}
+                  </h1>
+                </div>
+
+                {(activityDetails.popular || activityDetails.recommended) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {activityDetails.popular && (
+                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Popular
+                      </span>
+                    )}
+                    {activityDetails.recommended && (
+                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[220px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
+                        <span className="truncate">ExploreWorld Recommended</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+                {Number(activityDetails.rating) > 0 && (
+                  <div className="flex items-center gap-2">
+                    <i className="fi fi-sr-star text-yellow-400 text-sm"></i>
+                    <span className="font-medium text-gray-800">
+                      {Number(activityDetails.rating).toFixed(1)}
+                    </span>
+                    <span className="text-gray-500">
+                      ({Number(activityDetails.reviewCount || 0)} reviews)
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Image Gallery */}
           <div className="w-full mb-8">
             {/* Mobile Carousel - Hidden on desktop */}
@@ -585,7 +642,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
             </div>
 
             {/* Desktop Grid - Hidden on mobile */}
-            <div className="hidden lg:grid grid-cols-3 gap-2 h-[600px]">
+            <div className="hidden lg:grid grid-cols-3 gap-2 h-[500px]">
               {/* Main Large Image - Left Side (2/3 width) */}
               <div 
                 className="relative col-span-2 rounded-l-xl overflow-hidden cursor-pointer group"
@@ -695,6 +752,59 @@ const ActivityDetailPage = ({ activityDetails }) => {
             <div className="w-full lg:w-2/3 space-y-8">
               {/* Activity Details Sections */}
               <div>
+                {/* Activity Guide */}
+                <div className="bg-white mb-12 border-b border-gray-200 pb-8">
+                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                    Activity Guide
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-4">
+                      <i className="fi fi-rr-clock text-xl text-primary-500"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Duration</p>
+                        <p className="font-medium text-sm text-gray-700">
+                          {activityDetails.activityGuide.duration}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(activityDetails.categories || []).length > 0 && (
+                      <div className="flex items-start gap-4">
+                        <i className="fi fi-rr-apps text-xl text-primary-500"></i>
+                        <div>
+                          <p className="text-sm text-gray-500">Category</p>
+                          <p className="font-medium text-sm text-gray-700">
+                            {(activityDetails.categories || []).join(", ")}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {activityDetails.location && (
+                      <div className="flex items-start gap-4">
+                        <i className="fi fi-rr-marker text-xl text-primary-500"></i>
+                        <div>
+                          <p className="text-sm text-gray-500">Location</p>
+                          <p className="font-medium text-sm text-gray-700">
+                            {activityDetails.location}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {activityDetails.address && (
+                      <div className="flex items-start gap-4">
+                        <i className="fi fi-rr-map text-xl text-primary-500"></i>
+                        <div>
+                          <p className="text-sm text-gray-500">Address</p>
+                          <p className="font-medium text-sm text-gray-700">
+                            {activityDetails.address}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* About Section */}
                 <div className="bg-white rounded-xl mb-14">
                   <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
@@ -715,7 +825,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
                 {/* Gallery Section */}
                 {activityDetails.gallery && activityDetails.gallery.length > 0 && (
-                  <div className="bg-white rounded-xl mb-14 hidden">
+                  <div className="bg-white rounded-xl mb-14">
                     <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
                       Activity Gallery
                     </h2>
@@ -766,78 +876,70 @@ const ActivityDetailPage = ({ activityDetails }) => {
                   </div>
                 )}
 
-                {/* Activity Guide */}
-                <div className="bg-white mb-12 border-b border-gray-200 pb-8">
-                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                    Activity Guide
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-4">
-                      <i className="fi fi-rr-clock text-xl text-primary-500"></i>
-                      <div>
-                        <p className="text-sm text-gray-500">Duration</p>
-                        <p className="font-medium text-sm text-gray-700">
-                          {activityDetails.activityGuide.duration}
-                        </p>
-                      </div>
-                    </div>
-
-                    {activityDetails.location && (
-                      <div className="flex items-start gap-4">
-                        <i className="fi fi-rr-marker text-xl text-primary-500"></i>
-                        <div>
-                          <p className="text-sm text-gray-500">Location</p>
-                          <p className="font-medium text-sm text-gray-700">
-                            {activityDetails.location}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {activityDetails.address && (
-                      <div className="flex items-start gap-4">
-                        <i className="fi fi-rr-map text-xl text-primary-500"></i>
-                        <div>
-                          <p className="text-sm text-gray-500">Address</p>
-                          <p className="font-medium text-sm text-gray-700">
-                            {activityDetails.address}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 {/* Activity Tickets Options Section */}
                 {activityDetails.ticketOptions && activityDetails.ticketOptions.length > 0 && (
-                  <div className="bg-[#f5f5f5] p-4 rounded-xl mb-14">
-                    <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
+                  <div className="bg-[#f5f5f5] p-3 sm:p-4 rounded-2xl mb-14">
+                    <h2 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 tracking-tight">
                       Activity Tickets Options
                     </h2>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {activityDetails.ticketOptions.map((ticket, index) => {
-                        const isSelected = expandedTicketType === ticket.id;
+                        const isSelected = selectedTicketId === ticket.id;
+                        const isExpanded = expandedTicketId === ticket.id;
                         const displayedFeatures = ticket.features?.slice(0, 3) || [];
+                        const activeTab = getActiveTicketTab(ticket.id);
+                        const hasInclusions = Array.isArray(ticket.inclusions) && ticket.inclusions.length > 0;
+                        const hasExclusions = Array.isArray(ticket.exclusions) && ticket.exclusions.length > 0;
+                        const hasItinerary = Array.isArray(ticket.itineraries) && ticket.itineraries.length > 0;
 
                         return (
                           <div 
                             key={ticket.id || index} 
-                            className={`border border-gray-200 rounded-2xl p-4 transition-all duration-200 ${
-                              isSelected ? "bg-gray-50 border-primary-300" : "bg-white hover:bg-gray-50"
+                            className={`border rounded-2xl p-3 sm:p-4 transition-all duration-200 ${
+                              isExpanded ? "bg-white border-primary-300 shadow-sm" : "bg-white border-gray-200 hover:border-gray-300"
                             }`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setExpandedTicketId((prev) => {
+                                const next = prev === ticket.id ? null : ticket.id;
+                                if (next === ticket.id) {
+                                  setActiveTicketTab(ticket.id, getActiveTicketTab(ticket.id));
+                                }
+                                return next;
+                              });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setExpandedTicketId((prev) => {
+                                  const next = prev === ticket.id ? null : ticket.id;
+                                  if (next === ticket.id) {
+                                    setActiveTicketTab(ticket.id, getActiveTicketTab(ticket.id));
+                                  }
+                                  return next;
+                                });
+                              }
+                            }}
                           >
-                            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center w-full">
+                            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center w-full">
                               {/* Left Side - Main Heading */}
                               <div className="flex-1 w-full lg:w-auto">
-                                <h3 className="text-base font-semibold text-gray-800 mb-3">
-                                  {ticket.type || ticket.name}
-                                </h3>
-                                <div className="flex flex-wrap gap-2 mb-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <h3 className="text-[15px] font-semibold text-gray-900 leading-snug">
+                                    {ticket.type || ticket.name}
+                                  </h3>
+                                  <div className="lg:hidden mt-0.5 text-gray-400">
+                                    <i className={`fi fi-rr-angle-small-${isExpanded ? "up" : "down"} text-lg`}></i>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 mt-2">
                                   {displayedFeatures.map((feature, featureIndex) => (
                                     <span
                                       key={featureIndex}
-                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-gray-200 text-xs font-medium text-gray-700"
+                                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] font-medium text-gray-700"
                                     >
-                                      <i className="fi fi-rr-check text-primary-600 text-xs"></i>
+                                      <i className="fi fi-rr-check text-primary-600 text-[11px]"></i>
                                       {typeof feature === 'string' ? feature : feature.name || feature}
                                     </span>
                                   ))}
@@ -846,11 +948,13 @@ const ActivityDetailPage = ({ activityDetails }) => {
                                 {/* Show More Button */}
                                 {ticket.features && ticket.features.length > 3 && (
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      e.stopPropagation();
                                       setSelectedTicketForDetails(ticket);
                                       setShowTicketDetailsPopup(true);
                                     }}
-                                    className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1 transition-colors"
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    className="mt-2 text-xs text-primary-700 hover:text-primary-800 font-semibold inline-flex items-center gap-1 transition-colors"
                                   >
                                     <span>Show More</span>
                                     <i className="fi fi-br-angle-small-right text-xs"></i>
@@ -859,11 +963,11 @@ const ActivityDetailPage = ({ activityDetails }) => {
                               </div>
 
                               {/* Right Side - Price and Select Button */}
-                              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 w-full lg:w-auto lg:min-w-[180px]">
+                              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-2.5 w-full lg:w-auto lg:min-w-[170px]">
                                 {/* Price */}
                                 <div className="text-right">
                                   <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl font-bold text-gray-900">
+                                    <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
                                       ₹{ticket.price || ticket.adult_price || 0}
                                     </span>
                                     {ticket.originalPrice && ticket.originalPrice > ticket.price && (
@@ -871,6 +975,9 @@ const ActivityDetailPage = ({ activityDetails }) => {
                                         ₹{ticket.originalPrice}
                                       </span>
                                     )}
+                                    <span className="hidden lg:inline-flex items-center justify-center w-7 h-7 rounded-full border border-gray-200 bg-white text-gray-400 ml-2">
+                                      <i className={`fi fi-rr-angle-small-${isExpanded ? "up" : "down"} text-base`}></i>
+                                    </span>
                                   </div>
                                   {ticket.rateType === "pax" && (
                                     <span className="text-xs text-gray-500">per person</span>
@@ -879,23 +986,169 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
                                 {/* Select Button */}
                                 <button
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      setExpandedTicketType(null);
-                                    } else {
-                                      setExpandedTicketType(ticket.id);
-                                    }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTicketId(ticket.id);
                                   }}
-                                  className={`w-full sm:w-auto lg:w-full px-6 py-2.5 rounded-full font-medium text-sm transition-all duration-200 cursor-pointer ${
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  className={`w-full sm:w-auto lg:w-full px-5 py-2 rounded-full font-semibold text-sm transition-all duration-200 cursor-pointer ${
                                     isSelected
-                                      ? "bg-primary-500 text-white hover:bg-primary-600"
-                                      : "bg-primary-50 border border-primary-600 text-primary-600 hover:bg-primary-50"
+                                      ? "bg-primary-600 text-white hover:bg-primary-700"
+                                      : "bg-primary-50 border border-primary-600 text-primary-700 hover:bg-primary-100"
                                   }`}
                                 >
                                   {isSelected ? "Selected" : "Select"}
                                 </button>
                               </div>
                             </div>
+
+                            {/* Ticket-level tabs */}
+                            {isExpanded && (
+                              <div
+                                className="mt-3 bg-white rounded-2xl border border-gray-200 overflow-hidden"
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                              >
+                                <div className="p-2 bg-gray-50 border-b border-gray-200">
+                                  <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveTicketTab(ticket.id, "inclusions");
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+                                      activeTab === "inclusions"
+                                        ? "bg-primary-600 text-white"
+                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
+                                    }`}
+                                  >
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <i className="fi fi-rr-check text-[11px]"></i>
+                                      Inclusions
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveTicketTab(ticket.id, "exclusions");
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+                                      activeTab === "exclusions"
+                                        ? "bg-primary-600 text-white"
+                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
+                                    }`}
+                                  >
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <i className="fi fi-rr-cross-small text-[11px]"></i>
+                                      Exclusions
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveTicketTab(ticket.id, "itinerary");
+                                    }}
+                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
+                                      activeTab === "itinerary"
+                                        ? "bg-primary-600 text-white"
+                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
+                                    }`}
+                                  >
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <i className="fi fi-rr-route text-[11px]"></i>
+                                      Itinerary
+                                    </span>
+                                  </button>
+                                  </div>
+                                </div>
+
+                                <div className="p-3 sm:p-4">
+                                  {activeTab === "inclusions" && (
+                                    <div className="space-y-2">
+                                      {hasInclusions ? (
+                                        <ul className="space-y-2">
+                                          {ticket.inclusions.map((item, i) => (
+                                            <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                              <span className="mt-0.5 inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary-50 border border-primary-100 text-primary-700 shrink-0">
+                                                <i className="fi fi-rr-check text-[10px]"></i>
+                                              </span>
+                                              <span className="leading-snug">{item}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <div className="text-sm text-gray-500">
+                                          No inclusions listed for this ticket.
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {activeTab === "exclusions" && (
+                                    <div className="space-y-2">
+                                      {hasExclusions ? (
+                                        <ul className="space-y-2">
+                                          {ticket.exclusions.map((item, i) => (
+                                            <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
+                                              <span className="mt-0.5 inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-50 border border-red-100 text-red-600 shrink-0">
+                                                <i className="fi fi-rr-cross-small text-[10px]"></i>
+                                              </span>
+                                              <span className="leading-snug">{item}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      ) : (
+                                        <div className="text-sm text-gray-500">
+                                          No exclusions listed for this ticket.
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {activeTab === "itinerary" && (
+                                    <div className="space-y-2">
+                                      {hasItinerary ? (
+                                        <ol className="space-y-3">
+                                          {ticket.itineraries.map((step, i) => (
+                                            <li key={i} className="flex gap-3">
+                                              <div className="flex-shrink-0 w-6 h-6 bg-primary-50 border border-primary-100 rounded-full flex items-center justify-center">
+                                                <span className="text-primary-700 font-semibold text-xs">
+                                                  {step.step_number ?? i + 1}
+                                                </span>
+                                              </div>
+                                              <div className="flex-1">
+                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                                  <h4 className="font-semibold text-sm text-gray-800">
+                                                    {step.title || "Step"}
+                                                  </h4>
+                                                  {step.time && (
+                                                    <span className="text-xs text-gray-500">
+                                                      ({step.time})
+                                                    </span>
+                                                  )}
+                                                </div>
+                                                {step.description && (
+                                                  <p className="text-sm text-gray-600 mt-0.5 leading-snug">
+                                                    {step.description}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </li>
+                                          ))}
+                                        </ol>
+                                      ) : (
+                                        <div className="text-sm text-gray-500">
+                                          No itinerary provided for this ticket.
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -955,7 +1208,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
                   enquireOnly={enquireOnly}
                   selectedTicket={
                     activityDetails.ticketOptions?.find(
-                      ticket => ticket.id === expandedTicketType
+                      ticket => ticket.id === selectedTicketId
                     ) || null
                   }
                 />
@@ -980,7 +1233,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
             <span className="text-sm font-bold">
               {(() => {
                 const selectedTicket = activityDetails.ticketOptions?.find(
-                  ticket => ticket.id === expandedTicketType
+                  ticket => ticket.id === selectedTicketId
                 );
                 if (selectedTicket) {
                   return `₹${selectedTicket.price || selectedTicket.adult_price || 0}`;

@@ -93,12 +93,14 @@ const ConfirmationClient = ({ activityId }) => {
                       : "N/A"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Time Slot</span>
-                  <span className="text-gray-900 font-medium">
-                    {bookingData.selectedTimeSlot}
-                  </span>
-                </div>
+                {bookingData.selectedTimeSlot && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Time Slot</span>
+                    <span className="text-gray-900 font-medium">
+                      {bookingData.selectedTimeSlotLabel || bookingData.selectedTimeSlot}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Adults</span>
                   <span className="text-gray-900 font-medium">
@@ -113,15 +115,7 @@ const ConfirmationClient = ({ activityId }) => {
                     </span>
                   </div>
                 )}
-                {bookingData.needBuggy && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Transport Service</span>
-                    <span className="text-gray-900 font-medium flex items-center gap-1">
-                      <i className="fi fi-rr-car text-primary-500"></i>
-                      Buggy Requested
-                    </span>
-                  </div>
-                )}
+                {/* Buggy option removed */}
               </div>
             </div>
 

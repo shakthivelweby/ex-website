@@ -7,22 +7,51 @@ const ActivityCard = ({ activity }) => {
     image,
     price,
     rating,
-    promoted,
     popular,
     recommended,
-    city,
+    location,
     id,
   } = activity;
 
   return (
-    <Link
-      key={activity.id}
-      href={`/activities/${id}`}
-      className="block group overflow-hidden transition-all duration-300"
-    >
-      <div className="flex flex-col h-full">
-        {/* Image Section */}
-        <div className="relative w-full h-[400px] rounded-2xl overflow-hidden">
+    <Link href={`/activities/${id}`} className="block group">
+      <div className="relative flex flex-col h-full overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
+        {/* Status Badges (match EventCard) */}
+        {(popular || recommended) && (
+          <div className="absolute top-4 left-4 z-10 pointer-events-none">
+            <div className="flex flex-row flex-wrap items-center gap-2">
+              {popular && (
+                <span className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  <span className="leading-none">Popular</span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
+                  />
+                </span>
+              )}
+
+              {recommended && (
+                <span
+                  title="ExploreWorld Recommended"
+                  className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[190px]"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
+                  <span className="leading-none truncate">
+                    ExploreWorld Recommended
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
+                  />
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Background Image (match EventCard height) */}
+        <div className="relative w-full h-[350px] overflow-hidden shrink-0">
           {image ? (
             <Image
               src={image}
@@ -32,71 +61,43 @@ const ActivityCard = ({ activity }) => {
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
               <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
             </div>
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Badges Overlay */}
-          <div className="absolute top-3 left-3 flex items-center gap-2 z-10">
-            {recommended && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-600 text-white shadow-lg">
-                <span>🔥</span>
-                <span>Featured</span>
-              </span>
-            )}
-            {/* {promoted && !popular && !recommended && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500 text-white shadow-lg">
-                <span>⭐</span>
-                <span>Featured</span>
-              </span>
-            )} */}
-          </div>
-
-          {/* Rating Badge */}
+          {/* Rating overlay (same placement style) */}
           {rating > 0 && (
-            <div className="hidden absolute top-3 right-3 z-10">
-              <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-xs font-medium shadow-lg">
+            <div className="absolute bottom-4 left-4 z-10">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-black/40 text-white backdrop-blur-md border border-white/15">
                 <i className="fi fi-sr-star text-yellow-400 text-xs"></i>
-                <span>{rating.toFixed(1)}</span>
-              </div>
+                <span>{Number(rating).toFixed(1)}</span>
+              </span>
             </div>
           )}
         </div>
 
-        {/* Content Section */}
-        <div className="flex flex-col flex-grow pt-2">
-          {/* City */}
-          {city && (
-            <div className="flex items-start text-primary-600 font-medium text-xs capitalize tracking-wide mb-2">
-              <i className="fi fi-rr-marker mr-1.5"></i>
-              <span className="leading-tight break-words">{city}</span>
-            </div>
-          )}
+        {/* Content (match EventCard) */}
+        <div className="p-4 flex flex-col flex-grow">
+          {/* Location line (styled like EventCard date line) */}
+          <p className="text-primary-600 font-medium text-sm mb-2">
+            {location || "Location TBA"}
+          </p>
 
           {/* Title */}
-          <h3 className="font-semibold text-base text-gray-900 leading-tight mb-2 line-clamp-2">
+          <h3 className="font-medium text-base text-gray-800 line-clamp-2 mb-2 transition-colors">
             {title || "Untitled Activity"}
           </h3>
 
-          {/* Bottom Section - Price and Button */}
-          <div className="mt-auto pt-1">
-            <div className="flex items-start justify-between gap-2">
-              {/* Price */}
-              <div className="flex items-baseline flex-shrink-0">
-                <span className="text-gray-900 font-bold text-lg leading-none">
-                  ₹{price || 0}
-                </span>
-                <span className="text-gray-500 text-xs font-normal ml-1 leading-none">
-                  / onwards
-                </span>
-              </div>
-              {/* Book Now Button */}
-              <button className="hidden items-center gap-1 text-sm px-4 py-2 rounded-full bg-black text-white hover:bg-black/90 transition-colors font-medium">
-                Book Now
-                <i className="fi fi-rr-arrow-right text-xs"></i>
-              </button>
-            </div>
+          {/* Bottom row */}
+          <div className="flex items-center justify-between mt-auto">
+            <p className="text-gray-600 font-medium text-sm">
+              {price && Number(price) > 0 ? `₹${price} onwards` : "Price TBA"}
+            </p>
+            <span className="text-sm text-primary-600 font-medium hover:text-primary-700">
+              Book Now <i className="fi fi-rr-arrow-right ml-1"></i>
+            </span>
           </div>
         </div>
       </div>

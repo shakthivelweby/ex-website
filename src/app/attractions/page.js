@@ -1,12 +1,10 @@
 import ClientWrapper from "./clientWrapper";
-import { getAttractionCategories, getAttractionLocations, list, getAttractions } from "./service";
+import { getAttractionCategories, getAttractionLocations, getAttractions } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
 
-  // console.log("Page.js - allCategories.data:", allCategories?.data);
-  
   const allLocations = await getAttractionLocations();
 
   // Await searchParams before accessing its properties
@@ -23,20 +21,12 @@ export default async function Attractions({ searchParams }) {
     longitude: resolvedSearchParams.longitude || "",
     latitude: resolvedSearchParams.latitude || "",
   };
-
-  const attractionsList = await list(filters);
-  
-  // Test the new getAttractions API
-  const attractionsFromAPI = await getAttractions(filters); 
+ 
+  const attractionsFromAPI = await getAttractions(filters);
   
   // Use the API data instead of mock data
   const attractionsArray = attractionsFromAPI?.data?.data || [];
-
-  console.log("Server-side: Checking attractions for start_time", attractionsArray);
-
-  
-
-  
+ 
   // Transform attractions data server-side for SSR based on actual API response
   const transformedAttractions = attractionsArray.map((attraction) => ({
     // Admin flags may come as "1"/"0" strings, integers, or booleans depending on API serialization

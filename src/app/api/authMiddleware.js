@@ -1,38 +1,41 @@
 import axios from "axios";
 
-const apiServerMiddleware = axios.create({
+const apiAuthMiddleware = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/web",
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
+  timeout: 30000,
 });
 
-// Request interceptor
-apiServerMiddleware.interceptors.request.use(
-  async (config) => {
-    config.headers["X-Server-Key"] = process.env.SERVER_API_KEY || "";
-
-    // Attach auth token for protected web routes (client-side only)
+apiAuthMiddleware.interceptors.request.use(
+  (config) => {
+    // Attach token only in browser context
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
-apiServerMiddleware.interceptors.response.use(
+apiAuthMiddleware.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Server Middleware Error:", error.response?.status);
+    if (error?.response?.status === 401) {
+      try {
+        localStorage.removeItem("token");
+        window.dispatchEvent(new CustomEvent("showLogin"));
+      } catch (_) {
+        // ignore
+      }
+    }
     return Promise.reject(error);
   }
 );
 
-export default apiServerMiddleware;
+export default apiAuthMiddleware;
+

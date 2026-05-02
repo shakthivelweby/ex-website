@@ -22,6 +22,8 @@ const RentalFilters = ({
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [subCategories, setSubCategories] = useState([]);
   const prevInitialFiltersRef = useRef();
+  /** Ignore stale subcategory API responses (e.g. "all subs" finishing after a category-scoped request). */
+  const subCategoriesFetchIdRef = useRef(0);
 
   useEffect(() => {
     const prevFilters = prevInitialFiltersRef.current;
@@ -37,16 +39,15 @@ const RentalFilters = ({
   }, [initialFilters]);
 
   useEffect(() => {
-    const loadSubCategories = async () => {
-      const categorySlug = String(tempFilters?.category || "").trim();
-      if (!categorySlug) {
-        setSubCategories([]);
-        return;
-      }
-      const res = await getRentalSubCategories({ category: categorySlug });
+    const categorySlug = String(tempFilters?.category || "").trim();
+    const params = categorySlug ? { category: categorySlug } : {};
+    const fetchId = ++subCategoriesFetchIdRef.current;
+
+    (async () => {
+      const res = await getRentalSubCategories(params);
+      if (fetchId !== subCategoriesFetchIdRef.current) return;
       setSubCategories(Array.isArray(res?.data) ? res.data : []);
-    };
-    loadSubCategories();
+    })();
   }, [tempFilters?.category]);
 
   const patchFilters = (patch) => {
@@ -82,6 +83,7 @@ const RentalFilters = ({
   };
 
   const clearAllFilters = () => {
+    const hadCategory = Boolean(String(tempFilters?.category || "").trim());
     const clearedFilters = {
       date: "",
       location: "",
@@ -97,9 +99,17 @@ const RentalFilters = ({
       search: "",
     };
     setTempFilters(clearedFilters);
-    setSubCategories([]);
     setSelectedDate(new Date());
     onFilterChange(clearedFilters);
+    // If a category was selected, useEffect(category → "") refetches all subs.
+    // If category was already empty, that effect does not re-run — refetch here.
+    if (!hadCategory) {
+      const fetchId = ++subCategoriesFetchIdRef.current;
+      getRentalSubCategories({}).then((res) => {
+        if (fetchId !== subCategoriesFetchIdRef.current) return;
+        setSubCategories(Array.isArray(res?.data) ? res.data : []);
+      });
+    }
   };
 
   const hasActiveFilters = () => Object.values(tempFilters || {}).some((v) => Boolean(v));
@@ -164,8 +174,7 @@ const RentalFilters = ({
         <select
           value={tempFilters.sub_category || ""}
           onChange={(e) => patchFilters({ sub_category: e.target.value })}
-          disabled={!tempFilters.category}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600 disabled:bg-gray-100"
+          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
         >
           <option value="">All sub categories</option>
           {subCategories.map((sub) => (

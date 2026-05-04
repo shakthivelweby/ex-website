@@ -95,7 +95,7 @@ export default function RentalDetailsClient({ rental }) {
       rental?.transmission,
     ]);
     const fuels = uniq([...units.map((u) => u?.fuel_type), rental?.fuel_type]);
-    const seats = uniq(units.map((u) => u?.seats));
+    const seats = uniq([...units.map((u) => u?.seats), rental?.seats]);
 
     if (transmissions.length)
       out.push({
@@ -111,7 +111,7 @@ export default function RentalDetailsClient({ rental }) {
       });
     if (seats.length)
       out.push({
-        label: "Seats",
+        label: "Seating capacity",
         value: seats.join(", "),
         icon: "fi fi-rr-users",
       });
@@ -122,7 +122,7 @@ export default function RentalDetailsClient({ rental }) {
         icon: "fi fi-rr-dashboard",
       });
     return out;
-  }, [rental?.units, rental?.running_limit]);
+  }, [rental]);
 
   const handleBackClick = () => router.back();
 

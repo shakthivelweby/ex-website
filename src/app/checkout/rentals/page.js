@@ -9,6 +9,7 @@ import { checkRentalAvailability } from "../../rentals/clientService";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
+import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -48,6 +49,7 @@ export default function RentalCheckoutPage() {
   const [successMessage, setSuccessMessage] = useState({ title: "", message: "" });
   const [pricingQuote, setPricingQuote] = useState(null);
   const [reservationBookingId, setReservationBookingId] = useState(null);
+  const [minBookingHours, setMinBookingHours] = useState(RENTAL_MIN_BOOKING_HOURS_DEFAULT);
 
   useEffect(() => {
     const run = async () => {
@@ -100,8 +102,12 @@ export default function RentalCheckoutPage() {
           dropoff_time,
         });
         const inner = res?.data;
-        if (!cancelled && inner?.pricing_quote) {
-          setPricingQuote(inner.pricing_quote);
+        if (!cancelled && inner) {
+          if (inner.pricing_quote) setPricingQuote(inner.pricing_quote);
+          if (inner.min_booking_hours != null && inner.min_booking_hours !== "") {
+            const m = Math.max(1, Number(inner.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT);
+            setMinBookingHours(m);
+          }
         }
       } catch {
         if (!cancelled) setPricingQuote(null);
@@ -223,6 +229,14 @@ export default function RentalCheckoutPage() {
   // Reserve slot as soon as user lands on checkout (temporary block).
   useEffect(() => {
     if (!rentalItemId || !start_datetime || !end_datetime) return;
+    const h = diffHoursCeil(startISO, endISO);
+    if (h < minBookingHours) {
+      setError(
+        `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
+      );
+      return;
+    }
+    setError("");
     const existing = reservationKey ? sessionStorage.getItem(reservationKey) : null;
     if (existing) {
       setReservationBookingId(existing);
@@ -250,7 +264,7 @@ export default function RentalCheckoutPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rentalItemId, start_datetime, end_datetime, reservationKey]);
+  }, [rentalItemId, start_datetime, end_datetime, reservationKey, minBookingHours, startISO, endISO]);
 
   const handleContinue = async () => {
     setError("");
@@ -260,6 +274,13 @@ export default function RentalCheckoutPage() {
     }
     if (!start_datetime || !end_datetime) {
       setError("Invalid start/end date & time.");
+      return;
+    }
+    const slotHours = diffHoursCeil(startISO, endISO);
+    if (slotHours < minBookingHours) {
+      setError(
+        `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
+      );
       return;
     }
 

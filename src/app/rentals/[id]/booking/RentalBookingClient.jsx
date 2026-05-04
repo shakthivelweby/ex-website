@@ -9,11 +9,21 @@ import "react-datepicker/dist/react-datepicker.css";
 import Button from "@/components/common/Button";
 import { getRentalDetails } from "../../service";
 import { checkRentalAvailability, getRentalUnavailableDates } from "../../clientService";
+import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
+};
+
+const computeBillingHoursCeil = (b) => {
+  if (!b.start_date || !b.end_date || !b.pickup_time || !b.dropoff_time) return 0;
+  const start = new Date(`${b.start_date}T${b.pickup_time}:00`);
+  const end = new Date(`${b.end_date}T${b.dropoff_time}:00`);
+  const ms = end.getTime() - start.getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
 };
 
 const initialBooking = {
@@ -87,14 +97,17 @@ export default function RentalBookingClient() {
       ? null
       : Number(adminChargeValueRaw);
 
-  const effectiveHours = useMemo(() => {
-    if (!booking.start_date || !booking.end_date || !booking.pickup_time || !booking.dropoff_time) return 0;
-    const start = new Date(`${booking.start_date}T${booking.pickup_time}:00`);
-    const end = new Date(`${booking.end_date}T${booking.dropoff_time}:00`);
-    const ms = end.getTime() - start.getTime();
-    if (!Number.isFinite(ms) || ms <= 0) return 0;
-    return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
-  }, [booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time]);
+  const effectiveHours = useMemo(() => computeBillingHoursCeil(booking), [
+    booking.start_date,
+    booking.end_date,
+    booking.pickup_time,
+    booking.dropoff_time,
+  ]);
+
+  const minBookingHours =
+    avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
+      ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
+      : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
 
   const rentSubtotal = useMemo(() => {
     if (effectiveHours <= 0) return 0;
@@ -238,6 +251,14 @@ export default function RentalBookingClient() {
     if (pu.length > 255 || du.length > 255) {
       return "Pickup and dropoff locations must be at most 255 characters each.";
     }
+    const hours = computeBillingHoursCeil(booking);
+    const minH =
+      avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
+        ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
+        : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+    if (hours > 0 && hours < minH) {
+      return `Minimum rental length is ${minH} hours (selected: ${hours}). Please extend your drop-off time.`;
+    }
     return "";
   };
 
@@ -254,7 +275,12 @@ export default function RentalBookingClient() {
         const d = res?.data || null;
         if (cancelled) return;
         setAvail(d);
-        if (d?.is_available === false) {
+        if (d?.minimum_hours_not_met) {
+          const mh = d?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+          setError(
+            `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
+          );
+        } else if (d?.is_available === false) {
           setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
         }
       } catch (e) {
@@ -277,6 +303,13 @@ export default function RentalBookingClient() {
       return;
     }
     if (checking) return;
+    if (avail?.minimum_hours_not_met) {
+      const mh = avail?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+      setError(
+        `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
+      );
+      return;
+    }
     if (avail?.is_available === false) {
       setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
       return;
@@ -294,7 +327,8 @@ export default function RentalBookingClient() {
     router.push(`/checkout/rentals?${params.toString()}`);
   };
 
-  const continueDisabled = checking || avail?.is_available === false;
+  const continueDisabled =
+    checking || avail?.is_available === false || avail?.minimum_hours_not_met === true;
   const thumb = rental?.thumbnail_image_url;
 
   if (!rentalId) {
@@ -397,7 +431,10 @@ export default function RentalBookingClient() {
             <div className="bg-white rounded-lg shadow border overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200">
                 <h2 className="text-base font-medium text-gray-800">Select dates &amp; times</h2>
-                <p className="text-sm text-gray-600 mt-1">Choose when you need the vehicle. We will check availability automatically.</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Choose when you need the vehicle. We will check availability automatically. Minimum rental:{" "}
+                  {minBookingHours} hours.
+                </p>
               </div>
               <div className="p-4 sm:p-6 space-y-5">
                 <div>
@@ -466,7 +503,7 @@ export default function RentalBookingClient() {
                   </div>
                 ) : null}
 
-                {avail?.is_available === true ? (
+                {avail?.is_available === true && !avail?.minimum_hours_not_met ? (
                   <div className="text-sm text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5">
                     This slot is available. You can continue to payment.
                   </div>

@@ -34,6 +34,70 @@ const AttractionBookings = () => {
     return `₹${parseFloat(amount).toLocaleString()}`;
   };
 
+  const n = (v) => {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : 0;
+  };
+
+  const getGrandTotal = (booking) => {
+    // Prefer DB-stored grand total (includes GST + convenience fee)
+    const gt = n(booking?.grand_total);
+    if (gt > 0) return gt;
+
+    // Backward-compatible fallback: compute from total_amount
+    const subtotal = n(booking?.total_amount);
+    const gstPct = n(booking?.gst_percent) || 18;
+    const convPct = n(booking?.convenience_fee_percent) || 2;
+    const gst = (subtotal * gstPct) / 100;
+    const afterGst = subtotal + gst;
+    const conv = (afterGst * convPct) / 100;
+    return afterGst + conv;
+  };
+
+  const getAttractionPricingBreakdown = (booking) => {
+    const subtotalGross = n(booking?.total_amount);
+    const discount = n(booking?.discount_amount);
+    const subtotalAfterDiscount =
+      booking?.subtotal_after_discount != null
+        ? n(booking.subtotal_after_discount)
+        : Math.max(0, subtotalGross - discount);
+
+    const gstPct = n(booking?.gst_percent) || 18;
+    const convPct = n(booking?.convenience_fee_percent) || 2;
+
+    const gstAmount =
+      booking?.gst_amount != null
+        ? n(booking.gst_amount)
+        : (subtotalAfterDiscount * gstPct) / 100;
+
+    const afterGst = subtotalAfterDiscount + gstAmount;
+
+    const convAmount =
+      booking?.convenience_fee_amount != null
+        ? n(booking.convenience_fee_amount)
+        : (afterGst * convPct) / 100;
+
+    const grandTotal = n(booking?.grand_total) || afterGst + convAmount;
+
+    const hasAnyBreakdown =
+      booking?.gst_amount != null ||
+      booking?.convenience_fee_amount != null ||
+      booking?.grand_total != null ||
+      booking?.subtotal_after_discount != null;
+
+    return {
+      hasAnyBreakdown,
+      subtotalGross,
+      discount,
+      subtotalAfterDiscount,
+      gstPct,
+      gstAmount,
+      convPct,
+      convAmount,
+      grandTotal,
+    };
+  };
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "completed":
@@ -196,6 +260,8 @@ const AttractionBookings = () => {
             key={booking.id}
             className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
           >
+            {/** ensure label+color stay consistent even if status is missing */}
+            {(() => null)()}
             {/* Attraction Info */}
             <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex-1">
@@ -233,17 +299,36 @@ const AttractionBookings = () => {
               {/* Price Info */}
               <div className="flex flex-col items-start md:items-end gap-2">
                 <div className="flex items-center gap-2">
+                  {(() => {
+                    const statusLabel = booking.status || "Confirmed";
+                    return (
+                      <>
                   <span className="text-lg font-bold text-gray-900">
-                    {formatCurrency(booking.total_amount || 0)}
+                    {formatCurrency(getGrandTotal(booking))}
                   </span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                      booking.status
+                      statusLabel
                     )}`}
                   >
-                    {booking.status || "Confirmed"}
+                    {statusLabel}
                   </span>
+                      </>
+                    );
+                  })()}
                 </div>
+
+                {(() => {
+                  const pb = getAttractionPricingBreakdown(booking);
+                  if (!pb.hasAnyBreakdown) return null;
+                  return (
+                    <div className="text-[11px] text-gray-500">
+                      <span className="font-semibold text-gray-700">
+                        GST {pb.gstPct}% · Convenience {pb.convPct}%
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {booking.discount_amount &&
                   parseFloat(booking.discount_amount) > 0 && (
@@ -324,16 +409,6 @@ const AttractionBookings = () => {
                             </span>
                           </div>
                           {tickets.map((ticket, index) => {
-                            console.log(`Ticket ${index + 1}:`, {
-                              ticket_type_name: ticket.ticket_type_name,
-                              adult_quantity: ticket.adult_quantity,
-                              child_quantity: ticket.child_quantity,
-                              adult_price: ticket.adult_price,
-                              child_price: ticket.child_price,
-                              total_price: ticket.total_price,
-                              full_ticket_data: ticket,
-                            });
-
                             return (
                               <div
                                 key={index}
@@ -409,17 +484,69 @@ const AttractionBookings = () => {
                       Payment Details
                     </h4>
                     <div className="space-y-1 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>Total Amount:</span>
-                        <span className="font-medium">
-                          {formatCurrency(booking.total_amount || 0)}
-                        </span>
-                      </div>
+                      {(() => {
+                        const pb = getAttractionPricingBreakdown(booking);
+                        return (
+                          <>
+                            <div className="flex justify-between">
+                              <span>Subtotal:</span>
+                              <span className="font-medium">
+                                {formatCurrency(pb.subtotalGross)}
+                              </span>
+                            </div>
+                            {pb.discount > 0 ? (
+                              <>
+                                <div className="flex justify-between">
+                                  <span>Discount:</span>
+                                  <span className="font-medium text-green-700">
+                                    −{formatCurrency(pb.discount)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-500">
+                                  <span>After discount:</span>
+                                  <span className="font-medium text-gray-800">
+                                    {formatCurrency(pb.subtotalAfterDiscount)}
+                                  </span>
+                                </div>
+                              </>
+                            ) : null}
+                            {pb.hasAnyBreakdown ? (
+                              <>
+                                <div className="flex justify-between">
+                                  <span>GST ({pb.gstPct}%):</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(pb.gstAmount)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Convenience fee ({pb.convPct}%):</span>
+                                  <span className="font-medium">
+                                    {formatCurrency(pb.convAmount)}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex justify-between">
+                                <span>Taxes &amp; fees:</span>
+                                <span className="font-medium text-gray-900 text-right">
+                                  18% GST and 2% convenience fee included in total where applicable
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span>Total Amount:</span>
+                              <span className="font-medium">
+                                {formatCurrency(pb.grandTotal)}
+                              </span>
+                            </div>
+                          </>
+                        );
+                      })()}
                       <div className="flex justify-between">
                         <span>Paid Amount:</span>
                         <span className="font-medium">
                           {formatCurrency(
-                            booking.total_paid || booking.total_amount || 0
+                            booking.total_paid || getGrandTotal(booking)
                           )}
                         </span>
                       </div>

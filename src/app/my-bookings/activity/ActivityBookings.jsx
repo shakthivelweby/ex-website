@@ -116,6 +116,50 @@ const ActivityBookings = () => {
 
   const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`;
 
+  const n = (v) => {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : 0;
+  };
+
+  const getPricingBreakdown = (booking) => {
+    const subtotal = n(booking?.total_amount);
+    const discount = n(booking?.discount_amount);
+    const afterDiscount =
+      booking?.subtotal_after_discount != null
+        ? n(booking.subtotal_after_discount)
+        : Math.max(0, subtotal - discount);
+    const gstPct = n(booking?.gst_percent) || 18;
+    const convPct = n(booking?.convenience_fee_percent) || 2;
+    const gstAmount =
+      booking?.gst_amount != null
+        ? n(booking.gst_amount)
+        : (afterDiscount * gstPct) / 100;
+    const afterGst = afterDiscount + gstAmount;
+    const convAmount =
+      booking?.convenience_fee_amount != null
+        ? n(booking.convenience_fee_amount)
+        : (afterGst * convPct) / 100;
+    const grandTotal = n(booking?.grand_total) || afterGst + convAmount;
+
+    const hasBreakdown =
+      booking?.grand_total != null ||
+      booking?.gst_amount != null ||
+      booking?.convenience_fee_amount != null ||
+      booking?.subtotal_after_discount != null;
+
+    return {
+      hasBreakdown,
+      subtotal,
+      discount,
+      afterDiscount,
+      gstPct,
+      gstAmount,
+      convPct,
+      convAmount,
+      grandTotal,
+    };
+  };
+
   const getStatusColor = (status) => {
     switch (String(status || "").toLowerCase()) {
       case "confirmed":
@@ -251,17 +295,36 @@ const ActivityBookings = () => {
 
                 <div className="flex flex-col items-start md:items-end gap-2">
                   <div className="flex items-center gap-2">
+                    {(() => {
+                      const pb = getPricingBreakdown(booking);
+                      const statusLabel = booking.booking_status || "Confirmed";
+                      return (
+                        <>
                     <span className="text-lg font-bold text-gray-900">
-                      {formatCurrency(booking.total_amount || 0)}
+                      {formatCurrency(pb.grandTotal)}
                     </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                        booking.booking_status || booking.payment_status
+                        statusLabel
                       )}`}
                     >
-                      {booking.booking_status || "Confirmed"}
+                      {statusLabel}
                     </span>
+                        </>
+                      );
+                    })()}
                   </div>
+                  {(() => {
+                    const pb = getPricingBreakdown(booking);
+                    if (!pb.hasBreakdown) return null;
+                    return (
+                      <div className="text-[11px] text-gray-500">
+                        <span className="font-semibold text-gray-700">
+                          GST {pb.gstPct}% · Convenience {pb.convPct}%
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -363,12 +426,64 @@ const ActivityBookings = () => {
                         Payment Details
                       </h4>
                       <div className="space-y-1 text-sm text-gray-600">
-                        <div className="flex justify-between">
-                          <span>Total Amount:</span>
-                          <span className="font-medium">
-                            {formatCurrency(booking.total_amount || 0)}
-                          </span>
-                        </div>
+                        {(() => {
+                          const pb = getPricingBreakdown(booking);
+                          if (!pb.hasBreakdown) {
+                            return (
+                              <div className="flex justify-between">
+                                <span>Taxes &amp; fees:</span>
+                                <span className="font-medium text-gray-900 text-right">
+                                  18% GST and 2% convenience fee included in total where applicable
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <div className="flex justify-between">
+                                <span>Subtotal:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(pb.subtotal)}
+                                </span>
+                              </div>
+                              {pb.discount > 0 ? (
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>Discount:</span>
+                                    <span className="font-medium text-green-700">
+                                      −{formatCurrency(pb.discount)}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-xs text-gray-500">
+                                    <span>After discount:</span>
+                                    <span className="font-medium text-gray-800">
+                                      {formatCurrency(pb.afterDiscount)}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : null}
+                              <div className="flex justify-between">
+                                <span>GST ({pb.gstPct}%):</span>
+                                <span className="font-medium">
+                                  {formatCurrency(pb.gstAmount)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Convenience fee ({pb.convPct}%):</span>
+                                <span className="font-medium">
+                                  {formatCurrency(pb.convAmount)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Total Amount:</span>
+                                <span className="font-medium">
+                                  {formatCurrency(pb.grandTotal)}
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
                         <div className="flex justify-between">
                           <span>Payment Status:</span>
                           <span className="font-medium">

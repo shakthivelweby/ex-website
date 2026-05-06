@@ -27,7 +27,8 @@ apiAuthMiddleware.interceptors.response.use(
   (error) => {
     if (error?.response?.status === 401) {
       try {
-        localStorage.removeItem("token");
+        // Don't clear token here; login flow overwrites it.
+        localStorage.setItem("redirectAfterLogin", window.location.href);
         window.dispatchEvent(new CustomEvent("showLogin"));
       } catch (_) {
         // ignore

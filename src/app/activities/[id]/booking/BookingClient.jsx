@@ -423,6 +423,13 @@ const BookingClient = ({ activityId }) => {
   };
 
   const totalPrice = calculateTotalPrice();
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+  const subtotalForFees = Math.max(0, Number(totalPrice || 0));
+  const gstAmount = (subtotalForFees * gstPercent) / 100;
+  const afterGst = subtotalForFees + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalUi = afterGst + convenienceAmount;
   const effectivePricing = getEffectiveTicketUnitPrices();
   const showSeasonAddonNote = Boolean(effectivePricing?.source === "seasonal");
   const totalPaxCount = formData.adultCount + formData.childCount;
@@ -468,7 +475,8 @@ const BookingClient = ({ activityId }) => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    // handle both <form onSubmit> and Button onClick
+    if (e?.preventDefault) e.preventDefault();
 
     if (!isLogin()) {
       const event = new CustomEvent("showLogin");
@@ -560,7 +568,10 @@ const BookingClient = ({ activityId }) => {
         throw new Error("Booking creation failed (missing booking id)");
       }
 
-      const payableAmount = Math.round(Number(totalPrice || 0));
+      const payableAmount =
+        bookingData?.grand_total != null && bookingData.grand_total !== ""
+          ? Number(bookingData.grand_total)
+          : Number(grandTotalUi || 0);
 
       // 2. Create Order
       const orderResponse = await createActivityOrder({
@@ -1098,7 +1109,7 @@ const BookingClient = ({ activityId }) => {
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200">
                     <i className="fi fi-rr-money text-primary-500"></i>
                     <span className="font-semibold text-gray-900">
-                      Total: ₹{totalPrice.toFixed(0)}
+                      Total: ₹{grandTotalUi.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -1176,10 +1187,10 @@ const BookingClient = ({ activityId }) => {
                     return (
                       <div className="text-right">
                         <div className="text-sm text-gray-500 line-through">
-                          ₹{parts.originalTotal.toFixed(0)}
+                          ₹{subtotalForFees.toFixed(2)}
                         </div>
                         <div className="text-2xl font-bold text-primary-500">
-                          ₹{parts.finalTotal.toFixed(0)}
+                          ₹{grandTotalUi.toFixed(2)}
                         </div>
                         {showSeasonAddonNote ? (
                           <div className="text-xs text-blue-700 mt-1">
@@ -1192,7 +1203,7 @@ const BookingClient = ({ activityId }) => {
                   return (
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary-500">
-                        ₹{totalPrice.toFixed(0)}
+                        ₹{grandTotalUi.toFixed(2)}
                       </div>
                       {showSeasonAddonNote ? (
                         <div className="text-xs text-blue-700 mt-1">
@@ -1202,6 +1213,21 @@ const BookingClient = ({ activityId }) => {
                     </div>
                   );
                 })()}
+              </div>
+
+              <div className="space-y-1 mb-6 text-sm text-gray-600">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span className="text-gray-900 font-medium">₹{subtotalForFees.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>GST ({gstPercent}%)</span>
+                  <span className="text-gray-900 font-medium">₹{gstAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Convenience fee ({conveniencePercent}%)</span>
+                  <span className="text-gray-900 font-medium">₹{convenienceAmount.toFixed(2)}</span>
+                </div>
               </div>
 
               {/* Submit Button - Desktop */}

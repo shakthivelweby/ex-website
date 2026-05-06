@@ -218,6 +218,9 @@ export default function RentalBookings() {
           const paid = parseFloat(b.total_paid || 0);
           const balance = parseFloat(b.balance || 0);
           const locationLabel = displayRentalLocation(b);
+          const pb = b.pricing_breakdown || null;
+          const breakdownMatchesTotal =
+            pb && Number.isFinite(full) && Math.abs(Number(pb.grand_total) - full) <= 0.05;
           return (
             <div
               key={b.id}
@@ -256,6 +259,13 @@ export default function RentalBookings() {
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${statusPill(b.status)}`}>
                       {b.status || "pending"}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-gray-500">
+                    <span className="font-semibold text-gray-700">
+                      {breakdownMatchesTotal
+                        ? `GST ${pb.gst_percent}% · Convenience ${pb.convenience_fee_percent}%`
+                        : "Includes GST & convenience fee"}
                     </span>
                   </div>
                   <div className="text-xs text-gray-600">
@@ -334,6 +344,51 @@ export default function RentalBookings() {
                       <span>Full amount:</span>
                       <span className="font-medium text-gray-900">{formatCurrency(full)}</span>
                     </div>
+                    {breakdownMatchesTotal ? (
+                      <>
+                        <div className="flex justify-between gap-3">
+                          <span>Rental subtotal:</span>
+                          <span className="font-medium text-gray-900">
+                            {formatCurrency(pb.rent_subtotal_gross ?? pb.rent_subtotal)}
+                          </span>
+                        </div>
+                        {(pb.discount_amount ?? 0) > 0 ? (
+                          <>
+                            <div className="flex justify-between gap-3">
+                              <span>Discount:</span>
+                              <span className="font-medium text-green-700">
+                                −{formatCurrency(pb.discount_amount)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3 text-xs text-gray-500">
+                              <span>Rental after discount:</span>
+                              <span className="font-medium text-gray-800">
+                                {formatCurrency(pb.rent_subtotal)}
+                              </span>
+                            </div>
+                          </>
+                        ) : null}
+                        <div className="flex justify-between gap-3">
+                          <span>GST ({pb.gst_percent}%):</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(pb.gst_amount)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span>Convenience fee ({pb.convenience_fee_percent}%):</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(pb.convenience_fee_amount)}</span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span>Security deposit:</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(pb.security_deposit)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between gap-3">
+                        <span>Taxes &amp; fees:</span>
+                        <span className="font-medium text-gray-900 text-right">
+                          18% GST and 2% convenience fee included in total where applicable
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between gap-3">
                       <span>Paid:</span>
                       <span className="font-medium text-gray-900">{formatCurrency(paid || b.total_price)}</span>

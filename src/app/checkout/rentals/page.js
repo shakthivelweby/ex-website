@@ -10,6 +10,7 @@ import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
+import { computeRentalBookingMonetaryBreakdown } from "../../rentals/rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -161,22 +162,29 @@ export default function RentalCheckoutPage() {
 
   const totalHours = useMemo(() => diffHoursCeil(startISO, endISO), [startISO, endISO]);
   const rentSubtotal = useMemo(() => (totalHours > 0 ? totalHours * effectivePerHour : 0), [totalHours, effectivePerHour]);
-  const totalFullAmount = useMemo(() => rentSubtotal + depositAmount, [rentSubtotal, depositAmount]);
+  const monetary = useMemo(
+    () => computeRentalBookingMonetaryBreakdown(rentSubtotal, pricing),
+    [rentSubtotal, pricing]
+  );
+  const totalFullAmount = monetary.grandTotal;
+  const feesBeforeDeposit = monetary.feesBeforeDeposit;
+  const rentSubtotalGross = monetary.rentSubtotalGross;
+  const discountAmount = monetary.discountAmount;
+  const gstAmount = monetary.gstAmount;
+  const gstPercent = monetary.gstPercent;
+  const convenienceFeeAmount = monetary.convenienceFeeAmount;
+  const convenienceFeePercent = monetary.convenienceFeePercent;
 
   const payAdvanceAmount = useMemo(() => {
-    // Preferred: advance_type/value
     if (advanceType && advanceValue != null && Number.isFinite(advanceValue)) {
       if (advanceType === "percent") {
-        // percentage of FULL total (including deposit)
-        return (totalFullAmount * advanceValue) / 100;
+        return (feesBeforeDeposit * advanceValue) / 100;
       }
-      // flat amount (cap at full total)
       return Math.min(advanceValue, totalFullAmount || advanceValue);
     }
-    // Backward compatibility: legacy advance_amount as flat amount (cap at full total)
     if (legacyAdvanceAmount > 0) return Math.min(legacyAdvanceAmount, totalFullAmount || legacyAdvanceAmount);
     return 0;
-  }, [advanceType, advanceValue, totalFullAmount, legacyAdvanceAmount]);
+  }, [advanceType, advanceValue, feesBeforeDeposit, totalFullAmount, legacyAdvanceAmount]);
 
   const canPayAdvance = payAdvanceAmount > 0;
   const selectedPayAmount =
@@ -586,37 +594,56 @@ export default function RentalCheckoutPage() {
 
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Total hours</span>
-                <span className="text-gray-900 font-semibold text-right">
-                  {totalHours || "-"}
+                <span className="text-gray-500">
+                  {totalHours || "-"} h × ₹{money(effectivePerHour)}
                 </span>
+                <span className="text-gray-900 font-semibold text-right">₹{money(rentSubtotalGross)}</span>
               </div>
+              {discountAmount > 0 ? (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">Discount</span>
+                  <span className="text-gray-900 font-semibold text-right text-green-700">
+                    −₹{money(discountAmount)}
+                  </span>
+                </div>
+              ) : null}
+              {gstAmount > 0 ? (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">GST{gstPercent > 0 ? ` (${money(gstPercent)}%)` : ""}</span>
+                  <span className="text-gray-900 font-semibold text-right">₹{money(gstAmount)}</span>
+                </div>
+              ) : null}
+              {convenienceFeeAmount > 0 ? (
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-500">
+                    Convenience{convenienceFeePercent > 0 ? ` (${money(convenienceFeePercent)}%)` : ""}
+                  </span>
+                  <span className="text-gray-900 font-semibold text-right">₹{money(convenienceFeeAmount)}</span>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Rent subtotal</span>
-                <span className="text-gray-900 font-semibold text-right">₹{money(rentSubtotal)}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Deposit</span>
+                <span className="text-gray-500">Refundable deposit</span>
                 <span className="text-gray-900 font-semibold text-right">₹{money(depositAmount)}</span>
               </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Booking amount</span>
-                <span className="text-gray-900 font-semibold text-right">
-                  {payChoice === "full" ? "Full amount" : "Advance"}
-                </span>
+              <div className="flex justify-between gap-3 pt-2 border-t border-gray-100">
+                <span className="text-gray-900 font-bold">Total</span>
+                <span className="text-gray-900 font-bold text-right">₹{money(totalFullAmount)}</span>
               </div>
               <div className="flex justify-between gap-3">
-                <span className="text-gray-900 font-bold">Total amount</span>
-                <span className="text-gray-900 font-bold text-right">
-                  ₹{money(selectedPayAmount)}
+                <span className="text-gray-500">
+                  Pay now ({payChoice === "full" ? "full" : "advance"})
                 </span>
+                <span className="text-gray-900 font-semibold text-right">₹{money(selectedPayAmount)}</span>
               </div>
               {payChoice === "advance" && canPayAdvance && (
                 <div className="flex justify-between gap-3 text-xs">
-                  <span className="text-gray-500">Balance due later</span>
+                  <span className="text-gray-500">Remaining</span>
                   <span className="text-gray-900 font-semibold text-right">₹{money(balanceAmount)}</span>
                 </div>
               )}
+              <p className="text-[11px] text-gray-500 pt-1 leading-snug">
+                Pay now + remaining equals your total (taxes included).
+              </p>
               {totalHours === 0 && (
                 <div className="text-xs text-red-600">
                   Invalid start/end date &amp; time (still showing deposit as booking amount).

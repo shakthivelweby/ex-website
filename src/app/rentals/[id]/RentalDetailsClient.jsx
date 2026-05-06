@@ -228,14 +228,25 @@ export default function RentalDetailsClient({ rental }) {
             </div>
 
             {gallery.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Gallery</h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {gallery.slice(0, 6).map((image, index) => (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-medium text-gray-700 tracking-tight">Gallery</h2>
+                  {gallery.length > 8 ? (
+                    <button
+                      type="button"
+                      onClick={() => openImageViewer()}
+                      className="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                    >
+                      View all
+                    </button>
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {gallery.slice(0, 8).map((image, index) => (
                     <button
                       type="button"
                       key={image.id ?? index}
-                      className="aspect-square rounded-lg overflow-hidden bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity text-left p-0 border-0"
+                      className="aspect-square rounded-md overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity text-left p-0 border border-gray-100"
                       onClick={() => {
                         setIsImageViewerOpen(true);
                       }}
@@ -250,15 +261,6 @@ export default function RentalDetailsClient({ rental }) {
                     </button>
                   ))}
                 </div>
-                {gallery.length > 6 && (
-                  <button
-                    type="button"
-                    onClick={() => openImageViewer()}
-                    className="w-full py-3 text-primary-600 font-medium hover:text-primary-700 transition-colors"
-                  >
-                    View All {gallery.length} Photos
-                  </button>
-                )}
               </div>
             )}
 

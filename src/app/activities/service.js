@@ -1,4 +1,5 @@
 import apiServerMiddleware from "../api/serverMiddleware";
+import apiMiddleware from "../api/apiMiddleware";
 import axios from "axios";
 
 // get all activity categories
@@ -156,56 +157,26 @@ export const getActivityGallery = async (activityId) => {
 
 // Create activity booking
 export const createActivityBooking = async (bookingData) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const response = await axios.post(
-    process.env.NEXT_PUBLIC_API_URL + "/api/web/create-activity-booking",
-    bookingData,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+  const response = await apiMiddleware.post("/create-activity-booking", bookingData);
   return response.data;
 }
 
 // Create activity order (payment)
 export const createActivityOrder = async (data) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const response = await axios.post(
-    process.env.NEXT_PUBLIC_API_URL + "/api/web/create-activity-order",
-    data,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+  const response = await apiMiddleware.post("/create-activity-order", data);
   return response.data;
 }
 
 // Verify activity payment
 export const verifyActivityPayment = async (data) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const response = await axios.post(
-    process.env.NEXT_PUBLIC_API_URL + "/api/web/activity-payment-verify",
-    data,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+  const response = await apiMiddleware.post("/activity-payment-verify", data, {
+    timeout: 60000,
+  });
   return response.data;
 }
 
 // Payment failed
 export const activityPaymentFailed = async (data) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const response = await axios.post(
-    process.env.NEXT_PUBLIC_API_URL + "/api/web/activity-payment-failed",
-    data,
-    {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    }
-  );
+  const response = await apiMiddleware.post("/activity-payment-failed", data);
   return response.data;
 }

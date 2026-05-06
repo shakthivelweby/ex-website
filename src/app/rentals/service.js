@@ -4,6 +4,8 @@ export const getRentals = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
     if (filters.search && String(filters.search).trim()) params.append("search", String(filters.search).trim());
+    // Date filter: backend will exclude rentals already booked/blocked on that date.
+    if (filters.date && /^\d{4}-\d{2}-\d{2}$/.test(String(filters.date))) params.append("date", String(filters.date));
     const hasCoords =
       filters.latitude !== "" &&
       filters.latitude !== undefined &&
@@ -25,6 +27,7 @@ export const getRentals = async (filters = {}) => {
     if (filters.sub_category && String(filters.sub_category).trim()) params.append("sub_category", String(filters.sub_category).trim()); // slug
     if (filters.transmission && String(filters.transmission).trim()) params.append("transmission", String(filters.transmission).trim());
     if (filters.fuel_type && String(filters.fuel_type).trim()) params.append("fuel_type", String(filters.fuel_type).trim());
+    if (filters.seats && String(filters.seats).trim()) params.append("seats", String(filters.seats).trim());
     if (filters.price_from !== "" && filters.price_from !== undefined && filters.price_from !== null) params.append("price_from", String(filters.price_from));
     if (filters.price_to !== "" && filters.price_to !== undefined && filters.price_to !== null) params.append("price_to", String(filters.price_to));
     if (filters.per_page) params.append("per_page", String(filters.per_page));

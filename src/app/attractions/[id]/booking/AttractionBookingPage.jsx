@@ -247,6 +247,14 @@ const AttractionBookingPage = ({
     setCurrentStep(1);
   };
 
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+  const subtotalForSummary = getTotalPrice();
+  const gstAmount = (Number(subtotalForSummary || 0) * gstPercent) / 100;
+  const afterGst = Number(subtotalForSummary || 0) + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalForSummary = afterGst + convenienceAmount;
+
   const handleProceedToPayment = () => {
     if (!isLogin()) {
       const event = new CustomEvent("showLogin");
@@ -999,8 +1007,16 @@ const AttractionBookingPage = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Total Amount:</span>
                     <span className="text-lg font-semibold text-primary-600">
-                      ₹{getTotalPrice().toFixed(2)}
+                      ₹{grandTotalForSummary.toFixed(2)}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">GST (18%)</span>
+                    <span className="text-sm font-medium text-gray-800">₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Convenience (2%)</span>
+                    <span className="text-sm font-medium text-gray-800">₹{convenienceAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -1055,7 +1071,7 @@ const AttractionBookingPage = ({
             <div>
               <p className="text-sm text-gray-600">Total Amount</p>
               <p className="text-lg font-semibold text-gray-800">
-                ₹{getTotalPrice().toFixed(2)}
+                ₹{grandTotalForSummary.toFixed(2)}
               </p>
             </div>
           </div>

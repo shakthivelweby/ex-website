@@ -10,6 +10,7 @@ import Button from "@/components/common/Button";
 import { getRentalDetails } from "../../service";
 import { checkRentalAvailability, getRentalUnavailableDates } from "../../clientService";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
+import { computeRentalBookingMonetaryBreakdown } from "../../rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -82,21 +83,7 @@ export default function RentalBookingClient() {
 
     return basePerHour;
   }, [avail, rental, booking.start_date, basePerHour]);
-  const advanceType = pricing.advance_type || null;
-  const advanceValueRaw = pricing.advance_value;
-  const advanceValue =
-    advanceValueRaw === "" || advanceValueRaw === null || advanceValueRaw === undefined
-      ? null
-      : Number(advanceValueRaw);
-  const legacyAdvanceAmount = Number(pricing.advance_amount || 0) || 0;
   const depositAmount = Number(pricing.security_deposit || 0) || 0;
-  const adminChargeType = pricing.admin_charge_type || null;
-  const adminChargeValueRaw = pricing.admin_charge_value;
-  const adminChargeValue =
-    adminChargeValueRaw === "" || adminChargeValueRaw === null || adminChargeValueRaw === undefined
-      ? null
-      : Number(adminChargeValueRaw);
-
   const effectiveHours = useMemo(() => computeBillingHoursCeil(booking), [
     booking.start_date,
     booking.end_date,
@@ -114,32 +101,17 @@ export default function RentalBookingClient() {
     return effectiveHours * effectivePerHour;
   }, [effectiveHours, effectivePerHour]);
 
-  const adminChargeAmount = useMemo(() => {
-    if (!adminChargeType || adminChargeValue === null || !Number.isFinite(adminChargeValue)) return 0;
-    if (adminChargeType === "percent") {
-      return (rentSubtotal * adminChargeValue) / 100;
-    }
-    return adminChargeValue;
-  }, [adminChargeType, adminChargeValue, rentSubtotal]);
-
-  const totalWithAdminCharge = useMemo(() => {
-    return rentSubtotal + adminChargeAmount;
-  }, [rentSubtotal, adminChargeAmount]);
-
-  const totalCostIncludingDeposit = useMemo(() => {
-    return totalWithAdminCharge + depositAmount;
-  }, [totalWithAdminCharge, depositAmount]);
-
-  const payAdvanceAmount = useMemo(() => {
-    if (advanceType && advanceValue != null && Number.isFinite(advanceValue)) {
-      if (advanceType === "percent") {
-        return (totalWithAdminCharge * advanceValue) / 100;
-      }
-      return Math.min(advanceValue, totalWithAdminCharge || advanceValue);
-    }
-    if (legacyAdvanceAmount > 0) return Math.min(legacyAdvanceAmount, totalWithAdminCharge || legacyAdvanceAmount);
-    return 0;
-  }, [advanceType, advanceValue, totalWithAdminCharge, legacyAdvanceAmount]);
+  const monetary = useMemo(
+    () => computeRentalBookingMonetaryBreakdown(rentSubtotal, pricing),
+    [rentSubtotal, pricing]
+  );
+  const rentSubtotalGross = monetary.rentSubtotalGross;
+  const discountAmount = monetary.discountAmount;
+  const gstAmount = monetary.gstAmount;
+  const gstPercent = monetary.gstPercent;
+  const convenienceFeeAmount = monetary.convenienceFeeAmount;
+  const convenienceFeePercent = monetary.convenienceFeePercent;
+  const totalCostIncludingDeposit = monetary.grandTotal;
 
   const vehicleLocation = (rental?.location || "").toString().trim();
 
@@ -175,7 +147,9 @@ export default function RentalBookingClient() {
       try {
         const res = await getRentalUnavailableDates(rentalId);
         if (cancelled) return;
-        const payload = res?.data || {};
+        // API wrappers differ across endpoints; accept both {data:{...}} and direct payloads.
+        const payload =
+          (res && typeof res === "object" && res.data && typeof res.data === "object" ? res.data : res) || {};
         setUnavailable({
           bookings: Array.isArray(payload.bookings) ? payload.bookings : [],
           blocked: Array.isArray(payload.blocked) ? payload.blocked : [],
@@ -210,6 +184,92 @@ export default function RentalBookingClient() {
       if (r?.start_datetime && r?.end_datetime && overlaps(r.start_datetime, r.end_datetime)) return true;
     }
     return false;
+  };
+
+  const overlapsWindow = (windowStartISO, windowEndISO, itemStartISO, itemEndISO) => {
+    const ws = new Date(windowStartISO);
+    const we = new Date(windowEndISO);
+    const s = new Date(itemStartISO);
+    const e = new Date(itemEndISO);
+    if (![ws, we, s, e].every((d) => Number.isFinite(d.getTime()))) return false;
+    return s < we && e > ws;
+  };
+
+  const blockedAppliesToWindow = (blockedRow, windowStartISO, windowEndISO) => {
+    const ad = blockedRow?.applicable_days;
+    if (!ad) return true;
+    const allowed = [];
+    const keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    keys.forEach((k, idx) => {
+      if (ad?.[k]) allowed.push(idx);
+    });
+    // if applicable_days exists but none enabled, treat as non-blocking
+    if (allowed.length === 0) return false;
+
+    const ws = new Date(windowStartISO);
+    const we = new Date(windowEndISO);
+    if (![ws, we].every((d) => Number.isFinite(d.getTime()))) return true;
+    const cursor = new Date(ws);
+    cursor.setHours(0, 0, 0, 0);
+    const endDay = new Date(we);
+    endDay.setHours(0, 0, 0, 0);
+    while (cursor <= endDay) {
+      if (allowed.includes(cursor.getDay())) return true;
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return false;
+  };
+
+  const isWindowUnavailable = (windowStartISO, windowEndISO) => {
+    const ws = new Date(windowStartISO);
+    const we = new Date(windowEndISO);
+    if (![ws, we].every((d) => Number.isFinite(d.getTime()))) return false;
+    if (we <= ws) return false;
+
+    for (const b of unavailable.bookings || []) {
+      if (b?.start_datetime && b?.end_datetime && overlapsWindow(windowStartISO, windowEndISO, b.start_datetime, b.end_datetime)) {
+        return true;
+      }
+    }
+    for (const r of unavailable.blocked || []) {
+      if (!r?.start_datetime || !r?.end_datetime) continue;
+      if (!blockedAppliesToWindow(r, windowStartISO, windowEndISO)) continue;
+      if (overlapsWindow(windowStartISO, windowEndISO, r.start_datetime, r.end_datetime)) return true;
+    }
+    return false;
+  };
+
+  const isStartDateSelectable = (dateObj) => {
+    if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return true;
+    const ymd = formatDateYmd(dateObj);
+    const pu = String(booking.pickup_time || "").trim();
+    const endYmd = String(booking.end_date || "").trim();
+    const du = String(booking.dropoff_time || "").trim();
+    if (timeRe.test(pu) && endYmd && timeRe.test(du)) {
+      const startISO = `${ymd}T${pu}:00`;
+      const endISO = `${endYmd}T${du}:00`;
+      if (new Date(endISO) > new Date(startISO)) {
+        return !isWindowUnavailable(startISO, endISO);
+      }
+    }
+    // fallback: day-level block
+    return !isDateUnavailable(dateObj);
+  };
+
+  const isEndDateSelectable = (dateObj) => {
+    if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return true;
+    const ymd = formatDateYmd(dateObj);
+    const du = String(booking.dropoff_time || "").trim();
+    const startYmd = String(booking.start_date || "").trim();
+    const pu = String(booking.pickup_time || "").trim();
+    if (timeRe.test(du) && startYmd && timeRe.test(pu)) {
+      const startISO = `${startYmd}T${pu}:00`;
+      const endISO = `${ymd}T${du}:00`;
+      if (new Date(endISO) > new Date(startISO)) {
+        return !isWindowUnavailable(startISO, endISO);
+      }
+    }
+    return !isDateUnavailable(dateObj);
   };
 
   const parseYmdToDate = (ymd) => {
@@ -451,7 +511,7 @@ export default function RentalBookingClient() {
                       <DatePicker
                         selected={parseYmdToDate(booking.start_date)}
                         onChange={(d) => updateBooking("start_date", formatDateYmd(d))}
-                        filterDate={(d) => !isDateUnavailable(d)}
+                        filterDate={isStartDateSelectable}
                         minDate={new Date()}
                         placeholderText="Select start date"
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
@@ -464,7 +524,7 @@ export default function RentalBookingClient() {
                       <DatePicker
                         selected={parseYmdToDate(booking.end_date)}
                         onChange={(d) => updateBooking("end_date", formatDateYmd(d))}
-                        filterDate={(d) => !isDateUnavailable(d)}
+                        filterDate={isEndDateSelectable}
                         minDate={parseYmdToDate(booking.start_date) || new Date()}
                         placeholderText="Select end date"
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
@@ -557,30 +617,53 @@ export default function RentalBookingClient() {
 
               <div className="bg-white rounded-lg shadow border p-4">
                 <h3 className="text-base font-medium text-gray-800 mb-3">Booking summary</h3>
-                <div className="space-y-2 mb-4 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Total hours</span>
-                    <span className="font-medium text-gray-900">{effectiveHours || 0}</span>
+                <div className="space-y-2.5 mb-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-600">
+                      {effectiveHours || 0} h × ₹{money(effectivePerHour)}
+                    </span>
+                    <span className="font-medium text-gray-900">₹{money(rentSubtotalGross)}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Rate / hour</span>
-                    <span className="font-medium text-gray-900">₹{money(effectivePerHour)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Security deposit</span>
+                  {discountAmount > 0 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-600">
+                        Discount
+                        {pricing.discount_type === "percent" &&
+                        pricing.discount_value != null &&
+                        String(pricing.discount_value) !== "" ? (
+                          <span className="text-gray-400"> ({String(pricing.discount_value)}%)</span>
+                        ) : null}
+                      </span>
+                      <span className="font-medium text-green-700">−₹{money(discountAmount)}</span>
+                    </div>
+                  ) : null}
+                  {gstAmount > 0 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-600">GST{gstPercent > 0 ? ` (${money(gstPercent)}%)` : ""}</span>
+                      <span className="font-medium text-gray-900">₹{money(gstAmount)}</span>
+                    </div>
+                  ) : null}
+                  {convenienceFeeAmount > 0 ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-600">
+                        Convenience fee{convenienceFeePercent > 0 ? ` (${money(convenienceFeePercent)}%)` : ""}
+                      </span>
+                      <span className="font-medium text-gray-900">₹{money(convenienceFeeAmount)}</span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-gray-600">Refundable deposit</span>
                     <span className="font-medium text-gray-900">₹{money(depositAmount)}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Advance to pay</span>
-                    <span className="font-medium text-gray-900">₹{money(payAdvanceAmount)}</span>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-gray-600">Total amount</span>
-                    <span className="text-lg font-semibold text-primary-600">₹{money(totalCostIncludingDeposit)}</span>
+                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <span className="text-gray-800 font-medium">Total</span>
+                    <span className="text-lg font-semibold text-primary-600">
+                      ₹{money(totalCostIncludingDeposit)}
+                    </span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mb-4">
-                  Total amount includes refundable security deposit where applicable.
+                <p className="text-[11px] text-gray-500 mb-4 leading-snug">
+                  Total includes taxes and refundable deposit.
                 </p>
                 <Button onClick={onContinue} size="lg" className="w-full" disabled={continueDisabled}>
                   {checking ? "Checking…" : "Continue to payment"}

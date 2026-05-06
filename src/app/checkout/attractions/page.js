@@ -166,7 +166,7 @@ export default function AttractionCheckoutPage() {
         return;
       }
 
-      // total_amount already includes guide rate from booking page
+      // total_amount already includes guide rate from booking page (pre-tax). Backend will compute GST+convenience safely.
       const finalTotalAmount = selectedTickets.total_amount || 0;
 
       // Calculate total adult and child counts from booking tickets
@@ -207,7 +207,10 @@ export default function AttractionCheckoutPage() {
       const response = await book(apiBookingData);
      
       if (response.status) {
-        const paymentAmount = finalTotalAmount; // Full payment including guide charge
+        const paymentAmount =
+          response?.data?.grand_total != null && response.data.grand_total !== ""
+            ? Number(response.data.grand_total)
+            : finalTotalAmount;
         
         // Create order for payment
         const orderRes = await createOrder({
@@ -323,6 +326,12 @@ export default function AttractionCheckoutPage() {
 
   const ticketDetails = getTicketDetails();
   const totalAmount = getTotalPrice();
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+  const gstAmount = ((Number(totalAmount || 0) || 0) * gstPercent) / 100;
+  const afterGst = (Number(totalAmount || 0) || 0) + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalUi = afterGst + convenienceAmount;
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -416,9 +425,17 @@ export default function AttractionCheckoutPage() {
                   Price Details
                 </h4>
                 <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">GST (18%)</span>
+                    <span className="text-gray-900 font-semibold">₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Convenience (2%)</span>
+                    <span className="text-gray-900 font-semibold">₹{convenienceAmount.toFixed(2)}</span>
+                  </div>
                   <div className="flex justify-between font-bold pt-1.5 border-t border-green-200">
                     <span className="text-gray-900 text-sm">Total Amount</span>
-                    <span className="text-primary-600 text-sm">₹{parseFloat(totalAmount).toFixed(2)}</span>
+                    <span className="text-primary-600 text-sm">₹{grandTotalUi.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -721,9 +738,21 @@ export default function AttractionCheckoutPage() {
                       <span className="text-gray-600">Total Tickets</span>
                       <span className="text-gray-900 font-semibold">{getTotalSelectedTickets()}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal (excl. taxes)</span>
+                      <span className="text-gray-900 font-semibold">₹{parseFloat(totalAmount || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">GST (18%)</span>
+                      <span className="text-gray-900 font-semibold">₹{gstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Convenience fee (2%)</span>
+                      <span className="text-gray-900 font-semibold">₹{convenienceAmount.toFixed(2)}</span>
+                    </div>
                     <div className="flex justify-between font-bold pt-2 border-t border-green-200">
                       <span className="text-gray-900">Total Amount</span>
-                      <span className="text-primary-600">₹{parseFloat(totalAmount).toFixed(2)}</span>
+                      <span className="text-primary-600">₹{grandTotalUi.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>

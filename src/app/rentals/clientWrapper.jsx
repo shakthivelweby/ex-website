@@ -25,6 +25,7 @@ const ClientWrapper = ({
     sub_category: initialSearchParams.sub_category || "",
     transmission: initialSearchParams.transmission || "",
     fuel_type: initialSearchParams.fuel_type || "",
+    seats: initialSearchParams.seats || "",
     rating: initialSearchParams.rating || "",
     price_from: initialSearchParams.price_from || "",
     price_to: initialSearchParams.price_to || "",
@@ -48,6 +49,7 @@ const ClientWrapper = ({
     setOrDelete("sub_category", newFilters.sub_category);
     setOrDelete("transmission", newFilters.transmission);
     setOrDelete("fuel_type", newFilters.fuel_type);
+    setOrDelete("seats", newFilters.seats);
     setOrDelete("rating", newFilters.rating);
     if (newFilters.price_from && newFilters.price_to) {
       params.set("price_from", newFilters.price_from);

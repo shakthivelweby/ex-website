@@ -9,6 +9,7 @@ import { getRentalSubCategories } from "@/app/rentals/service";
 
 const FUEL_TYPE_OPTIONS = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "Other"];
 const TRANSMISSION_OPTIONS = ["Manual", "Automatic", "AMT", "CVT", "DCT", "Other"];
+const SEAT_OPTIONS = ["2", "4", "5", "6", "7", "8"];
 
 const RentalFilters = ({
   initialFilters,
@@ -91,6 +92,7 @@ const RentalFilters = ({
       sub_category: "",
       transmission: "",
       fuel_type: "",
+      seats: "",
       rating: "",
       price_from: "",
       price_to: "",
@@ -218,6 +220,25 @@ const RentalFilters = ({
           {TRANSMISSION_OPTIONS.map((item) => (
             <option key={item} value={item}>
               {item}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="p-3 bg-gray-100 rounded-lg">
+        <div className="flex items-center gap-2 mb-2">
+          <i className="fi fi-rr-users text-gray-400"></i>
+          <span className="text-sm font-medium text-gray-700">Seating capacity</span>
+        </div>
+        <select
+          value={tempFilters.seats || ""}
+          onChange={(e) => patchFilters({ seats: e.target.value })}
+          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+        >
+          <option value="">Any</option>
+          {SEAT_OPTIONS.map((s) => (
+            <option key={s} value={s}>
+              {s} seats
             </option>
           ))}
         </select>

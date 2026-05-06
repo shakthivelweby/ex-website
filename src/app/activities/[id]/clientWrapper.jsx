@@ -315,6 +315,13 @@ const ActivityDetailPage = ({ activityDetails }) => {
     setExpandedTicketId((prev) => prev ?? firstId);
   }, [activityDetails?.ticketOptions]);
 
+  // By default, select the first ticket option (so booking can proceed)
+  useEffect(() => {
+    const firstId = activityDetails?.ticketOptions?.[0]?.id;
+    if (!firstId) return;
+    setSelectedTicketId((prev) => prev ?? firstId);
+  }, [activityDetails?.ticketOptions]);
+
   const getDummyCancellationPolicy = (ticket) => {
     return `<div class="space-y-3">
       <div class="">

@@ -586,20 +586,20 @@ const Form = ({
                 dateFormat="dd/MM/yyyy"
                 placeholderText="Choose a date"
                 className={`w-full px-4 py-3 pl-12 text-gray-800 border ${
-                  !selectedTicket ? "bg-gray-50 cursor-not-allowed" : "cursor-pointer"
+                  "cursor-pointer"
                 } ${errors.date ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 outline-none`}
-                disabled={!selectedTicket}
+                disabled={false}
               />
               <i className="fi fi-rr-calendar absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none"></i>
             </div>
             {errors.date && (
               <p className="text-red-500 text-xs mt-1">{errors.date}</p>
             )}
-            {!selectedTicket && (
+            {!selectedTicket ? (
               <p className="text-gray-500 text-xs mt-1">
-                Select a ticket option to choose date.
+                You can pick a date now. Select a ticket option to continue booking.
               </p>
-            )}
+            ) : null}
           </div>
 
           {/* Time Slot Selection */}

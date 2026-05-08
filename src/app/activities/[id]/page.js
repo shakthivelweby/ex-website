@@ -50,6 +50,14 @@ const ActivityDetailPage = async ({ params }) => {
     }
   }
 
+  // Detail page display: show base + admin charge only (no discount here).
+  const applyAdminOnly = (amountRaw, adminRaw) => {
+    const amount = Number(amountRaw || 0);
+    const admin = Math.max(0, Number(adminRaw || 0));
+    if (!Number.isFinite(amount) || amount <= 0) return 0;
+    return Math.round((amount + (amount * admin) / 100) * 100) / 100;
+  };
+
   // Format time helper
   const formatTime = (timeString) => {
     if (!timeString) return "TBD";
@@ -70,14 +78,18 @@ const ActivityDetailPage = async ({ params }) => {
     ? activity.activity_ticket_types.map((ticket) => {
     const priceObj = ticket.current_price;
     const rateType = priceObj?.rate_type || 'pax';
-    const price = rateType === 'full' ? priceObj?.full_rate : priceObj?.adult_price;
+    const base = rateType === 'full' ? priceObj?.full_rate : priceObj?.adult_price;
+    const priceWithAdmin = applyAdminOnly(base || 0, priceObj?.admin_charge ?? 0);
 
     return {
       id: ticket.id,
       type: ticket.name, // or ticket_type_label
       name: ticket.name,
       description: ticket.description,
-      price: price || 0,
+      // Keep raw/base prices for comparisons + selection (do NOT include admin here).
+      price: Number(base || 0),
+      // Convenience field for UI when we want base+admin (detail page "starting from").
+      price_with_admin: priceWithAdmin || 0,
       originalPrice: 0, // Backend doesn't seem to have original price separate yet
       rateType: rateType,
       child_price: priceObj?.child_price || 0,
@@ -107,7 +119,10 @@ const ActivityDetailPage = async ({ params }) => {
     categories: [activity.activity_category?.name || activity.activityCategory?.name || "Activity"],
     location: activity.location || activity.city,
     address: activity.address || "",
-    price: bestPrice > 0 ? `₹${bestPrice}` : 'Price TBA',
+    price:
+      bestPrice > 0
+        ? `₹${applyAdminOnly(bestPrice, activityData?.current_pricing?.admin_charge ?? 0)}`
+        : 'Price TBA',
     image: activity.cover_image || activity.thumb_image || activity.image,
     description: activity.description || "",
     activityGuide: {

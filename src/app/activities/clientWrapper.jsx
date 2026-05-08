@@ -138,12 +138,18 @@ const ClientWrapper = ({
               activity.image ||
               activity.thumb_image ||
               activity.cover_image,
-            price:
-              activity.price?.rate_type === "full"
-                ? activity.price?.full_rate
-                : activity.price?.rate_type === "pax"
-                ? activity.price?.adult_price
-                : activity.price?.full_rate || activity.price || 0,
+            price: (() => {
+              const rt = activity.price?.rate_type;
+              const base =
+                rt === "full"
+                  ? Number(activity.price?.full_rate || 0)
+                  : rt === "pax"
+                  ? Number(activity.price?.adult_price || 0)
+                  : Number(activity.price?.full_rate || activity.price || 0);
+              const admin = Math.max(0, Number(activity.price?.admin_charge ?? 0));
+              const afterAdmin = base + (base * admin) / 100;
+              return Math.round(afterAdmin * 100) / 100;
+            })(),
             rating: activity.rating || 0,
             reviewCount: activity.review_count || 0,
             duration: formatTimeTo12Hour(activity.start_time) || "updating",

@@ -52,11 +52,36 @@ export default function EventCheckoutPage() {
         const parsedTickets = JSON.parse(decodeURIComponent(ticketsData));
         setSelectedTickets(parsedTickets);
 
-        // Fetch event and booking details
-        const [eventResponse, bookingResponse] = await Promise.all([
-          eventInfo(eventId),
-          getDetailsForBooking(eventId),
-        ]);
+        // Fetch event and booking details (separately so we can surface which one fails)
+        let eventResponse;
+        let bookingResponse;
+        try {
+          eventResponse = await eventInfo(eventId);
+        } catch (err) {
+          const status = err?.response?.status;
+          const data = err?.response?.data;
+          const serverMsg = (typeof data === "string" ? data : data?.message) || err?.message;
+          setError(
+            ["event-details", status ? `HTTP ${status}` : null, serverMsg]
+              .filter(Boolean)
+              .join(" - ")
+          );
+          return;
+        }
+
+        try {
+          bookingResponse = await getDetailsForBooking(eventId);
+        } catch (err) {
+          const status = err?.response?.status;
+          const data = err?.response?.data;
+          const serverMsg = (typeof data === "string" ? data : data?.message) || err?.message;
+          setError(
+            ["event-booking-details", status ? `HTTP ${status}` : null, serverMsg]
+              .filter(Boolean)
+              .join(" - ")
+          );
+          return;
+        }
 
         if (eventResponse.status && bookingResponse.status) {
           setEventData(eventResponse.data);
@@ -64,8 +89,18 @@ export default function EventCheckoutPage() {
         } else {
           setError("Failed to load event details");
         }
-      } catch (error) {      
-        setError("Failed to load event details. Please try again.");
+      } catch (error) {
+        const status = error?.response?.status;
+        const data = error?.response?.data;
+        const serverMsg =
+          (typeof data === "string" ? data : data?.message) || null;
+        const fallback =
+          error?.message || "Failed to load event details. Please try again.";
+        setError(
+          [status ? `HTTP ${status}` : null, serverMsg || fallback]
+            .filter(Boolean)
+            .join(" - ")
+        );
       } finally {
         setIsLoadingData(false);
       }
@@ -151,10 +186,39 @@ export default function EventCheckoutPage() {
       );
 
       if (ticketPrice && quantity > 0) {
-        total += parseFloat(ticketPrice.price) * quantity;
+        const base = Number(ticketPrice.price || 0);
+        const admin = Math.max(0, Number(ticketPrice.admin_charge ?? 0));
+        const afterAdmin =
+          Math.round((base + (base * admin) / 100) * 100) / 100;
+        total += afterAdmin * quantity;
       }
     });
     return total;
+  };
+
+  const getPriceBreakdown = () => {
+    const GST_PERCENT = 18;
+    const CONVENIENCE_PERCENT = 2;
+
+    const total = Number(getTotalPrice() || 0);
+    const discount = Number(selectedTickets.discount_amount || 0);
+    const subtotalAfterDiscount = Math.max(0, total - discount);
+
+    const gstAmount = (subtotalAfterDiscount * GST_PERCENT) / 100;
+    const afterGst = subtotalAfterDiscount + gstAmount;
+    const convenienceFeeAmount = (afterGst * CONVENIENCE_PERCENT) / 100;
+    const grandTotal = afterGst + convenienceFeeAmount;
+
+    return {
+      total,
+      discount,
+      subtotalAfterDiscount,
+      gstPercent: GST_PERCENT,
+      gstAmount,
+      conveniencePercent: CONVENIENCE_PERCENT,
+      convenienceFeeAmount,
+      grandTotal,
+    };
   };
 
   const getTicketDetails = () => {
@@ -184,8 +248,8 @@ export default function EventCheckoutPage() {
             endTime: show.end_time,
             ticketType: ticketType.name,
             quantity: ticket.quantity,
-            price: ticket.price,
-            total: ticket.total,
+            price: ticket.unit_price ?? ticket.price,
+            total: ticket.total_price ?? ticket.total,
           });
         }
       });
@@ -205,6 +269,15 @@ export default function EventCheckoutPage() {
       const ticketType = ticketPrice?.event_ticket_type.event_ticket_type_master;
 
       if (date && show && ticketPrice && ticketType) {
+        const base = Number(ticketPrice.price || 0);
+        const admin = Math.max(0, Number(ticketPrice.admin_charge ?? 0));
+        const afterAdmin =
+          Math.round((base + (base * admin) / 100) * 100) / 100;
+        const pct = Math.max(0, Number(ticketPrice.discount || 0));
+        const final =
+          pct > 0
+            ? Math.round((afterAdmin - (afterAdmin * pct) / 100) * 100) / 100
+            : afterAdmin;
         ticketDetails.push({
           date: date.date,
           showName: show.name,
@@ -212,8 +285,8 @@ export default function EventCheckoutPage() {
           endTime: show.end_time,
           ticketType: ticketType.name,
           quantity: quantity,
-          price: ticketPrice.price,
-          total: parseFloat(ticketPrice.price) * quantity,
+          price: final,
+          total: final * quantity,
         });
       }
     });
@@ -237,16 +310,26 @@ export default function EventCheckoutPage() {
         event_id: parseInt(searchParams.get("event_id")),
         event_day_id: selectedTickets.event_day_id,
         event_show_id: selectedTickets.event_show_id,
-        total_amount: selectedTickets.total_amount,
+        // Backend expects total_amount as the pre-tax subtotal (GST & convenience are added server-side)
+        total_amount: breakdown.total,
         discount_amount: selectedTickets.discount_amount,
-        bookingTickets: selectedTickets.bookingTickets
+        bookingTickets: (selectedTickets.bookingTickets || []).map((t) => ({
+          event_ticket_type_id: t.event_ticket_type_id,
+          quantity: t.quantity,
+          unit_price: t.unit_price ?? t.price,
+          total_price: t.total_price ?? t.total,
+        })),
       };
 
       // First create booking to get order ID
       const response = await book(apiBookingData);
      
       if (response.status) {
-        const paymentAmount = selectedTickets.total_amount; // Full payment
+        // Align with Attraction/Activity: pay server-computed grand_total when available.
+        const paymentAmount =
+          response?.data?.grand_total != null && response.data.grand_total !== ""
+            ? Number(response.data.grand_total)
+            : Number(breakdown.grandTotal || 0);
         
         // Create order for payment
         const orderRes = await createOrder({
@@ -293,8 +376,11 @@ export default function EventCheckoutPage() {
             // Payment initialization failed - mark payment as failed
             const failRes = await paymentFailure(orderRes.data.event_payment_id);
             console.log(failRes);
-            
-            setError("Payment initialization failed. Please try again.");
+
+            setError(
+              paymentResponse?.error?.description ||
+                "Payment initialization failed. Please try again."
+            );
           }
         } else {
           setError(orderRes.message || "Failed to create payment order. Please try again.");
@@ -305,7 +391,11 @@ export default function EventCheckoutPage() {
 
     } catch (error) {
       console.error("Booking error:", error);
-      setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
+      setError(
+        error?.message ||
+          error.response?.data?.message ||
+          "Failed to complete booking. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -352,6 +442,7 @@ export default function EventCheckoutPage() {
 
   const ticketDetails = getTicketDetails();
   const totalAmount = getTotalPrice();
+  const breakdown = getPriceBreakdown();
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -435,6 +526,36 @@ export default function EventCheckoutPage() {
                 </div>
               </div>
 
+              {/* Ticket Details */}
+              <div className="bg-gradient-to-r from-purple-50 to-violet-25 p-2.5 rounded-lg border border-purple-100">
+                <h4 className="font-semibold text-gray-900 mb-1.5 text-sm flex items-center">
+                  <div className="w-3.5 h-3.5 bg-purple-100 rounded-md flex items-center justify-center mr-1.5">
+                    <i className="fi fi-rr-calendar text-purple-600 text-[8px]"></i>
+                  </div>
+                  Selected Tickets
+                </h4>
+                <div className="space-y-2">
+                  {ticketDetails.map((ticket, index) => (
+                    <div key={index} className="text-xs border-b border-purple-200 pb-2 last:border-b-0 last:pb-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-gray-700 font-medium">
+                          {ticket.ticketType} × {ticket.quantity}
+                        </span>
+                        <span className="text-gray-900 font-semibold">
+                          ₹{ticket.total.toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-gray-600">
+                        {formatDate(ticket.date)} - {ticket.showName}
+                      </p>
+                      <p className="text-gray-500">
+                        {formatTime(ticket.startTime)} - {formatTime(ticket.endTime)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="bg-gradient-to-r from-green-50 to-emerald-25 p-2.5 rounded-lg border border-green-100">
                 <h4 className="font-semibold text-gray-900 mb-1.5 text-sm flex items-center">
                   <div className="w-3.5 h-3.5 bg-green-100 rounded-md flex items-center justify-center mr-1.5">
@@ -442,10 +563,42 @@ export default function EventCheckoutPage() {
                   </div>
                   Price Details
                 </h4>
-                <div className="space-y-1">
+                <div className="space-y-1 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="text-gray-900 font-semibold">
+                      ₹{breakdown.total.toFixed(2)}
+                    </span>
+                  </div>
+                  {breakdown.discount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="text-gray-900 font-semibold">
+                        -₹{breakdown.discount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      GST ({breakdown.gstPercent}%)
+                    </span>
+                    <span className="text-gray-900 font-semibold">
+                      ₹{breakdown.gstAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">
+                      Convenience ({breakdown.conveniencePercent}%)
+                    </span>
+                    <span className="text-gray-900 font-semibold">
+                      ₹{breakdown.convenienceFeeAmount.toFixed(2)}
+                    </span>
+                  </div>
                   <div className="flex justify-between font-bold pt-1.5 border-t border-green-200">
-                    <span className="text-gray-900 text-sm">Total Amount</span>
-                    <span className="text-primary-600 text-sm">₹{totalAmount.toFixed(2)}</span>
+                    <span className="text-gray-900 text-sm">Grand Total</span>
+                    <span className="text-primary-600 text-sm">
+                      ₹{breakdown.grandTotal.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -730,21 +883,6 @@ export default function EventCheckoutPage() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-green-50 to-emerald-25 p-3 rounded-xl border border-green-100">
-                  <h4 className="font-bold text-gray-900 mb-2 text-sm flex items-center">
-                    <div className="w-4 h-4 bg-green-100 rounded-lg flex items-center justify-center mr-2">
-                      <i className="fi fi-rr-money-bill-wave text-green-600 text-xs"></i>
-                    </div>
-                    Price Details
-                  </h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between font-bold pt-2 border-t border-green-200">
-                      <span className="text-gray-900 text-sm">Total Amount</span>
-                      <span className="text-primary-600 text-sm">₹{totalAmount.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Ticket Details */}
                 <div className="bg-gradient-to-r from-purple-50 to-violet-25 p-3 rounded-xl border border-purple-100">
                   <h4 className="font-bold text-gray-900 mb-2 text-sm flex items-center">
@@ -770,6 +908,53 @@ export default function EventCheckoutPage() {
                     ))}
                   </div>
                 </div>
+
+                <div className="bg-gradient-to-r from-green-50 to-emerald-25 p-3 rounded-xl border border-green-100">
+                  <h4 className="font-bold text-gray-900 mb-2 text-sm flex items-center">
+                    <div className="w-4 h-4 bg-green-100 rounded-lg flex items-center justify-center mr-2">
+                      <i className="fi fi-rr-money-bill-wave text-green-600 text-xs"></i>
+                    </div>
+                    Price Details
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotal</span>
+                      <span className="text-gray-900 font-bold">
+                        ₹{breakdown.total.toFixed(2)}
+                      </span>
+                    </div>
+                    {breakdown.discount > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Discount</span>
+                        <span className="text-gray-900 font-bold">
+                          -₹{breakdown.discount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        GST ({breakdown.gstPercent}%)
+                      </span>
+                      <span className="text-gray-900 font-bold">
+                        ₹{breakdown.gstAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        Convenience ({breakdown.conveniencePercent}%)
+                      </span>
+                      <span className="text-gray-900 font-bold">
+                        ₹{breakdown.convenienceFeeAmount.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-bold pt-2 border-t border-green-200">
+                      <span className="text-gray-900 text-sm">Grand Total</span>
+                      <span className="text-primary-600 text-sm">
+                        ₹{breakdown.grandTotal.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -781,7 +966,7 @@ export default function EventCheckoutPage() {
         show={showSuccess}
         onClose={() => {
           setShowSuccess(false);
-          router.push("/my-bookings");
+          router.push("/my-bookings?tab=events");
         }}
         title={successMessage.title}
         message={successMessage.message}

@@ -102,6 +102,19 @@ const BookingPage = ({ eventId }) => {
     );
   };
 
+  const applyAdminCharge = (amountRaw, adminPctRaw) => {
+    const amount = Number(amountRaw || 0);
+    const admin = Math.max(0, Number(adminPctRaw || 0));
+    return Math.round((amount + (amount * admin) / 100) * 100) / 100;
+  };
+
+  const applyDiscount = (amountRaw, discountPctRaw) => {
+    const amount = Number(amountRaw || 0);
+    const pct = Math.max(0, Number(discountPctRaw || 0));
+    if (pct <= 0) return Math.round(amount * 100) / 100;
+    return Math.round((amount - (amount * pct) / 100) * 100) / 100;
+  };
+
   const getTotalPrice = () => {
     let total = 0;
     Object.entries(selectedTickets).forEach(([key, quantity]) => {
@@ -112,10 +125,61 @@ const BookingPage = ({ eventId }) => {
       );
 
       if (ticketPrice && quantity > 0) {
-        total += parseFloat(ticketPrice.price) * quantity;
+        const unitAfterAdmin = applyAdminCharge(
+          ticketPrice.price,
+          ticketPrice.admin_charge
+        );
+        total += unitAfterAdmin * quantity;
       }
     });
     return total;
+  };
+
+  const getPriceBreakdown = () => {
+    const GST_PERCENT = 18;
+    const CONVENIENCE_PERCENT = 2;
+
+    let totalAmount = 0;
+    let discountAmount = 0;
+
+    Object.entries(selectedTickets).forEach(([key, quantity]) => {
+      const [dateId, showId, ticketTypeId] = key.split("-");
+      const date = bookingData?.find((d) => d.id == dateId);
+      const ticketPrice = date?.event_ticket_prices.find(
+        (t) => t.event_ticket_type_id == ticketTypeId
+      );
+      if (!ticketPrice || quantity <= 0) return;
+
+      const unitAfterAdmin = applyAdminCharge(
+        ticketPrice.price,
+        ticketPrice.admin_charge
+      );
+      const lineTotal = unitAfterAdmin * quantity;
+      const pct = parseFloat(ticketPrice.discount || 0);
+      const unitFinal = applyDiscount(unitAfterAdmin, pct);
+      const lineDiscount = (unitAfterAdmin - unitFinal) * quantity;
+
+      totalAmount += lineTotal;
+      discountAmount += lineDiscount;
+    });
+
+    const subtotalAfterDiscount = Math.max(0, totalAmount - discountAmount);
+
+    const gstAmount = (subtotalAfterDiscount * GST_PERCENT) / 100;
+    const afterGst = subtotalAfterDiscount + gstAmount;
+    const convenienceFeeAmount = (afterGst * CONVENIENCE_PERCENT) / 100;
+    const grandTotal = afterGst + convenienceFeeAmount;
+
+    return {
+      totalAmount,
+      discountAmount,
+      subtotalAfterDiscount,
+      gstPercent: GST_PERCENT,
+      gstAmount,
+      conveniencePercent: CONVENIENCE_PERCENT,
+      convenienceFeeAmount,
+      grandTotal,
+    };
   };
 
   const handleContinue = () => {
@@ -153,17 +217,32 @@ const BookingPage = ({ eventId }) => {
       );
 
       if (date && show && ticketPrice && quantity > 0) {
-        const ticketTotal = parseFloat(ticketPrice.price) * quantity;
+        // IMPORTANT: Keep amounts PRE-discount so the API can compute discount/taxes correctly.
+        const unitAfterAdmin = applyAdminCharge(
+          ticketPrice.price,
+          ticketPrice.admin_charge
+        );
+        const ticketTotal = unitAfterAdmin * quantity;
         totalAmount += ticketTotal;
+
+        const pct = parseFloat(ticketPrice.discount || 0);
+        if (pct > 0) {
+          const unitFinal = applyDiscount(unitAfterAdmin, pct);
+          discountAmount += (unitAfterAdmin - unitFinal) * quantity;
+        }
 
         formattedTickets.push({
           event_ticket_type_id: parseInt(ticketTypeId),
           quantity: quantity,
-          price: parseFloat(ticketPrice.price),
-          total: ticketTotal,
+          unit_price: unitAfterAdmin,
+          total_price: ticketTotal,
         });
       }
     });
+
+    // round to 2 decimals for API + UI consistency
+    totalAmount = parseFloat(totalAmount.toFixed(2));
+    discountAmount = parseFloat(discountAmount.toFixed(2));
 
     // Get the first selected ticket to extract event_day_id and event_show_id
     const firstTicketKey = Object.keys(selectedTickets).find(
@@ -317,9 +396,18 @@ const BookingPage = ({ eventId }) => {
                               <p className="text-sm font-semibold text-primary-600">
                                 ₹
                                 {Math.min(
-                                  ...date.event_ticket_prices.map((t) =>
-                                    parseFloat(t.price)
-                                  )
+                                  ...date.event_ticket_prices.map((t) => {
+                                    const base = Number(t?.price || 0);
+                                    const admin = Math.max(
+                                      0,
+                                      Number(t?.admin_charge ?? 0)
+                                    );
+                                    const afterAdmin =
+                                      Math.round(
+                                        (base + (base * admin) / 100) * 100
+                                      ) / 100;
+                                    return afterAdmin;
+                                  })
                                 )}
                               </p>
                             </div>
@@ -457,15 +545,51 @@ const BookingPage = ({ eventId }) => {
                                                     <span className="text-xs text-gray-500">
                                                       Price:
                                                     </span>
-                                                    <span
-                                                      className={`text-lg font-bold ${
-                                                        isSelected
-                                                          ? "text-primary-700"
-                                                          : "text-gray-900"
-                                                      }`}
-                                                    >
-                                                      ₹{ticketPrice.price}
-                                                    </span>
+                                                    {(() => {
+                                                      const afterAdmin =
+                                                        applyAdminCharge(
+                                                          ticketPrice.price,
+                                                          ticketPrice.admin_charge
+                                                        );
+                                                      const final =
+                                                        applyDiscount(
+                                                          afterAdmin,
+                                                          ticketPrice.discount
+                                                        );
+
+                                                      if (
+                                                        Number(
+                                                          ticketPrice.discount ||
+                                                            0
+                                                        ) > 0
+                                                      ) {
+                                                        return (
+                                                          <span className="flex items-baseline gap-2">
+                                                            <span className="text-lg font-bold line-through text-gray-500">
+                                                              ₹{afterAdmin}
+                                                            </span>
+                                                            <span className="text-lg font-bold text-green-600">
+                                                              ₹
+                                                              {final.toFixed(
+                                                                2
+                                                              )}
+                                                            </span>
+                                                          </span>
+                                                        );
+                                                      }
+
+                                                      return (
+                                                        <span
+                                                          className={`text-lg font-bold ${
+                                                            isSelected
+                                                              ? "text-primary-700"
+                                                              : "text-gray-900"
+                                                          }`}
+                                                        >
+                                                          ₹{afterAdmin}
+                                                        </span>
+                                                      );
+                                                    })()}
                                                   </div>
                                                   <div className="flex items-center gap-1">
                                                     <i className="fi fi-rr-ticket text-xs text-gray-400"></i>
@@ -605,15 +729,27 @@ const BookingPage = ({ eventId }) => {
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-gray-800">
-                              ₹{ticketPrice?.price} × {quantity}
-                            </p>
-                            <p className="text-base font-semibold text-primary-600">
-                              ₹
-                              {(
-                                parseFloat(ticketPrice?.price) * quantity
-                              ).toFixed(2)}
-                            </p>
+                            {(() => {
+                              const afterAdmin = applyAdminCharge(
+                                ticketPrice?.price,
+                                ticketPrice?.admin_charge
+                              );
+                              const final = applyDiscount(
+                                afterAdmin,
+                                ticketPrice?.discount
+                              );
+                              const lineTotal = final * quantity;
+                              return (
+                                <>
+                                  <p className="text-sm text-gray-800">
+                                    ₹{final.toFixed(2)} × {quantity}
+                                  </p>
+                                  <p className="text-base font-semibold text-primary-600">
+                                    ₹{lineTotal.toFixed(2)}
+                                  </p>
+                                </>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -673,22 +809,73 @@ const BookingPage = ({ eventId }) => {
                   Booking Summary
                 </h3>
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      Total Tickets:
-                    </span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {getTotalSelectedTickets()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Total Amount:</span>
-                    <span className="text-lg font-semibold text-primary-600">
-                      ₹{getTotalPrice().toFixed(2)}
-                    </span>
-                  </div>
-                </div>
+                {(() => {
+                  const b = getPriceBreakdown();
+                  return (
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          Total Tickets:
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          {getTotalSelectedTickets()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Subtotal:</span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{b.totalAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {b.discountAmount > 0 ? (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Discount:</span>
+                          <span className="text-sm font-medium text-green-700">
+                            −₹{b.discountAmount.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          After discount:
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{b.subtotalAfterDiscount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          GST ({b.gstPercent}%):
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{b.gstAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">
+                          Convenience ({b.conveniencePercent}%):
+                        </span>
+                        <span className="text-sm font-medium text-gray-800">
+                          ₹{b.convenienceFeeAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-800">
+                          Grand Total:
+                        </span>
+                        <span className="text-lg font-semibold text-primary-600">
+                          ₹{b.grandTotal.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {currentStep === 1 ? (
                   <Button
@@ -725,20 +912,62 @@ const BookingPage = ({ eventId }) => {
 
         {/* Mobile Booking Summary - Fixed at bottom on mobile */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm text-gray-600">Total Tickets</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {getTotalSelectedTickets()}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Total Amount</p>
-              <p className="text-xl font-bold text-primary-600">
-                ₹{getTotalPrice().toFixed(2)}
-              </p>
-            </div>
-          </div>
+          {(() => {
+            const b = getPriceBreakdown();
+            return (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Tickets</p>
+                    <p className="text-lg font-semibold text-gray-800">
+                      {getTotalSelectedTickets()}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600">Grand Total</p>
+                    <p className="text-xl font-bold text-primary-600">
+                      ₹{b.grandTotal.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-600 mb-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>Subtotal</span>
+                    <span className="font-medium text-gray-800">
+                      ₹{b.totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  {b.discountAmount > 0 ? (
+                    <div className="flex items-center justify-between">
+                      <span>Discount</span>
+                      <span className="font-medium text-green-700">
+                        −₹{b.discountAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  ) : null}
+                  <div className="flex items-center justify-between">
+                    <span>After discount</span>
+                    <span className="font-medium text-gray-800">
+                      ₹{b.subtotalAfterDiscount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>GST ({b.gstPercent}%)</span>
+                    <span className="font-medium text-gray-800">
+                      ₹{b.gstAmount.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Convenience ({b.conveniencePercent}%)</span>
+                    <span className="font-medium text-gray-800">
+                      ₹{b.convenienceFeeAmount.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
           {currentStep === 1 ? (
             <Button
               onClick={handleContinue}

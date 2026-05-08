@@ -10,7 +10,7 @@ import Button from "@/components/common/Button";
 import { getRentalDetails } from "../../service";
 import { checkRentalAvailability, getRentalUnavailableDates } from "../../clientService";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
-import { computeRentalBookingMonetaryBreakdown } from "../../rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown } from "../../rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -107,11 +107,44 @@ export default function RentalBookingClient() {
   );
   const rentSubtotalGross = monetary.rentSubtotalGross;
   const discountAmount = monetary.discountAmount;
+  const adminChargeAmount = monetary.adminCharge;
   const gstAmount = monetary.gstAmount;
   const gstPercent = monetary.gstPercent;
   const convenienceFeeAmount = monetary.convenienceFeeAmount;
   const convenienceFeePercent = monetary.convenienceFeePercent;
   const totalCostIncludingDeposit = monetary.grandTotal;
+
+  const displayPerHourWithAdmin = useMemo(() => applyRentalAdminChargeOnly(effectivePerHour, pricing), [
+    effectivePerHour,
+    pricing,
+  ]);
+
+  // For summary display: merge admin into the hourly subtotal line (do not show separately).
+  // Backend computes admin on rent subtotal after discount; we still keep totals consistent by
+  // adding the computed admin amount to the gross rent subtotal in the display line item.
+  const rentSubtotalWithAdminForDisplay = useMemo(
+    () => (adminChargeAmount > 0 ? rentSubtotalGross + adminChargeAmount : rentSubtotalGross),
+    [rentSubtotalGross, adminChargeAmount]
+  );
+
+  const hourlySubtotalWithAdminForDisplay = useMemo(() => {
+    const hrs = Number(effectiveHours || 0) || 0;
+    if (hrs <= 0) return 0;
+    return hrs * displayPerHourWithAdmin;
+  }, [effectiveHours, displayPerHourWithAdmin]);
+
+  const discountAmountForDisplay = useMemo(() => {
+    const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
+    if (gross <= 0) return 0;
+    const type = pricing?.discount_type || null;
+    const raw = pricing?.discount_value;
+    if (!type || raw === "" || raw === null || raw === undefined) return 0;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    if (type === "percent") return (gross * Math.min(v, 100)) / 100;
+    if (type === "flat") return Math.min(gross, v);
+    return 0;
+  }, [hourlySubtotalWithAdminForDisplay, pricing]);
 
   const vehicleLocation = (rental?.location || "").toString().trim();
 
@@ -609,7 +642,7 @@ export default function RentalBookingClient() {
                   {effectivePerHour > 0 ? (
                     <div className="flex items-center gap-2">
                       <i className="fi fi-rr-indian-rupee-sign text-primary-500 text-sm shrink-0" />
-                      <span className="text-gray-700">From ₹{money(effectivePerHour)} / hour</span>
+                      <span className="text-gray-700">From ₹{money(displayPerHourWithAdmin)} / hour</span>
                     </div>
                   ) : null}
                 </div>
@@ -620,11 +653,11 @@ export default function RentalBookingClient() {
                 <div className="space-y-2.5 mb-4 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-gray-600">
-                      {effectiveHours || 0} h × ₹{money(effectivePerHour)}
+                      {effectiveHours || 0} h × ₹{money(displayPerHourWithAdmin)}
                     </span>
-                    <span className="font-medium text-gray-900">₹{money(rentSubtotalGross)}</span>
+                    <span className="font-medium text-gray-900">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
                   </div>
-                  {discountAmount > 0 ? (
+                  {discountAmountForDisplay > 0 ? (
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-600">
                         Discount
@@ -634,7 +667,7 @@ export default function RentalBookingClient() {
                           <span className="text-gray-400"> ({String(pricing.discount_value)}%)</span>
                         ) : null}
                       </span>
-                      <span className="font-medium text-green-700">−₹{money(discountAmount)}</span>
+                      <span className="font-medium text-green-700">−₹{money(discountAmountForDisplay)}</span>
                     </div>
                   ) : null}
                   {gstAmount > 0 ? (

@@ -138,9 +138,10 @@ function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
   const discount = Number(discountRaw || 0);
   const admin = Number(adminChargeRaw || 0);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
-  const discounted = amount - (amount * Math.max(0, discount)) / 100;
-  const withAdmin = discounted + (discounted * Math.max(0, admin)) / 100;
-  return Number.isFinite(withAdmin) ? withAdmin : 0;
+  // Align with Events/Attractions: apply admin first, then discount on admin-inclusive amount.
+  const withAdmin = amount + (amount * Math.max(0, admin)) / 100;
+  const discounted = withAdmin - (withAdmin * Math.max(0, discount)) / 100;
+  return Number.isFinite(discounted) ? discounted : 0;
 }
 
 function pickNumber(obj, keys, fallback = 0) {
@@ -271,9 +272,13 @@ const BookingClient = ({ activityId }) => {
       childPrice: ticketPriceRow.child_price,
       fullRate: ticketPriceRow.full_rate,
     });
-    // discount/admin charge are stored on ticket base pricing, not per-slot ticket price rows
-    const discountPct = pickNumber(selectedTicket, ["discount"], 0);
-    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0);
+    // Discount/admin charge may be on ticket type OR slot price row depending on module configuration.
+    const discountPct =
+      pickNumber(ticketPriceRow, ["discount", "discount_percentage", "discountPercent"], null) ??
+      pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
+    const adminChargePct =
+      pickNumber(ticketPriceRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+      pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
 
     const adultUnitBase =
       rateType === "full"
@@ -301,8 +306,12 @@ const BookingClient = ({ activityId }) => {
         childPrice: seasonalRow.child_price,
         fullRate: seasonalRow.full_rate,
       });
-      const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
-      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+      const discountPct =
+        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
+        pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
+      const adminChargePct =
+        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
 
       const baseAdultOrFull =
         rateType === "full"
@@ -330,8 +339,8 @@ const BookingClient = ({ activityId }) => {
       childPrice: selectedTicket.child_price,
       fullRate: selectedTicket.full_rate ?? selectedTicket.price,
     });
-    const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
-    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
+    const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
+    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
 
     const adultUnitBase =
       rateType === "full"
@@ -438,6 +447,82 @@ const BookingClient = ({ activityId }) => {
       ? `${ticketCount} Tickets`
       : `${totalPaxCount} Pax`;
 
+  const getDiscountAdminSummary = () => {
+    const e = effectivePricing;
+    if (!e) return null;
+
+    const discountPct = Number(e.discountPct || 0);
+    const adminPct = Number(e.adminChargePct || 0);
+
+    const qtyFull = Math.max(1, Number(ticketCount) || 1);
+    const adultQty = Math.max(0, Number(formData.adultCount) || 0);
+    const childQty = Math.max(0, Number(formData.childCount) || 0);
+
+    const guideRate = Number(pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) || 0);
+    const guideTotal = includeGuide && guideRate > 0 ? guideRate : 0;
+
+    const adultBase = Number(e.adultUnitBase ?? 0);
+    const childBase = Number(e.childUnitBase ?? 0);
+    const adultWithAdminNoDiscount = applyDiscountAndAdminCharge(
+      adultBase,
+      0,
+      adminPct
+    );
+    const childWithAdminNoDiscount = applyDiscountAndAdminCharge(
+      childBase,
+      0,
+      adminPct
+    );
+
+    const adultFinal = applyDiscountAndAdminCharge(adultBase, discountPct, adminPct);
+    const childFinal = applyDiscountAndAdminCharge(childBase, discountPct, adminPct);
+
+    if (e.rateType === "full") {
+      const baseSubtotal = adultBase * qtyFull;
+      const originalSubtotalWithAdminNoDiscount = Number(adultWithAdminNoDiscount || 0) * qtyFull;
+      const finalSubtotal = Number(adultFinal || 0) * qtyFull;
+      const adminAmount = Math.max(0, originalSubtotalWithAdminNoDiscount - baseSubtotal);
+      const discountAmount = Math.max(0, originalSubtotalWithAdminNoDiscount - finalSubtotal);
+
+      return {
+        mode: "full",
+        discountPct,
+        adminPct,
+        baseSubtotal,
+        afterAdminSubtotal: originalSubtotalWithAdminNoDiscount,
+        afterDiscountSubtotal: finalSubtotal,
+        discountAmount,
+        adminAmount,
+        finalSubtotal,
+        guideTotal,
+        originalSubtotalWithAdminNoDiscount,
+      };
+    }
+
+    const baseSubtotal = adultBase * adultQty + childBase * childQty;
+    const originalSubtotalWithAdminNoDiscount =
+      Number(adultWithAdminNoDiscount || 0) * adultQty +
+      Number(childWithAdminNoDiscount || 0) * childQty;
+    const finalSubtotal =
+      Number(adultFinal || 0) * adultQty + Number(childFinal || 0) * childQty;
+    const adminAmount = Math.max(0, originalSubtotalWithAdminNoDiscount - baseSubtotal);
+    const discountAmount = Math.max(0, originalSubtotalWithAdminNoDiscount - finalSubtotal);
+
+    return {
+      mode: "pax",
+      discountPct,
+      adminPct,
+      baseSubtotal,
+      afterAdminSubtotal: originalSubtotalWithAdminNoDiscount,
+      afterDiscountSubtotal: finalSubtotal,
+      discountAmount,
+      adminAmount,
+      finalSubtotal,
+      guideTotal,
+      originalSubtotalWithAdminNoDiscount,
+    };
+  };
+
   // Validate form
   const validateForm = () => {
     const newErrors = {};
@@ -508,6 +593,20 @@ const BookingClient = ({ activityId }) => {
       const basePrice = effective
         ? effective.adultUnit
         : selectedTicket?.price || activityDetails?.price || 0;
+      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0);
+      const discountPct = Number(effective?.discountPct ?? pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0) ?? 0);
+
+      // Original (pre-discount) unit prices (admin charge still applies, discount removed)
+      const originalAdultUnit = applyDiscountAndAdminCharge(
+        effective?.adultUnitBase ?? basePrice,
+        0,
+        adminChargePct
+      );
+      const originalChildUnitBase = effective?.childUnitBase ?? selectedTicket?.child_price ?? (effective?.adultUnitBase ?? basePrice) * 0.7;
+      const originalChildUnit = applyDiscountAndAdminCharge(originalChildUnitBase, 0, adminChargePct);
+
+      let originalTotal = 0;
+      let discountedTotal = 0;
 
       if (effective?.rateType === "full") {
         const qty = Math.max(1, Number(ticketCount) || 1);
@@ -520,6 +619,8 @@ const BookingClient = ({ activityId }) => {
               ? basePrice * qty
               : basePrice * formData.adultCount
         });
+        discountedTotal += (basePrice * qty);
+        originalTotal += (originalAdultUnit * qty);
       } else if (formData.adultCount > 0) {
         bookingTickets.push({
           activity_ticket_type_id: ticketId,
@@ -527,6 +628,8 @@ const BookingClient = ({ activityId }) => {
           unit_price: basePrice,
           total_price: basePrice * formData.adultCount
         });
+        discountedTotal += (basePrice * formData.adultCount);
+        originalTotal += (originalAdultUnit * formData.adultCount);
       }
 
       if (effective?.rateType !== "full" && formData.childCount > 0) {
@@ -542,13 +645,22 @@ const BookingClient = ({ activityId }) => {
           unit_price: childPrice,
           total_price: childPrice * formData.childCount
         });
+        discountedTotal += (childPrice * formData.childCount);
+        originalTotal += (originalChildUnit * formData.childCount);
       }
+
+      // totalPrice currently represents discounted subtotal + guide (pre-tax) in UI.
+      // For backend consistency, send total_amount as original (pre-discount) subtotal (+ guide),
+      // and discount_amount as the difference.
+      const guideAmt = Number(pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) || 0) * (includeGuide ? 1 : 0);
+      const totalAmountForApi = Number((originalTotal + guideAmt).toFixed(2));
+      const discountAmountForApi = Number(Math.max(0, originalTotal - discountedTotal).toFixed(2));
 
       const apiBookingData = {
         activity_id: activityId,
         visit_date: formData.selectedDate.toISOString().split('T')[0],
-        total_amount: totalPrice,
-        discount_amount: 0,
+        total_amount: totalAmountForApi,
+        discount_amount: discountAmountForApi,
         adult_count: formData.adultCount,
         child_count: formData.childCount,
         include_guide: includeGuide,
@@ -1183,11 +1295,12 @@ const BookingClient = ({ activityId }) => {
                 </span>
                 {(() => {
                   const parts = getTotalParts();
+                  const summary = getDiscountAdminSummary();
                   if (parts?.hasDiscount && parts.originalTotal > parts.finalTotal) {
                     return (
                       <div className="text-right">
                         <div className="text-sm text-gray-500 line-through">
-                          ₹{subtotalForFees.toFixed(2)}
+                          ₹{Number(summary?.originalSubtotalWithAdminNoDiscount ?? parts.originalTotal).toFixed(2)}
                         </div>
                         <div className="text-2xl font-bold text-primary-500">
                           ₹{grandTotalUi.toFixed(2)}
@@ -1216,6 +1329,51 @@ const BookingClient = ({ activityId }) => {
               </div>
 
               <div className="space-y-1 mb-6 text-sm text-gray-600">
+                {(() => {
+                  const s = getDiscountAdminSummary();
+                  if (!s) return null;
+
+                  const showDiscount = s.discountPct > 0 && s.discountAmount > 0.01;
+                  const showGuide = s.guideTotal > 0.01;
+
+                  if (!showDiscount && !showAdmin && !showGuide) return null;
+
+                  return (
+                    <>
+                      <div className="flex justify-between">
+                        <span>Base amount</span>
+                        <span className="text-gray-900 font-medium">
+                          ₹{Number(s.afterAdminSubtotal ?? s.baseSubtotal ?? 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {showDiscount ? (
+                        <div className="flex justify-between">
+                          <span>Discount ({Number(s.discountPct || 0).toFixed(0)}%)</span>
+                          <span className="text-green-700 font-medium">
+                            −₹{Number(s.discountAmount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+                      {showDiscount ? (
+                        <div className="flex justify-between">
+                          <span>After discount</span>
+                          <span className="text-gray-900 font-medium">
+                            ₹{Number(s.afterDiscountSubtotal || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+                      {showGuide ? (
+                        <div className="flex justify-between">
+                          <span>Guide</span>
+                          <span className="text-gray-900 font-medium">
+                            ₹{Number(s.guideTotal || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div className="pt-2 border-t border-gray-100" />
+                    </>
+                  );
+                })()}
                 <div className="flex justify-between">
                   <span>Subtotal</span>
                   <span className="text-gray-900 font-medium">₹{subtotalForFees.toFixed(2)}</span>

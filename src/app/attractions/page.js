@@ -42,11 +42,18 @@ export default async function Attractions({ searchParams }) {
     city: attraction.city,
     type: attraction.attraction_category_master?.name || attraction.category || "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
-    price: attraction.price?.rate_type === "full" 
-      ? attraction.price?.full_rate 
-      : attraction.price?.rate_type === "pax" 
-        ? attraction.price?.adult_price 
-        : attraction.price?.full_rate || attraction.price || 0,
+    price: (() => {
+      const rt = attraction.price?.rate_type;
+      const base =
+        rt === "full"
+          ? Number(attraction.price?.full_rate || 0)
+          : rt === "pax"
+          ? Number(attraction.price?.adult_price || 0)
+          : Number(attraction.price?.full_rate || attraction.price || 0);
+      const admin = Math.max(0, Number(attraction.price?.admin_charge ?? 0));
+      const afterAdmin = base + (base * admin) / 100;
+      return Math.round(afterAdmin * 100) / 100;
+    })(),
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
     duration: formatTimeTo12Hour(attraction.start_time) || "updating",

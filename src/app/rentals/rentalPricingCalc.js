@@ -11,6 +11,38 @@ function round2(n) {
 }
 
 /**
+ * Admin charge for display contexts where we want "base + admin" (no discount).
+ * @param {number} baseAmount
+ * @param {Record<string, unknown>} pricing
+ * @returns {number}
+ */
+export function applyRentalAdminChargeOnly(baseAmount, pricing) {
+  const base = round2(Number(baseAmount || 0) || 0);
+  const p = pricing || {};
+  const achType = p.admin_charge_type || null;
+  const achValRaw = p.admin_charge_value;
+  const achVal =
+    achValRaw === "" || achValRaw === null || achValRaw === undefined ? null : Number(achValRaw);
+  if ((achType === "flat" || achType === "percent") && achVal != null && Number.isFinite(achVal)) {
+    const admin =
+      achType === "percent" ? round2((base * Math.min(achVal, 100)) / 100) : round2(achVal);
+    return round2(base + admin);
+  }
+  return base;
+}
+
+/**
+ * Convenience helper to compute hourly display rate.
+ * @param {Record<string, unknown>} pricing
+ * @returns {number}
+ */
+export function rentalHourlyRateWithAdmin(pricing) {
+  const p = pricing || {};
+  const basePerHour = Number(p.price_per_hour || 0) || 0;
+  return applyRentalAdminChargeOnly(basePerHour, p);
+}
+
+/**
  * @param {number} grossRentSubtotal — hours × hourly rate (before pricing-rule discount)
  * @param {Record<string, unknown>} pricing
  * @returns {{ gross: number, discountAmount: number, net: number }}

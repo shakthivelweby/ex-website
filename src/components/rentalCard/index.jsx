@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { applyRentalAdminChargeOnly } from "@/app/rentals/rentalPricingCalc";
 
 const haversineKm = (lat1, lon1, lat2, lon2) => {
   const toRad = (d) => (Number(d) * Math.PI) / 180;
@@ -30,7 +31,11 @@ const RentalCard = ({ rental, userCoords }) => {
   } = rental || {};
 
   const pricing = pricing_rule || pricingRule || {};
-  const pricePerHour = pricing?.price_per_hour ?? null;
+  const basePerHour = pricing?.price_per_hour ?? null;
+  const displayPerHour =
+    basePerHour === null || basePerHour === undefined || basePerHour === ""
+      ? null
+      : applyRentalAdminChargeOnly(Number(basePerHour), pricing);
   const primaryUnit = Array.isArray(units) && units.length ? units[0] : null;
   const effectiveTransmission = transmission ?? primaryUnit?.transmission;
   const effectiveFuelType = fuel_type ?? primaryUnit?.fuel_type;
@@ -109,7 +114,7 @@ const RentalCard = ({ rental, userCoords }) => {
           <div className="mt-auto pt-2 flex items-start justify-between gap-2">
             <div className="flex items-baseline flex-shrink-0">
               <span className="text-gray-900 font-bold text-xl leading-none">
-                ₹{pricePerHour ?? 0}
+                ₹{displayPerHour ?? 0}
               </span>
               <span className="text-gray-500 text-sm font-normal ml-1 leading-none">
                 / hour

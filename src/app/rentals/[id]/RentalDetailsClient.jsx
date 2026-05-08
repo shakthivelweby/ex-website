@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import { rentalHourlyRateWithAdmin } from "@/app/rentals/rentalPricingCalc";
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -176,7 +177,7 @@ export default function RentalDetailsClient({ rental }) {
         )}`
       : null);
 
-  const priceHourLabel = `₹${formatMoney(pricing.price_per_hour)}/hr`;
+  const priceHourLabel = `₹${formatMoney(rentalHourlyRateWithAdmin(pricing))}/hr`;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -485,7 +486,9 @@ export default function RentalDetailsClient({ rental }) {
                       </div>
                       <div>
                         <p className="text-gray-500 text-xs">Price / Hour</p>
-                        <p className="text-gray-700 font-medium">₹{formatMoney(pricing.price_per_hour)}</p>
+                        <p className="text-gray-700 font-medium">
+                          ₹{formatMoney(rentalHourlyRateWithAdmin(pricing))}
+                        </p>
                       </div>
                     </div>
 

@@ -317,9 +317,22 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
   // By default, select the first ticket option (so booking can proceed)
   useEffect(() => {
-    const firstId = activityDetails?.ticketOptions?.[0]?.id;
-    if (!firstId) return;
-    setSelectedTicketId((prev) => prev ?? firstId);
+    const options = activityDetails?.ticketOptions || [];
+    if (!Array.isArray(options) || options.length === 0) return;
+
+    // Auto-select the lowest BASE priced ticket (e.g. 1200) by default.
+    // Admin/discount are applied later in the side form; keep base for selection.
+    const lowest = options.reduce((acc, t) => {
+      const base = Number(t?.price || t?.adult_price || 0);
+      if (!Number.isFinite(base) || base <= 0) return acc;
+      if (!acc) return t;
+      const accBase = Number(acc?.price || acc?.adult_price || 0);
+      return base < accBase ? t : acc;
+    }, null);
+
+    const idToSelect = lowest?.id ?? options?.[0]?.id;
+    if (!idToSelect) return;
+    setSelectedTicketId((prev) => prev ?? idToSelect);
   }, [activityDetails?.ticketOptions]);
 
   const getDummyCancellationPolicy = (ticket) => {
@@ -491,13 +504,20 @@ const ActivityDetailPage = ({ activityDetails }) => {
                 {/* Price */}
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
-                    ₹{selectedTicketForDetails.price || selectedTicketForDetails.adult_price || 0}
+                    ₹
+                    {(() => {
+                      const base =
+                        Number(selectedTicketForDetails.price || 0) ||
+                        Number(selectedTicketForDetails.adult_price || 0);
+                      const admin = Math.max(
+                        0,
+                        Number(selectedTicketForDetails.admin_charge ?? 0)
+                      );
+                      const afterAdmin =
+                        Math.round((base + (base * admin) / 100) * 100) / 100;
+                      return afterAdmin.toFixed(0);
+                    })()}
                   </span>
-                  {selectedTicketForDetails.originalPrice && selectedTicketForDetails.originalPrice > selectedTicketForDetails.price && (
-                    <span className="text-sm text-gray-500 line-through">
-                      ₹{selectedTicketForDetails.originalPrice}
-                    </span>
-                  )}
                   {selectedTicketForDetails.rateType === "pax" && (
                     <span className="text-xs text-gray-500">per person</span>
                   )}
@@ -975,7 +995,21 @@ const ActivityDetailPage = ({ activityDetails }) => {
                                 <div className="text-right">
                                   <div className="flex items-baseline gap-1">
                                     <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                                      ₹{ticket.price || ticket.adult_price || 0}
+                                      ₹
+                                      {(() => {
+                                        const base = Number(
+                                          ticket.price || ticket.adult_price || 0
+                                        );
+                                        const admin = Math.max(
+                                          0,
+                                          Number(ticket.admin_charge ?? 0)
+                                        );
+                                        const afterAdmin =
+                                          Math.round(
+                                            (base + (base * admin) / 100) * 100
+                                          ) / 100;
+                                        return afterAdmin.toFixed(0);
+                                      })()}
                                     </span>
                                     {ticket.originalPrice && ticket.originalPrice > ticket.price && (
                                       <span className="text-sm text-gray-500 line-through ml-1">

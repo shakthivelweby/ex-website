@@ -57,14 +57,17 @@ export default async function Events({ searchParams }) {
       if (event.event_days && event.event_days.length > 0) {
         const prices = event.event_days
           .flatMap((day) => day.event_ticket_prices)
-          .map((price) => parseFloat(price.price))
-          .filter((price) => !isNaN(price));
+          .map((p) => {
+            const base = Number(p?.price || 0);
+            const admin = Math.max(0, Number(p?.admin_charge ?? 0));
+            const afterAdmin = base + (base * admin) / 100;
+            return Math.round(afterAdmin * 100) / 100;
+          })
+          .filter((n) => Number.isFinite(n) && n > 0);
 
-        if (prices.length > 0) {
-          return Math.min(...prices);
-        }
+        if (prices.length > 0) return Math.min(...prices);
       }
-      return 100;
+      return 0;
     })(),
     eventDays: event.event_days || [],
     totalShows: (() => {

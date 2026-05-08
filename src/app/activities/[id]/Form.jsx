@@ -88,9 +88,10 @@ function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
   const admin = Number(adminChargeRaw || 0);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
 
-  const discounted = amount - (amount * Math.max(0, discount)) / 100;
-  const withAdmin = discounted + (discounted * Math.max(0, admin)) / 100;
-  return Number.isFinite(withAdmin) ? withAdmin : 0;
+  // Align with Events/Attractions: apply admin first, then discount on admin-inclusive amount.
+  const withAdmin = amount + (amount * Math.max(0, admin)) / 100;
+  const discounted = withAdmin - (withAdmin * Math.max(0, discount)) / 100;
+  return Number.isFinite(discounted) ? discounted : 0;
 }
 
 function pickNumber(obj, keys, fallback = 0) {
@@ -522,12 +523,38 @@ const Form = ({
                 : "Starting from"}
             </span>
             {(() => {
+              const readyForTotal =
+                Boolean(selectedTicket) &&
+                Boolean(selectedDate) &&
+                (!isSlotBased || Boolean(selectedTimeSlot));
+
               const parts = getTotalParts();
               const unitLabel = !selectedTicket
                 ? "per person"
                 : uiRateType === "full"
                   ? `× ${ticketCount}`
                   : `for ${totalPaxCount} pax`;
+
+              // If we are NOT ready (no date/slot), don't show discounted totals.
+              // Show base + admin only (no discount) for the selected/lowest ticket.
+              if (!readyForTotal && selectedTicket) {
+                const effective = getEffectiveTicketUnitPrices();
+                const adminPct = Number(effective?.adminChargePct ?? pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0) ?? 0);
+                const rateType = effective?.rateType || uiRateType;
+                const qty = rateType === "full" ? Math.max(1, Number(ticketCount) || 1) : totalPaxCount;
+                const base = Number(effective?.adultUnitBase ?? selectedTicket.price ?? selectedTicket.adult_price ?? 0);
+                const unit = applyDiscountAndAdminCharge(base, 0, adminPct);
+                const total = unit * qty;
+
+                return (
+                  <span className="text-xl lg:text-2xl font-semibold text-gray-800">
+                    ₹{Number(total || 0).toFixed(0)}{" "}
+                    <span className="text-sm text-gray-500 font-normal">
+                      {unitLabel}
+                    </span>
+                  </span>
+                );
+              }
 
               if (!parts) {
                 return (

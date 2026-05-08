@@ -8,6 +8,35 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getDetailsForBooking, getTicketPricesForDate } from "./service";
 
+/** Same rule as `attractions/[id]/page.js`: shown amount = base + admin % (no discount on detail). */
+function applyAdminChargeOnly(amountRaw, adminPctRaw) {
+  const amount = Number(amountRaw || 0);
+  const admin = Math.max(0, Number(adminPctRaw || 0));
+  const afterAdmin = amount + (amount * admin) / 100;
+  return Math.round(afterAdmin * 100) / 100;
+}
+
+/** Lowest “starting from” unit across ticket rows after admin (matches SSR detail logic). */
+function minDisplayedEntryFeeFromRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const candidates = [];
+  for (const row of rows) {
+    const rate = row?.rate_type;
+    const adminPct = row?.admin_charge ?? 0;
+    if (rate === "full") {
+      const base = Number(row?.full_rate || 0);
+      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+    } else if (rate === "pax") {
+      const adult = Number(row?.adult_price || 0);
+      if (adult > 0) candidates.push(applyAdminChargeOnly(adult, adminPct));
+    } else {
+      const base = Number(row?.full_rate || row?.adult_price || 0);
+      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+    }
+  }
+  return candidates.length ? Math.min(...candidates) : null;
+}
+
 const Form = ({
   attractionDetails,
   isMobilePopup = false,
@@ -365,31 +394,11 @@ const Form = ({
             <span className="text-gray-500 text-sm">Entry fee</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">
               {(() => {
-                // Get the first ticket from the API response
-                const ticketData = ticketPrices?.[0];
-
-                if (ticketData) {
-                  if (ticketData.rate_type === "full") {
-                    return ticketData.full_rate
-                      ? `₹${ticketData.full_rate}`
-                      : attractionDetails.price;
-                  } else if (ticketData.rate_type === "pax") {
-                    return ticketData.adult_price
-                      ? `₹${ticketData.adult_price}`
-                      : attractionDetails.price;
-                  }
+                const minFee = minDisplayedEntryFeeFromRows(ticketPrices);
+                if (minFee != null && minFee > 0) {
+                  return `₹${minFee}`;
                 }
-
-                // Fallback to original logic if no ticket data
-                return attractionDetails.rateType === "full"
-                  ? attractionDetails.fullRate
-                    ? `₹${attractionDetails.fullRate}`
-                    : attractionDetails.price
-                  : attractionDetails.rateType === "pax"
-                  ? attractionDetails.adultPrice
-                    ? `₹${attractionDetails.adultPrice}`
-                    : attractionDetails.price
-                  : attractionDetails.price;
+                return attractionDetails.price;
               })()}
             </span>
           </div>

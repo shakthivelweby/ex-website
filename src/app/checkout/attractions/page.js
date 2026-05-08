@@ -117,12 +117,14 @@ export default function AttractionCheckoutPage() {
     return 0;
   };
 
-  const getTotalPrice = () => {
-    // total_amount already includes guide rate from booking page
-    if (selectedTickets.total_amount) {
-      return selectedTickets.total_amount;
-    }
-    return 0;
+  /** Pre-discount total from booking flow (admin-inclusive ticket bases + guide); backend uses this with discount_amount. */
+  const getPreDiscountTotal = () => Number(selectedTickets.total_amount || 0);
+
+  /** Amount taxes apply to: matches API subtotal_after_discount = total_amount − discount_amount. */
+  const getTaxableSubtotalExTax = () => {
+    const pre = getPreDiscountTotal();
+    const disc = Number(selectedTickets.discount_amount || 0);
+    return Math.max(0, Math.round((pre - disc) * 100) / 100);
   };
 
   const getTicketDetails = () => {
@@ -193,7 +195,7 @@ export default function AttractionCheckoutPage() {
         attraction_id: parseInt(searchParams.get("attraction_id")),
         visit_date: selectedTickets.visit_date,
         total_amount: finalTotalAmount,
-        discount_amount: 0, // Add required discount_amount field
+        discount_amount: Number(selectedTickets.discount_amount || 0),
         adult_count: totalAdultCount, // Add required adult_count field
         child_count: totalChildCount, // Add required child_count field
         bookingTickets: enhancedBookingTickets,
@@ -325,11 +327,12 @@ export default function AttractionCheckoutPage() {
   }
 
   const ticketDetails = getTicketDetails();
-  const totalAmount = getTotalPrice();
+  const discountAmountUi = Number(selectedTickets.discount_amount || 0);
+  const subtotalExTax = getTaxableSubtotalExTax();
   const gstPercent = 18;
   const conveniencePercent = 2;
-  const gstAmount = ((Number(totalAmount || 0) || 0) * gstPercent) / 100;
-  const afterGst = (Number(totalAmount || 0) || 0) + gstAmount;
+  const gstAmount = (subtotalExTax * gstPercent) / 100;
+  const afterGst = subtotalExTax + gstAmount;
   const convenienceAmount = (afterGst * conveniencePercent) / 100;
   const grandTotalUi = afterGst + convenienceAmount;
 
@@ -425,6 +428,20 @@ export default function AttractionCheckoutPage() {
                   Price Details
                 </h4>
                 <div className="space-y-1">
+                  {discountAmountUi > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="text-gray-900 font-semibold">
+                        −₹{discountAmountUi.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Subtotal (excl. taxes)</span>
+                    <span className="text-gray-900 font-semibold">
+                      ₹{subtotalExTax.toFixed(2)}
+                    </span>
+                  </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-gray-600">GST (18%)</span>
                     <span className="text-gray-900 font-semibold">₹{gstAmount.toFixed(2)}</span>
@@ -738,9 +755,19 @@ export default function AttractionCheckoutPage() {
                       <span className="text-gray-600">Total Tickets</span>
                       <span className="text-gray-900 font-semibold">{getTotalSelectedTickets()}</span>
                     </div>
+                    {discountAmountUi > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Discount</span>
+                        <span className="text-gray-900 font-semibold">
+                          −₹{discountAmountUi.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Subtotal (excl. taxes)</span>
-                      <span className="text-gray-900 font-semibold">₹{parseFloat(totalAmount || 0).toFixed(2)}</span>
+                      <span className="text-gray-900 font-semibold">
+                        ₹{subtotalExTax.toFixed(2)}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">GST (18%)</span>

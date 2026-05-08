@@ -104,7 +104,16 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
       );
 
       if (ticketPrice && quantity > 0) {
-        total += parseFloat(ticketPrice.price) * quantity;
+        const base = Number(ticketPrice.price || 0);
+        const admin = Math.max(0, Number(ticketPrice.admin_charge ?? 0));
+        const afterAdmin =
+          Math.round((base + (base * admin) / 100) * 100) / 100;
+        const pct = Math.max(0, Number(ticketPrice.discount || 0));
+        const final =
+          pct > 0
+            ? Math.round((afterAdmin - (afterAdmin * pct) / 100) * 100) / 100
+            : afterAdmin;
+        total += final * quantity;
       }
     });
     return total;
@@ -247,7 +256,46 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                                             : "text-gray-600"
                                         }`}
                                       >
-                                        ₹{ticketPrice.price}
+                                        {(() => {
+                                          const base = Number(
+                                            ticketPrice.price || 0
+                                          );
+                                          const admin = Math.max(
+                                            0,
+                                            Number(
+                                              ticketPrice.admin_charge ?? 0
+                                            )
+                                          );
+                                          const afterAdmin = Math.round(
+                                            (base + (base * admin) / 100) * 100
+                                          ) / 100;
+                                          const pct = Math.max(
+                                            0,
+                                            Number(ticketPrice.discount || 0)
+                                          );
+                                          const final =
+                                            pct > 0
+                                              ? Math.round(
+                                                  (afterAdmin -
+                                                    (afterAdmin * pct) /
+                                                      100) *
+                                                    100
+                                                ) / 100
+                                              : afterAdmin;
+
+                                          return pct > 0 ? (
+                                            <span className="flex items-center gap-2">
+                                              <span className="line-through text-gray-500">
+                                                ₹{afterAdmin}
+                                              </span>
+                                              <span className="font-semibold text-green-700">
+                                                ₹{final.toFixed(2)}
+                                              </span>
+                                            </span>
+                                          ) : (
+                                            <>₹{afterAdmin}</>
+                                          );
+                                        })()}
                                       </p>
                                       {ticketPrice.discount > 0 && (
                                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
@@ -374,7 +422,32 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                         {ticketType?.name}
                       </span>
                       <span className="text-gray-800 font-medium">
-                        {quantity} × ₹{ticketPrice?.price}
+                        {(() => {
+                          const base = Number(ticketPrice?.price || 0);
+                          const admin = Math.max(
+                            0,
+                            Number(ticketPrice?.admin_charge ?? 0)
+                          );
+                          const afterAdmin =
+                            Math.round((base + (base * admin) / 100) * 100) /
+                            100;
+                          const pct = Math.max(
+                            0,
+                            Number(ticketPrice?.discount || 0)
+                          );
+                          const final =
+                            pct > 0
+                              ? Math.round(
+                                  (afterAdmin - (afterAdmin * pct) / 100) *
+                                    100
+                                ) / 100
+                              : afterAdmin;
+                          return (
+                            <>
+                              {quantity} × ₹{final.toFixed(2)}
+                            </>
+                          );
+                        })()}
                       </span>
                     </div>
                   );

@@ -10,7 +10,7 @@ import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
-import { computeRentalBookingMonetaryBreakdown } from "../../rentals/rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown } from "../../rentals/rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -170,10 +170,40 @@ export default function RentalCheckoutPage() {
   const feesBeforeDeposit = monetary.feesBeforeDeposit;
   const rentSubtotalGross = monetary.rentSubtotalGross;
   const discountAmount = monetary.discountAmount;
+  const adminChargeAmount = monetary.adminCharge;
   const gstAmount = monetary.gstAmount;
   const gstPercent = monetary.gstPercent;
   const convenienceFeeAmount = monetary.convenienceFeeAmount;
   const convenienceFeePercent = monetary.convenienceFeePercent;
+
+  const displayPerHourWithAdmin = useMemo(() => applyRentalAdminChargeOnly(effectivePerHour, pricing), [
+    effectivePerHour,
+    pricing,
+  ]);
+
+  const rentSubtotalWithAdminForDisplay = useMemo(
+    () => (adminChargeAmount > 0 ? rentSubtotalGross + adminChargeAmount : rentSubtotalGross),
+    [rentSubtotalGross, adminChargeAmount]
+  );
+
+  const hourlySubtotalWithAdminForDisplay = useMemo(() => {
+    const hrs = Number(totalHours || 0) || 0;
+    if (hrs <= 0) return 0;
+    return hrs * displayPerHourWithAdmin;
+  }, [totalHours, displayPerHourWithAdmin]);
+
+  const discountAmountForDisplay = useMemo(() => {
+    const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
+    if (gross <= 0) return 0;
+    const type = pricing?.discount_type || null;
+    const raw = pricing?.discount_value;
+    if (!type || raw === "" || raw === null || raw === undefined) return 0;
+    const v = Number(raw);
+    if (!Number.isFinite(v) || v <= 0) return 0;
+    if (type === "percent") return (gross * Math.min(v, 100)) / 100;
+    if (type === "flat") return Math.min(gross, v);
+    return 0;
+  }, [hourlySubtotalWithAdminForDisplay, pricing]);
 
   const payAdvanceAmount = useMemo(() => {
     if (advanceType && advanceValue != null && Number.isFinite(advanceValue)) {
@@ -559,7 +589,7 @@ export default function RentalCheckoutPage() {
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 ₹/hour (effective):{" "}
-                <span className="font-semibold text-gray-900">₹{money(effectivePerHour)}</span>
+                <span className="font-semibold text-gray-900">₹{money(displayPerHourWithAdmin)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Advance: <span className="font-semibold text-gray-900">₹{money(payAdvanceAmount)}</span>
@@ -595,15 +625,15 @@ export default function RentalCheckoutPage() {
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">
-                  {totalHours || "-"} h × ₹{money(effectivePerHour)}
+                  {totalHours || "-"} h × ₹{money(displayPerHourWithAdmin)}
                 </span>
-                <span className="text-gray-900 font-semibold text-right">₹{money(rentSubtotalGross)}</span>
+                <span className="text-gray-900 font-semibold text-right">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
               </div>
-              {discountAmount > 0 ? (
+              {discountAmountForDisplay > 0 ? (
                 <div className="flex justify-between gap-3">
                   <span className="text-gray-500">Discount</span>
                   <span className="text-gray-900 font-semibold text-right text-green-700">
-                    −₹{money(discountAmount)}
+                    −₹{money(discountAmountForDisplay)}
                   </span>
                 </div>
               ) : null}

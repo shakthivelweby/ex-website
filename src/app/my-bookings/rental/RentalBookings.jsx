@@ -25,6 +25,16 @@ const formatDateTime = (dateString) => {
   });
 };
 
+const formatDate = (dateString) => {
+  const d = new Date(dateString);
+  if (!Number.isFinite(d.getTime())) return "-";
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
 const formatCurrency = (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`;
 
 /** One line for UI: same pickup/dropoff collapsed; otherwise both without separate labels. */
@@ -45,6 +55,15 @@ const statusPill = (status) => {
   if (s === "cancelled") return "bg-red-50 text-red-700";
   if (s === "completed") return "bg-green-50 text-green-700";
   return "bg-gray-50 text-gray-700";
+};
+
+const getPaymentMethodIcon = (method) => {
+  switch (String(method || "").toLowerCase()) {
+    case "razorpay":
+      return "fi fi-rr-credit-card";
+    default:
+      return "fi fi-rr-money-bill";
+  }
 };
 
 export default function RentalBookings() {
@@ -212,7 +231,6 @@ export default function RentalBookings() {
       />
       <div className="space-y-4">
         {bookings.map((b) => {
-          const payment = Array.isArray(b.rental_payments) ? b.rental_payments[0] : null;
           const title = b.item?.title || "Rental";
           const full = parseFloat(b.total_full_amount || 0);
           const paid = parseFloat(b.total_paid || 0);
@@ -221,6 +239,13 @@ export default function RentalBookings() {
           const pb = b.pricing_breakdown || null;
           const breakdownMatchesTotal =
             pb && Number.isFinite(full) && Math.abs(Number(pb.grand_total) - full) <= 0.05;
+          const rentalPayments = Array.isArray(b.rental_payments)
+            ? [...b.rental_payments]
+                .filter((p) => String(p?.status || "").toLowerCase() === "completed")
+                .sort((a, c) => new Date(c?.created_at || 0) - new Date(a?.created_at || 0))
+            : [];
+          const paymentTypeLabel = balance <= 0.009 ? "Full Payment" : "Partial payment";
+
           return (
             <div
               key={b.id}
@@ -248,39 +273,49 @@ export default function RentalBookings() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mt-1.5">
-                    Booked on {formatDateTime(b.created_at)}
+                    Booked on {formatDate(b.created_at)}
                   </p>
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-2">
+                <div className="flex flex-col items-start md:items-end gap-1.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      {formatCurrency(full || b.total_price)}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusPill(b.status)}`}>
-                      {b.status || "pending"}
+                    <span className="text-lg font-bold text-gray-900">{formatCurrency(paid)}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                      {paymentTypeLabel}
                     </span>
                   </div>
-                  <div className="text-[11px] text-gray-500">
-                    <span className="font-semibold text-gray-700">
-                      {breakdownMatchesTotal
-                        ? `GST ${pb.gst_percent}% · Convenience ${pb.convenience_fee_percent}%`
-                        : "Includes GST & convenience fee"}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-600">
-                    Paid: <span className="font-semibold text-gray-900">{formatCurrency(paid)}</span>
-                    {balance > 0 ? (
-                      <>
-                        {" "}
-                        · Balance: <span className="font-semibold text-orange-600">{formatCurrency(balance)}</span>
-                      </>
+                  {balance > 0.009 ? (
+                    <p className="text-xs text-gray-500">
+                      Trip total {formatCurrency(full || b.total_price)}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-col items-start md:items-end gap-1 w-full md:w-auto">
+                    <div className="flex flex-wrap gap-2 justify-start md:justify-end">
+                      {breakdownMatchesTotal && (pb.discount_amount ?? 0) > 0 ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                          Saved {formatCurrency(pb.discount_amount)}
+                        </span>
+                      ) : null}
+                      {balance > 0.009 ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
+                          Balance: {formatCurrency(balance)}
+                        </span>
+                      ) : null}
+                    </div>
+                    {breakdownMatchesTotal && (pb.gst_amount > 0 || pb.gst_percent) ? (
+                      <span className="text-xs text-gray-500 text-right">
+                        GST ({pb.gst_percent}%): {formatCurrency(pb.gst_amount)}
+                        {(pb.convenience_fee_amount ?? 0) > 0 ? (
+                          <span className="text-gray-400">
+                            {" "}
+                            · Convenience ({pb.convenience_fee_percent}%):{" "}
+                            {formatCurrency(pb.convenience_fee_amount)}
+                          </span>
+                        ) : null}
+                      </span>
                     ) : (
-                      <> · <span className="text-green-700 font-semibold">Paid in full</span></>
+                      <span className="text-xs text-gray-500">Includes GST &amp; convenience fee where applicable</span>
                     )}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Paid via {payment?.payment_method || "razorpay"}
                   </div>
                 </div>
               </div>
@@ -295,7 +330,7 @@ export default function RentalBookings() {
                   <i
                     className={`fi fi-rr-${expandedBooking === b.id ? "angle-up" : "angle-down"} mr-1.5`}
                   ></i>
-                  {expandedBooking === b.id ? "Hide" : "View"} Details
+                  {expandedBooking === b.id ? "Hide" : "View"} Payment History
                 </Button>
                 <Button
                   variant="outline"
@@ -320,86 +355,150 @@ export default function RentalBookings() {
               </div>
 
               {expandedBooking === b.id ? (
-                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-1 text-gray-600">
-                    <div className="flex justify-between gap-3">
-                      <span>Booking ID:</span>
-                      <span className="font-medium text-gray-900">#{b.id}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span>Location:</span>
-                      <span className="font-medium text-gray-900 text-right">{locationLabel}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span>Start:</span>
-                      <span className="font-medium text-gray-900 text-right">{formatDateTime(b.start_datetime)}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span>End:</span>
-                      <span className="font-medium text-gray-900 text-right">{formatDateTime(b.end_datetime)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-gray-600">
-                    <div className="flex justify-between gap-3">
-                      <span>Full amount:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(full)}</span>
-                    </div>
-                    {breakdownMatchesTotal ? (
-                      <>
-                        <div className="flex justify-between gap-3">
-                          <span>Rental subtotal:</span>
-                          <span className="font-medium text-gray-900">
-                            {formatCurrency(pb.rent_subtotal_gross ?? pb.rent_subtotal)}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-xs font-medium text-gray-900 mb-3">Payment History</h4>
+                  {rentalPayments.length ? (
+                    <div className="space-y-3 mb-4">
+                      {rentalPayments.map((payment) => (
+                        <div
+                          key={payment.id}
+                          className={`flex flex-col md:flex-row md:items-center justify-between rounded-xl p-3 gap-3 ${
+                            payment.status === "failed"
+                              ? "bg-red-50/50 border border-red-100"
+                              : "bg-gray-50/50 border border-gray-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                payment.status === "failed" ? "bg-red-100" : "bg-white"
+                              }`}
+                            >
+                              <i
+                                className={`${getPaymentMethodIcon(payment.payment_method)} text-base ${
+                                  payment.status === "failed" ? "text-red-500" : "text-gray-500"
+                                }`}
+                              ></i>
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`text-sm font-medium ${
+                                    payment.status === "failed" ? "text-red-700" : "text-gray-900"
+                                  }`}
+                                >
+                                  {formatCurrency(payment.amount)}
+                                </span>
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                  Payment
+                                </span>
+                              </div>
+                              <span
+                                className={`text-xs ${
+                                  payment.status === "failed" ? "text-red-600" : "text-gray-500"
+                                }`}
+                              >
+                                {formatDateTime(payment.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${statusPill(payment.status)}`}
+                          >
+                            {payment.status}
                           </span>
                         </div>
-                        {(pb.discount_amount ?? 0) > 0 ? (
-                          <>
-                            <div className="flex justify-between gap-3">
-                              <span>Discount:</span>
-                              <span className="font-medium text-green-700">
-                                −{formatCurrency(pb.discount_amount)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between gap-3 text-xs text-gray-500">
-                              <span>Rental after discount:</span>
-                              <span className="font-medium text-gray-800">
-                                {formatCurrency(pb.rent_subtotal)}
-                              </span>
-                            </div>
-                          </>
-                        ) : null}
-                        <div className="flex justify-between gap-3">
-                          <span>GST ({pb.gst_percent}%):</span>
-                          <span className="font-medium text-gray-900">{formatCurrency(pb.gst_amount)}</span>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <span>Convenience fee ({pb.convenience_fee_percent}%):</span>
-                          <span className="font-medium text-gray-900">{formatCurrency(pb.convenience_fee_amount)}</span>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <span>Security deposit:</span>
-                          <span className="font-medium text-gray-900">{formatCurrency(pb.security_deposit)}</span>
-                        </div>
-                      </>
-                    ) : (
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 mb-4">No completed payments to show.</p>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="space-y-1 text-gray-600">
+                      <h4 className="text-xs font-semibold text-gray-900 mb-2">Booking details</h4>
                       <div className="flex justify-between gap-3">
-                        <span>Taxes &amp; fees:</span>
-                        <span className="font-medium text-gray-900 text-right">
-                          18% GST and 2% convenience fee included in total where applicable
+                        <span>Booking ID:</span>
+                        <span className="font-medium text-gray-900">#{b.id}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span>Status:</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusPill(b.status)}`}>
+                          {b.status || "pending"}
                         </span>
                       </div>
-                    )}
-                    <div className="flex justify-between gap-3">
-                      <span>Paid:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(paid || b.total_price)}</span>
+                      <div className="flex justify-between gap-3">
+                        <span>Location:</span>
+                        <span className="font-medium text-gray-900 text-right">{locationLabel}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span>Start:</span>
+                        <span className="font-medium text-gray-900 text-right">{formatDateTime(b.start_datetime)}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span>End:</span>
+                        <span className="font-medium text-gray-900 text-right">{formatDateTime(b.end_datetime)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between gap-3">
-                      <span>Balance:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(balance)}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span>Order ID:</span>
-                      <span className="font-medium text-gray-900">{payment?.order_id || "-"}</span>
+                    <div className="space-y-1 text-gray-600">
+                      <h4 className="text-xs font-semibold text-gray-900 mb-2">Price summary</h4>
+                      <div className="flex justify-between gap-3">
+                        <span>Full amount:</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(full)}</span>
+                      </div>
+                      {breakdownMatchesTotal ? (
+                        <>
+                          <div className="flex justify-between gap-3">
+                            <span>Rental subtotal:</span>
+                            <span className="font-medium text-gray-900">
+                              {formatCurrency(pb.rent_subtotal_gross ?? pb.rent_subtotal)}
+                            </span>
+                          </div>
+                          {(pb.discount_amount ?? 0) > 0 ? (
+                            <>
+                              <div className="flex justify-between gap-3">
+                                <span>Discount:</span>
+                                <span className="font-medium text-green-700">
+                                  −{formatCurrency(pb.discount_amount)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between gap-3 text-xs text-gray-500">
+                                <span>Rental after discount:</span>
+                                <span className="font-medium text-gray-800">
+                                  {formatCurrency(pb.rent_subtotal)}
+                                </span>
+                              </div>
+                            </>
+                          ) : null}
+                          <div className="flex justify-between gap-3">
+                            <span>GST ({pb.gst_percent}%):</span>
+                            <span className="font-medium text-gray-900">{formatCurrency(pb.gst_amount)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span>Convenience fee ({pb.convenience_fee_percent}%):</span>
+                            <span className="font-medium text-gray-900">{formatCurrency(pb.convenience_fee_amount)}</span>
+                          </div>
+                          <div className="flex justify-between gap-3">
+                            <span>Security deposit:</span>
+                            <span className="font-medium text-gray-900">{formatCurrency(pb.security_deposit)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex justify-between gap-3">
+                          <span>Taxes &amp; fees:</span>
+                          <span className="font-medium text-gray-900 text-right">
+                            18% GST and 2% convenience fee included in total where applicable
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between gap-3">
+                        <span>Paid:</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(paid || b.total_price)}</span>
+                      </div>
+                      <div className="flex justify-between gap-3">
+                        <span>Balance:</span>
+                        <span className="font-medium text-gray-900">{formatCurrency(balance)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -272,24 +272,87 @@ const BookingClient = ({ activityId }) => {
       childPrice: ticketPriceRow.child_price,
       fullRate: ticketPriceRow.full_rate,
     });
-    // Discount/admin charge may be on ticket type OR slot price row depending on module configuration.
+    // Admin/discount are typically stored on ticket base pricing. Some APIs may also provide them on slot rows.
+    // IMPORTANT: Prefer `selectedTicket` first, because slot rows often include `admin_charge: 0` which would
+    // otherwise override the real ticket admin percentage.
+    const pricingFallback = activityDetails?.current_pricing || {};
+    const discountFromTicket = pickNumber(
+      selectedTicket,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
+    const discountFromActivity = pickNumber(
+      pricingFallback,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
+    const discountFromSlot = pickNumber(
+      ticketPriceRow,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
     const discountPct =
-      pickNumber(ticketPriceRow, ["discount", "discount_percentage", "discountPercent"], null) ??
-      pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
+      discountFromTicket > 0
+        ? discountFromTicket
+        : discountFromActivity > 0
+          ? discountFromActivity
+          : discountFromSlot;
+
+    const adminFromTicket = pickNumber(
+      selectedTicket,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
+    const adminFromActivity = pickNumber(
+      pricingFallback,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
+    const adminFromSlot = pickNumber(
+      ticketPriceRow,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
     const adminChargePct =
-      pickNumber(ticketPriceRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-      pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
+      adminFromTicket > 0
+        ? adminFromTicket
+        : adminFromActivity > 0
+          ? adminFromActivity
+          : adminFromSlot;
+
+    // Prefer backend-computed admin-inclusive slot prices when available.
+    const hasBackendAdmin =
+      ticketPriceRow?.adult_price_with_admin !== undefined ||
+      ticketPriceRow?.full_rate_with_admin !== undefined;
 
     const adultUnitBase =
       rateType === "full"
-        ? Number(ticketPriceRow.full_rate || 0)
-        : Number(ticketPriceRow.adult_price || 0);
-    const childUnitBase = Number(ticketPriceRow.child_price || 0);
+        ? Number((hasBackendAdmin ? ticketPriceRow.full_rate_with_admin : ticketPriceRow.full_rate) || 0)
+        : Number((hasBackendAdmin ? ticketPriceRow.adult_price_with_admin : ticketPriceRow.adult_price) || 0);
+    const childUnitBase = Number((hasBackendAdmin ? ticketPriceRow.child_price_with_admin : ticketPriceRow.child_price) || 0);
 
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+    const adminPctToApply = hasBackendAdmin ? 0 : adminChargePct;
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminPctToApply);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminPctToApply);
 
-    return { rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
+    const adminPctRaw = pickNumber(
+      ticketPriceRow,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      adminChargePct
+    );
+
+    return {
+      rateType,
+      adultUnit,
+      childUnit,
+      adultUnitBase,
+      childUnitBase,
+      discountPct,
+      // If backend already included admin in *_with_admin, never apply admin again in UI math.
+      adminChargePct: hasBackendAdmin ? 0 : adminChargePct,
+      // Keep raw admin % only for reference/debugging if needed.
+      adminChargePctRaw: adminPctRaw,
+    };
   };
 
   const getEffectiveTicketUnitPrices = () => {
@@ -300,6 +363,11 @@ const BookingClient = ({ activityId }) => {
       selectedTicket.id,
       selectedYmd
     );
+    // IMPORTANT (slot-based activities):
+    // When a time slot is selected, always prefer slot pricing over seasonal rows.
+    const slotUnit = getSlotTicketUnitPrices();
+    if (slotUnit) return { source: "slot", ...slotUnit };
+
     if (seasonalRow) {
       const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
         adultPrice: seasonalRow.adult_price,
@@ -330,9 +398,6 @@ const BookingClient = ({ activityId }) => {
 
       return { source: "seasonal", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
     }
-
-    const slotUnit = getSlotTicketUnitPrices();
-    if (slotUnit) return { source: "slot", ...slotUnit };
 
     const rateType = normalizeRateType(selectedTicket.rateType, {
       adultPrice: selectedTicket.adult_price,
@@ -593,7 +658,12 @@ const BookingClient = ({ activityId }) => {
       const basePrice = effective
         ? effective.adultUnit
         : selectedTicket?.price || activityDetails?.price || 0;
-      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0);
+      const adminChargePct = Number(
+        effective?.adminChargePct ??
+          pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+          pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
+          0
+      );
       const discountPct = Number(effective?.discountPct ?? pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0) ?? 0);
 
       // Original (pre-discount) unit prices (admin charge still applies, discount removed)

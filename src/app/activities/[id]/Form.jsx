@@ -171,20 +171,87 @@ const Form = ({
       childPrice: ticketPriceRow.child_price,
       fullRate: ticketPriceRow.full_rate,
     });
-    // discount/admin charge are stored on ticket base pricing, not per-slot ticket price rows
-    const discountPct = pickNumber(selectedTicket, ["discount"], 0);
-    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0);
+    // Admin/discount are typically stored on ticket base pricing. Some APIs may also provide them on slot rows.
+    // IMPORTANT: Prefer `selectedTicket` first, because slot rows often include `admin_charge: 0` which would
+    // otherwise override the real ticket admin percentage.
+    const pricingFallback = activityDetails?.current_pricing || {};
+    const discountFromTicket = pickNumber(
+      selectedTicket,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
+    const discountFromActivity = pickNumber(
+      pricingFallback,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
+    const discountFromSlot = pickNumber(
+      ticketPriceRow,
+      ["discount", "discount_percentage", "discountPercent"],
+      0
+    );
+    const discountPct =
+      discountFromTicket > 0
+        ? discountFromTicket
+        : discountFromActivity > 0
+          ? discountFromActivity
+          : discountFromSlot;
+
+    const adminFromTicket = pickNumber(
+      selectedTicket,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
+    const adminFromActivity = pickNumber(
+      pricingFallback,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
+    const adminFromSlot = pickNumber(
+      ticketPriceRow,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      0
+    );
+    const adminChargePct =
+      adminFromTicket > 0
+        ? adminFromTicket
+        : adminFromActivity > 0
+          ? adminFromActivity
+          : adminFromSlot;
+
+    // Prefer backend-computed admin-inclusive slot prices when available.
+    const hasBackendAdmin =
+      ticketPriceRow?.adult_price_with_admin !== undefined ||
+      ticketPriceRow?.full_rate_with_admin !== undefined;
 
     const adultUnitBase =
       rateType === "full"
-        ? Number(ticketPriceRow.full_rate || 0)
-        : Number(ticketPriceRow.adult_price || 0);
-    const childUnitBase = Number(ticketPriceRow.child_price || 0);
+        ? Number((hasBackendAdmin ? ticketPriceRow.full_rate_with_admin : ticketPriceRow.full_rate) || 0)
+        : Number((hasBackendAdmin ? ticketPriceRow.adult_price_with_admin : ticketPriceRow.adult_price) || 0);
+    const childUnitBase = Number((hasBackendAdmin ? ticketPriceRow.child_price_with_admin : ticketPriceRow.child_price) || 0);
 
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+    const adminPctToApply = hasBackendAdmin ? 0 : adminChargePct;
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminPctToApply);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminPctToApply);
 
-    return { rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
+    const adminPctRaw = pickNumber(
+      ticketPriceRow,
+      ["admin_charge", "adminCharge", "admin_charge_percentage"],
+      adminChargePct
+    );
+
+    return {
+      rateType,
+      adultUnit,
+      childUnit,
+      adultUnitBase,
+      childUnitBase,
+      discountPct,
+      // If backend already included admin in *_with_admin, never apply admin again in UI math.
+      adminChargePct: hasBackendAdmin ? 0 : adminChargePct,
+      // Keep raw admin % only for reference/debugging if needed.
+      adminChargePctRaw: adminPctRaw,
+    };
   };
 
   const getEffectiveTicketUnitPrices = () => {
@@ -196,7 +263,13 @@ const Form = ({
       selectedYmd
     );
 
-    // Seasonal pricing is an add-on (base + seasonal)
+    // IMPORTANT (slot-based activities):
+    // When a time slot is selected, always prefer slot pricing over seasonal rows.
+    // Seasonal rows are add-ons on top of base pricing, but slot pricing defines the base for that time slot.
+    const slotUnit = getSlotTicketUnitPrices();
+    if (slotUnit) return { source: "slot", ...slotUnit };
+
+    // Seasonal pricing is an add-on (base + seasonal) for non-slot selections
     if (seasonalRow) {
       const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
         adultPrice: seasonalRow.adult_price,
@@ -223,9 +296,6 @@ const Form = ({
 
       return { source: "seasonal", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
     }
-
-    const slotUnit = getSlotTicketUnitPrices();
-    if (slotUnit) return { source: "slot", ...slotUnit };
 
     const rateType = normalizeRateType(selectedTicket.rateType, {
       adultPrice: selectedTicket.adult_price,
@@ -539,7 +609,12 @@ const Form = ({
               // Show base + admin only (no discount) for the selected/lowest ticket.
               if (!readyForTotal && selectedTicket) {
                 const effective = getEffectiveTicketUnitPrices();
-                const adminPct = Number(effective?.adminChargePct ?? pickNumber(selectedTicket, ["admin_charge", "adminCharge"], 0) ?? 0);
+                const adminPct = Number(
+                  effective?.adminChargePct ??
+                    pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+                    pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
+                    0
+                );
                 const rateType = effective?.rateType || uiRateType;
                 const qty = rateType === "full" ? Math.max(1, Number(ticketCount) || 1) : totalPaxCount;
                 const base = Number(effective?.adultUnitBase ?? selectedTicket.price ?? selectedTicket.adult_price ?? 0);
@@ -570,15 +645,30 @@ const Form = ({
               return (
                 <div className="text-right">
                   {parts.hasDiscount && parts.originalTotal > parts.finalTotal ? (
-                    <div className="text-sm text-gray-500 line-through">
-                      ₹{parts.originalTotal.toFixed(0)}
+                    <div className="flex items-center justify-end gap-2 text-sm text-gray-500">
+                      <span className="line-through">₹{parts.originalTotal.toFixed(0)}</span>
+                      <span className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+                        Before discount
+                      </span>
                     </div>
                   ) : null}
-                  <div className="text-xl lg:text-2xl font-semibold text-gray-800">
-                    ₹{parts.finalTotal.toFixed(0)}{" "}
-                    <span className="text-sm text-gray-500 font-normal">
-                      {unitLabel}
-                    </span>
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="text-xl lg:text-2xl font-semibold text-gray-800">
+                      ₹{parts.finalTotal.toFixed(0)}{" "}
+                      <span className="text-sm text-gray-500 font-normal">
+                        {unitLabel}
+                      </span>
+                    </div>
+                    {(() => {
+                      const effective = getEffectiveTicketUnitPrices();
+                      const pct = Number(effective?.discountPct || 0);
+                      if (!(pct > 0) || !(parts.originalTotal > parts.finalTotal)) return null;
+                      return (
+                        <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-extrabold tracking-wide text-red-600 ring-1 ring-red-200">
+                          {pct.toFixed(0)}% OFF
+                        </span>
+                      );
+                    })()}
                   </div>
                   {showSeasonAddonNote ? (
                     <div className="text-xs text-blue-700 mt-1">

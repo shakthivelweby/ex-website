@@ -30,6 +30,18 @@ const AttractionBookings = () => {
     });
   };
 
+  const formatDateTime = (dateString) => {
+    const date = new Date(dateString);
+    if (!Number.isFinite(date.getTime())) return "—";
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const formatCurrency = (amount) => {
     return `₹${parseFloat(amount).toLocaleString()}`;
   };
@@ -55,6 +67,21 @@ const AttractionBookings = () => {
   };
 
   const getAttractionPricingBreakdown = (booking) => {
+    const br = booking.pricing_breakdown;
+    if (br && br.grand_total != null) {
+      return {
+        hasAnyBreakdown: true,
+        subtotalGross: n(br.total_amount),
+        discount: n(br.discount_amount),
+        subtotalAfterDiscount: n(br.subtotal_after_discount),
+        gstPct: n(br.gst_percent) || 18,
+        gstAmount: n(br.gst_amount),
+        convPct: n(br.convenience_fee_percent) || 2,
+        convAmount: n(br.convenience_fee_amount),
+        grandTotal: n(br.grand_total),
+      };
+    }
+
     const subtotalGross = n(booking?.total_amount);
     const discount = n(booking?.discount_amount);
     const subtotalAfterDiscount =
@@ -96,6 +123,18 @@ const AttractionBookings = () => {
       convAmount,
       grandTotal,
     };
+  };
+
+  const getPaymentStatusLabel = (booking) => {
+    const bal = n(booking?.balance);
+    if (bal <= 0.009) return "Full Payment";
+    return "Partial payment";
+  };
+
+  const getAttractionPayments = (booking) => {
+    const raw = booking.attraction_payment ?? booking.attraction_payments;
+    if (!raw) return [];
+    return Array.isArray(raw) ? raw : [raw];
   };
 
   const getStatusColor = (status) => {
@@ -253,15 +292,13 @@ const AttractionBookings = () => {
   }
 
   return (
-    <>
+    <div className="p-6">
       <div className="space-y-4">
         {attractionBookings.map((booking) => (
           <div
             key={booking.id}
             className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
           >
-            {/** ensure label+color stay consistent even if status is missing */}
-            {(() => null)()}
             {/* Attraction Info */}
             <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex-1">
@@ -297,45 +334,53 @@ const AttractionBookings = () => {
               </div>
 
               {/* Price Info */}
-              <div className="flex flex-col items-start md:items-end gap-2">
+              <div className="flex flex-col items-start md:items-end gap-1.5">
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const statusLabel = booking.status || "Confirmed";
+                    const paid = n(booking.total_paid);
+                    const gt = getGrandTotal(booking);
+                    const display = paid > 0 ? paid : gt;
                     return (
-                      <>
-                  <span className="text-lg font-bold text-gray-900">
-                    {formatCurrency(getGrandTotal(booking))}
-                  </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                      statusLabel
-                    )}`}
-                  >
-                    {statusLabel}
-                  </span>
-                      </>
+                      <span className="text-lg font-bold text-gray-900">
+                        {formatCurrency(display)}
+                      </span>
                     );
                   })()}
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    {getPaymentStatusLabel(booking)}
+                  </span>
                 </div>
 
                 {(() => {
                   const pb = getAttractionPricingBreakdown(booking);
                   if (!pb.hasAnyBreakdown) return null;
                   return (
-                    <div className="text-[11px] text-gray-500">
-                      <span className="font-semibold text-gray-700">
-                        GST {pb.gstPct}% · Convenience {pb.convPct}%
+                    <>
+                      {pb.discount > 0 ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                          Saved {formatCurrency(pb.discount)}
+                        </span>
+                      ) : null}
+                      <span className="text-xs text-gray-500 text-right">
+                        GST ({pb.gstPct}%): {formatCurrency(pb.gstAmount)}
+                        {(pb.convAmount ?? 0) > 0 ? (
+                          <span className="text-gray-400">
+                            {" "}
+                            · Convenience ({pb.convPct}%): {formatCurrency(pb.convAmount)}
+                          </span>
+                        ) : null}
                       </span>
-                    </div>
+                    </>
                   );
                 })()}
 
-                {booking.discount_amount &&
-                  parseFloat(booking.discount_amount) > 0 && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                      Saved {formatCurrency(booking.discount_amount)}
-                    </span>
-                  )}
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
+                    booking.status || "Confirmed"
+                  )}`}
+                >
+                  {booking.status || "Confirmed"}
+                </span>
               </div>
             </div>
 
@@ -345,10 +390,14 @@ const AttractionBookings = () => {
                 onClick={() => togglePaymentHistory(booking.id)}
                 variant="outline"
                 size="sm"
-                className="!px-3 !py-2 flex items-center justify-center"
+                className="!rounded-full !text-xs !px-4 !py-2 flex items-center justify-center"
               >
-                <i className="fi fi-rr-document-text mr-1.5"></i>
-                {expandedBooking === booking.id ? "Hide" : "View"} Details
+                <i
+                  className={`fi fi-rr-${
+                    expandedBooking === booking.id ? "angle-up" : "angle-down"
+                  } mr-1.5`}
+                ></i>
+                {expandedBooking === booking.id ? "Hide" : "View"} Payment History
               </Button>
 
               <Button
@@ -374,6 +423,54 @@ const AttractionBookings = () => {
             {/* Expanded Booking Details */}
             {expandedBooking === booking.id && (
               <div className="mt-4 pt-4 border-t border-gray-100">
+                {(() => {
+                  const payments = getAttractionPayments(booking).filter(
+                    (p) => String(p?.status || "").toLowerCase() === "completed"
+                  );
+                  if (!payments.length) return null;
+                  return (
+                    <div className="mb-4">
+                      <h4 className="text-xs font-medium text-gray-900 mb-3">Payment History</h4>
+                      <div className="space-y-3">
+                        {payments.map((payment) => (
+                          <div
+                            key={payment.id}
+                            className="flex flex-col md:flex-row md:items-center justify-between rounded-xl p-3 gap-3 bg-gray-50/50 border border-gray-100"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white">
+                                <i
+                                  className={`${getPaymentMethodIcon(payment.payment_method)} text-base text-gray-500`}
+                                ></i>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {formatCurrency(payment.amount)}
+                                  </span>
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
+                                    Full
+                                  </span>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {formatDateTime(payment.created_at)}
+                                </span>
+                              </div>
+                            </div>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
+                                payment.status
+                              )}`}
+                            >
+                              {payment.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">
@@ -480,9 +577,7 @@ const AttractionBookings = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">
-                      Payment Details
-                    </h4>
+                    <h4 className="text-xs font-semibold text-gray-900 mb-2">Price summary</h4>
                     <div className="space-y-1 text-sm text-gray-600">
                       {(() => {
                         const pb = getAttractionPricingBreakdown(booking);
@@ -675,7 +770,7 @@ const AttractionBookings = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

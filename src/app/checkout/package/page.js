@@ -28,6 +28,7 @@ export default function CheckoutPage() {
     paymentOption: "full", // full or partial
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [bookingCompleted, setBookingCompleted] = useState(false);
   const [packageDetails, setPackageDetails] = useState(null);
   const [isLoadingPackage, setIsLoadingPackage] = useState(true);
   const [error, setError] = useState(null);
@@ -99,6 +100,7 @@ export default function CheckoutPage() {
     setIsLoading(true);
     setError(null);
   
+    let pendingPackagePaymentId = null;
     try {
       // Validate minimum members requirement (infants are not counted as members)
       const adultCount = parseInt(searchParams.get("adult_count") || "0");
@@ -147,10 +149,8 @@ export default function CheckoutPage() {
       
 
         if (orderRes.status) {
+          pendingPackagePaymentId = orderRes.data.package_payment_id;
 
-
-      
-      
           // Initialize Razorpay payment
           const paymentResponse = await initializeRazorpayPayment({
             amount: paymentAmount,
@@ -167,34 +167,42 @@ export default function CheckoutPage() {
         
 
           if (paymentResponse.status) {
-  
-            // Verify payment with the correct parameters
             const verificationResponse = await verifyPayment({
               razorpay_order_id: paymentResponse.data.razorpay_order_id,
               razorpay_signature: paymentResponse.data.razorpay_signature,
-              payment_id : paymentResponse.data.razorpay_payment_id,
+              payment_id: paymentResponse.data.razorpay_payment_id,
             });
-            console.log("verificationResponse", verificationResponse)
             if (verificationResponse.status) {
+              setBookingCompleted(true);
               setSuccessMessage({
                 title: "Booking Successful!",
                 message: "Your trip has been booked successfully. Check your email for details.",
               });
               setShowSuccess(true);
-              
-              // Redirect after a short delay
-              // setTimeout(() => {
-              //   router.push("/my-bookings");
-              // }, 2000);
+              setTimeout(() => {
+                router.replace("/my-bookings?tab=packages");
+              }, 2000);
             } else {
-              const failRes = paymentFailure(orderRes.data.package_payment_id)
-           console.log(failRes)
-             
-              // setError("Payment verification failed. Please contact support.");
+              setError(
+                verificationResponse.message ||
+                  "Payment verification failed. Please contact support."
+              );
+              try {
+                await paymentFailure(orderRes.data.package_payment_id);
+              } catch {
+                /* non-blocking */
+              }
             }
           } else {
-           const failRes = paymentFailure(orderRes.data.package_payment_id)
-           console.log(failRes)
+            try {
+              await paymentFailure(orderRes.data.package_payment_id);
+            } catch {
+              /* non-blocking */
+            }
+            setError(
+              paymentResponse.error?.description ||
+                "Payment was not completed. Please try again."
+            );
           }
         } else {
           setError(orderRes.message || "Failed to create payment order. Please try again.");
@@ -204,6 +212,13 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error("Booking error:", error);
+      if (pendingPackagePaymentId) {
+        try {
+          await paymentFailure(pendingPackagePaymentId);
+        } catch {
+          /* non-blocking */
+        }
+      }
       setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
     } finally {
       setIsLoading(false);
@@ -354,15 +369,31 @@ export default function CheckoutPage() {
                   </div>
                   Price Details
                 </h4>
-                <div className="space-y-1">
+                  <div className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-gray-600">Base Price</span>
+                    <span className="text-gray-600">Subtotal</span>
                     <span className="text-gray-900 font-semibold">₹{prices.baseTotal.toLocaleString()}</span>
                   </div>
+                  {Number(packageDetails.gst_amount) > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">GST ({packageDetails.gst_percent ?? 5}%)</span>
+                      <span className="text-gray-900 font-semibold">₹{Math.round(Number(packageDetails.gst_amount)).toLocaleString()}</span>
+                    </div>
+                  )}
                   {packageDetails.discount_percentage > 0 && (
                     <div className="flex justify-between text-xs">
                       <span className="text-green-700">Discount ({packageDetails.discount_percentage}%)</span>
                       <span className="text-green-700 font-semibold">-₹{packageDetails.discount_price.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {Number(packageDetails.convenience_fee_amount) > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">
+                        Convenience fee ({packageDetails.convenience_fee_percent ?? 2}%)
+                      </span>
+                      <span className="text-gray-900 font-semibold">
+                        ₹{Math.round(Number(packageDetails.convenience_fee_amount)).toLocaleString()}
+                      </span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold pt-1.5 border-t border-green-200">
@@ -525,7 +556,7 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || bookingCompleted}
               className="w-full h-10 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-sm font-semibold rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               {isLoading ? (
@@ -694,7 +725,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || bookingCompleted}
                 className="w-full h-12 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-base font-bold rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:translate-y-0"
               >
                 {isLoading ? (
@@ -784,13 +815,29 @@ export default function CheckoutPage() {
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">Base Price</span>
+                      <span className="text-gray-600">Subtotal</span>
                       <span className="text-gray-900 font-bold">₹{prices.baseTotal.toLocaleString()}</span>
                     </div>
+                    {Number(packageDetails.gst_amount) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">GST ({packageDetails.gst_percent ?? 5}%)</span>
+                        <span className="text-gray-900 font-bold">₹{Math.round(Number(packageDetails.gst_amount)).toLocaleString()}</span>
+                      </div>
+                    )}
                     {packageDetails.discount_percentage > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-green-700">Discount ({packageDetails.discount_percentage}%)</span>
                         <span className="text-green-700 font-bold">-₹{packageDetails.discount_price.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {Number(packageDetails.convenience_fee_amount) > 0 && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">
+                          Convenience fee ({packageDetails.convenience_fee_percent ?? 2}%)
+                        </span>
+                        <span className="text-gray-900 font-bold">
+                          ₹{Math.round(Number(packageDetails.convenience_fee_amount)).toLocaleString()}
+                        </span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold pt-2 border-t border-green-200">

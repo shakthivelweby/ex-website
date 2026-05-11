@@ -79,7 +79,12 @@ const ActivityDetailPage = async ({ params }) => {
     const priceObj = ticket.current_price;
     const rateType = priceObj?.rate_type || 'pax';
     const base = rateType === 'full' ? priceObj?.full_rate : priceObj?.adult_price;
-    const priceWithAdmin = applyAdminOnly(base || 0, priceObj?.admin_charge ?? 0);
+    const adminPct =
+      priceObj?.admin_charge ??
+      priceObj?.admin_charge_percentage ??
+      priceObj?.adminCharge ??
+      0;
+    const priceWithAdmin = applyAdminOnly(base || 0, adminPct);
 
     return {
       id: ticket.id,
@@ -93,8 +98,8 @@ const ActivityDetailPage = async ({ params }) => {
       originalPrice: 0, // Backend doesn't seem to have original price separate yet
       rateType: rateType,
       child_price: priceObj?.child_price || 0,
-      discount: priceObj?.discount ?? 0,
-      admin_charge: priceObj?.admin_charge ?? 0,
+      discount: priceObj?.discount ?? priceObj?.discount_percentage ?? priceObj?.discountPercent ?? 0,
+      admin_charge: adminPct,
       guide_rate: priceObj?.guide_rate ?? 0,
       features: [], // derived from inclusions?
       briefDetails: ticket.description,

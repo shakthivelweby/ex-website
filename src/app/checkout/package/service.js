@@ -34,19 +34,16 @@ const createOrder = async (data) => {
 };
 
 const verifyPayment = async (data) => {
-    try {
-     
-        const queryString = new URLSearchParams({
+    const response = await apiMiddleware.post(
+        "/package-payment-verify",
+        {
+            payment_id: data.payment_id,
             order_id: data.razorpay_order_id,
             signature: data.razorpay_signature,
-            payment_id : data.payment_id
-        
-        }).toString();
-        const response = await apiMiddleware.post(`/package-payment-verify?${queryString}`);
-        return response.data;
-    } catch (error) {
-        throw error;
-    }
+        },
+        { timeout: 60000 }
+    );
+    return response.data;
 };
 
 

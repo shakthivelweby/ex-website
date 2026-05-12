@@ -244,7 +244,9 @@ export default function RentalBookings() {
                 .filter((p) => String(p?.status || "").toLowerCase() === "completed")
                 .sort((a, c) => new Date(c?.created_at || 0) - new Date(a?.created_at || 0))
             : [];
-          const paymentTypeLabel = balance <= 0.009 ? "Full Payment" : "Partial payment";
+          const paymentPill =
+            b.payment_status ||
+            (balance <= 0.009 ? "Paid" : "Partial payment");
 
           return (
             <div
@@ -277,16 +279,20 @@ export default function RentalBookings() {
                   </p>
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-1.5">
+                <div className="flex flex-col items-start md:items-end gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">{formatCurrency(paid)}</span>
+                    <span className="text-lg font-bold text-gray-900">
+                      {formatCurrency(
+                        full > 0 ? full : parseFloat(b.total_price || paid || 0)
+                      )}
+                    </span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                      {paymentTypeLabel}
+                      {paymentPill}
                     </span>
                   </div>
                   {balance > 0.009 ? (
-                    <p className="text-xs text-gray-500">
-                      Trip total {formatCurrency(full || b.total_price)}
+                    <p className="text-xs text-gray-500 text-right">
+                      Paid {formatCurrency(paid)} · Balance {formatCurrency(balance)}
                     </p>
                   ) : null}
                   <div className="flex flex-col items-start md:items-end gap-1 w-full md:w-auto">
@@ -296,23 +302,13 @@ export default function RentalBookings() {
                           Saved {formatCurrency(pb.discount_amount)}
                         </span>
                       ) : null}
-                      {balance > 0.009 ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
-                          Balance: {formatCurrency(balance)}
-                        </span>
-                      ) : null}
                     </div>
                     {breakdownMatchesTotal && (pb.gst_amount > 0 || pb.gst_percent) ? (
-                      <span className="text-xs text-gray-500 text-right">
-                        GST ({pb.gst_percent}%): {formatCurrency(pb.gst_amount)}
-                        {(pb.convenience_fee_amount ?? 0) > 0 ? (
-                          <span className="text-gray-400">
-                            {" "}
-                            · Convenience ({pb.convenience_fee_percent}%):{" "}
-                            {formatCurrency(pb.convenience_fee_amount)}
-                          </span>
-                        ) : null}
-                      </span>
+                      <div className="text-[11px] text-gray-500 text-right">
+                        <span className="font-semibold text-gray-700">
+                          GST {pb.gst_percent}% · Convenience {pb.convenience_fee_percent}%
+                        </span>
+                      </div>
                     ) : (
                       <span className="text-xs text-gray-500">Includes GST &amp; convenience fee where applicable</span>
                     )}
@@ -330,7 +326,7 @@ export default function RentalBookings() {
                   <i
                     className={`fi fi-rr-${expandedBooking === b.id ? "angle-up" : "angle-down"} mr-1.5`}
                   ></i>
-                  {expandedBooking === b.id ? "Hide" : "View"} Payment History
+                  {expandedBooking === b.id ? "Hide" : "View"} Details
                 </Button>
                 <Button
                   variant="outline"
@@ -354,9 +350,9 @@ export default function RentalBookings() {
                 ) : null}
               </div>
 
-              {expandedBooking === b.id ? (
+                {expandedBooking === b.id ? (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <h4 className="text-xs font-medium text-gray-900 mb-3">Payment History</h4>
+                  <h4 className="text-xs font-medium text-gray-900 mb-3">Payments</h4>
                   {rentalPayments.length ? (
                     <div className="space-y-3 mb-4">
                       {rentalPayments.map((payment) => (

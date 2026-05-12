@@ -125,12 +125,6 @@ const AttractionBookings = () => {
     };
   };
 
-  const getPaymentStatusLabel = (booking) => {
-    const bal = n(booking?.balance);
-    if (bal <= 0.009) return "Full Payment";
-    return "Partial payment";
-  };
-
   const getAttractionPayments = (booking) => {
     const raw = booking.attraction_payment ?? booking.attraction_payments;
     if (!raw) return [];
@@ -334,53 +328,54 @@ const AttractionBookings = () => {
               </div>
 
               {/* Price Info */}
-              <div className="flex flex-col items-start md:items-end gap-1.5">
+              <div className="flex flex-col items-start md:items-end gap-2">
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const paid = n(booking.total_paid);
-                    const gt = getGrandTotal(booking);
-                    const display = paid > 0 ? paid : gt;
+                    const pb = getAttractionPricingBreakdown(booking);
+                    const grand =
+                      booking.pricing_breakdown?.grand_total ??
+                      booking.grand_total ??
+                      pb.grandTotal ??
+                      getGrandTotal(booking) ??
+                      booking.total_amount ??
+                      0;
                     return (
                       <span className="text-lg font-bold text-gray-900">
-                        {formatCurrency(display)}
+                        {formatCurrency(grand)}
                       </span>
                     );
                   })()}
                   <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                    {getPaymentStatusLabel(booking)}
+                    {booking.payment_status || "Paid"}
                   </span>
                 </div>
-
                 {(() => {
                   const pb = getAttractionPricingBreakdown(booking);
-                  if (!pb.hasAnyBreakdown) return null;
-                  return (
-                    <>
-                      {pb.discount > 0 ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                          Saved {formatCurrency(pb.discount)}
-                        </span>
-                      ) : null}
-                      <span className="text-xs text-gray-500 text-right">
-                        GST ({pb.gstPct}%): {formatCurrency(pb.gstAmount)}
-                        {(pb.convAmount ?? 0) > 0 ? (
-                          <span className="text-gray-400">
-                            {" "}
-                            · Convenience ({pb.convPct}%): {formatCurrency(pb.convAmount)}
-                          </span>
-                        ) : null}
+                  if (!pb.hasAnyBreakdown && !booking.pricing_breakdown) return null;
+                  const disc =
+                    booking.discount_amount != null
+                      ? n(booking.discount_amount)
+                      : pb.discount;
+                  if (disc > 0.009) {
+                    return (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                        Saved {formatCurrency(disc)}
                       </span>
-                    </>
+                    );
+                  }
+                  return null;
+                })()}
+                {(() => {
+                  const pb = getAttractionPricingBreakdown(booking);
+                  if (!pb.hasAnyBreakdown && !booking.pricing_breakdown) return null;
+                  return (
+                    <div className="text-[11px] text-gray-500 text-right">
+                      <span className="font-semibold text-gray-700">
+                        GST {pb.gstPct}% · Convenience {pb.convPct}%
+                      </span>
+                    </div>
                   );
                 })()}
-
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                    booking.status || "Confirmed"
-                  )}`}
-                >
-                  {booking.status || "Confirmed"}
-                </span>
               </div>
             </div>
 
@@ -397,7 +392,7 @@ const AttractionBookings = () => {
                     expandedBooking === booking.id ? "angle-up" : "angle-down"
                   } mr-1.5`}
                 ></i>
-                {expandedBooking === booking.id ? "Hide" : "View"} Payment History
+                {expandedBooking === booking.id ? "Hide" : "View"} Details
               </Button>
 
               <Button
@@ -411,13 +406,6 @@ const AttractionBookings = () => {
                 <i className="fi fi-rr-eye mr-1.5"></i>
                 View Attraction
               </Button>
-
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                <i
-                  className={`${getPaymentMethodIcon(booking.payment_method)}`}
-                ></i>
-                <span>{booking.payment_method || "Razorpay"}</span>
-              </div>
             </div>
 
             {/* Expanded Booking Details */}
@@ -430,7 +418,7 @@ const AttractionBookings = () => {
                   if (!payments.length) return null;
                   return (
                     <div className="mb-4">
-                      <h4 className="text-xs font-medium text-gray-900 mb-3">Payment History</h4>
+                      <h4 className="text-xs font-medium text-gray-900 mb-3">Payments</h4>
                       <div className="space-y-3">
                         {payments.map((payment) => (
                           <div
@@ -480,6 +468,16 @@ const AttractionBookings = () => {
                       <div className="flex justify-between">
                         <span>Booking ID:</span>
                         <span className="font-medium">#{booking.id}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Booking status:</span>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(
+                            booking.status || "confirmed"
+                          )}`}
+                        >
+                          {booking.status || "Confirmed"}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Visit Date:</span>
@@ -657,16 +655,6 @@ const AttractionBookings = () => {
                         <span>Payment Method:</span>
                         <span className="font-medium">
                           {booking.payment_method || "Razorpay"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Status:</span>
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {booking.status || "Confirmed"}
                         </span>
                       </div>
                     </div>

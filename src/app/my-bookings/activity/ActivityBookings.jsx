@@ -196,12 +196,6 @@ const ActivityBookings = () => {
     };
   };
 
-  const getPaymentStatusLabel = (booking) => {
-    const bal = n(booking?.balance);
-    if (bal <= 0.009) return "Full Payment";
-    return "Partial payment";
-  };
-
   const getActivityPayments = (booking) => {
     const raw = booking.activity_payment ?? booking.activity_payments;
     if (!raw) return [];
@@ -334,58 +328,55 @@ const ActivityBookings = () => {
                   <p className="text-xs text-gray-500 mt-1.5">
                     Booked on {formatDate(booking.created_at)}
                   </p>
-                  {booking.booking_reference && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Ref: <span className="font-semibold text-gray-700">{booking.booking_reference}</span>
-                    </p>
-                  )}
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-1.5">
+                <div className="flex flex-col items-start md:items-end gap-2">
                   <div className="flex items-center gap-2">
                     {(() => {
                       const pb = getPricingBreakdown(booking);
-                      const paid = n(booking.total_paid);
-                      const display = paid > 0 ? paid : pb.grandTotal;
+                      const grand =
+                        booking.pricing_breakdown?.grand_total ??
+                        booking.grand_total ??
+                        pb.grandTotal ??
+                        booking.total_amount ??
+                        0;
                       return (
                         <span className="text-lg font-bold text-gray-900">
-                          {formatCurrency(display)}
+                          {formatCurrency(grand)}
                         </span>
                       );
                     })()}
                     <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                      {getPaymentStatusLabel(booking)}
+                      {booking.payment_status || "Paid"}
                     </span>
                   </div>
                   {(() => {
                     const pb = getPricingBreakdown(booking);
-                    if (!pb.hasBreakdown) return null;
-                    return (
-                      <>
-                        {pb.discount > 0 ? (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                            Saved {formatCurrency(pb.discount)}
-                          </span>
-                        ) : null}
-                        <span className="text-xs text-gray-500 text-right">
-                          GST ({pb.gstPct}%): {formatCurrency(pb.gstAmount)}
-                          {(pb.convAmount ?? 0) > 0 ? (
-                            <span className="text-gray-400">
-                              {" "}
-                              · Convenience ({pb.convPct}%): {formatCurrency(pb.convAmount)}
-                            </span>
-                          ) : null}
+                    if (!pb.hasBreakdown && !booking.pricing_breakdown) return null;
+                    const disc =
+                      booking.discount_amount != null
+                        ? n(booking.discount_amount)
+                        : pb.discount;
+                    if (disc > 0.009) {
+                      return (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
+                          Saved {formatCurrency(disc)}
                         </span>
-                      </>
+                      );
+                    }
+                    return null;
+                  })()}
+                  {(() => {
+                    const pb = getPricingBreakdown(booking);
+                    if (!pb.hasBreakdown && !booking.pricing_breakdown) return null;
+                    return (
+                      <div className="text-[11px] text-gray-500 text-right">
+                        <span className="font-semibold text-gray-700">
+                          GST {pb.gstPct}% · Convenience {pb.convPct}%
+                        </span>
+                      </div>
                     );
                   })()}
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(
-                      booking.booking_status || "Confirmed"
-                    )}`}
-                  >
-                    {booking.booking_status || "Confirmed"}
-                  </span>
                 </div>
               </div>
 
@@ -401,7 +392,7 @@ const ActivityBookings = () => {
                       expandedBooking === booking.id ? "angle-up" : "angle-down"
                     } mr-1.5`}
                   ></i>
-                  {expandedBooking === booking.id ? "Hide" : "View"} Payment History
+                  {expandedBooking === booking.id ? "Hide" : "View"} Details
                 </Button>
 
                 <Button
@@ -474,6 +465,16 @@ const ActivityBookings = () => {
                         <div className="flex justify-between">
                           <span>Booking ID:</span>
                           <span className="font-medium">#{booking.id}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span>Booking status:</span>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(
+                              booking.booking_status || "confirmed"
+                            )}`}
+                          >
+                            {booking.booking_status || "Confirmed"}
+                          </span>
                         </div>
                       {booking.booking_reference && (
                         <div className="flex justify-between">

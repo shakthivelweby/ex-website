@@ -586,6 +586,10 @@ const Form = ({
         time_slot_pricing: activityDetails.time_slot_pricing || [],
         seasonal_dates: activityDetails.seasonal_dates || [],
         closeout_dates: activityDetails.closeout_dates || [],
+        current_pricing: activityDetails.current_pricing || null,
+        cancellation_policies: Array.isArray(activityDetails.cancellation_policies)
+          ? activityDetails.cancellation_policies
+          : [],
       },
     };
     sessionStorage.setItem("bookingData", JSON.stringify(bookingData));

@@ -12,11 +12,15 @@ import {
   verifyActivityPayment,
   activityPaymentFailed
 } from "../../service";
+import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";
+  const desc = String(row.description || "").trim();
+  if (desc) return desc;
+
   const name = row.policy_name || "Cancellation Policy";
   const refund = Number(row.refund_percentage ?? 0);
 
@@ -257,18 +261,21 @@ const BookingClient = ({ activityId }) => {
 
   const selectedYmd = formData.selectedDate ? toYmd(formData.selectedDate) : "";
 
-  // Fetch activity details
+  // Load booking session + authoritative cancellation policies from API
   useEffect(() => {
+    let cancelled = false;
+
     const fetchActivityDetails = async () => {
       try {
-        // Get booking data from sessionStorage
+        const today = new Date().toISOString().split("T")[0];
+        let details = null;
+
         const bookingDataStr = sessionStorage.getItem("bookingData");
         if (bookingDataStr) {
           const data = JSON.parse(bookingDataStr);
 
-          // Set activity details from sessionStorage or use defaults
           if (data.activityDetails) {
-            setActivityDetails(data.activityDetails);
+            details = { ...data.activityDetails };
           }
 
           setFormData((prev) => ({
@@ -282,12 +289,55 @@ const BookingClient = ({ activityId }) => {
           setSelectedTicket(data.selectedTicket);
           setIncludeGuide(Boolean(data.includeGuide));
 
-          // Mark that data was successfully loaded
           if (data.selectedDate || data.selectedTimeSlot) {
             setDataLoaded(true);
           }
         } else {
-          // If no booking data, set a default activity
+          details = {
+            id: activityId,
+            title: "Adventure Activity",
+            location: "Location",
+            price: 2500,
+            duration: "2-3 hours",
+            time_slot_based: false,
+            time_slot_pricing: [],
+            cancellation_policies: [],
+          };
+        }
+
+        // Session payload used to omit cancellation_policies; always merge from API when possible.
+        try {
+          const res = await apiMiddleware.get(`/activity-details/${activityId}`, {
+            params: { date: today },
+          });
+          const inner = res.data?.data;
+          const policies = Array.isArray(inner?.cancellation_policies)
+            ? inner.cancellation_policies
+            : [];
+          if (!cancelled && details) {
+            details = { ...details, cancellation_policies: policies };
+          } else if (!cancelled && !details && policies.length) {
+            details = {
+              id: activityId,
+              title: inner?.activity?.name || "Activity",
+              location: inner?.activity?.location || inner?.activity?.city || "",
+              price: 0,
+              duration: "—",
+              time_slot_based: Boolean(inner?.activity?.time_slot_based),
+              time_slot_pricing: Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [],
+              cancellation_policies: policies,
+            };
+          }
+        } catch {
+          // keep session / defaults; policies may stay empty
+        }
+
+        if (!cancelled) {
+          if (details) setActivityDetails(details);
+        }
+      } catch (error) {
+        console.error("Error loading booking data:", error);
+        if (!cancelled) {
           setActivityDetails({
             id: activityId,
             title: "Adventure Activity",
@@ -296,24 +346,16 @@ const BookingClient = ({ activityId }) => {
             duration: "2-3 hours",
             time_slot_based: false,
             time_slot_pricing: [],
+            cancellation_policies: [],
           });
         }
-      } catch (error) {
-        console.error("Error loading booking data:", error);
-        // Set default activity on error
-        setActivityDetails({
-          id: activityId,
-          title: "Adventure Activity",
-          location: "Location",
-          price: 2500,
-          duration: "2-3 hours",
-          time_slot_based: false,
-          time_slot_pricing: [],
-        });
       }
     };
 
     fetchActivityDetails();
+    return () => {
+      cancelled = true;
+    };
   }, [activityId]);
 
   const getSlotTicketUnitPrices = () => {
@@ -603,11 +645,12 @@ const BookingClient = ({ activityId }) => {
   const totalPrice = calculateTotalPrice();
   const gstPercent = 18;
   const conveniencePercent = 2;
-  const subtotalForFees = Math.max(0, Number(totalPrice || 0));
-  const gstAmount = (subtotalForFees * gstPercent) / 100;
-  const afterGst = subtotalForFees + gstAmount;
-  const convenienceAmount = (afterGst * conveniencePercent) / 100;
-  const grandTotalUi = afterGst + convenienceAmount;
+  // Round in paise steps so UI matches API (GST on subtotal, convenience on subtotal+GST).
+  const subtotalForFees = Math.max(0, Math.round(Number(totalPrice || 0) * 100) / 100);
+  const gstAmount = Math.round(subtotalForFees * (gstPercent / 100) * 100) / 100;
+  const afterGst = Math.round((subtotalForFees + gstAmount) * 100) / 100;
+  const convenienceAmount = Math.round(afterGst * (conveniencePercent / 100) * 100) / 100;
+  const grandTotalUi = Math.round((afterGst + convenienceAmount) * 100) / 100;
   const effectivePricing = getEffectiveTicketUnitPrices();
   const showSeasonAddonNote = Boolean(
     effectivePricing?.source === "seasonal" ||
@@ -1295,12 +1338,6 @@ const BookingClient = ({ activityId }) => {
                         <i className="fi fi-rr-info mt-0.5 text-primary-500"></i>
                         <p className="leading-relaxed">
                           {formatCancellationPolicyRow(row)}
-                          {row.description ? (
-                            <span className="text-gray-500">
-                              {" "}
-                              — {row.description}
-                            </span>
-                          ) : null}
                         </p>
                       </div>
                     ))}
@@ -1472,12 +1509,13 @@ const BookingClient = ({ activityId }) => {
                 </span>
                 {(() => {
                   const parts = getTotalParts();
-                  const summary = getDiscountAdminSummary();
                   if (parts?.hasDiscount && parts.originalTotal > parts.finalTotal) {
+                    // Strikethrough must include guide when selected — summary.originalSubtotalWithAdminNoDiscount is tickets-only.
+                    const strikePreDiscount = Number(parts.originalTotal);
                     return (
                       <div className="text-right">
                         <div className="text-sm text-gray-500 line-through">
-                          ₹{Number(summary?.originalSubtotalWithAdminNoDiscount ?? parts.originalTotal).toFixed(2)}
+                          ₹{strikePreDiscount.toFixed(2)}
                         </div>
                         <div className="text-2xl font-bold text-primary-500">
                           ₹{grandTotalUi.toFixed(2)}
@@ -1512,13 +1550,14 @@ const BookingClient = ({ activityId }) => {
 
                   const showDiscount = s.discountPct > 0 && s.discountAmount > 0.01;
                   const showGuide = s.guideTotal > 0.01;
+                  const showAdmin = (s.adminAmount ?? 0) > 0.01;
 
                   if (!showDiscount && !showAdmin && !showGuide) return null;
 
                   return (
                     <>
                       <div className="flex justify-between">
-                        <span>Base amount</span>
+                        <span>Tickets (incl. admin, before discount)</span>
                         <span className="text-gray-900 font-medium">
                           ₹{Number(s.afterAdminSubtotal ?? s.baseSubtotal ?? 0).toFixed(2)}
                         </span>
@@ -1563,6 +1602,10 @@ const BookingClient = ({ activityId }) => {
                   <span>Convenience fee ({conveniencePercent}%)</span>
                   <span className="text-gray-900 font-medium">₹{convenienceAmount.toFixed(2)}</span>
                 </div>
+                <p className="text-xs text-gray-500 pt-2 leading-relaxed">
+                  Total = subtotal + GST ({gstPercent}% of subtotal) + convenience ({conveniencePercent}% of subtotal
+                  + GST). Subtotal is ticket total after discount{includeGuide ? " plus guide fee" : ""} (excl. GST).
+                </p>
               </div>
 
               {/* Submit Button - Desktop */}

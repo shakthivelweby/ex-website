@@ -106,22 +106,24 @@ const AttractionBookingPage = ({
     return false;
   };
 
-  // Check for selected date from localStorage (if coming from Form.jsx)
+  // Initialise visit date from localStorage (detail page) or today, then load tickets for that date.
   useEffect(() => {
-    const storedDate = localStorage.getItem(
-      `attraction_${attractionId}_selectedDate`
-    );
+    if (!attractionId) return;
 
-    if (storedDate) setSelectedDate(storedDate);
-    else setSelectedDate(new Date().toISOString().split("T")[0]);
-  }, [attractionId]);
+    const storedDate =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`attraction_${attractionId}_selectedDate`)
+        : null;
+    const visitDate =
+      storedDate && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)
+        ? storedDate
+        : new Date().toISOString().split("T")[0];
+    setSelectedDate(visitDate);
 
-  useEffect(() => {
-    // Load available tickets for this attraction (independent of date)
     const loadBookingDetails = async () => {
       try {
         setLoading(true);
-        const response = await getDetailsForBooking(attractionId);
+        const response = await getDetailsForBooking(attractionId, visitDate);
         if (response?.data) {
           setAttractionData(response.data);
           setTicketData(response.data);
@@ -133,7 +135,7 @@ const AttractionBookingPage = ({
       }
     };
 
-    if (attractionId) loadBookingDetails();
+    loadBookingDetails();
   }, [attractionId]);
 
   const formatDate = (dateString) => {

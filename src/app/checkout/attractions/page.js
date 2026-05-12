@@ -797,7 +797,14 @@ export default function AttractionCheckoutPage() {
           message={successMessage.message}
           onClose={() => {
             setShowSuccess(false);
-            router.push("/my-bookings");
+            router.push("/my-bookings?tab=attractions");
+          }}
+          actionButton={{
+            label: "My bookings",
+            onClick: () => {
+              setShowSuccess(false);
+              router.push("/my-bookings?tab=attractions");
+            },
           }}
         />
       )}

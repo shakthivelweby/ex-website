@@ -254,9 +254,12 @@ const Form = ({
                         : "";
                       setSelectedDate(dateString);
 
-                      // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
                         try {
+                          localStorage.setItem(
+                            `attraction_${attractionDetails.id}_selectedDate`,
+                            dateString
+                          );
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
                             dateString
@@ -325,9 +328,12 @@ const Form = ({
                         : "";
                       setSelectedDate(dateString);
 
-                      // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
                         try {
+                          localStorage.setItem(
+                            `attraction_${attractionDetails.id}_selectedDate`,
+                            dateString
+                          );
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
                             dateString

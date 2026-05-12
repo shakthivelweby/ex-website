@@ -45,7 +45,12 @@ export default async function Activities({ searchParams }) {
     console.error("Error fetching activities list:", error);
   }
 
-  const activitiesArray = activitiesFromAPI?.data?.data || [];
+  const activitiesPayload = activitiesFromAPI?.data;
+  const activitiesArray = Array.isArray(activitiesPayload?.data)
+    ? activitiesPayload.data
+    : Array.isArray(activitiesPayload)
+      ? activitiesPayload
+      : [];
 
   
 

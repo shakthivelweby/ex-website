@@ -62,6 +62,66 @@ function getSeasonalPriceForTicket(seasonalDates, ticketTypeId, ymd) {
   return row || null;
 }
 
+/** Normalize HH:MM(:ss) for matching catalogue slot to seasonal slot rows. */
+function normalizeSlotTimeKey(timeString) {
+  if (timeString == null || timeString === "") return "";
+  const s = String(timeString).trim();
+  const parts = s.split(":");
+  if (parts.length < 2) return s.slice(0, 8);
+  const h = String(parseInt(parts[0], 10)).padStart(2, "0");
+  const m = String(parseInt(parts[1], 10)).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+/**
+ * When seasonal pricing includes per–activity-time-slot rows, merge those amounts
+ * for the slot the user selected (matches activity_time_slot_id, else same start_time).
+ */
+function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
+  if (!seasonalRow || !activitySlotObj) return seasonalRow;
+  const merged = { ...seasonalRow };
+  const slots = seasonalRow.time_slots || seasonalRow.timeSlots || [];
+  if (!Array.isArray(slots) || slots.length === 0) return merged;
+
+  const slotId = activitySlotObj.id != null ? String(activitySlotObj.id) : "";
+  const slotStart = activitySlotObj.start_time ?? activitySlotObj.startTime;
+
+  let match = null;
+  if (slotId) {
+    match = slots.find((ts) => {
+      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
+      return tsSid != null && String(tsSid) === slotId;
+    });
+  }
+  if (!match && slotStart) {
+    const key = normalizeSlotTimeKey(slotStart);
+    match = slots.find((ts) => {
+      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
+      if (tsSid != null) return false;
+      return normalizeSlotTimeKey(ts.start_time ?? ts.startTime) === key;
+    });
+  }
+
+  if (!match) return merged;
+
+  const oFull = match.full_rate ?? match.fullRate;
+  const oAdult = match.adult_price ?? match.adultPrice;
+  const oChild = match.child_price ?? match.childPrice;
+
+  const hasOverride =
+    (oFull !== undefined && oFull !== null && oFull !== "") ||
+    (oAdult !== undefined && oAdult !== null && oAdult !== "") ||
+    (oChild !== undefined && oChild !== null && oChild !== "");
+
+  if (!hasOverride) return merged;
+
+  if (oFull !== undefined && oFull !== null && oFull !== "") merged.full_rate = oFull;
+  if (oAdult !== undefined && oAdult !== null && oAdult !== "") merged.adult_price = oAdult;
+  if (oChild !== undefined && oChild !== null && oChild !== "") merged.child_price = oChild;
+
+  return merged;
+}
+
 function isCloseoutDate(closeouts, ymd, weekdayName) {
   if (!Array.isArray(closeouts) || !ymd) return false;
   return closeouts.some((c) => {
@@ -249,6 +309,9 @@ const Form = ({
       discountPct,
       // If backend already included admin in *_with_admin, never apply admin again in UI math.
       adminChargePct: hasBackendAdmin ? 0 : adminChargePct,
+      // Catalogue admin % (ticket / activity / slot resolution) for applying to seasonal bases
+      // when slot prices are already admin-inclusive (adminChargePct is forced to 0 above).
+      catalogAdminChargePct: adminChargePct,
       // Keep raw admin % only for reference/debugging if needed.
       adminChargePctRaw: adminPctRaw,
     };
@@ -257,39 +320,82 @@ const Form = ({
   const getEffectiveTicketUnitPrices = () => {
     if (!selectedTicket) return null;
 
-    const seasonalRow = getSeasonalPriceForTicket(
+    const seasonalRowRaw = getSeasonalPriceForTicket(
       activityDetails?.seasonal_dates,
       selectedTicket.id,
       selectedYmd
     );
+    const selectedSlotRaw =
+      isSlotBased && selectedTimeSlot
+        ? slotOptions.find((s) => s.id === String(selectedTimeSlot))?.raw
+        : null;
+    const seasonalRow =
+      seasonalRowRaw && selectedSlotRaw
+        ? mergeSeasonalWithSelectedSlot(seasonalRowRaw, selectedSlotRaw)
+        : seasonalRowRaw;
 
-    // IMPORTANT (slot-based activities):
-    // When a time slot is selected, always prefer slot pricing over seasonal rows.
-    // Seasonal rows are add-ons on top of base pricing, but slot pricing defines the base for that time slot.
     const slotUnit = getSlotTicketUnitPrices();
+
+    // Slot + season: when the date is in season, use seasonal row prices only (ignore slot catalogue base).
+    if (slotUnit && seasonalRow) {
+      const rateType = normalizeRateType(
+        seasonalRow.rate_type || slotUnit.rateType || selectedTicket.rateType,
+        {
+          adultPrice: seasonalRow.adult_price,
+          childPrice: seasonalRow.child_price,
+          fullRate: seasonalRow.full_rate,
+        }
+      );
+      const discountPct =
+        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
+        slotUnit.discountPct;
+      const adminChargePct =
+        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+        slotUnit.catalogAdminChargePct ??
+        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
+
+      const adultUnitBase =
+        rateType === "full"
+          ? Number(seasonalRow.full_rate || 0)
+          : Number(seasonalRow.adult_price || 0);
+      const childUnitBase = Number(seasonalRow.child_price || 0);
+      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
+
+      return {
+        source: "slot-seasonal",
+        rateType,
+        adultUnit,
+        childUnit,
+        adultUnitBase,
+        childUnitBase,
+        discountPct,
+        adminChargePct,
+        adminChargePctRaw: slotUnit.adminChargePctRaw,
+      };
+    }
+
     if (slotUnit) return { source: "slot", ...slotUnit };
 
-    // Seasonal pricing is an add-on (base + seasonal) for non-slot selections
+    // Non-slot + season: seasonal row replaces catalogue base for that date.
     if (seasonalRow) {
       const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
         adultPrice: seasonalRow.adult_price,
         childPrice: seasonalRow.child_price,
         fullRate: seasonalRow.full_rate,
       });
-      const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
-      const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
-
-      const baseAdultOrFull =
-        rateType === "full"
-          ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
-          : Number(selectedTicket.price || selectedTicket.adult_price || 0);
-      const baseChild = Number(selectedTicket.child_price || 0);
+      const discountPct =
+        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
+        pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
+      const adminChargePct =
+        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
 
       const adultUnitBase =
         rateType === "full"
-          ? baseAdultOrFull + Number(seasonalRow.full_rate || 0)
-          : baseAdultOrFull + Number(seasonalRow.adult_price || 0);
-      const childUnitBase = baseChild + Number(seasonalRow.child_price || 0);
+          ? Number(seasonalRow.full_rate || 0)
+          : Number(seasonalRow.adult_price || 0);
+      const childUnitBase = Number(seasonalRow.child_price || 0);
 
       const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
       const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
@@ -414,7 +520,10 @@ const Form = ({
         fullRate: currentPricing?.full_rate,
       });
   const totalPaxCount = adultCount + childCount;
-  const showSeasonAddonNote = Boolean(effectivePricing?.source === "seasonal");
+  const showSeasonAddonNote = Boolean(
+    effectivePricing?.source === "seasonal" ||
+      effectivePricing?.source === "slot-seasonal"
+  );
 
   const validateForm = () => {
     const newErrors = {};
@@ -672,7 +781,7 @@ const Form = ({
                   </div>
                   {showSeasonAddonNote ? (
                     <div className="text-xs text-blue-700 mt-1">
-                      Season/special price add-on applied
+                      Seasonal / special rate applied
                     </div>
                   ) : null}
                 </div>

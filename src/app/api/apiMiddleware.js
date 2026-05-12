@@ -2,9 +2,16 @@
 // src/services/apiMiddleware.js
 import axios from "axios";
 
+const apiBase = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
+if (typeof window !== "undefined" && !apiBase) {
+  console.warn(
+    "[ex-website] NEXT_PUBLIC_API_URL is not set; API requests may fail."
+  );
+}
+
 // Create axios instance with base config
 const apiMiddleware = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/web", // your API base URL
+  baseURL: apiBase ? `${apiBase}/api/web` : "/api/web", // your API base URL
   headers: {
     "Content-Type": "application/json",
   },

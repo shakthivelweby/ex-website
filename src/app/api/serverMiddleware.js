@@ -1,7 +1,46 @@
 import axios from "axios";
 
+/**
+ * Base URL for Laravel (no trailing slash).
+ * - Browser: prefers NEXT_PUBLIC_API_URL; falls back to relative /api/web only if unset (needs reverse proxy).
+ * - Server (RSC): never use host-relative "/api/web" alone — that hits Next.js, not Laravel. Use INTERNAL_API_URL
+ *   / LARAVEL_URL, or in non-production default to http://127.0.0.1:8000 for local XAMPP/Laravel.
+ */
+function resolveWebApiBaseUrl() {
+  const explicit = (process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "")
+    .trim()
+    .replace(/\/+$/, "");
+  if (explicit) return explicit;
+
+  if (typeof window === "undefined") {
+    const internal = (process.env.INTERNAL_API_URL || process.env.LARAVEL_URL || "")
+      .trim()
+      .replace(/\/+$/, "");
+    if (internal) return internal;
+    if (process.env.NODE_ENV !== "production") {
+      return "http://127.0.0.1:8000";
+    }
+  }
+
+  return "";
+}
+
+const apiBase = resolveWebApiBaseUrl();
+
+if (typeof window === "undefined" && !apiBase && process.env.NODE_ENV === "production") {
+  console.error(
+    "[ex-website] SSR: set NEXT_PUBLIC_API_URL or INTERNAL_API_URL so activity (and other) API calls reach Laravel."
+  );
+}
+
+if (typeof window !== "undefined" && !apiBase) {
+  console.warn(
+    "[ex-website] NEXT_PUBLIC_API_URL is not set; API requests use /api/web on this host (needs a proxy or env)."
+  );
+}
+
 const apiServerMiddleware = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/web",
+  baseURL: apiBase ? `${apiBase}/api/web` : "/api/web",
   headers: {
     "Content-Type": "application/json",
   },
@@ -26,11 +65,45 @@ apiServerMiddleware.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+function normalizeErrorMessage(error) {
+  const raw =
+    error.response?.data?.message ?? error.response?.data?.error ?? error.message;
+  if (typeof raw === "string" && raw.trim()) return raw.trim();
+  if (raw != null && typeof raw === "object") {
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return String(raw);
+    }
+  }
+  if (error.code) return `Network: ${error.code}`;
+  return "Request failed";
+}
+
 // Response interceptor
 apiServerMiddleware.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Server Middleware Error:", error.response?.status);
+    const status = error.response?.status;
+    const base = error.config?.baseURL ?? "";
+    const path = error.config?.url ?? "";
+    const url =
+      path && (String(path).startsWith("http") ? path : `${base}${path}`) || "(unknown url)";
+    const message = normalizeErrorMessage(error);
+
+    const payload = {
+      status: status ?? "no-response",
+      message,
+      url,
+      code: error.code ?? null,
+    };
+
+    // Avoid console.error on routine 4xx (e.g. 404 "Activity not found") — Next/Turbopack treats it as a dev overlay error.
+    const isHttpClientError = Number.isFinite(status) && status >= 400 && status < 500;
+    if (!error.response || !Number.isFinite(status) || status >= 500) {
+      console.error("API Server Middleware Error:", JSON.stringify(payload));
+    }
+
     return Promise.reject(error);
   }
 );

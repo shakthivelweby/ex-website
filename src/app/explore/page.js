@@ -307,12 +307,17 @@ export default function Explore() {
               }}
               className="w-full"
             >
-              {featuredDestinations.map((destination) => (
-            
+              {featuredDestinations.map((destination) => {
+                const packagesHref = `/packages/${destination.state.country_id}?state=${destination.state_id}&destination=${destination.id}`;
+                // Text `location` filter only: geo + HAVING(distance) drops rows with null lat/lng in DB.
+                const activitiesHref = `/activities?location=${encodeURIComponent(destination.name)}`;
+
+                return (
                 <SwiperSlide key={destination.id}>
+                  <div className="flex h-full flex-col gap-2">
                   <Link
-                    href={`/packages/${destination.state.country_id}?state=${destination.state_id}&destination=${destination.id}`}
-                    className="group block h-full"
+                    href={packagesHref}
+                    className="group block h-full min-h-0 flex-1"
                   >
                     <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
                       {/* Main Image */}
@@ -371,8 +376,16 @@ export default function Explore() {
                       </div>
                     </div>
                   </Link>
+                  <Link
+                    href={activitiesHref}
+                    className="block shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm font-medium text-gray-800 transition-colors hover:border-primary-500 hover:text-primary-600"
+                  >
+                    View activities near {destination.name}
+                  </Link>
+                  </div>
                 </SwiperSlide>
-              ))}
+                );
+              })}
             </Swiper>
           ) : (
             <div className="text-center py-12">

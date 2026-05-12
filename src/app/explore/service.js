@@ -1,15 +1,42 @@
 import apiServerMiddleware from "../api/serverMiddleware";
 
+/** Laravel successResponse wraps payload in { message, data, status } */
+function unwrapList(body) {
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body)) return body;
+  return [];
+}
 
 const getExploreData = async () => {
+  try {
     const response = await apiServerMiddleware.get("/countries-and-states");
-    return response.data;
+    const body = response?.data ?? {};
+    const rows = unwrapList(body);
+    return {
+      ...body,
+      data: rows,
+      status: body?.status ?? true,
+    };
+  } catch (error) {
+    console.error("getExploreData failed:", error?.message || error);
+    return { data: [], status: false, message: error?.message || "Failed" };
+  }
 };
 
-
 const getFeaturedDestinations = async () => {
-    const response = await apiServerMiddleware.get(`/featured-destinations`);
-    return response.data;
+  try {
+    const response = await apiServerMiddleware.get("/featured-destinations");
+    const body = response?.data ?? {};
+    const rows = unwrapList(body);
+    return {
+      ...body,
+      data: rows,
+      status: body?.status ?? true,
+    };
+  } catch (error) {
+    console.error("getFeaturedDestinations failed:", error?.message || error);
+    return { data: [], status: false, message: error?.message || "Failed" };
+  }
 };
 
 // Get actual package count for a country

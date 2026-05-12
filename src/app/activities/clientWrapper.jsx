@@ -8,12 +8,12 @@ import { useEffect, useRef, useState } from "react";
 import { getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
-const ClientWrapper = ({
-  searchParams: initialSearchParams,
+export default function ClientWrapper({
+  searchParams: initialSearchParams = {},
   initialActivities,
   initialCategories,
   initialLocations,
-}) => {
+}) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [activities, setActivities] = useState(initialActivities || []);
   const [loading, setLoading] = useState(false);
@@ -121,9 +121,10 @@ const ClientWrapper = ({
       setLoading(true);
       const activitiesResponse = await getActivities(newFilters);
 
-      // Transform activities data
-      if (activitiesResponse?.data?.data) {
-        const transformedActivities = activitiesResponse.data.data.map(
+      // Transform activities data (Laravel: { data: { data: [], pagination } })
+      const list = activitiesResponse?.data?.data;
+      if (Array.isArray(list)) {
+        const transformedActivities = list.map(
           (activity) => ({
             id: activity.id,
             title: activity.name,
@@ -233,10 +234,17 @@ const ClientWrapper = ({
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="flex items-center gap-3 sm:gap-4">
                 <h2 className="text-sm sm:text-base font-medium text-gray-900">
-                  Activities in{" "}
-                  <span className="text-primary-600">
-                    {filters.location || "Mumbai"}
-                  </span>
+                  {filters.location ? (
+                    <>
+                      Activities in{" "}
+                      <span className="text-primary-600">{filters.location}</span>
+                    </>
+                  ) : (
+                    <>
+                      Activities —{" "}
+                      <span className="text-primary-600">all locations</span>
+                    </>
+                  )}
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
                   {activities.length} activities available
@@ -443,18 +451,7 @@ const ClientWrapper = ({
         </Popup>
       </div>
 
-      <style jsx global>{`
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </main>
   );
-};
-
-export default ClientWrapper;
+}
 

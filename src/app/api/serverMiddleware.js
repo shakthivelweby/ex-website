@@ -27,6 +27,14 @@ function resolveWebApiBaseUrl() {
 
 const apiBase = resolveWebApiBaseUrl();
 
+/** SSR / server fetches: Laravel on local XAMPP can exceed 10s on cold start; override with SERVER_API_TIMEOUT_MS. */
+const serverApiTimeoutMs = (() => {
+  const raw = process.env.SERVER_API_TIMEOUT_MS;
+  const n = raw != null && raw !== "" ? Number.parseInt(String(raw), 10) : NaN;
+  if (Number.isFinite(n) && n >= 1000) return n;
+  return 45000;
+})();
+
 if (typeof window === "undefined" && !apiBase && process.env.NODE_ENV === "production") {
   console.error(
     "[ex-website] SSR: set NEXT_PUBLIC_API_URL or INTERNAL_API_URL so activity (and other) API calls reach Laravel."
@@ -44,7 +52,7 @@ const apiServerMiddleware = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000,
+  timeout: serverApiTimeoutMs,
 });
 
 // Request interceptor
@@ -99,9 +107,23 @@ apiServerMiddleware.interceptors.response.use(
     };
 
     // Avoid console.error on routine 4xx (e.g. 404 "Activity not found") — Next/Turbopack treats it as a dev overlay error.
-    const isHttpClientError = Number.isFinite(status) && status >= 400 && status < 500;
+    const code = error.code ?? null;
+    const msgLower = String(message || "").toLowerCase();
+    const isLikelyNetworkOrTimeout =
+      !error.response &&
+      (code === "ECONNABORTED" ||
+        code === "ETIMEDOUT" ||
+        code === "ECONNREFUSED" ||
+        code === "ENOTFOUND" ||
+        msgLower.includes("timeout"));
+
     if (!error.response || !Number.isFinite(status) || status >= 500) {
-      console.error("API Server Middleware Error:", JSON.stringify(payload));
+      const line = `API Server Middleware Error: ${JSON.stringify(payload)}`;
+      if (isLikelyNetworkOrTimeout) {
+        console.warn(line);
+      } else {
+        console.error(line);
+      }
     }
 
     return Promise.reject(error);

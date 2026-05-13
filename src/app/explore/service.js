@@ -18,7 +18,9 @@ const getExploreData = async () => {
       status: body?.status ?? true,
     };
   } catch (error) {
-    console.error("getExploreData failed:", error?.message || error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("getExploreData failed:", error?.message || error);
+    }
     return { data: [], status: false, message: error?.message || "Failed" };
   }
 };
@@ -34,7 +36,9 @@ const getFeaturedDestinations = async () => {
       status: body?.status ?? true,
     };
   } catch (error) {
-    console.error("getFeaturedDestinations failed:", error?.message || error);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("getFeaturedDestinations failed:", error?.message || error);
+    }
     return { data: [], status: false, message: error?.message || "Failed" };
   }
 };

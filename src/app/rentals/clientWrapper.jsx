@@ -5,6 +5,7 @@ import RentalFilters from "@/components/RentalFilters/RentalFilters";
 import Popup from "@/components/Popup";
 import { useEffect, useRef, useState } from "react";
 import { getRentals } from "./service";
+import { normalizeRentalFilters } from "./rentalFilterUtils";
 
 const ClientWrapper = ({
   searchParams: initialSearchParams,
@@ -14,25 +15,29 @@ const ClientWrapper = ({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [rentals, setRentals] = useState(initialRentals || []);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState("");
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const rentalsFetchIdRef = useRef(0);
 
-  const [initialFilters, setInitialFilters] = useState({
-    date: initialSearchParams.date || "",
-    location: initialSearchParams.location || "",
-    category: initialSearchParams.category || "",
-    sub_category: initialSearchParams.sub_category || "",
-    transmission: initialSearchParams.transmission || "",
-    fuel_type: initialSearchParams.fuel_type || "",
-    seats: initialSearchParams.seats || "",
-    rating: initialSearchParams.rating || "",
-    price_from: initialSearchParams.price_from || "",
-    price_to: initialSearchParams.price_to || "",
-    longitude: initialSearchParams.longitude || "",
-    latitude: initialSearchParams.latitude || "",
-    search: initialSearchParams.search || "",
-  });
+  const [initialFilters, setInitialFilters] = useState(() =>
+    normalizeRentalFilters({
+      date: initialSearchParams.date || "",
+      location: initialSearchParams.location || "",
+      category: initialSearchParams.category || "",
+      sub_category: initialSearchParams.sub_category || "",
+      transmission: initialSearchParams.transmission || "",
+      fuel_type: initialSearchParams.fuel_type || "",
+      seats: initialSearchParams.seats || "",
+      rating: initialSearchParams.rating || "",
+      price_from: initialSearchParams.price_from || "",
+      price_to: initialSearchParams.price_to || "",
+      longitude: initialSearchParams.longitude || "",
+      latitude: initialSearchParams.latitude || "",
+      search: initialSearchParams.search || "",
+    })
+  );
 
   const hasActiveFilters = () => Object.values(initialFilters).some((value) => value);
 
@@ -72,18 +77,57 @@ const ClientWrapper = ({
     else document.body.style.overflow = "unset";
   };
 
-  const handleFilterChange = async (newFilters) => {
-    updateURL(newFilters);
-    setInitialFilters(newFilters);
+  const loadRentals = async (filters) => {
+    const normalized = normalizeRentalFilters(filters);
+    const fetchId = ++rentalsFetchIdRef.current;
+    setLoading(true);
+    setFetchError("");
     try {
-      setLoading(true);
-      const res = await getRentals({ ...newFilters, per_page: 24 });
+      const res = await getRentals({ ...normalized, per_page: 100 });
+      if (fetchId !== rentalsFetchIdRef.current) return;
+      if (res?.success === false) {
+        setRentals([]);
+        setFetchError(res?.message || "Failed to load rentals");
+        return;
+      }
       setRentals(res?.data?.data || []);
     } catch (e) {
+      if (fetchId !== rentalsFetchIdRef.current) return;
       setRentals([]);
+      setFetchError("Could not load rentals. Is Laravel running on port 8000?");
     } finally {
-      setLoading(false);
+      if (fetchId === rentalsFetchIdRef.current) {
+        setLoading(false);
+      }
     }
+  };
+
+  const handleFilterChange = async (newFilters) => {
+    const normalized = normalizeRentalFilters(newFilters);
+    updateURL(normalized);
+    setInitialFilters(normalized);
+    await loadRentals(normalized);
+  };
+
+  useEffect(() => {
+    if (!initialRentals?.length) {
+      loadRentals(initialFilters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCategorySelect = async (slug) => {
+    const nextCategory = initialFilters.category === slug ? "" : slug;
+    await handleFilterChange(
+      normalizeRentalFilters({
+        ...initialFilters,
+        category: nextCategory,
+        sub_category: "",
+        transmission: "",
+        fuel_type: "",
+        seats: "",
+      })
+    );
   };
 
   const categories = Array.isArray(initialCategories) ? initialCategories : [];
@@ -120,6 +164,7 @@ const ClientWrapper = ({
                 categories={categories}
                 locations={[]}
                 layout="sidebar"
+                hideCategory
               />
             </div>
           </div>
@@ -134,7 +179,7 @@ const ClientWrapper = ({
                   </span>
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
-                  {rentals.length} {rentals.length === 1 ? "vehicle" : "vehicles"} available
+                  {rentals.length} {rentals.length === 1 ? "rental" : "rentals"} available
                 </span>
               </div>
 
@@ -153,9 +198,121 @@ const ClientWrapper = ({
               </div>
             </div>
 
-            {/* Category strip removed from top (requested). */}
+            {categories.length > 0 && (
+              <div className="mb-8">
+                <div className="lg:hidden">
+                  <div className="relative">
+                    {canScrollLeft && (
+                      <button
+                        type="button"
+                        onClick={scrollLeft}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                      >
+                        <i className="fi fi-rr-angle-left text-gray-600 text-sm"></i>
+                      </button>
+                    )}
+                    {canScrollRight && (
+                      <button
+                        type="button"
+                        onClick={scrollRight}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-lg rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
+                      >
+                        <i className="fi fi-rr-angle-right text-gray-600 text-sm"></i>
+                      </button>
+                    )}
+                    <div
+                      ref={scrollContainerRef}
+                      onScroll={checkScrollPosition}
+                      className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 px-1 -mx-1"
+                    >
+                      {categories.map((category) => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => handleCategorySelect(category.slug)}
+                          className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
+                            initialFilters.category === category.slug
+                              ? "text-primary-600"
+                              : "text-gray-600 hover:text-primary-600"
+                          }`}
+                        >
+                          <div
+                            className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                              initialFilters.category === category.slug
+                                ? "bg-primary-50 shadow-sm"
+                                : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
+                            }`}
+                          >
+                            {category.image ? (
+                              <img
+                                src={category.image}
+                                alt={category.name}
+                                className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                              />
+                            ) : (
+                              <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                            )}
+                          </div>
+                          <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
+                            {category.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
+                    <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
+                  </div>
+                </div>
 
-            {loading ? (
+                <div className="hidden lg:block">
+                  <div className="grid grid-cols-6 xl:grid-cols-8 gap-4">
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        onClick={() => handleCategorySelect(category.slug)}
+                        className={`flex flex-col items-center gap-2 group ${
+                          initialFilters.category === category.slug
+                            ? "text-primary-600"
+                            : "text-gray-600 hover:text-primary-600"
+                        }`}
+                      >
+                        <div
+                          className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
+                            initialFilters.category === category.slug
+                              ? "bg-primary-50"
+                              : "bg-gray-50 group-hover:bg-primary-50"
+                          }`}
+                        >
+                          {category.image ? (
+                            <img
+                              src={category.image}
+                              alt={category.name}
+                              className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+                            />
+                          ) : (
+                            <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-center leading-tight">
+                          {category.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {fetchError ? (
+              <div className="text-center py-12">
+                <div className="text-red-600 text-lg mb-2">{fetchError}</div>
+                <div className="text-gray-500 text-sm">
+                  Start Laravel (<code className="text-xs">php artisan serve</code>) then restart the website (
+                  <code className="text-xs">npm run build &amp;&amp; npm run start</code>).
+                </div>
+              </div>
+            ) : loading ? (
               <div className="text-center py-12">
                 <div className="flex items-center justify-center gap-3">
                   <svg
@@ -221,6 +378,7 @@ const ClientWrapper = ({
               categories={categories}
               locations={[]}
               layout="mobile"
+              hideCategory
               onClose={() => {
                 setIsFilterOpen(false);
                 document.body.style.overflow = "unset";
@@ -229,16 +387,6 @@ const ClientWrapper = ({
           </div>
         </Popup>
       </div>
-
-      <style jsx global>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </main>
   );
 };

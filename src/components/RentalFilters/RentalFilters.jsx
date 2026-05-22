@@ -6,6 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import LocationSearchPopup from "../LocationSearchPopup";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import { getRentalSubCategories } from "@/app/rentals/service";
+import { isVehicleCategorySlug } from "@/app/rentals/rentalFilterUtils";
 
 const FUEL_TYPE_OPTIONS = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "Other"];
 const TRANSMISSION_OPTIONS = ["Manual", "Automatic", "AMT", "CVT", "DCT", "Other"];
@@ -17,6 +18,7 @@ const RentalFilters = ({
   categories,
   layout = "inline",
   onClose,
+  hideCategory = false,
 }) => {
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -117,6 +119,8 @@ const RentalFilters = ({
   const hasActiveFilters = () => Object.values(tempFilters || {}).some((v) => Boolean(v));
   const getActiveFilterCount = () => Object.values(tempFilters || {}).filter((v) => Boolean(v)).length;
 
+  const showVehicleFilters = isVehicleCategorySlug(tempFilters?.category);
+
   const FilterContent = () => (
     <div className="space-y-3">
       <div className="p-3 bg-gray-100 rounded-lg">
@@ -149,24 +153,26 @@ const RentalFilters = ({
         />
       </div>
 
-      <div className="p-3 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <i className="fi fi-rr-apps text-gray-400"></i>
-          <span className="text-sm font-medium text-gray-700">Category Type</span>
+      {!hideCategory && (
+        <div className="p-3 bg-gray-100 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <i className="fi fi-rr-apps text-gray-400"></i>
+            <span className="text-sm font-medium text-gray-700">Category Type</span>
+          </div>
+          <select
+            value={tempFilters.category || ""}
+            onChange={(e) => patchFilters({ category: e.target.value, sub_category: "" })}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+          >
+            <option value="">All categories</option>
+            {(categories || []).map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <select
-          value={tempFilters.category || ""}
-          onChange={(e) => patchFilters({ category: e.target.value, sub_category: "" })}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-        >
-          <option value="">All categories</option>
-          {(categories || []).map((category) => (
-            <option key={category.id} value={category.slug}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      )}
 
       <div className="p-3 bg-gray-100 rounded-lg">
         <div className="flex items-center gap-2 mb-2">
@@ -187,62 +193,66 @@ const RentalFilters = ({
         </select>
       </div>
 
-      <div className="p-3 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <i className="fi fi-rr-gas-pump text-gray-400"></i>
-          <span className="text-sm font-medium text-gray-700">Fuel Type</span>
-        </div>
-        <select
-          value={tempFilters.fuel_type || ""}
-          onChange={(e) => patchFilters({ fuel_type: e.target.value })}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-        >
-          <option value="">All fuel types</option>
-          {FUEL_TYPE_OPTIONS.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showVehicleFilters && (
+        <>
+          <div className="p-3 bg-gray-100 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fi fi-rr-gas-pump text-gray-400"></i>
+              <span className="text-sm font-medium text-gray-700">Fuel Type</span>
+            </div>
+            <select
+              value={tempFilters.fuel_type || ""}
+              onChange={(e) => patchFilters({ fuel_type: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+            >
+              <option value="">All fuel types</option>
+              {FUEL_TYPE_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="p-3 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <i className="fi fi-rr-settings text-gray-400"></i>
-          <span className="text-sm font-medium text-gray-700">Transmission</span>
-        </div>
-        <select
-          value={tempFilters.transmission || ""}
-          onChange={(e) => patchFilters({ transmission: e.target.value })}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-        >
-          <option value="">All transmissions</option>
-          {TRANSMISSION_OPTIONS.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div className="p-3 bg-gray-100 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fi fi-rr-settings text-gray-400"></i>
+              <span className="text-sm font-medium text-gray-700">Transmission</span>
+            </div>
+            <select
+              value={tempFilters.transmission || ""}
+              onChange={(e) => patchFilters({ transmission: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+            >
+              <option value="">All transmissions</option>
+              {TRANSMISSION_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="p-3 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <i className="fi fi-rr-users text-gray-400"></i>
-          <span className="text-sm font-medium text-gray-700">Seating capacity</span>
-        </div>
-        <select
-          value={tempFilters.seats || ""}
-          onChange={(e) => patchFilters({ seats: e.target.value })}
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-        >
-          <option value="">Any</option>
-          {SEAT_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s} seats
-            </option>
-          ))}
-        </select>
-      </div>
+          <div className="p-3 bg-gray-100 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fi fi-rr-users text-gray-400"></i>
+              <span className="text-sm font-medium text-gray-700">Seating capacity</span>
+            </div>
+            <select
+              value={tempFilters.seats || ""}
+              onChange={(e) => patchFilters({ seats: e.target.value })}
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+            >
+              <option value="">Any</option>
+              {SEAT_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s} seats
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
 
       <div className="p-3 bg-gray-100 rounded-lg">
         <div className="flex items-center gap-2 mb-2">

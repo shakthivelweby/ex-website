@@ -1,45 +1,54 @@
 import apiServerMiddleware from "../api/serverMiddleware";
+import { normalizeRentalFilters } from "./rentalFilterUtils";
 
 export const getRentals = async (filters = {}) => {
   try {
+    const normalized = normalizeRentalFilters(filters);
     const params = new URLSearchParams();
-    if (filters.search && String(filters.search).trim()) params.append("search", String(filters.search).trim());
-    // Date filter: backend will exclude rentals already booked/blocked on that date.
-    if (filters.date && /^\d{4}-\d{2}-\d{2}$/.test(String(filters.date))) params.append("date", String(filters.date));
+    if (normalized.search && String(normalized.search).trim()) params.append("search", String(normalized.search).trim());
+    if (normalized.date && /^\d{4}-\d{2}-\d{2}$/.test(String(normalized.date))) params.append("date", String(normalized.date));
     const hasCoords =
-      filters.latitude !== "" &&
-      filters.latitude !== undefined &&
-      filters.latitude !== null &&
-      filters.longitude !== "" &&
-      filters.longitude !== undefined &&
-      filters.longitude !== null;
-    // If we have coordinates, prefer radius-based filtering over string matching (so nearby vehicles show up).
-    if (!hasCoords && filters.location && String(filters.location).trim()) {
-      params.append("location", String(filters.location).trim());
+      normalized.latitude !== "" &&
+      normalized.latitude !== undefined &&
+      normalized.latitude !== null &&
+      normalized.longitude !== "" &&
+      normalized.longitude !== undefined &&
+      normalized.longitude !== null;
+    if (!hasCoords && normalized.location && String(normalized.location).trim()) {
+      params.append("location", String(normalized.location).trim());
     }
-    if (filters.latitude !== "" && filters.latitude !== undefined && filters.latitude !== null) params.append("latitude", String(filters.latitude));
-    if (filters.longitude !== "" && filters.longitude !== undefined && filters.longitude !== null) params.append("longitude", String(filters.longitude));
+    if (normalized.latitude !== "" && normalized.latitude !== undefined && normalized.latitude !== null) params.append("latitude", String(normalized.latitude));
+    if (normalized.longitude !== "" && normalized.longitude !== undefined && normalized.longitude !== null) params.append("longitude", String(normalized.longitude));
     if (hasCoords) {
-      const r = filters.radius_km !== undefined && filters.radius_km !== null && String(filters.radius_km) !== "" ? String(filters.radius_km) : "5";
+      const r = normalized.radius_km !== undefined && normalized.radius_km !== null && String(normalized.radius_km) !== "" ? String(normalized.radius_km) : "5";
       params.append("radius_km", r);
     }
-    if (filters.category && String(filters.category).trim()) params.append("category", String(filters.category).trim()); // slug
-    if (filters.sub_category && String(filters.sub_category).trim()) params.append("sub_category", String(filters.sub_category).trim()); // slug
-    if (filters.transmission && String(filters.transmission).trim()) params.append("transmission", String(filters.transmission).trim());
-    if (filters.fuel_type && String(filters.fuel_type).trim()) params.append("fuel_type", String(filters.fuel_type).trim());
-    if (filters.seats && String(filters.seats).trim()) params.append("seats", String(filters.seats).trim());
-    if (filters.price_from !== "" && filters.price_from !== undefined && filters.price_from !== null) params.append("price_from", String(filters.price_from));
-    if (filters.price_to !== "" && filters.price_to !== undefined && filters.price_to !== null) params.append("price_to", String(filters.price_to));
-    if (filters.per_page) params.append("per_page", String(filters.per_page));
+    if (normalized.category && String(normalized.category).trim()) params.append("category", String(normalized.category).trim());
+    if (normalized.sub_category && String(normalized.sub_category).trim()) params.append("sub_category", String(normalized.sub_category).trim());
+    if (normalized.transmission && String(normalized.transmission).trim()) params.append("transmission", String(normalized.transmission).trim());
+    if (normalized.fuel_type && String(normalized.fuel_type).trim()) params.append("fuel_type", String(normalized.fuel_type).trim());
+    if (normalized.seats && String(normalized.seats).trim()) params.append("seats", String(normalized.seats).trim());
+    if (normalized.price_from !== "" && normalized.price_from !== undefined && normalized.price_from !== null) params.append("price_from", String(normalized.price_from));
+    if (normalized.price_to !== "" && normalized.price_to !== undefined && normalized.price_to !== null) params.append("price_to", String(normalized.price_to));
+    params.append("per_page", String(normalized.per_page || 100));
 
-    const url = params.toString() ? `/rentals?${params.toString()}` : "/rentals";
-    const response = await apiServerMiddleware.get(url);
-    return response.data;
+    const response = await apiServerMiddleware.get(`/rentals?${params.toString()}`);
+    const body = response.data;
+    const items = body?.data?.data ?? (Array.isArray(body?.data) ? body.data : []);
+    return {
+      ...body,
+      data: {
+        ...(typeof body?.data === "object" && body?.data !== null && !Array.isArray(body.data) ? body.data : {}),
+        data: items,
+      },
+      success: body?.status !== false,
+    };
   } catch (error) {
+    console.warn("[rentals] getRentals failed:", error?.message || error);
     return {
       data: { data: [] },
       success: false,
-      message: "Failed to fetch rentals",
+      message: error?.response?.data?.message || "Failed to fetch rentals",
     };
   }
 };

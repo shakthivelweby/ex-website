@@ -1,7 +1,25 @@
 /** @type {import('next').NextConfig} */
 const mobileIp = '192.168.1.38';
 
+/** Laravel origin used by Next.js rewrites (proxy /api/web → Laravel). */
+const laravelOrigin = (
+  process.env.LARAVEL_URL ||
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  `http://${mobileIp}:8000`
+)
+  .trim()
+  .replace(/\/+$/, '');
+
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/web/:path*',
+        destination: `${laravelOrigin}/api/web/:path*`,
+      },
+    ];
+  },
   typescript: {
     // Disable type checking during build (for faster dev)
     ignoreBuildErrors: true,

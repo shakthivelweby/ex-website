@@ -120,7 +120,7 @@ export default function Explore() {
               {/* Country Header */}
               <div className="flex flex-col items-start mb-10">
               
-                <div className="flex items-end justify-between w-full">
+                <div className="flex items-end justify-between w-full gap-4">
                   <div className="space-y-3">
                     <h2 className="text-3xl font-light text-gray-900 tracking-tight">
                       Explore {country.name}
@@ -129,15 +129,48 @@ export default function Explore() {
                       {country.state.length} States • {packageCounts[country.id] !== undefined ? packageCounts[country.id] : country.state.reduce((total, state) => total + (state.package_count || 0), 0)} Packages Available
                     </p>
                   </div>
+
+                  <div className="flex flex-col items-end gap-4 shrink-0">
+                    <Link
+                      href={`/packages/${country.id}`}
+                      className="text-primary-600 font-medium inline-flex items-center gap-2 hover:gap-3 transition-all text-sm sm:text-base"
+                    >
+                      View All
+                      <i className="fi fi-rr-arrow-right"></i>
+                    </Link>
+
+                    {country.state.length > 1 && (
+                      <div className="hidden md:flex items-center gap-3">
+                        <button
+                          type="button"
+                          aria-label={`Previous states in ${country.name}`}
+                          className={`states-swiper-button-prev-${country.id} w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100`}
+                        >
+                          <i className="fi fi-rr-angle-left text-gray-600 group-hover:text-primary-500 transition-colors"></i>
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Next states in ${country.name}`}
+                          className={`states-swiper-button-next-${country.id} w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100`}
+                        >
+                          <i className="fi fi-rr-angle-right text-gray-600 group-hover:text-primary-500 transition-colors"></i>
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* States Carousel */}
               <Swiper
-                modules={[FreeMode]}
+                modules={[FreeMode, Navigation]}
                 spaceBetween={24}
                 slidesPerView={1.2}
                 freeMode={true}
+                navigation={{
+                  prevEl: `.states-swiper-button-prev-${country.id}`,
+                  nextEl: `.states-swiper-button-next-${country.id}`,
+                }}
                 breakpoints={{
                   640: {
                     slidesPerView: 2,

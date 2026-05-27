@@ -44,7 +44,7 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
       </head>
-      <body className="pt-12 pb-24">
+      <body className="pt-12 pb-24 lg:pb-0">
         <Suspense>
           <LoadingSpinner />
         </Suspense>

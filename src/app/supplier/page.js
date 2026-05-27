@@ -24,149 +24,170 @@ export default function SupplierPage() {
 
     return (
         <main className="min-h-screen bg-white">
-            {/* 1. Supplier Hero Section (Horizontal Scroll Snap) */}
-            <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 bg-gray-50 overflow-hidden">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-100/40 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+            {/* 1. Supplier Hero Section */}
+            <section className="relative pt-24 pb-10 md:pt-28 md:pb-12 bg-gray-50 overflow-hidden">
+                <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-blue-100/40 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-100/30 rounded-full blur-3xl pointer-events-none"></div>
 
                 <div className="container mx-auto px-4 relative z-10">
-                    <div className="text-center max-w-4xl mx-auto mb-16 md:mb-20">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6 }}
+                            className="lg:col-span-5 text-center lg:text-left"
                         >
-                            <span className="inline-block py-1 px-3 rounded-full bg-primary-50 text-primary-700 text-xs font-bold tracking-wide mb-6 uppercase">
-                                Ecosystem
-                            </span>
-                            <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight tracking-tighter">
-                                Powering Every Type of <br className="hidden md:block" />
+                            <div className="inline-flex items-center gap-3 mb-4 justify-center lg:justify-start">
+                                <span className="w-10 h-0.5 bg-primary-600 shrink-0" aria-hidden="true"></span>
+                                <span className="text-primary-700 text-xs font-bold tracking-[0.2em] uppercase">
+                                    Ecosystem
+                                </span>
+                            </div>
+                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-[1.1] tracking-tight">
+                                Powering Every Type of{" "}
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Travel Experience</span>
                             </h1>
-                            <p className="text-gray-600 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-10 font-light">
+                            <p className="text-gray-600 text-base md:text-lg leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
                                 Whether you guide small groups or manage large attractions, our platform scales to fit your unique business model.
                             </p>
 
-                            <Link
-                                href="https://supplier.exploreworld.com/login"
-                                className="inline-flex items-center justify-center h-14 px-10 rounded-full bg-primary-600 text-white font-bold text-lg hover:bg-primary-700 transition-all hover:scale-105 shadow-xl shadow-primary-600/20 gap-2"
-                            >
-                                Become a Supplier
-                                <i className="fi fi-rr-arrow-right text-sm"></i>
-                            </Link>
+                            <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 mb-6">
+                                <Link
+                                    href="https://supplier.exploreworld.com/login"
+                                    className="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary-600 text-white font-bold text-base hover:bg-primary-700 transition-all hover:scale-[1.02] shadow-lg shadow-primary-600/20 gap-2 w-full sm:w-auto"
+                                >
+                                    Become a Supplier
+                                    <i className="fi fi-rr-arrow-right text-sm"></i>
+                                </Link>
+                                <Link
+                                    href="#how-it-works"
+                                    className="inline-flex items-center justify-center h-12 px-6 rounded-full bg-white text-gray-700 font-semibold text-base border border-gray-200 hover:border-primary-200 hover:text-primary-600 transition-all gap-2 w-full sm:w-auto"
+                                >
+                                    See how it works
+                                    <i className="fi fi-rr-angle-down text-sm"></i>
+                                </Link>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
+                                {[
+                                    { icon: "fi-rr-map-location-track", label: "Tour Operators" },
+                                    { icon: "fi-rr-surfing", label: "Activities" },
+                                    { icon: "fi-rr-ticket", label: "Attractions" },
+                                    { icon: "fi-rr-calendar-star", label: "Events" },
+                                ].map((item) => (
+                                    <span
+                                        key={item.label}
+                                        className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm"
+                                    >
+                                        <i className={`fi ${item.icon} text-primary-600 text-sm`}></i>
+                                        {item.label}
+                                    </span>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: 0.15 }}
+                            className="lg:col-span-7"
+                        >
+                            <SupplierHeroCarousel />
                         </motion.div>
                     </div>
-
-                    {/* Carousel (Swiper) */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.2 }}
-                    >
-                        <SupplierHeroCarousel />
-                    </motion.div>
                 </div>
             </section>
 
-            {/* 2. Why Sell on This Platform */}
-            {/* 2. Why Sell on This Platform */}
-            {/* 2. Why Partner with Us (Redesigned) */}
-            <section className="py-20 md:py-32 relative overflow-hidden bg-gray-50/50">
-                {/* Decorative Background Elements */}
-                <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-blue-100/30 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-                <div className="absolute bottom-0 right-0 w-[800px] h-[800px] bg-purple-100/30 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
-                <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-[0.02]"></div>
+            {/* 2. Why Partner with Us */}
+            <section className="py-10 md:py-14 bg-gray-100">
+                <div className="container mx-auto px-4">
+                    <div className="flex flex-col gap-4 md:gap-5">
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5 }}
+                            className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
+                        >
+                            <div>
+                                <div className="inline-flex items-center gap-3 mb-3">
+                                    <span className="w-10 h-0.5 bg-primary-600 shrink-0" aria-hidden="true"></span>
+                                    <span className="text-primary-700 text-xs font-bold tracking-[0.2em] uppercase">
+                                        Key Benefits
+                                    </span>
+                                </div>
+                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 tracking-tight leading-tight">
+                                    Why Partner with{" "}
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Us?</span>
+                                </h2>
+                                <p className="text-gray-600 text-sm md:text-base leading-relaxed max-w-xl">
+                                    We empower suppliers with the tools, reach, and freedom they need to succeed in the modern travel marketplace.
+                                </p>
+                            </div>
+                            <div className="flex shrink-0 gap-2">
+                                {[
+                                    { value: "0%", label: "Setup fee" },
+                                    { value: "24/7", label: "Access" },
+                                    { value: "Global", label: "Reach" },
+                                ].map((stat) => (
+                                    <div key={stat.label} className="rounded-xl bg-white border border-gray-200 px-3 py-2 text-center shadow-sm">
+                                        <div className="text-base font-bold text-gray-900 leading-none">{stat.value}</div>
+                                        <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wide">{stat.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
 
-                <div className="container mx-auto px-4 relative z-10">
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.7 }}
-                        className="text-center mb-12 md:mb-20"
-                    >
-                        <span className="inline-block py-1 px-3 rounded-full bg-primary-50 text-primary-600 text-xs font-bold tracking-wide mb-4 border border-primary-100 uppercase">
-                            Key Benefits
-                        </span>
-                        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
-                            Why Partner with <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Us?</span>
-                        </h2>
-                        <p className="text-gray-600 text-lg leading-relaxed max-w-2xl mx-auto">
-                            We empower suppliers with the tools, reach, and freedom they need to succeed in the modern travel marketplace.
-                        </p>
-                    </motion.div>
-
-                    <motion.div
-                        variants={staggerContainer}
-                        initial="initial"
-                        whileInView="whileInView"
-                        viewport={{ once: true }}
-                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-                    >
-                        {[
-                            {
-                                icon: "fi-rr-shopping-bag",
-                                title: "Direct Sales",
-                                desc: "Sell directly to travelers without multiple middlemen eating your profits.",
-                                gradient: "from-blue-500 to-cyan-500",
-                                bg: "bg-blue-50",
-                                text: "text-blue-600"
-                            },
-                            {
-                                icon: "fi-rr-chart-pie-alt",
-                                title: "Better Margins",
-                                desc: "Competitive commission rates mean you keep more of what you earn.",
-                                gradient: "from-emerald-500 to-teal-500",
-                                bg: "bg-emerald-50",
-                                text: "text-emerald-600"
-                            },
-                            {
-                                icon: "fi-rr-map-location-track",
-                                title: "Global Visibility",
-                                desc: "Showcase your products to a worldwide audience of eager travelers.",
-                                gradient: "from-violet-500 to-purple-500",
-                                bg: "bg-violet-50",
-                                text: "text-violet-600"
-                            },
-                            {
-                                icon: "fi-rr-dashboard",
-                                title: "Easy Management",
-                                desc: "Full control over your availability, pricing, and bookings.",
-                                gradient: "from-amber-500 to-orange-500",
-                                bg: "bg-amber-50",
-                                text: "text-amber-600"
-                            },
-                        ].map((item, index) => (
-                            <motion.div
-                                key={index}
-                                variants={fadeInUp}
-                                whileHover={{ y: -8 }}
-                                className="group bg-white rounded-[2rem] p-8 shadow-sm hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 border border-gray-100 relative overflow-hidden"
-                            >
-                                {/* Hover Gradient Fill */}
-                                <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`}></div>
-
-                                <div className="flex flex-col h-full relative z-10">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <div className={`w-14 h-14 ${item.bg} ${item.text} rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-500`}>
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="initial"
+                            whileInView="whileInView"
+                            viewport={{ once: true }}
+                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
+                        >
+                                {[
+                                    {
+                                        icon: "fi-rr-shopping-bag",
+                                        title: "Direct Sales",
+                                        desc: "Sell directly to travelers without middlemen eating your profits.",
+                                        accent: "text-blue-600 bg-blue-50",
+                                    },
+                                    {
+                                        icon: "fi-rr-chart-pie-alt",
+                                        title: "Better Margins",
+                                        desc: "Competitive commission rates so you keep more of what you earn.",
+                                        accent: "text-emerald-600 bg-emerald-50",
+                                    },
+                                    {
+                                        icon: "fi-rr-map-location-track",
+                                        title: "Global Visibility",
+                                        desc: "Showcase your products to a worldwide audience of travelers.",
+                                        accent: "text-violet-600 bg-violet-50",
+                                    },
+                                    {
+                                        icon: "fi-rr-dashboard",
+                                        title: "Easy Management",
+                                        desc: "Full control over availability, pricing, and bookings.",
+                                        accent: "text-amber-600 bg-amber-50",
+                                    },
+                                ].map((item, index) => (
+                                    <motion.div
+                                        key={index}
+                                        variants={fadeInUp}
+                                        whileHover={{ y: -4 }}
+                                        className="group rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 p-4 md:p-5"
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg mb-3 ${item.accent}`}>
                                             <i className={`fi ${item.icon}`}></i>
                                         </div>
-                                        {/* Subtle Arrow */}
-                                        <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-[-10px] group-hover:translate-x-0">
-                                            <i className={`fi fi-rr-arrow-right ${item.text} text-xl`}></i>
-                                        </div>
-                                    </div>
-
-                                    <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-primary-600 transition-colors">{item.title}</h3>
-                                    <p className="text-gray-500 leading-relaxed mb-4">
-                                        {item.desc}
-                                    </p>
-                                </div>
-
-                                {/* Decorative Blob on Hover */}
-                                <div className={`absolute -right-8 -bottom-8 w-32 h-32 ${item.bg} rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
+                                        <h3 className="text-sm md:text-base font-bold text-gray-900 mb-1.5 group-hover:text-primary-600 transition-colors">
+                                            {item.title}
+                                        </h3>
+                                        <p className="text-gray-500 text-xs md:text-sm leading-snug">{item.desc}</p>
+                                    </motion.div>
+                                ))}
+                        </motion.div>
+                    </div>
                 </div>
             </section>
 
@@ -175,43 +196,92 @@ export default function SupplierPage() {
             {/* 3. Who Can Join (Now Merged into Hero - Section Removed) */}
 
             {/* 4. How It Works (Steps) */}
-            <section className="py-16 md:py-20 bg-primary-900 text-white relative overflow-hidden">
-                {/* Decorative Circles */}
-                <div className="absolute top-0 right-0 w-96 h-96 bg-primary-800 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50"></div>
-                <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-700 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-50"></div>
-
-                <div className="container mx-auto px-4 relative z-10">
-                    <div className="text-center mb-12 md:mb-16">
-                        <h2 className="text-3xl lg:text-4xl font-bold mb-4 tracking-tight">How It Works</h2>
-                        <p className="text-primary-100/80 text-lg">Start selling in 4 simple steps</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-                        {/* Connecting Line (Desktop) */}
-                        <div className="hidden lg:block absolute top-[2.5rem] left-[10%] right-[10%] h-[2px] bg-primary-800/50 -z-10"></div>
-
-                        {[
-                            { title: "Sign Up", desc: "Create your free supplier account in minutes.", icon: "fi-rr-user-add" },
-                            { title: "List Experience", desc: "Add details, photos, and set your prices.", icon: "fi-rr-edit" },
-                            { title: "Receive Bookings", desc: "Get notified instantly when customers book.", icon: "fi-rr-calendar-check" },
-                            { title: "Get Paid", desc: "Secure payouts directly to your bank account.", icon: "fi-rr-money-bill-wave" },
-                        ].map((step, idx) => (
-                            <motion.div
-                                key={idx}
-                                variants={fadeInUp}
-                                initial="initial"
-                                whileInView="whileInView"
-                                viewport={{ once: true }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="flex flex-col items-center text-center"
+            <section id="how-it-works" className="py-10 md:py-14 bg-white">
+                <div className="container mx-auto px-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+                        <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5 }}
+                            className="lg:col-span-4 lg:sticky lg:top-28"
+                        >
+                            <div className="inline-flex items-center gap-3 mb-3">
+                                <span className="w-10 h-0.5 bg-primary-600 shrink-0" aria-hidden="true"></span>
+                                <span className="text-primary-700 text-xs font-bold tracking-[0.2em] uppercase">
+                                    4 Simple Steps
+                                </span>
+                            </div>
+                            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight leading-tight">
+                                From sign-up to your first payout
+                            </h2>
+                            <p className="text-gray-600 text-base leading-relaxed mb-6">
+                                Getting started takes minutes. List your experience, accept bookings, and get paid — we handle the rest.
+                            </p>
+                            <Link
+                                href="https://supplier.exploreworld.com/login"
+                                className="inline-flex items-center gap-2 text-primary-600 font-bold hover:text-primary-700 transition-colors group"
                             >
-                                <div className="w-20 h-20 bg-primary-800 rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg border-4 border-primary-900 z-10">
-                                    <i className={`fi ${step.icon}`}></i>
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-                                <p className="text-primary-100/70 text-sm leading-relaxed">{step.desc}</p>
-                            </motion.div>
-                        ))}
+                                Create your free account
+                                <i className="fi fi-rr-arrow-right text-sm transition-transform group-hover:translate-x-1"></i>
+                            </Link>
+                        </motion.div>
+
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="initial"
+                            whileInView="whileInView"
+                            viewport={{ once: true }}
+                            className="lg:col-span-8 relative"
+                        >
+                            <div className="absolute left-[19px] top-3 bottom-3 w-px bg-gradient-to-b from-primary-200 via-primary-400 to-primary-200 hidden sm:block"></div>
+
+                            {[
+                                {
+                                    title: "Sign Up",
+                                    desc: "Create your free supplier account in minutes — no credit card required.",
+                                    icon: "fi-rr-user-add",
+                                },
+                                {
+                                    title: "List Experience",
+                                    desc: "Add details, photos, pricing, and availability for your tours or activities.",
+                                    icon: "fi-rr-edit",
+                                },
+                                {
+                                    title: "Receive Bookings",
+                                    desc: "Get instant notifications when travelers book. Manage everything from one dashboard.",
+                                    icon: "fi-rr-calendar-check",
+                                },
+                                {
+                                    title: "Get Paid",
+                                    desc: "Receive secure payouts directly to your bank account on a regular schedule.",
+                                    icon: "fi-rr-money-bill-wave",
+                                },
+                            ].map((step, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    variants={fadeInUp}
+                                    className="relative flex gap-5 sm:gap-6 pb-8 last:pb-0 group"
+                                >
+                                    <div className="relative z-10 shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-primary-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-primary-600/25 ring-4 ring-white group-hover:scale-110 transition-transform duration-300">
+                                            {idx + 1}
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 pt-0.5 pb-1 border-b border-gray-100 last:border-0 group-last:border-0 min-w-0">
+                                        <div className="flex items-start justify-between gap-4 mb-1.5">
+                                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-primary-600 transition-colors">
+                                                {step.title}
+                                            </h3>
+                                            <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-primary-600 text-base shrink-0 group-hover:bg-primary-50 group-hover:border-primary-100 transition-colors">
+                                                <i className={`fi ${step.icon}`}></i>
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-500 text-sm leading-relaxed">{step.desc}</p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </motion.div>
                     </div>
                 </div>
             </section>
@@ -231,30 +301,28 @@ export default function SupplierPage() {
                             viewport={{ once: true }}
                             transition={{ duration: 0.5 }}
                             whileHover={{ y: -5 }}
-                            className="col-span-1 lg:col-span-2 bg-black rounded-3xl p-6 md:p-12 text-white relative overflow-hidden flex flex-col justify-between"
+                            className="col-span-1 lg:col-span-2 bg-gray-900 rounded-3xl p-6 md:p-10 lg:p-12 text-white relative overflow-hidden flex flex-col lg:block lg:min-h-[420px]"
                         >
-                            <div className="relative z-10 max-w-md">
+                            <div className="relative z-10 w-full max-w-full lg:max-w-[42%] xl:max-w-[40%] shrink-0">
                                 <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-6 text-2xl">
                                     <i className="fi fi-rr-dashboard"></i>
                                 </div>
                                 <h3 className="text-2xl md:text-3xl font-bold mb-4">Comprehensive Dashboard</h3>
-                                <p className="text-gray-400 mb-8 leading-relaxed">
+                                <p className="text-gray-400 leading-relaxed">
                                     Track your performance, view upcoming bookings, and analyze your revenue growth all in one intuitive interface. Get real-time insights to make better business decisions.
                                 </p>
                             </div>
-                            <div className="absolute right-0 bottom-0 top-0 w-1/2 opacity-20 lg:opacity-100 lg:w-[45%] bg-gradient-to-l from-primary-900/50 to-transparent">
-                                {/* Abstract UI representation */}
-                                <div className="absolute right-[-40px] top-[20%] w-full h-full bg-slate-800 rounded-tl-3xl border-t border-l border-slate-700 p-6">
-                                    <div className="flex gap-4 mb-6">
-                                        <div className="w-1/2 h-24 bg-slate-700/50 rounded-xl"></div>
-                                        <div className="w-1/2 h-24 bg-slate-700/50 rounded-xl"></div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                    </div>
-                                </div>
+                            <div className="relative z-0 mt-8 ml-auto w-[94%] sm:w-[88%] -mr-4 -mb-4 sm:-mr-6 sm:-mb-6 rounded-tl-2xl overflow-hidden bg-white shadow-2xl ring-1 ring-white/10 pointer-events-none lg:absolute lg:mt-0 lg:ml-0 lg:mr-0 lg:mb-0 lg:right-0 lg:bottom-0 lg:w-[56%] xl:w-[54%] lg:translate-x-[12%] lg:translate-y-[16%]">
+                                <Image
+                                    src="/supplier-dashboard.png"
+                                    alt="Supplier dashboard showing bookings, revenue, listings and service breakdown"
+                                    width={1920}
+                                    height={1080}
+                                    className="w-full h-auto"
+                                    quality={100}
+                                    priority
+                                    sizes="(max-width: 1024px) 88vw, 42vw"
+                                />
                             </div>
                         </motion.div>
 
@@ -384,9 +452,12 @@ export default function SupplierPage() {
                                 transition={{ duration: 0.6 }}
                                 className="lg:sticky lg:top-32"
                             >
-                                <span className="inline-block py-1 px-3 rounded-full bg-primary-50 text-primary-600 text-xs font-bold tracking-wide mb-6 uppercase">
-                                    Support
-                                </span>
+                                <div className="inline-flex items-center gap-3 mb-6">
+                                    <span className="w-10 h-0.5 bg-primary-600 shrink-0" aria-hidden="true"></span>
+                                    <span className="text-primary-700 text-xs font-bold tracking-[0.2em] uppercase">
+                                        Support
+                                    </span>
+                                </div>
                                 <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6 tracking-tight leading-tight">
                                     Frequently Asked <br />
                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Questions</span>

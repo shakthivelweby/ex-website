@@ -11,9 +11,7 @@ import { getDetailsForBooking, getTicketPricesForDate } from "./service";
 /** Same rule as `attractions/[id]/page.js`: shown amount = base + admin % (no discount on detail). */
 function applyAdminChargeOnly(amountRaw, adminPctRaw) {
   const amount = Number(amountRaw || 0);
-  const admin = Math.max(0, Number(adminPctRaw || 0));
-  const afterAdmin = amount + (amount * admin) / 100;
-  return Math.round(afterAdmin * 100) / 100;
+  return Math.round(amount * 100) / 100;
 }
 
 /** Lowest “starting from” unit across ticket rows after admin (matches SSR detail logic). */
@@ -206,19 +204,16 @@ const Form = ({
       <div className="!bg-[#f7f7f7] rounded-xl p-3 shadow-sm">
         {/* Title and Categories */}
         <div className="bg-white rounded-xl p-4 mb-4">
-          <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-3">
+          <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-2">
             {attractionDetails.title}
           </h1>
-          <div className="flex flex-wrap gap-2">
-            {attractionDetails.categories.map((category, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f7f7f7] text-gray-700"
-              >
-                {category}
-              </span>
-            ))}
-          </div>
+          {(attractionDetails.categoryName ||
+            attractionDetails.categories?.[0]) && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+              {attractionDetails.categoryName ||
+                attractionDetails.categories[0]}
+            </span>
+          )}
         </div>
 
         {/* Attraction Info Card */}

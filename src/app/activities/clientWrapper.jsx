@@ -147,9 +147,7 @@ export default function ClientWrapper({
                   : rt === "pax"
                   ? Number(activity.price?.adult_price || 0)
                   : Number(activity.price?.full_rate || activity.price || 0);
-              const admin = Math.max(0, Number(activity.price?.admin_charge ?? 0));
-              const afterAdmin = base + (base * admin) / 100;
-              return Math.round(afterAdmin * 100) / 100;
+              return Math.round(base * 100) / 100;
             })(),
             rating: activity.rating || 0,
             reviewCount: activity.review_count || 0,

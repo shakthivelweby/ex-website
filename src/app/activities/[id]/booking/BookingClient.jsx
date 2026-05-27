@@ -200,11 +200,10 @@ function normalizeRateType(rateTypeRaw, { adultPrice, childPrice, fullRate } = {
 function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
   const amount = Number(amountRaw || 0);
   const discount = Number(discountRaw || 0);
-  const admin = Number(adminChargeRaw || 0);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
-  // Align with Events/Attractions: apply admin first, then discount on admin-inclusive amount.
-  const withAdmin = amount + (amount * Math.max(0, admin)) / 100;
-  const discounted = withAdmin - (withAdmin * Math.max(0, discount)) / 100;
+
+  // Admin charge is informational only; apply discount on base price.
+  const discounted = amount - (amount * Math.max(0, discount)) / 100;
   return Number.isFinite(discounted) ? discounted : 0;
 }
 
@@ -1432,17 +1431,11 @@ const BookingClient = ({ activityId }) => {
                       {summaryCountLabel}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-200">
-                    <i className="fi fi-rr-money text-primary-500"></i>
-                    <span className="font-semibold text-gray-900">
-                      Total: ₹{grandTotalUi.toFixed(2)}
-                    </span>
-                  </div>
                 </div>
               </div>
 
               {/* Price Breakdown */}
-              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
+              <div className="space-y-3 mb-4">
                 {effectivePricing?.rateType === "full" ? (
                   <>
                     <div className="flex justify-between text-sm">
@@ -1502,47 +1495,6 @@ const BookingClient = ({ activityId }) => {
                 )}
               </div>
 
-              {/* Total Price */}
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-lg font-semibold text-gray-900">
-                  Total Price
-                </span>
-                {(() => {
-                  const parts = getTotalParts();
-                  if (parts?.hasDiscount && parts.originalTotal > parts.finalTotal) {
-                    // Strikethrough must include guide when selected — summary.originalSubtotalWithAdminNoDiscount is tickets-only.
-                    const strikePreDiscount = Number(parts.originalTotal);
-                    return (
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500 line-through">
-                          ₹{strikePreDiscount.toFixed(2)}
-                        </div>
-                        <div className="text-2xl font-bold text-primary-500">
-                          ₹{grandTotalUi.toFixed(2)}
-                        </div>
-                        {showSeasonAddonNote ? (
-                          <div className="text-xs text-blue-700 mt-1">
-                            Seasonal / special rate applied
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-primary-500">
-                        ₹{grandTotalUi.toFixed(2)}
-                      </div>
-                      {showSeasonAddonNote ? (
-                        <div className="text-xs text-blue-700 mt-1">
-                          Seasonal / special rate applied
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })()}
-              </div>
-
               <div className="space-y-1 mb-6 text-sm text-gray-600">
                 {(() => {
                   const s = getDiscountAdminSummary();
@@ -1557,7 +1509,7 @@ const BookingClient = ({ activityId }) => {
                   return (
                     <>
                       <div className="flex justify-between">
-                        <span>Tickets (incl. admin, before discount)</span>
+                        <span>Tickets (before discount)</span>
                         <span className="text-gray-900 font-medium">
                           ₹{Number(s.afterAdminSubtotal ?? s.baseSubtotal ?? 0).toFixed(2)}
                         </span>
@@ -1601,6 +1553,42 @@ const BookingClient = ({ activityId }) => {
                 <div className="flex justify-between">
                   <span>Convenience fee ({conveniencePercent}%)</span>
                   <span className="text-gray-900 font-medium">₹{convenienceAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-3 mt-2 border-t border-gray-200">
+                  <span className="text-base font-semibold text-gray-900">Total Amount</span>
+                  {(() => {
+                    const parts = getTotalParts();
+                    if (parts?.hasDiscount && parts.originalTotal > parts.finalTotal) {
+                      const strikePreDiscount = Number(parts.originalTotal);
+                      return (
+                        <div className="text-right">
+                          <div className="text-sm text-gray-500 line-through">
+                            ₹{strikePreDiscount.toFixed(2)}
+                          </div>
+                          <div className="text-xl font-bold text-primary-500">
+                            ₹{grandTotalUi.toFixed(2)}
+                          </div>
+                          {showSeasonAddonNote ? (
+                            <div className="text-xs text-blue-700 mt-1">
+                              Seasonal / special rate applied
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div className="text-right">
+                        <div className="text-xl font-bold text-primary-500">
+                          ₹{grandTotalUi.toFixed(2)}
+                        </div>
+                        {showSeasonAddonNote ? (
+                          <div className="text-xs text-blue-700 mt-1">
+                            Seasonal / special rate applied
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <p className="text-xs text-gray-500 pt-2 leading-relaxed">
                   Total = subtotal + GST ({gstPercent}% of subtotal) + convenience ({conveniencePercent}% of subtotal

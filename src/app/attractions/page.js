@@ -50,9 +50,7 @@ export default async function Attractions({ searchParams }) {
           : rt === "pax"
           ? Number(attraction.price?.adult_price || 0)
           : Number(attraction.price?.full_rate || attraction.price || 0);
-      const admin = Math.max(0, Number(attraction.price?.admin_charge ?? 0));
-      const afterAdmin = base + (base * admin) / 100;
-      return Math.round(afterAdmin * 100) / 100;
+      return Math.round(base * 100) / 100;
     })(),
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,

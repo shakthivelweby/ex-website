@@ -1,5 +1,6 @@
 /**
- * GST is fixed at 18% on (discounted rent + admin). Convenience fee is fixed at 2% after GST.
+ * GST is fixed at 18% on discounted rent. Convenience fee is fixed at 2% after GST.
+ * Admin charge is informational only and is not added to ticket/rent totals.
  * Aligned with API `RentalPricingTotals`.
  */
 export const RENTAL_CHECKOUT_GST_PERCENT = 18;
@@ -11,24 +12,13 @@ function round2(n) {
 }
 
 /**
- * Admin charge for display contexts where we want "base + admin" (no discount).
+ * Returns base amount only; admin charge is not added to the price.
  * @param {number} baseAmount
  * @param {Record<string, unknown>} pricing
  * @returns {number}
  */
 export function applyRentalAdminChargeOnly(baseAmount, pricing) {
-  const base = round2(Number(baseAmount || 0) || 0);
-  const p = pricing || {};
-  const achType = p.admin_charge_type || null;
-  const achValRaw = p.admin_charge_value;
-  const achVal =
-    achValRaw === "" || achValRaw === null || achValRaw === undefined ? null : Number(achValRaw);
-  if ((achType === "flat" || achType === "percent") && achVal != null && Number.isFinite(achVal)) {
-    const admin =
-      achType === "percent" ? round2((base * Math.min(achVal, 100)) / 100) : round2(achVal);
-    return round2(base + admin);
-  }
-  return base;
+  return round2(Number(baseAmount || 0) || 0);
 }
 
 /**
@@ -77,26 +67,15 @@ export function splitRentDiscount(grossRentSubtotal, pricing) {
 export function computeRentalBookingMonetaryBreakdown(rentSubtotalGross, pricing) {
   const split = splitRentDiscount(rentSubtotalGross, pricing);
   const rentNet = split.net;
-  const p = pricing || {};
-  let admin = 0;
-  const achType = p.admin_charge_type || null;
-  const achValRaw = p.admin_charge_value;
-  const achVal =
-    achValRaw === "" || achValRaw === null || achValRaw === undefined ? null : Number(achValRaw);
-  if ((achType === "flat" || achType === "percent") && achVal != null && Number.isFinite(achVal)) {
-    admin =
-      achType === "percent"
-        ? round2((rentNet * Math.min(achVal, 100)) / 100)
-        : round2(achVal);
-  }
+  const admin = 0;
   const gstPct = RENTAL_CHECKOUT_GST_PERCENT;
-  const gstBase = round2(rentNet + admin);
+  const gstBase = round2(rentNet);
   const gst = round2((gstBase * gstPct) / 100);
   const afterGst = round2(gstBase + gst);
   const convPct = RENTAL_CHECKOUT_CONVENIENCE_FEE_PERCENT;
   const convenienceFee = round2((afterGst * convPct) / 100);
   const feesBeforeDeposit = round2(afterGst + convenienceFee);
-  const deposit = round2(Number(p.security_deposit || 0) || 0);
+  const deposit = round2(Number((pricing || {}).security_deposit || 0) || 0);
   const grandTotal = round2(feesBeforeDeposit + deposit);
   return {
     rentSubtotalGross: split.gross,

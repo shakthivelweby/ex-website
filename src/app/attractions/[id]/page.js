@@ -49,9 +49,7 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
 
   const applyAdminChargeOnly = (amountRaw, adminPctRaw) => {
     const amount = Number(amountRaw || 0);
-    const admin = Math.max(0, Number(adminPctRaw || 0));
-    const afterAdmin = amount + (amount * admin) / 100;
-    return Math.round(afterAdmin * 100) / 100;
+    return Math.round(amount * 100) / 100;
   };
 
   const computeDisplayEntryFee = () => {
@@ -101,10 +99,16 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
 
 
 
+  const categoryName =
+    attraction.attraction?.attraction_category_master?.name ||
+    attraction.attraction?.attractionCategoryMaster?.name ||
+    null;
+
   const attractionDetails = {
     id: attraction.attraction.id,
     title: attraction.attraction.name,
-    categories: [attraction.attraction_category_master?.name || "Attraction"],
+    categoryName,
+    categories: categoryName ? [categoryName] : [],
     openingTime: new Date(`1970-01-01T${attraction.attraction.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
     closingTime: new Date(`1970-01-01T${attraction.attraction.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
     closeoutDates: attraction.closeout_dates || [],

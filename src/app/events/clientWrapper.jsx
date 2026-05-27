@@ -171,9 +171,7 @@ const ClientWrapper = ({
                 .flatMap((day) => day.event_ticket_prices)
                 .map((p) => {
                   const base = Number(p?.price || 0);
-                  const admin = Math.max(0, Number(p?.admin_charge ?? 0));
-                  const afterAdmin = base + (base * admin) / 100;
-                  return Math.round(afterAdmin * 100) / 100;
+                  return Math.round(base * 100) / 100;
                 })
                 .filter((n) => Number.isFinite(n) && n > 0);
 

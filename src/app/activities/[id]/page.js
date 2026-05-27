@@ -50,12 +50,11 @@ const ActivityDetailPage = async ({ params }) => {
     }
   }
 
-  // Detail page display: show base + admin charge only (no discount here).
+  // Detail page display: base ticket price only (admin charge is informational).
   const applyAdminOnly = (amountRaw, adminRaw) => {
     const amount = Number(amountRaw || 0);
-    const admin = Math.max(0, Number(adminRaw || 0));
     if (!Number.isFinite(amount) || amount <= 0) return 0;
-    return Math.round((amount + (amount * admin) / 100) * 100) / 100;
+    return Math.round(amount * 100) / 100;
   };
 
   // Format time helper

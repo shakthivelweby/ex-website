@@ -19,8 +19,7 @@ function attractionAdminPct(ticket) {
 
 function applyAdminCharge(amountRaw, adminPctRaw) {
   const amount = Number(amountRaw || 0);
-  const admin = Math.max(0, Number(adminPctRaw || 0));
-  return Math.round((amount + (amount * admin) / 100) * 100) / 100;
+  return Math.round(amount * 100) / 100;
 }
 
 /** Discount applies on the admin-inclusive amount. */
@@ -509,10 +508,11 @@ const AttractionBookingPage = ({
               </div>
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-tag text-primary-500 text-sm"></i>
-                <span className="text-gray-700 text-sm">
-                  {attractionData.attraction_category_master?.name ||
-                    "Attraction"}
-                </span>
+                {attractionData.attraction_category_master?.name && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+                    {attractionData.attraction_category_master.name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -530,28 +530,6 @@ const AttractionBookingPage = ({
                       <h3 className="text-sm font-medium text-gray-800">
                         Available Tickets
                       </h3>
-
-                      {/* Guide Toggle */}
-                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
-                          <span className="text-sm font-medium text-gray-700 pr-2">
-                            Need a guide
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => setNeedGuide(!needGuide)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                            needGuide ? "bg-primary-600" : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                              needGuide ? "translate-x-6" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
                     </div>
                     <div className="space-y-3">
                       {ticketData?.attraction_ticket_type_prices?.map(
@@ -901,6 +879,40 @@ const AttractionBookingPage = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Guide Section */}
+                  {guideRate > 0 && (
+                    <div className="border-t border-gray-200 pt-6">
+                      <h3 className="text-sm font-medium text-gray-800 mb-3">
+                        Guide
+                      </h3>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
+                          <div>
+                            <span className="text-sm font-medium text-gray-700 block">
+                              Need a guide
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ₹{guideRate} per booking
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setNeedGuide(!needGuide)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                            needGuide ? "bg-primary-600" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                              needGuide ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1086,10 +1098,11 @@ const AttractionBookingPage = ({
                 <h3 className="text-base font-medium text-gray-800 mb-2">
                   {attractionData.name}
                 </h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  {attractionData.attraction_category_master?.name ||
-                    "Attraction"}
-                </p>
+                {attractionData.attraction_category_master?.name && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 mb-3">
+                    {attractionData.attraction_category_master.name}
+                  </span>
+                )}
 
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-center gap-2">
@@ -1137,9 +1150,9 @@ const AttractionBookingPage = ({
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Total Amount:</span>
-                    <span className="text-lg font-semibold text-primary-600">
-                      ₹{grandTotalForSummary.toFixed(2)}
+                    <span className="text-sm text-gray-600">Subtotal (excl. taxes)</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      ₹{subtotalForSummary.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1149,6 +1162,12 @@ const AttractionBookingPage = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Convenience (2%)</span>
                     <span className="text-sm font-medium text-gray-800">₹{convenienceAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm font-semibold text-gray-800">Total Amount:</span>
+                    <span className="text-lg font-semibold text-primary-600">
+                      ₹{grandTotalForSummary.toFixed(2)}
+                    </span>
                   </div>
                 </div>
 

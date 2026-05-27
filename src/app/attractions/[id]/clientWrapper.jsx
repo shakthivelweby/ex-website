@@ -329,11 +329,11 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             )}
 
-            {/* Terms and Conditions */}
+            {/* Note */}
             {attractionDetails.terms && (
               <div className="space-y-4">
                 <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                  Terms & Conditions
+                  Note
                 </h2>
 
                 <Accordion

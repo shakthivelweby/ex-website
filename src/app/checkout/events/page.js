@@ -187,10 +187,7 @@ export default function EventCheckoutPage() {
 
       if (ticketPrice && quantity > 0) {
         const base = Number(ticketPrice.price || 0);
-        const admin = Math.max(0, Number(ticketPrice.admin_charge ?? 0));
-        const afterAdmin =
-          Math.round((base + (base * admin) / 100) * 100) / 100;
-        total += afterAdmin * quantity;
+        total += Math.round(base * 100) / 100 * quantity;
       }
     });
     return total;
@@ -238,7 +235,7 @@ export default function EventCheckoutPage() {
         const show = date?.event_shows.find((s) => s.id == showId);
         const ticketType = date?.event_ticket_prices.find(
           (t) => t.event_ticket_type_id == ticket.event_ticket_type_id
-        )?.event_ticket_type?.event_ticket_type_master;
+        )?.event_ticket_type;
 
         if (date && show && ticketType) {
           ticketDetails.push({
@@ -266,18 +263,15 @@ export default function EventCheckoutPage() {
       const ticketPrice = date?.event_ticket_prices.find(
         (t) => t.event_ticket_type_id == ticketTypeId
       );
-      const ticketType = ticketPrice?.event_ticket_type.event_ticket_type_master;
+      const ticketType = ticketPrice?.event_ticket_type;
 
       if (date && show && ticketPrice && ticketType) {
         const base = Number(ticketPrice.price || 0);
-        const admin = Math.max(0, Number(ticketPrice.admin_charge ?? 0));
-        const afterAdmin =
-          Math.round((base + (base * admin) / 100) * 100) / 100;
         const pct = Math.max(0, Number(ticketPrice.discount || 0));
         const final =
           pct > 0
-            ? Math.round((afterAdmin - (afterAdmin * pct) / 100) * 100) / 100
-            : afterAdmin;
+            ? Math.round((base - (base * pct) / 100) * 100) / 100
+            : Math.round(base * 100) / 100;
         ticketDetails.push({
           date: date.date,
           showName: show.name,
@@ -578,14 +572,16 @@ export default function EventCheckoutPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">
-                      GST ({breakdown.gstPercent}%)
-                    </span>
-                    <span className="text-gray-900 font-semibold">
-                      ₹{breakdown.gstAmount.toFixed(2)}
-                    </span>
-                  </div>
+                  {breakdown.gstPercent > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">
+                        GST ({breakdown.gstPercent}%)
+                      </span>
+                      <span className="text-gray-900 font-semibold">
+                        ₹{breakdown.gstAmount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-600">
                       Convenience ({breakdown.conveniencePercent}%)
@@ -931,14 +927,16 @@ export default function EventCheckoutPage() {
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">
-                        GST ({breakdown.gstPercent}%)
-                      </span>
-                      <span className="text-gray-900 font-bold">
-                        ₹{breakdown.gstAmount.toFixed(2)}
-                      </span>
-                    </div>
+                    {breakdown.gstPercent > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">
+                          GST ({breakdown.gstPercent}%)
+                        </span>
+                        <span className="text-gray-900 font-bold">
+                          ₹{breakdown.gstAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-gray-600">
                         Convenience ({breakdown.conveniencePercent}%)

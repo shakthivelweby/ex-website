@@ -509,13 +509,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
                       const base =
                         Number(selectedTicketForDetails.price || 0) ||
                         Number(selectedTicketForDetails.adult_price || 0);
-                      const admin = Math.max(
-                        0,
-                        Number(selectedTicketForDetails.admin_charge ?? 0)
-                      );
-                      const afterAdmin =
-                        Math.round((base + (base * admin) / 100) * 100) / 100;
-                      return afterAdmin.toFixed(0);
+                      return (Math.round(base * 100) / 100).toFixed(0);
                     })()}
                   </span>
                   {selectedTicketForDetails.rateType === "pax" && (
@@ -1000,15 +994,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
                                         const base = Number(
                                           ticket.price || ticket.adult_price || 0
                                         );
-                                        const admin = Math.max(
-                                          0,
-                                          Number(ticket.admin_charge ?? 0)
-                                        );
-                                        const afterAdmin =
-                                          Math.round(
-                                            (base + (base * admin) / 100) * 100
-                                          ) / 100;
-                                        return afterAdmin.toFixed(0);
+                                        return (Math.round(base * 100) / 100).toFixed(0);
                                       })()}
                                     </span>
                                     {ticket.originalPrice && ticket.originalPrice > ticket.price && (

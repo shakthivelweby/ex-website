@@ -31,17 +31,14 @@ const EventDetailPage = async ({ params }) => {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  // Calculate lowest displayed unit for detail page.
-  // Detail page: show base + admin charge only (no discount here).
+  // Calculate lowest displayed unit for detail page (base price only; admin charge is informational).
   const allPrices =
     event.event_days
       ?.flatMap((day) => day?.event_ticket_prices || [])
       .map((t) => {
         const base = Number.parseFloat(t?.price);
-        const admin = Math.max(0, Number.parseFloat(t?.admin_charge ?? 0));
         if (!Number.isFinite(base) || base <= 0) return null;
-        const afterAdmin = base + (base * admin) / 100;
-        return Math.round(afterAdmin * 100) / 100;
+        return Math.round(base * 100) / 100;
       })
       .filter((p) => Number.isFinite(p) && p > 0) || [];
 

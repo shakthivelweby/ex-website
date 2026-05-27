@@ -145,12 +145,10 @@ function isCloseoutDate(closeouts, ymd, weekdayName) {
 function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
   const amount = Number(amountRaw || 0);
   const discount = Number(discountRaw || 0);
-  const admin = Number(adminChargeRaw || 0);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
 
-  // Align with Events/Attractions: apply admin first, then discount on admin-inclusive amount.
-  const withAdmin = amount + (amount * Math.max(0, admin)) / 100;
-  const discounted = withAdmin - (withAdmin * Math.max(0, discount)) / 100;
+  // Admin charge is informational only; apply discount on base price.
+  const discounted = amount - (amount * Math.max(0, discount)) / 100;
   return Number.isFinite(discounted) ? discounted : 0;
 }
 

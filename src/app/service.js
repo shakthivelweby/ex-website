@@ -3,7 +3,7 @@ import apiServerMiddleware from "./api/serverMiddleware";
 
 export const getFeaturedDestinations = async () => {
   try {
-    const response = await apiServerMiddleware.get("/destinations/featured");
+    const response = await apiServerMiddleware.get("/featured-destinations");
     return {
       status: true,
       data: response.data,

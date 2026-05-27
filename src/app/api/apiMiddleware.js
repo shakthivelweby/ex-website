@@ -2,27 +2,34 @@
 // src/services/apiMiddleware.js
 import axios from "axios";
 
-// Create axios instance with base config
+const getApiBaseUrl = () => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) return null;
+  return `${apiUrl.replace(/\/$/, "")}/api/web`;
+};
+
 const apiMiddleware = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api/web", // your API base URL
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000, // increased to 30 seconds for payment verification
+  timeout: 30000,
 });
 
-// Request interceptor to add auth token if exists
 apiMiddleware.interceptors.request.use(
   (config) => {
+    const baseURL = getApiBaseUrl();
+    if (!baseURL) {
+      return Promise.reject(new Error("NEXT_PUBLIC_API_URL is not configured"));
+    }
+    config.baseURL = baseURL;
+
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor for global error handling

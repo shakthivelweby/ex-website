@@ -647,7 +647,7 @@ const AttractionBookings = () => {
                       <div className="flex justify-between">
                         <span>Payment Method:</span>
                         <span className="font-medium">
-                          {booking.payment_method || "Razorpay"}
+                          {booking.payment_method || "Online Payment"}
                         </span>
                       </div>
                     </div>

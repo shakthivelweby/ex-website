@@ -316,7 +316,7 @@ const PackageBookings = () => {
           <Button
             variant="primary"
             size="lg"
-            onClick={() => router.push("/packages")}
+            onClick={() => router.push("/explore")}
             className="!rounded-full !px-6 !py-2.5 !text-sm !font-medium"
           >
             <i className="fi fi-rr-search mr-2"></i>

@@ -273,9 +273,9 @@ body {
   color: #1f2937 !important;
 }
 
-.rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span,
-.rdrDay:not(.rdrDayPassive) .rdrStartEdge ~ .rdrDayNumber span,
-.rdrDay:not(.rdrDayPassive) .rdrEndEdge ~ .rdrDayNumber span {
+.rdrDay:not(.rdrDayPassive) .rdrInRange~.rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrStartEdge~.rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrEndEdge~.rdrDayNumber span {
   color: white !important;
 }
 
@@ -327,8 +327,10 @@ body.datepicker-open {
 
 /* Hide scrollbar for IE, Edge and Firefox */
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 i {
@@ -346,6 +348,7 @@ i {
     opacity: 0;
     transform: scale(0.95) translateY(10px);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -357,10 +360,12 @@ i {
     transform: scale(0.95);
     opacity: 0.5;
   }
+
   50% {
     transform: scale(1.05);
     opacity: 0.3;
   }
+
   100% {
     transform: scale(0.95);
     opacity: 0.5;
@@ -372,12 +377,15 @@ i {
     transform: scale(0.5) rotate(-10deg);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.1) rotate(5deg);
   }
+
   75% {
     transform: scale(0.95) rotate(0deg);
   }
+
   100% {
     transform: scale(1) rotate(0deg);
     opacity: 1;
@@ -389,6 +397,7 @@ i {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -538,4 +547,13 @@ select {
   margin: 1rem 0;
   padding: 1rem;
   overflow-x: auto;
+}
+
+/* Horizontal scroll strips (activities, events, explore, etc.) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

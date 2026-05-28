@@ -1,20 +1,31 @@
 /** @type {import('next').NextConfig} */
 const mobileIp = '192.168.1.38';
 
+/** Laravel origin used by Next.js rewrites (proxy /api/web → Laravel). */
+const laravelOrigin = (
+  process.env.LARAVEL_URL ||
+  process.env.INTERNAL_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  `http://${mobileIp}:8000`
+)
+  .trim()
+  .replace(/\/+$/, '');
+
 const nextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: '/api/web/:path*',
+        destination: `${laravelOrigin}/api/web/:path*`,
+      },
+    ];
+  },
   typescript: {
     // Disable type checking during build (for faster dev)
     ignoreBuildErrors: true,
   },
 
-  // ✅ Your custom config (not used by Next.js)
-  customConfig: {
-    allowedDevOrigins: [
-      `http://${mobileIp}:3000`,
-      'http://localhost:3000',
-      'https://api.exploreworld.com',
-    ],
-  },
+  // NOTE: Next.js doesn't accept arbitrary config keys. Keep non-Next settings out of this file.
 
   // ✅ Configure remote images
   images: {
@@ -43,10 +54,7 @@ const nextConfig = {
     ],
   },
 
-  // ✅ Optional performance improvements
-  experimental: {
-    turbo: true, // enables Rust-based turbo compilation for dev speed
-  },
+  // Turbopack is stable; no experimental.turbo needed (and it breaks config validation in v15).
 };
 
 export default nextConfig;

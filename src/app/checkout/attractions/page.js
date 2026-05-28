@@ -117,12 +117,14 @@ export default function AttractionCheckoutPage() {
     return 0;
   };
 
-  const getTotalPrice = () => {
-    // total_amount already includes guide rate from booking page
-    if (selectedTickets.total_amount) {
-      return selectedTickets.total_amount;
-    }
-    return 0;
+  /** Pre-discount total from booking flow (admin-inclusive ticket bases + guide); backend uses this with discount_amount. */
+  const getPreDiscountTotal = () => Number(selectedTickets.total_amount || 0);
+
+  /** Amount taxes apply to: matches API subtotal_after_discount = total_amount − discount_amount. */
+  const getTaxableSubtotalExTax = () => {
+    const pre = getPreDiscountTotal();
+    const disc = Number(selectedTickets.discount_amount || 0);
+    return Math.max(0, Math.round((pre - disc) * 100) / 100);
   };
 
   const getTicketDetails = () => {
@@ -142,7 +144,7 @@ export default function AttractionCheckoutPage() {
     }
     
     // Add guide charge if guide is needed
-    if (selectedTickets.need_guide && selectedTickets.guide_rate > 0) {
+    if (selectedTickets.include_guide && selectedTickets.guide_rate > 0) {
       ticketDetails.push({
         ticketType: "Guide Service",
         quantity: 1,
@@ -166,7 +168,7 @@ export default function AttractionCheckoutPage() {
         return;
       }
 
-      // total_amount already includes guide rate from booking page
+      // total_amount already includes guide rate from booking page (pre-tax). Backend will compute GST+convenience safely.
       const finalTotalAmount = selectedTickets.total_amount || 0;
 
       // Calculate total adult and child counts from booking tickets
@@ -193,11 +195,11 @@ export default function AttractionCheckoutPage() {
         attraction_id: parseInt(searchParams.get("attraction_id")),
         visit_date: selectedTickets.visit_date,
         total_amount: finalTotalAmount,
-        discount_amount: 0, // Add required discount_amount field
+        discount_amount: Number(selectedTickets.discount_amount || 0),
         adult_count: totalAdultCount, // Add required adult_count field
         child_count: totalChildCount, // Add required child_count field
         bookingTickets: enhancedBookingTickets,
-        need_guide: selectedTickets.need_guide || false,
+        include_guide: selectedTickets.include_guide || false,
         guide_rate: selectedTickets.guide_rate || 0,
       };
 
@@ -207,7 +209,10 @@ export default function AttractionCheckoutPage() {
       const response = await book(apiBookingData);
      
       if (response.status) {
-        const paymentAmount = finalTotalAmount; // Full payment including guide charge
+        const paymentAmount =
+          response?.data?.grand_total != null && response.data.grand_total !== ""
+            ? Number(response.data.grand_total)
+            : finalTotalAmount;
         
         // Create order for payment
         const orderRes = await createOrder({
@@ -219,11 +224,12 @@ export default function AttractionCheckoutPage() {
         if (orderRes.status) {
           // Initialize Razorpay payment
           const paymentResponse = await initializeRazorpayPayment({
-            amount: paymentAmount * 100, // Razorpay expects amount in paise
+            amount: paymentAmount,
             currency: "INR",
             name: "Explore World",
             description: `Payment for ${attractionData?.attraction?.name || 'attraction'} tickets`,
             orderId: orderRes.data.order_id,
+            key: orderRes.data.key,
             email: formData.email,
             contact: formData.phone,
           });
@@ -254,8 +260,11 @@ export default function AttractionCheckoutPage() {
           } else {
             // Payment initialization failed - mark payment as failed
             const failRes = await paymentFailure(orderRes.data.attraction_payment_id);       
-            
-            setError("Payment initialization failed. Please try again.");
+            console.error("Razorpay init failed:", paymentResponse?.error);
+            setError(
+              paymentResponse?.error?.description ||
+                "Payment initialization failed. Please try again."
+            );
           }
         } else {
           setError(orderRes.message || "Failed to create payment order. Please try again.");
@@ -318,7 +327,14 @@ export default function AttractionCheckoutPage() {
   }
 
   const ticketDetails = getTicketDetails();
-  const totalAmount = getTotalPrice();
+  const discountAmountUi = Number(selectedTickets.discount_amount || 0);
+  const subtotalExTax = getTaxableSubtotalExTax();
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+  const gstAmount = (subtotalExTax * gstPercent) / 100;
+  const afterGst = subtotalExTax + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalUi = afterGst + convenienceAmount;
 
   return (
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
@@ -412,9 +428,31 @@ export default function AttractionCheckoutPage() {
                   Price Details
                 </h4>
                 <div className="space-y-1">
+                  {discountAmountUi > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-600">Discount</span>
+                      <span className="text-gray-900 font-semibold">
+                        −₹{discountAmountUi.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Subtotal (excl. taxes)</span>
+                    <span className="text-gray-900 font-semibold">
+                      ₹{subtotalExTax.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">GST (18%)</span>
+                    <span className="text-gray-900 font-semibold">₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Convenience (2%)</span>
+                    <span className="text-gray-900 font-semibold">₹{convenienceAmount.toFixed(2)}</span>
+                  </div>
                   <div className="flex justify-between font-bold pt-1.5 border-t border-green-200">
                     <span className="text-gray-900 text-sm">Total Amount</span>
-                    <span className="text-primary-600 text-sm">₹{parseFloat(totalAmount).toFixed(2)}</span>
+                    <span className="text-primary-600 text-sm">₹{grandTotalUi.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -717,9 +755,31 @@ export default function AttractionCheckoutPage() {
                       <span className="text-gray-600">Total Tickets</span>
                       <span className="text-gray-900 font-semibold">{getTotalSelectedTickets()}</span>
                     </div>
+                    {discountAmountUi > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Discount</span>
+                        <span className="text-gray-900 font-semibold">
+                          −₹{discountAmountUi.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal (excl. taxes)</span>
+                      <span className="text-gray-900 font-semibold">
+                        ₹{subtotalExTax.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">GST (18%)</span>
+                      <span className="text-gray-900 font-semibold">₹{gstAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Convenience fee (2%)</span>
+                      <span className="text-gray-900 font-semibold">₹{convenienceAmount.toFixed(2)}</span>
+                    </div>
                     <div className="flex justify-between font-bold pt-2 border-t border-green-200">
                       <span className="text-gray-900">Total Amount</span>
-                      <span className="text-primary-600">₹{parseFloat(totalAmount).toFixed(2)}</span>
+                      <span className="text-primary-600">₹{grandTotalUi.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -737,7 +797,14 @@ export default function AttractionCheckoutPage() {
           message={successMessage.message}
           onClose={() => {
             setShowSuccess(false);
-            router.push("/my-bookings");
+            router.push("/my-bookings?tab=attractions");
+          }}
+          actionButton={{
+            label: "My bookings",
+            onClick: () => {
+              setShowSuccess(false);
+              router.push("/my-bookings?tab=attractions");
+            },
           }}
         />
       )}

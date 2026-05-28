@@ -8,6 +8,33 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getDetailsForBooking, getTicketPricesForDate } from "./service";
 
+/** Same rule as `attractions/[id]/page.js`: shown amount = base + admin % (no discount on detail). */
+function applyAdminChargeOnly(amountRaw, adminPctRaw) {
+  const amount = Number(amountRaw || 0);
+  return Math.round(amount * 100) / 100;
+}
+
+/** Lowest “starting from” unit across ticket rows after admin (matches SSR detail logic). */
+function minDisplayedEntryFeeFromRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return null;
+  const candidates = [];
+  for (const row of rows) {
+    const rate = row?.rate_type;
+    const adminPct = row?.admin_charge ?? 0;
+    if (rate === "full") {
+      const base = Number(row?.full_rate || 0);
+      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+    } else if (rate === "pax") {
+      const adult = Number(row?.adult_price || 0);
+      if (adult > 0) candidates.push(applyAdminChargeOnly(adult, adminPct));
+    } else {
+      const base = Number(row?.full_rate || row?.adult_price || 0);
+      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+    }
+  }
+  return candidates.length ? Math.min(...candidates) : null;
+}
+
 const Form = ({
   attractionDetails,
   isMobilePopup = false,
@@ -177,19 +204,16 @@ const Form = ({
       <div className="!bg-[#f7f7f7] rounded-xl p-3 shadow-sm">
         {/* Title and Categories */}
         <div className="bg-white rounded-xl p-4 mb-4">
-          <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-3">
+          <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-2">
             {attractionDetails.title}
           </h1>
-          <div className="flex flex-wrap gap-2">
-            {attractionDetails.categories.map((category, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#f7f7f7] text-gray-700"
-              >
-                {category}
-              </span>
-            ))}
-          </div>
+          {(attractionDetails.categoryName ||
+            attractionDetails.categories?.[0]) && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+              {attractionDetails.categoryName ||
+                attractionDetails.categories[0]}
+            </span>
+          )}
         </div>
 
         {/* Attraction Info Card */}
@@ -225,9 +249,12 @@ const Form = ({
                         : "";
                       setSelectedDate(dateString);
 
-                      // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
                         try {
+                          localStorage.setItem(
+                            `attraction_${attractionDetails.id}_selectedDate`,
+                            dateString
+                          );
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
                             dateString
@@ -296,9 +323,12 @@ const Form = ({
                         : "";
                       setSelectedDate(dateString);
 
-                      // Call API when date is selected
                       if (dateString && attractionDetails?.id) {
                         try {
+                          localStorage.setItem(
+                            `attraction_${attractionDetails.id}_selectedDate`,
+                            dateString
+                          );
                           const response = await getTicketPricesForDate(
                             attractionDetails.id,
                             dateString
@@ -365,31 +395,11 @@ const Form = ({
             <span className="text-gray-500 text-sm">Entry fee</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">
               {(() => {
-                // Get the first ticket from the API response
-                const ticketData = ticketPrices?.[0];
-
-                if (ticketData) {
-                  if (ticketData.rate_type === "full") {
-                    return ticketData.full_rate
-                      ? `₹${ticketData.full_rate}`
-                      : attractionDetails.price;
-                  } else if (ticketData.rate_type === "pax") {
-                    return ticketData.adult_price
-                      ? `₹${ticketData.adult_price}`
-                      : attractionDetails.price;
-                  }
+                const minFee = minDisplayedEntryFeeFromRows(ticketPrices);
+                if (minFee != null && minFee > 0) {
+                  return `₹${minFee}`;
                 }
-
-                // Fallback to original logic if no ticket data
-                return attractionDetails.rateType === "full"
-                  ? attractionDetails.fullRate
-                    ? `₹${attractionDetails.fullRate}`
-                    : attractionDetails.price
-                  : attractionDetails.rateType === "pax"
-                  ? attractionDetails.adultPrice
-                    ? `₹${attractionDetails.adultPrice}`
-                    : attractionDetails.price
-                  : attractionDetails.price;
+                return attractionDetails.price;
               })()}
             </span>
           </div>

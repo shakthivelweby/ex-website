@@ -31,7 +31,7 @@ const EventBookings = () => {
   };
 
   const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount).toLocaleString()}`;
+    return `₹${parseFloat(amount || 0).toLocaleString()}`;
   };
 
   const getStatusColor = (status) => {
@@ -162,16 +162,22 @@ const EventBookings = () => {
 
                   {/* Price Info */}
                   <div className="flex flex-col items-start md:items-end gap-2">
+                    {(() => {
+                      const pb = booking.pricing_breakdown || null;
+                      const grand = pb?.grand_total ?? booking.grand_total ?? booking.total_amount ?? booking.amount ?? 0;
+                      return (
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-gray-900">
                         {formatCurrency(
-                          booking.total_amount || booking.amount || 0
+                          grand
                         )}
                       </span>
                       <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
                         {booking.payment_status || "Paid"}
                       </span>
                     </div>
+                      );
+                    })()}
 
                     {booking.discount_amount &&
                       parseFloat(booking.discount_amount) > 0 && (
@@ -179,6 +185,14 @@ const EventBookings = () => {
                           Saved {formatCurrency(booking.discount_amount)}
                         </span>
                       )}
+
+                    {booking.pricing_breakdown ? (
+                      <div className="text-[11px] text-gray-500">
+                        <span className="font-semibold text-gray-700">
+                          GST {booking.pricing_breakdown.gst_percent}% · Convenience {booking.pricing_breakdown.convenience_fee_percent}%
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
@@ -253,6 +267,90 @@ const EventBookings = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Price Breakdown (like Rental) */}
+                    {booking.pricing_breakdown ? (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-medium text-gray-900 mb-3">
+                          Price Breakdown
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          <div className="space-y-1 text-gray-600">
+                            <div className="flex justify-between gap-3">
+                              <span>Subtotal:</span>
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(booking.pricing_breakdown.total_amount)}
+                              </span>
+                            </div>
+                            {(booking.pricing_breakdown.discount_amount ?? 0) > 0 ? (
+                              <div className="flex justify-between gap-3">
+                                <span>Discount:</span>
+                                <span className="font-medium text-green-700">
+                                  −{formatCurrency(booking.pricing_breakdown.discount_amount)}
+                                </span>
+                              </div>
+                            ) : null}
+                            <div className="flex justify-between gap-3">
+                              <span>After discount:</span>
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(booking.pricing_breakdown.subtotal_after_discount)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="space-y-1 text-gray-600">
+                            <div className="flex justify-between gap-3">
+                              <span>GST ({booking.pricing_breakdown.gst_percent}%):</span>
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(booking.pricing_breakdown.gst_amount)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                              <span>
+                                Convenience ({booking.pricing_breakdown.convenience_fee_percent}%):
+                              </span>
+                              <span className="font-medium text-gray-900">
+                                {formatCurrency(booking.pricing_breakdown.convenience_fee_amount)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between gap-3 pt-2 border-t border-gray-100">
+                              <span className="font-semibold text-gray-900">Grand total:</span>
+                              <span className="font-semibold text-primary-600">
+                                {formatCurrency(booking.pricing_breakdown.grand_total)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {/* Selected Tickets (like Rental breakdown section) */}
+                    {Array.isArray(booking.booking_tickets) && booking.booking_tickets.length > 0 ? (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-medium text-gray-900 mb-3">
+                          Selected Tickets
+                        </h4>
+                        <div className="space-y-2">
+                          {booking.booking_tickets.map((t) => (
+                            <div
+                              key={t.id}
+                              className="flex items-center justify-between rounded-xl p-3 bg-gray-50/50 border border-gray-100"
+                            >
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">
+                                  {t.ticket_type_name} × {t.quantity}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Unit: {formatCurrency(t.unit_price)}
+                                </div>
+                              </div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {formatCurrency(t.total_price)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     {/* Payment History */}
                     {booking.event_payment &&

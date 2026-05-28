@@ -1,8 +1,7 @@
 "use client";
 
 import Popup from "./Popup";
-import Autocomplete from "react-google-autocomplete";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function LocationSearchPopup({
   isOpen,
@@ -17,6 +16,43 @@ export default function LocationSearchPopup({
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [inputValue, setInputValue] = useState(initialValue);
+  const inputRef = useRef(null);
+  const autocompleteRef = useRef(null);
+
+  const ensureGooglePlacesScript = async () => {
+    if (typeof window === "undefined") return false;
+    if (window.google?.maps?.places) return true;
+    if (!googleApiKey) return false;
+
+    const existing = document.querySelector('script[data-ew-google-places="1"]');
+    if (existing) {
+      // Wait for it to load
+      await new Promise((resolve) => {
+        if (window.google?.maps?.places) return resolve(true);
+        existing.addEventListener("load", () => resolve(true), { once: true });
+        existing.addEventListener("error", () => resolve(false), { once: true });
+        setTimeout(() => resolve(false), 12000);
+      });
+      return Boolean(window.google?.maps?.places);
+    }
+
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
+      googleApiKey
+    )}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.setAttribute("data-ew-google-places", "1");
+    document.head.appendChild(script);
+
+    await new Promise((resolve) => {
+      script.addEventListener("load", () => resolve(true), { once: true });
+      script.addEventListener("error", () => resolve(false), { once: true });
+      setTimeout(() => resolve(false), 12000);
+    });
+
+    return Boolean(window.google?.maps?.places);
+  };
 
   // Function to get state name from coordinates using Google Geocoding API
   const getStateFromCoords = async (latitude, longitude) => {
@@ -120,6 +156,41 @@ export default function LocationSearchPopup({
       setInputValue(initialValue);
     }
   }, [isOpen, initialValue]);
+
+  // Init Places Autocomplete on our input (avoids ref issues with react-google-autocomplete + React 19).
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!isOpen) return;
+      const ok = await ensureGooglePlacesScript();
+      if (cancelled || !ok) return;
+      const el = inputRef.current;
+      if (!el || !(el instanceof HTMLInputElement)) return;
+
+      try {
+        const ac = new window.google.maps.places.Autocomplete(el, {
+          types: ["(regions)"],
+          componentRestrictions: { country: "in" },
+          fields: ["name", "formatted_address", "geometry"],
+        });
+        autocompleteRef.current = ac;
+        ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          if (!place) return;
+          const label = place.name || place.formatted_address || "";
+          setInputValue(label);
+          onPlaceSelected(place);
+        });
+      } catch (e) {
+        // Ignore init failures; user can still type and use auto-detect.
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+      autocompleteRef.current = null;
+    };
+  }, [isOpen, googleApiKey]);
 
   // Handle clear location
   const handleClear = () => {
@@ -264,18 +335,10 @@ export default function LocationSearchPopup({
                 <div className="absolute inset-y-0 left-0 flex items-center pl-4">
                   <i className="fi fi-rr-search text-gray-400 text-base"></i>
                 </div>
-                <Autocomplete
-                  key={isOpen ? `autocomplete-${inputValue}` : "autocomplete"}
-                  apiKey={googleApiKey}
-                  onPlaceSelected={(place) => {
-                    setInputValue(place.name || place.formatted_address);
-                    onPlaceSelected(place);
-                  }}
-                  options={{
-                    types: ["(regions)"],
-                    componentRestrictions: { country: "in" },
-                    fields: ["name", "formatted_address", "geometry"],
-                  }}
+                <input
+                  ref={inputRef}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
                   placeholder="Enter city or destination name..."
@@ -283,7 +346,6 @@ export default function LocationSearchPopup({
                     pl-11 pr-24 text-[15px] text-gray-900 placeholder:text-gray-400 
                     focus:outline-none border border-transparent
                     ${isFocused ? "bg-white border-gray-200 shadow-sm" : ""}`}
-                  defaultValue={inputValue}
                 />
                 <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
                   {inputValue && (

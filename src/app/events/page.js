@@ -51,18 +51,21 @@ export default async function Events({ searchParams }) {
     venue: event.location,
     type: event.event_category_master?.name || "",
     image: event.thumb_image || event.cover_image,
+    popular: Boolean(event.popular),
+    recommended: Boolean(event.recommended),
     price: (() => {
       if (event.event_days && event.event_days.length > 0) {
         const prices = event.event_days
           .flatMap((day) => day.event_ticket_prices)
-          .map((price) => parseFloat(price.price))
-          .filter((price) => !isNaN(price));
+          .map((p) => {
+            const base = Number(p?.price || 0);
+            return Math.round(base * 100) / 100;
+          })
+          .filter((n) => Number.isFinite(n) && n > 0);
 
-        if (prices.length > 0) {
-          return Math.min(...prices);
-        }
+        if (prices.length > 0) return Math.min(...prices);
       }
-      return 100;
+      return 0;
     })(),
     eventDays: event.event_days || [],
     totalShows: (() => {
@@ -99,8 +102,7 @@ export default async function Events({ searchParams }) {
       }
       return event.starting_date || "";
     })(),
-    promoted: true,
-    interest_count: 245,
+    interest_count: Number(event.event_bookings_count || 0),
   })) || [];
 
   return (

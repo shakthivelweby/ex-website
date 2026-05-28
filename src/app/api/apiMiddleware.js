@@ -2,13 +2,9 @@
 // src/services/apiMiddleware.js
 import axios from "axios";
 
-const getApiBaseUrl = () => {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) return null;
-  return `${apiUrl.replace(/\/$/, "")}/api/web`;
-};
-
+// Same-origin /api/web is proxied to Laravel via next.config.mjs rewrites.
 const apiMiddleware = axios.create({
+  baseURL: "/api/web",
   headers: {
     "Content-Type": "application/json",
   },
@@ -39,9 +35,15 @@ apiMiddleware.interceptors.response.use(
     // You can handle specific error statuses globally here
     if (error.response) {
       if (error.response.status === 401) {
-        // e.g., redirect to login or clear tokens
-        localStorage.removeItem("token");
-        window.location.href = "/login";
+        // Trigger login UI (do NOT eagerly clear token; some 401s can be transient / racey).
+        // Login will overwrite token on success.
+        try {
+          // Preserve current page so login can return user here.
+          localStorage.setItem("redirectAfterLogin", window.location.href);
+          window.dispatchEvent(new CustomEvent("showLogin"));
+        } catch (_) {
+          // ignore
+        }
       }
     }
     return Promise.reject(error);

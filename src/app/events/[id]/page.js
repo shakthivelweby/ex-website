@@ -20,17 +20,47 @@ const EventDetailPage = async ({ params }) => {
 
   const event = eventResponse.data;
 
-  // Calculate lowest price from event days
+  const formatTime = (timeString) => {
+    if (!timeString || typeof timeString !== "string") return null;
+    const [hours, minutes] = timeString.split(":");
+    if (!hours || !minutes) return null;
+    const hour = Number.parseInt(hours, 10);
+    if (Number.isNaN(hour)) return null;
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
 
+  // Calculate lowest displayed unit for detail page (base price only; admin charge is informational).
+  const allPrices =
+    event.event_days
+      ?.flatMap((day) => day?.event_ticket_prices || [])
+      .map((t) => {
+        const base = Number.parseFloat(t?.price);
+        if (!Number.isFinite(base) || base <= 0) return null;
+        return Math.round(base * 100) / 100;
+      })
+      .filter((p) => Number.isFinite(p) && p > 0) || [];
 
-  const lowestPrice = event.event_days?.reduce((lowestPrice, day) => {
-    const dayPrices = day.event_ticket_prices?.map(ticket => parseFloat(ticket.price)) || [];
-    if (dayPrices.length > 0) {
-      const minDayPrice = Math.min(...dayPrices);
-      return Math.min(lowestPrice, minDayPrice);
-    }
-    return lowestPrice;
-  }, Infinity) || 0;
+  const lowestPrice = allPrices.length > 0 ? Math.min(...allPrices) : null;
+
+  // Compute a friendly time label from shows (earliest start time)
+  const allStartTimes =
+    event.event_days
+      ?.flatMap((day) => day?.event_shows || [])
+      .map((s) => s?.start_time)
+      .filter(Boolean) || [];
+
+  const uniqueFormattedTimes = Array.from(
+    new Set(allStartTimes.map((t) => formatTime(t)).filter(Boolean))
+  );
+
+  const timeLabel =
+    uniqueFormattedTimes.length === 0
+      ? "TBD"
+      : uniqueFormattedTimes.length === 1
+      ? uniqueFormattedTimes[0]
+      : `${uniqueFormattedTimes[0]} +${uniqueFormattedTimes.length - 1} more`;
 
 
 
@@ -54,10 +84,10 @@ const EventDetailPage = async ({ params }) => {
     date: event.ending_date 
       ? `${formatDate(event.starting_date)} - ${formatDate(event.ending_date)}`
       : formatDate(event.starting_date),
-    time: event.event_days?.[0]?.event_shows?.[0]?.start_time || 'TBD',
+    time: timeLabel,
     venue: event.location,
     venueAddress: event.address,
-    price: lowestPrice > 0 ? `₹${lowestPrice}` : 'Price TBA',
+    price: lowestPrice ? `₹${lowestPrice}` : "Price TBA",
     image: event.cover_image || event.thumb_image,
     description: event.description,
     eventGuide: {

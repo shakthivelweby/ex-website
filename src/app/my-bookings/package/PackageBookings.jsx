@@ -46,8 +46,13 @@ const PackageBookings = () => {
     });
   };
 
-  const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount).toLocaleString()}`;
+  const formatCurrency = (amount, { minFrac = 2, maxFrac = 2 } = {}) => {
+    const n = parseFloat(amount);
+    const x = Number.isFinite(n) ? n : 0;
+    return `₹${x.toLocaleString("en-IN", {
+      minimumFractionDigits: minFrac,
+      maximumFractionDigits: maxFrac,
+    })}`;
   };
 
   const formatDateTime = (dateString) => {
@@ -59,6 +64,46 @@ const PackageBookings = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getPackagePricing = (booking) => {
+    const pb = booking.pricing_breakdown;
+    if (pb && pb.grand_total != null && pb.grand_total !== undefined) {
+      return {
+        subtotal: Number(pb.subtotal) || 0,
+        gstPercent: pb.gst_percent ?? 5,
+        gstAmount: Number(pb.gst_amount) || 0,
+        discount: Number(pb.discount_amount) || 0,
+        convPct: Number(pb.convenience_fee_percent) || 0,
+        convAmount: Number(pb.convenience_fee_amount) || 0,
+        grand: Number(pb.grand_total) || 0,
+      };
+    }
+    const subtotal = parseFloat(booking.total_price || 0);
+    const gst = parseFloat(booking.gst_amount || 0);
+    const discount = parseFloat(booking.discount_amount || 0);
+    const pre = parseFloat(booking.total_amount || 0) || subtotal + gst;
+    const convAmt = parseFloat(booking.convenience_fee_amount || 0);
+    const storedGrand = parseFloat(booking.grand_total || 0);
+    return {
+      subtotal,
+      gstPercent: 5,
+      gstAmount: gst,
+      discount,
+      convPct: parseFloat(booking.convenience_fee_percent) || 0,
+      convAmount: convAmt,
+      grand:
+        storedGrand > 0
+          ? storedGrand
+          : Math.max(0, pre - discount) + convAmt,
+    };
+  };
+
+  const getPackageCardStatusLabel = (booking) => {
+    if (!booking.balance || parseFloat(booking.balance) <= 0) {
+      return "Paid";
+    }
+    return getPaymentTypeLabel(booking);
   };
 
   const getPaymentTypeLabel = (booking) => {
@@ -317,29 +362,37 @@ const PackageBookings = () => {
                     </p>
                   </div>
 
-                  {/* Price Info */}
-                  <div className="flex flex-col items-start md:items-end gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-gray-900">
+                  {/* Price — compact summary only */}
+                  <div className="flex flex-col items-end gap-1.5 text-right w-full md:w-auto shrink-0">
+                    <div className="flex items-center gap-2 justify-end flex-wrap">
+                      <span className="text-lg font-bold text-gray-900 tabular-nums">
                         {formatCurrency(booking.total_paid)}
                       </span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                        {getPaymentTypeLabel(booking)}
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                        {getPackageCardStatusLabel(booking)}
                       </span>
                     </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {parseFloat(booking.discount_amount) > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                          Saved {formatCurrency(booking.discount_amount)}
+                    {parseFloat(booking.discount_amount) > 0 && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600 font-medium">
+                        Saved{" "}
+                        {formatCurrency(booking.discount_amount, {
+                          minFrac: 0,
+                          maxFrac: 0,
+                        })}
+                      </span>
+                    )}
+                    {(() => {
+                      const p = getPackagePricing(booking);
+                      const line =
+                        p.convAmount > 0 || (p.convPct ?? 0) > 0
+                          ? `GST ${p.gstPercent ?? 5}% · Convenience ${p.convPct || 2}%`
+                          : `GST ${p.gstPercent ?? 5}%`;
+                      return (
+                        <span className="text-[11px] text-gray-500 font-medium leading-snug">
+                          {line}
                         </span>
-                      )}
-                      {parseFloat(booking.balance) > 0 && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">
-                          Balance: {formatCurrency(booking.balance)}
-                        </span>
-                      )}
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

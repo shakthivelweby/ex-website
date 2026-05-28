@@ -104,7 +104,13 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
       );
 
       if (ticketPrice && quantity > 0) {
-        total += parseFloat(ticketPrice.price) * quantity;
+        const base = Number(ticketPrice.price || 0);
+        const pct = Math.max(0, Number(ticketPrice.discount || 0));
+        const final =
+          pct > 0
+            ? Math.round((base - (base * pct) / 100) * 100) / 100
+            : Math.round(base * 100) / 100;
+        total += final * quantity;
       }
     });
     return total;
@@ -217,7 +223,7 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                             const isSelected = selectedTickets[key] > 0;
                             const ticketType =
                               ticketPrice.event_ticket_type
-                                .event_ticket_type_master;
+                                .event_ticket_type;
 
                             return (
                               <div
@@ -247,7 +253,38 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                                             : "text-gray-600"
                                         }`}
                                       >
-                                        ₹{ticketPrice.price}
+                                        {(() => {
+                                          const base = Number(
+                                            ticketPrice.price || 0
+                                          );
+                                          const displayBase = Math.round(base * 100) / 100;
+                                          const pct = Math.max(
+                                            0,
+                                            Number(ticketPrice.discount || 0)
+                                          );
+                                          const final =
+                                            pct > 0
+                                              ? Math.round(
+                                                  (displayBase -
+                                                    (displayBase * pct) /
+                                                      100) *
+                                                    100
+                                                ) / 100
+                                              : displayBase;
+
+                                          return pct > 0 ? (
+                                            <span className="flex items-center gap-2">
+                                              <span className="line-through text-gray-500">
+                                                ₹{displayBase}
+                                              </span>
+                                              <span className="font-semibold text-green-700">
+                                                ₹{final.toFixed(2)}
+                                              </span>
+                                            </span>
+                                          ) : (
+                                            <>₹{displayBase}</>
+                                          );
+                                        })()}
                                       </p>
                                       {ticketPrice.discount > 0 && (
                                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">
@@ -362,7 +399,7 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                     (t) => t.event_ticket_type_id == ticketTypeId
                   );
                   const ticketType =
-                    ticketPrice?.event_ticket_type.event_ticket_type_master;
+                    ticketPrice?.event_ticket_type;
 
                   return (
                     <div
@@ -374,7 +411,26 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
                         {ticketType?.name}
                       </span>
                       <span className="text-gray-800 font-medium">
-                        {quantity} × ₹{ticketPrice?.price}
+                        {(() => {
+                          const base = Number(ticketPrice?.price || 0);
+                          const displayBase = Math.round(base * 100) / 100;
+                          const pct = Math.max(
+                            0,
+                            Number(ticketPrice?.discount || 0)
+                          );
+                          const final =
+                            pct > 0
+                              ? Math.round(
+                                  (displayBase - (displayBase * pct) / 100) *
+                                    100
+                                ) / 100
+                              : displayBase;
+                          return (
+                            <>
+                              {quantity} × ₹{final.toFixed(2)}
+                            </>
+                          );
+                        })()}
                       </span>
                     </div>
                   );

@@ -1,25 +1,43 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Accordion({
   title,
   children,
   defaultOpen = true,
   className = "",
+  isControlled = false,
+  isOpen: controlledIsOpen = false,
+  onToggle,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
+  // Sync with controlled state if provided
+  useEffect(() => {
+    if (isControlled) {
+      setIsOpen(controlledIsOpen);
+    }
+  }, [isControlled, controlledIsOpen]);
+
+  const handleToggle = () => {
+    if (isControlled && onToggle) {
+      onToggle(!isOpen);
+    } else {
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <div
-      className={`mb-2 border bg-[#F7F7F7] border-gray-100 rounded-2xl overflow-hidden ${className}`}
+      className={`border bg-[#F7F7F7] border-gray-100 rounded-2xl overflow-hidden ${className}`}
     >
       <div
         className="px-3 py-3 flex items-center justify-between cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
       >
-        <h3 className="text-sm font-medium tracking-wide text-gray-800 m-0">{title}</h3>
+        <div className="flex-1">{typeof title === 'string' ? <h3 className="text-sm font-medium tracking-wide text-gray-800 m-0">{title}</h3> : title}</div>
         <i
-          className={`bg-white p-2 text-gray-700 rounded-full flex items-center justify-center fi fi-rr-angle-small-${
+          className={`bg-white p-2 text-gray-700 rounded-full flex items-start justify-center ml-3 fi fi-rr-angle-small-${
             isOpen ? "up" : "down"
           } transition-transform`}
         ></i>

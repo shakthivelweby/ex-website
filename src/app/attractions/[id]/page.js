@@ -41,20 +41,55 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
   const lowestPrice = attraction.price || 0;
   const priceStructure = attraction.price;
   
-  // Get pricing information from attraction_ticket_type_prices if available
-const ticketPrice = attraction.attraction.attraction_ticket_type_prices?.[0];
+  // Compute the displayed entry fee from ticket price rows.
+  // Detail page: show base + admin charge only (no discount here).
+  const priceRows = Array.isArray(attraction.attraction?.attraction_ticket_type_prices)
+    ? attraction.attraction.attraction_ticket_type_prices
+    : [];
 
-  const fullRate = ticketPrice?.full_rate;
-  const rateType = ticketPrice?.rate_type;
-  const adultPrice = ticketPrice?.adult_price;
-  const childPrice = ticketPrice?.child_price;
-  
-  // Use date-specific pricing if available, otherwise fall back to default pricing
-  const currentTicketData = dateSpecificPricing?.[0] || ticketPrice;
-  const currentFullRate = currentTicketData?.full_rate || fullRate;
-  const currentRateType = currentTicketData?.rate_type || rateType;
-  const currentAdultPrice = currentTicketData?.adult_price || adultPrice;
-  const currentChildPrice = currentTicketData?.child_price || childPrice;
+  const applyAdminChargeOnly = (amountRaw, adminPctRaw) => {
+    const amount = Number(amountRaw || 0);
+    return Math.round(amount * 100) / 100;
+  };
+
+  const computeDisplayEntryFee = () => {
+    // Pick the lowest meaningful displayed unit among rows (after admin charge).
+    const candidates = [];
+    for (const row of priceRows) {
+      const rate = row?.rate_type;
+      const adminPct = row?.admin_charge ?? 0;
+
+      if (rate === "full") {
+        const base = Number(row?.full_rate || 0);
+        if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+      } else if (rate === "pax") {
+        const adult = Number(row?.adult_price || 0);
+        // For pax we show "starting from" adult price
+        if (adult > 0) candidates.push(applyAdminChargeOnly(adult, adminPct));
+      } else {
+        const base = Number(row?.full_rate || row?.adult_price || 0);
+        if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
+      }
+    }
+
+    if (candidates.length) {
+      return Math.min(...candidates);
+    }
+
+    // Fallback to attraction.price if no rows exist
+    const baseFallback = Number(lowestPrice || 0);
+    if (baseFallback > 0) return baseFallback;
+    return 0;
+  };
+
+  const displayEntryFee = computeDisplayEntryFee();
+
+  // Keep the first row (if any) for passing raw prices into the client wrapper (booking page uses full list).
+  const ticketPrice = priceRows?.[0] || null;
+  const currentFullRate = ticketPrice?.full_rate;
+  const currentRateType = ticketPrice?.rate_type;
+  const currentAdultPrice = ticketPrice?.adult_price;
+  const currentChildPrice = ticketPrice?.child_price;
 
   // Format opening and closing times
   const formatTime = (timeString) => {
@@ -64,10 +99,16 @@ const ticketPrice = attraction.attraction.attraction_ticket_type_prices?.[0];
 
 
 
+  const categoryName =
+    attraction.attraction?.attraction_category_master?.name ||
+    attraction.attraction?.attractionCategoryMaster?.name ||
+    null;
+
   const attractionDetails = {
     id: attraction.attraction.id,
     title: attraction.attraction.name,
-    categories: [attraction.attraction_category_master?.name || "Attraction"],
+    categoryName,
+    categories: categoryName ? [categoryName] : [],
     openingTime: new Date(`1970-01-01T${attraction.attraction.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
     closingTime: new Date(`1970-01-01T${attraction.attraction.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
     closeoutDates: attraction.closeout_dates || [],
@@ -75,11 +116,8 @@ const ticketPrice = attraction.attraction.attraction_ticket_type_prices?.[0];
     // closingTime: attraction.attraction.end_time,
     location: attraction.attraction.location,
     address: attraction.attraction.address,
-    price: currentRateType === "full" 
-      ? (currentFullRate ? `₹${currentFullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
-      : currentRateType === "pax" 
-        ? (currentAdultPrice ? `₹${currentAdultPrice}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry'))
-        : (currentFullRate ? `₹${currentFullRate}` : (lowestPrice > 0 ? `₹${lowestPrice}` : 'Free Entry')),
+    // Display price including admin charge only (discount applied only during booking/checkout)
+    price: displayEntryFee > 0 ? `₹${displayEntryFee}` : "Free Entry",
     fullRate: currentFullRate,
     rateType: currentRateType,
     adultPrice: currentAdultPrice,

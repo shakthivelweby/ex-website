@@ -30,10 +30,14 @@ export const getAttractionGallery = async (id) => {
   }
 };
 
-// Get attraction booking details (for ticket selection)
-export const getDetailsForBooking = async (id) => {
+// Get attraction booking details (for ticket selection). Pass `date` (Y-m-d) to apply seasonal pricing.
+export const getDetailsForBooking = async (id, date = null) => {
   try {
-    const response = await apiMiddleware.get(`/attraction-booking-details/${id}`);
+    const qs =
+      date && /^\d{4}-\d{2}-\d{2}$/.test(String(date))
+        ? `?date=${encodeURIComponent(String(date))}`
+        : "";
+    const response = await apiMiddleware.get(`/attraction-booking-details/${id}${qs}`);
 
     return response.data;
   } catch (error) {

@@ -1,12 +1,10 @@
 import ClientWrapper from "./clientWrapper";
-import { getAttractionCategories, getAttractionLocations, list, getAttractions } from "./service";
+import { getAttractionCategories, getAttractionLocations, getAttractions } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
 
-  // console.log("Page.js - allCategories.data:", allCategories?.data);
-  
   const allLocations = await getAttractionLocations();
 
   // Await searchParams before accessing its properties
@@ -23,22 +21,20 @@ export default async function Attractions({ searchParams }) {
     longitude: resolvedSearchParams.longitude || "",
     latitude: resolvedSearchParams.latitude || "",
   };
-
-  const attractionsList = await list(filters);
-  
-  // Test the new getAttractions API
-  const attractionsFromAPI = await getAttractions(filters); 
+ 
+  const attractionsFromAPI = await getAttractions(filters);
   
   // Use the API data instead of mock data
   const attractionsArray = attractionsFromAPI?.data?.data || [];
-
-  console.log("Server-side: Checking attractions for start_time", attractionsArray);
-
-  
-
-  
+ 
   // Transform attractions data server-side for SSR based on actual API response
   const transformedAttractions = attractionsArray.map((attraction) => ({
+    // Admin flags may come as "1"/"0" strings, integers, or booleans depending on API serialization
+    popular: attraction.popular === "1" || attraction.popular === 1 || attraction.popular === true,
+    recommended:
+      attraction.recommended === "1" ||
+      attraction.recommended === 1 ||
+      attraction.recommended === true,
     id: attraction.id,
     title: attraction.name,
     description: attraction.description,
@@ -46,19 +42,30 @@ export default async function Attractions({ searchParams }) {
     city: attraction.city,
     type: attraction.attraction_category_master?.name || attraction.category || "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
-    price: attraction.price?.rate_type === "full" 
-      ? attraction.price?.full_rate 
-      : attraction.price?.rate_type === "pax" 
-        ? attraction.price?.adult_price 
-        : attraction.price?.full_rate || attraction.price || 0,
+    price: (() => {
+      const rt = attraction.price?.rate_type;
+      const base =
+        rt === "full"
+          ? Number(attraction.price?.full_rate || 0)
+          : rt === "pax"
+          ? Number(attraction.price?.adult_price || 0)
+          : Number(attraction.price?.full_rate || attraction.price || 0);
+      return Math.round(base * 100) / 100;
+    })(),
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
     duration: formatTimeTo12Hour(attraction.start_time) || "updating",
     bestTimeToVisit: attraction.best_time_to_visit || "Morning",
     features: attraction.features || [],
-    promoted: attraction.promoted || attraction.popular === "1" || attraction.recommended === "1" || false,
-    popular: attraction.popular === "1",
-    recommended: attraction.recommended === "1",
+    promoted:
+      attraction.promoted ||
+      attraction.popular === "1" ||
+      attraction.popular === 1 ||
+      attraction.popular === true ||
+      attraction.recommended === "1" ||
+      attraction.recommended === 1 ||
+      attraction.recommended === true ||
+      false,
     interest_count: attraction.interest_count || 0,
     openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
     address: attraction.address || "",

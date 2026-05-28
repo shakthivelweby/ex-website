@@ -7,12 +7,38 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
   attractionInfo,
-  getAttractionTickets,
-  getTicketPricesForDate,
+  getDetailsForBooking,
 } from "../service";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+
+function attractionAdminPct(ticket) {
+  return Math.max(0, Number(ticket?.admin_charge ?? 0));
+}
+
+function applyAdminCharge(amountRaw, adminPctRaw) {
+  const amount = Number(amountRaw || 0);
+  return Math.round(amount * 100) / 100;
+}
+
+/** Discount applies on the admin-inclusive amount. */
+function applyDiscountOnAmount(amountRaw, discountPctRaw) {
+  const amount = Number(amountRaw || 0);
+  const pct = Math.max(0, Number(discountPctRaw || 0));
+  if (pct <= 0) return amount;
+  return Math.round((amount - (amount * pct) / 100) * 100) / 100;
+}
+
+function resolvePaxAdultChildRaw(ticket) {
+  let adultPrice = parseFloat(ticket.adult_price || 0);
+  let childPrice = parseFloat(ticket.child_price || 0);
+  if (adultPrice === 0 && childPrice === 0 && ticket.full_rate) {
+    adultPrice = parseFloat(ticket.full_rate);
+    childPrice = parseFloat(ticket.full_rate);
+  }
+  return { adultPrice, childPrice };
+}
 
 const AttractionBookingPage = ({
   attractionId,
@@ -79,102 +105,37 @@ const AttractionBookingPage = ({
     return false;
   };
 
-  // Check for selected date from localStorage (if coming from Form.jsx)
+  // Initialise visit date from localStorage (detail page) or today, then load tickets for that date.
   useEffect(() => {
-    const storedDate = localStorage.getItem(
-      `attraction_${attractionId}_selectedDate`
-    );
+    if (!attractionId) return;
 
-    if (storedDate) {
-      setSelectedDate(storedDate);
-    }
-  }, [attractionId]);
+    const storedDate =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`attraction_${attractionId}_selectedDate`)
+        : null;
+    const visitDate =
+      storedDate && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)
+        ? storedDate
+        : new Date().toISOString().split("T")[0];
+    setSelectedDate(visitDate);
 
-  useEffect(() => {
-    // Call API when date changes to get date-specific pricing
-    if (selectedDate && attractionId) {
-      fetchDateSpecificPricing();
-    }
-  }, [selectedDate]);
-
-  const fetchDateSpecificPricing = async () => {
-    try {
-      const response = await getTicketPricesForDate(attractionId, selectedDate);
-
-      if (response && response.data && response.data.ticket_prices) {
-        // Transform the new API response structure to match the expected format
-        const transformedData = {
-          attraction_ticket_type_prices: response.data.ticket_prices.map(
-            (ticket) => ({
-              id: ticket.ticket_type_id,
-              attraction_ticket_type_id: ticket.attraction_ticket_type_id,
-              attraction_ticket_type: {
-                attraction_ticket_type_master: {
-                  name: ticket.ticket_type_name,
-                },
-              },
-              adult_price: ticket.adult_price,
-              child_price: ticket.child_price,
-              full_rate: ticket.full_rate,
-              rate_type: ticket.rate_type,
-              guide_rate: ticket.guide_rate,
-              discount: ticket.discount,
-              description: ticket.description,
-              child_description: ticket.child_description,
-              maximum_allowed_bookings_per_user:
-                ticket.maximum_allowed_bookings_per_user,
-              pricing_type: ticket.pricing_type,
-              seasonal_period: ticket.seasonal_period,
-            })
-          ),
-        };
-
-        setTicketData(transformedData);
-
-        // Also update attraction data with image and other details from API response
-        if (response.data.attraction) {
-          setAttractionData((prevData) => {
-            const updatedAttractionData = {
-              ...(prevData || {}),
-              id: response.data.attraction.id || prevData?.id,
-              name: response.data.attraction.name || prevData?.name,
-              location: response.data.attraction.location || prevData?.location,
-              cover_image: (() => {
-                const coverImage =
-                  response.data.attraction.cover_image ||
-                  response.data.attraction.thumb_image;
-
-                // Clean up the URL if it has double paths
-                if (
-                  coverImage &&
-                  coverImage.includes(
-                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/"
-                  )
-                ) {
-                  const cleanedUrl = coverImage.replace(
-                    "http://127.0.0.1:8000/images/attraction/http://127.0.0.1:8000/",
-                    "http://127.0.0.1:8000/"
-                  );
-
-                  return cleanedUrl;
-                }
-
-                return coverImage;
-              })(),
-              start_time:
-                response.data.attraction.start_time || prevData?.start_time,
-              end_time: response.data.attraction.end_time || prevData?.end_time,
-              description:
-                response.data.attraction.description || prevData?.description,
-            };
-            return updatedAttractionData;
-          });
+    const loadBookingDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await getDetailsForBooking(attractionId, visitDate);
+        if (response?.data) {
+          setAttractionData(response.data);
+          setTicketData(response.data);
         }
+      } catch (error) {
+        console.error("Error fetching booking details:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching date-specific pricing:", error);
-    }
-  };
+    };
+
+    loadBookingDetails();
+  }, [attractionId]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -260,36 +221,26 @@ const AttractionBookingPage = ({
         (t) => t.attraction_ticket_type_id == ticketTypeId
       );
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
+        const adm = attractionAdminPct(ticket);
         if (ticket.rate_type === "full") {
-          // Use full_rate for both adults and children
-          let ticketPrice = ticket.full_rate;
-          if (ticket.discount > 0) {
-            ticketPrice =
-              ticket.full_rate - (ticket.full_rate * ticket.discount) / 100;
-          }
-          const subtotal =
-            parseFloat(ticketPrice) * (tickets.adult + tickets.child);
-          total += subtotal;
+          const raw = Number(ticket.full_rate || 0);
+          const afterAdmin = applyAdminCharge(raw, adm);
+          const unit = applyDiscountOnAmount(afterAdmin, ticket.discount);
+          total += unit * (tickets.adult + tickets.child);
         } else if (ticket.rate_type === "pax") {
-          // Use separate adult_price and child_price
-          let adultPrice = parseFloat(ticket.adult_price || 0);
-          let childPrice = parseFloat(ticket.child_price || 0);
-
-          // If adult_price or child_price is not available, fallback to full_rate
-          if (adultPrice === 0 && childPrice === 0 && ticket.full_rate) {
-            adultPrice = parseFloat(ticket.full_rate);
-            childPrice = parseFloat(ticket.full_rate);
-          }
-
-          // Apply discount if exists
-          if (ticket.discount > 0) {
-            adultPrice = adultPrice - (adultPrice * ticket.discount) / 100;
-            childPrice = childPrice - (childPrice * ticket.discount) / 100;
-          }
-
-          const subtotal =
-            adultPrice * tickets.adult + childPrice * tickets.child;
-          total += subtotal;
+          const { adultPrice: adultRaw, childPrice: childRaw } =
+            resolvePaxAdultChildRaw(ticket);
+          const adultAfterAdmin = applyAdminCharge(adultRaw, adm);
+          const childAfterAdmin = applyAdminCharge(childRaw, adm);
+          const adultUnit = applyDiscountOnAmount(
+            adultAfterAdmin,
+            ticket.discount
+          );
+          const childUnit = applyDiscountOnAmount(
+            childAfterAdmin,
+            ticket.discount
+          );
+          total += adultUnit * tickets.adult + childUnit * tickets.child;
         }
       }
     });
@@ -315,6 +266,54 @@ const AttractionBookingPage = ({
     setCurrentStep(1);
   };
 
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+
+  // Compute discount-aware subtotal for summary
+  let subtotalOriginal = 0;
+  let discountForSummary = 0;
+  Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
+    const ticket = ticketData?.attraction_ticket_type_prices?.find(
+      (t) => t.attraction_ticket_type_id == ticketTypeId
+    );
+    if (!ticket || (tickets.adult === 0 && tickets.child === 0)) return;
+
+    const qty = tickets.adult + tickets.child;
+    const pct = Number(ticket.discount || 0);
+
+    const adm = attractionAdminPct(ticket);
+    if (ticket.rate_type === "full") {
+      const originalUnit = applyAdminCharge(Number(ticket.full_rate || 0), adm);
+      const discountedUnit = applyDiscountOnAmount(originalUnit, pct);
+      subtotalOriginal += originalUnit * qty;
+      discountForSummary += (originalUnit - discountedUnit) * qty;
+      return;
+    }
+
+    // pax
+    const { adultPrice: adultRaw, childPrice: childRaw } =
+      resolvePaxAdultChildRaw(ticket);
+    const adultUnit = applyAdminCharge(adultRaw, adm);
+    const childUnit = applyAdminCharge(childRaw, adm);
+    const discountedAdult = applyDiscountOnAmount(adultUnit, pct);
+    const discountedChild = applyDiscountOnAmount(childUnit, pct);
+    subtotalOriginal +=
+      adultUnit * tickets.adult + childUnit * tickets.child;
+    discountForSummary +=
+      (adultUnit - discountedAdult) * tickets.adult +
+      (childUnit - discountedChild) * tickets.child;
+  });
+
+  if (needGuide && guideRate > 0) {
+    subtotalOriginal += Number(guideRate || 0);
+  }
+
+  const subtotalForSummary = Math.max(0, subtotalOriginal - discountForSummary);
+  const gstAmount = (Number(subtotalForSummary || 0) * gstPercent) / 100;
+  const afterGst = Number(subtotalForSummary || 0) + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalForSummary = afterGst + convenienceAmount;
+
   const handleProceedToPayment = () => {
     if (!isLogin()) {
       const event = new CustomEvent("showLogin");
@@ -325,6 +324,7 @@ const AttractionBookingPage = ({
     // Format the selected tickets data according to API requirements
     const formattedTickets = [];
     let totalAmount = 0;
+    let discountAmount = 0;
 
     // Process adult/child tickets
     Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
@@ -336,37 +336,18 @@ const AttractionBookingPage = ({
 
       if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         const totalQuantity = tickets.adult + tickets.child;
+        const adm = attractionAdminPct(ticket);
 
-        // Calculate offer price (discounted price) if discount exists
-        let ticketPrice;
         if (ticket.rate_type === "full") {
-          ticketPrice = ticket.full_rate;
+          const originalRaw = Number(ticket.full_rate || 0);
+          const afterAdmin = applyAdminCharge(originalRaw, adm);
+          let ticketPrice = afterAdmin;
           if (ticket.discount > 0) {
-            ticketPrice =
-              ticket.full_rate - (ticket.full_rate * ticket.discount) / 100;
-          }
-        } else if (ticket.rate_type === "pax") {
-          // For pax tickets, we need to calculate based on adult/child quantities
-          let adultPrice = parseFloat(ticket.adult_price || 0);
-          let childPrice = parseFloat(ticket.child_price || 0);
-
-          // If adult_price or child_price is not available, fallback to full_rate
-          if (adultPrice === 0 && childPrice === 0 && ticket.full_rate) {
-            adultPrice = parseFloat(ticket.full_rate);
-            childPrice = parseFloat(ticket.full_rate);
+            ticketPrice = applyDiscountOnAmount(afterAdmin, ticket.discount);
+            discountAmount += (afterAdmin - ticketPrice) * totalQuantity;
           }
 
-          // Apply discount if exists
-          if (ticket.discount > 0) {
-            adultPrice = adultPrice - (adultPrice * ticket.discount) / 100;
-            childPrice = childPrice - (childPrice * ticket.discount) / 100;
-          }
-
-          // Calculate total for this ticket type
-          const adultTotal = adultPrice * tickets.adult;
-          const childTotal = childPrice * tickets.child;
-          const ticketTotal = adultTotal + childTotal;
-
+          const ticketTotal = ticketPrice * totalQuantity;
           totalAmount += ticketTotal;
 
           formattedTickets.push({
@@ -375,29 +356,49 @@ const AttractionBookingPage = ({
             quantity: totalQuantity,
             adult_quantity: tickets.adult,
             child_quantity: tickets.child,
-            adult_price: adultPrice,
-            child_price: childPrice,
-            unit_price: adultPrice, // Add required unit_price field
-            total_price: ticketTotal, // Add required total_price field
+            price: ticketPrice,
+            unit_price: ticketPrice,
+            total_price: ticketTotal,
             total: ticketTotal,
           });
-          return; // Skip the rest of the logic for pax tickets
+        } else if (ticket.rate_type === "pax") {
+          let adultPrice = parseFloat(ticket.adult_price || 0);
+          let childPrice = parseFloat(ticket.child_price || 0);
+          if (adultPrice === 0 && childPrice === 0 && ticket.full_rate) {
+            adultPrice = parseFloat(ticket.full_rate);
+            childPrice = parseFloat(ticket.full_rate);
+          }
+
+          const adultAfterAdmin = applyAdminCharge(adultPrice, adm);
+          const childAfterAdmin = applyAdminCharge(childPrice, adm);
+          let adultFinal = adultAfterAdmin;
+          let childFinal = childAfterAdmin;
+
+          if (ticket.discount > 0) {
+            adultFinal = applyDiscountOnAmount(adultAfterAdmin, ticket.discount);
+            childFinal = applyDiscountOnAmount(childAfterAdmin, ticket.discount);
+            discountAmount +=
+              (adultAfterAdmin - adultFinal) * tickets.adult +
+              (childAfterAdmin - childFinal) * tickets.child;
+          }
+
+          const ticketTotal =
+            adultFinal * tickets.adult + childFinal * tickets.child;
+          totalAmount += ticketTotal;
+
+          formattedTickets.push({
+            id: parseInt(ticketTypeId),
+            attraction_ticket_type_id: parseInt(ticketTypeId),
+            quantity: totalQuantity,
+            adult_quantity: tickets.adult,
+            child_quantity: tickets.child,
+            adult_price: adultFinal,
+            child_price: childFinal,
+            unit_price: adultFinal,
+            total_price: ticketTotal,
+            total: ticketTotal,
+          });
         }
-
-        const ticketTotal = parseFloat(ticketPrice) * totalQuantity;
-        totalAmount += ticketTotal;
-
-        formattedTickets.push({
-          id: parseInt(ticketTypeId),
-          attraction_ticket_type_id: parseInt(ticketTypeId),
-          quantity: totalQuantity,
-          adult_quantity: tickets.adult,
-          child_quantity: tickets.child,
-          price: parseFloat(ticketPrice),
-          unit_price: parseFloat(ticketPrice), // Add required unit_price field
-          total_price: ticketTotal, // Add required total_price field
-          total: ticketTotal,
-        });
       }
     });
 
@@ -410,9 +411,11 @@ const AttractionBookingPage = ({
     const apiBookingData = {
       attraction_id: attractionId,
       visit_date: selectedDate,
-      total_amount: totalAmount,
+      // Send original subtotal (pre-discount) so backend can persist discount_amount correctly
+      total_amount: parseFloat((totalAmount + discountAmount).toFixed(2)),
+      discount_amount: parseFloat(discountAmount.toFixed(2)),
       bookingTickets: formattedTickets,
-      need_guide: needGuide,
+      include_guide: needGuide,
       guide_rate: needGuide ? guideRate : 0,
     };
 
@@ -505,10 +508,11 @@ const AttractionBookingPage = ({
               </div>
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-tag text-primary-500 text-sm"></i>
-                <span className="text-gray-700 text-sm">
-                  {attractionData.attraction_category_master?.name ||
-                    "Attraction"}
-                </span>
+                {attractionData.attraction_category_master?.name && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+                    {attractionData.attraction_category_master.name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -526,28 +530,6 @@ const AttractionBookingPage = ({
                       <h3 className="text-sm font-medium text-gray-800">
                         Available Tickets
                       </h3>
-
-                      {/* Guide Toggle */}
-                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
-                          <span className="text-sm font-medium text-gray-700 pr-2">
-                            Need a guide
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => setNeedGuide(!needGuide)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                            needGuide ? "bg-primary-600" : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                              needGuide ? "translate-x-6" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
                     </div>
                     <div className="space-y-3">
                       {ticketData?.attraction_ticket_type_prices?.map(
@@ -610,16 +592,31 @@ const AttractionBookingPage = ({
                                   <div className="flex items-center gap-4 mb-2">
                                     <div className="flex items-baseline gap-2">
                                       {(() => {
-                                        // Get the base price based on rate_type
-                                        const basePrice =
-                                          ticket.rate_type === "full"
-                                            ? ticket.full_rate || 0
-                                            : ticket.rate_type === "pax"
-                                            ? ticket.adult_price || 0
-                                            : 0;
+                                        const adm = attractionAdminPct(ticket);
+                                        const pct = Number(ticket.discount || 0);
+                                        let rawRepresentative = 0;
+                                        if (ticket.rate_type === "full") {
+                                          rawRepresentative = Number(
+                                            ticket.full_rate || 0
+                                          );
+                                        } else if (ticket.rate_type === "pax") {
+                                          rawRepresentative =
+                                            resolvePaxAdultChildRaw(
+                                              ticket
+                                            ).adultPrice;
+                                        }
+                                        const priceAfterAdmin =
+                                          applyAdminCharge(
+                                            rawRepresentative,
+                                            adm
+                                          );
+                                        const priceFinal =
+                                          applyDiscountOnAmount(
+                                            priceAfterAdmin,
+                                            pct
+                                          );
 
-                                        if (ticket.discount > 0) {
-                                          // Show both actual price (strikethrough) and offer price when discount exists
+                                        if (pct > 0) {
                                           return (
                                             <>
                                               <div className="flex items-baseline gap-1">
@@ -633,41 +630,34 @@ const AttractionBookingPage = ({
                                                       : "text-gray-500"
                                                   }`}
                                                 >
-                                                  ₹{basePrice}
+                                                  ₹{priceAfterAdmin}
                                                 </span>
                                               </div>
                                               <div className="flex items-baseline gap-1">
                                                 <span className="text-lg font-bold text-green-600">
-                                                  ₹
-                                                  {(
-                                                    basePrice -
-                                                    (basePrice *
-                                                      ticket.discount) /
-                                                      100
-                                                  ).toFixed(2)}
+                                                  ₹{priceFinal.toFixed(2)}
                                                 </span>
                                               </div>
                                             </>
                                           );
-                                        } else {
-                                          // Show only actual price when no discount
-                                          return (
-                                            <>
-                                              <span className="text-xs text-gray-500">
-                                                Price:
-                                              </span>
-                                              <span
-                                                className={`text-lg font-bold ${
-                                                  isSelected
-                                                    ? "text-primary-700"
-                                                    : "text-gray-900"
-                                                }`}
-                                              >
-                                                ₹{basePrice}
-                                              </span>
-                                            </>
-                                          );
                                         }
+
+                                        return (
+                                          <>
+                                            <span className="text-xs text-gray-500">
+                                              Price:
+                                            </span>
+                                            <span
+                                              className={`text-lg font-bold ${
+                                                isSelected
+                                                  ? "text-primary-700"
+                                                  : "text-gray-900"
+                                              }`}
+                                            >
+                                              ₹{priceAfterAdmin}
+                                            </span>
+                                          </>
+                                        );
                                       })()}
                                     </div>
                                     {ticket.available_slots && (
@@ -715,12 +705,39 @@ const AttractionBookingPage = ({
                                         Adults
                                       </h3>
                                       <p className="text-xs text-gray-500">
-                                        Over 18+ - ₹
-                                        {ticket.rate_type === "full"
-                                          ? ticket.full_rate || 0
-                                          : ticket.rate_type === "pax"
-                                          ? ticket.adult_price || 0
-                                          : 0}
+                                        Over 18+ —{" "}
+                                        {(() => {
+                                          const adm = attractionAdminPct(ticket);
+                                          const pct = Number(
+                                            ticket.discount || 0
+                                          );
+                                          const raw =
+                                            ticket.rate_type === "full"
+                                              ? Number(ticket.full_rate || 0)
+                                              : resolvePaxAdultChildRaw(
+                                                  ticket
+                                                ).adultPrice;
+                                          const afterAd = applyAdminCharge(
+                                            raw,
+                                            adm
+                                          );
+                                          const final = applyDiscountOnAmount(
+                                            afterAd,
+                                            pct
+                                          );
+                                          return pct > 0 ? (
+                                            <>
+                                              <span className="line-through text-gray-400">
+                                                ₹{afterAd}
+                                              </span>{" "}
+                                              <span className="font-medium text-green-700">
+                                                ₹{final}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <>₹{afterAd}</>
+                                          );
+                                        })()}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -775,12 +792,39 @@ const AttractionBookingPage = ({
                                         Child
                                       </h3>
                                       <p className="text-xs text-gray-500">
-                                        Under 18 - ₹
-                                        {ticket.rate_type === "full"
-                                          ? ticket.full_rate || 0
-                                          : ticket.rate_type === "pax"
-                                          ? ticket.child_price || 0
-                                          : 0}
+                                        Under 18 —{" "}
+                                        {(() => {
+                                          const adm = attractionAdminPct(ticket);
+                                          const pct = Number(
+                                            ticket.discount || 0
+                                          );
+                                          const raw =
+                                            ticket.rate_type === "full"
+                                              ? Number(ticket.full_rate || 0)
+                                              : resolvePaxAdultChildRaw(
+                                                  ticket
+                                                ).childPrice;
+                                          const afterAd = applyAdminCharge(
+                                            raw,
+                                            adm
+                                          );
+                                          const final = applyDiscountOnAmount(
+                                            afterAd,
+                                            pct
+                                          );
+                                          return pct > 0 ? (
+                                            <>
+                                              <span className="line-through text-gray-400">
+                                                ₹{afterAd}
+                                              </span>{" "}
+                                              <span className="font-medium text-green-700">
+                                                ₹{final}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <>₹{afterAd}</>
+                                          );
+                                        })()}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -835,6 +879,40 @@ const AttractionBookingPage = ({
                       )}
                     </div>
                   </div>
+
+                  {/* Guide Section */}
+                  {guideRate > 0 && (
+                    <div className="border-t border-gray-200 pt-6">
+                      <h3 className="text-sm font-medium text-gray-800 mb-3">
+                        Guide
+                      </h3>
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
+                          <div>
+                            <span className="text-sm font-medium text-gray-700 block">
+                              Need a guide
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ₹{guideRate} per booking
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setNeedGuide(!needGuide)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                            needGuide ? "bg-primary-600" : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
+                              needGuide ? "translate-x-6" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -895,20 +973,21 @@ const AttractionBookingPage = ({
                             </div>
                             <div className="text-right">
                               {(() => {
+                                const adm = attractionAdminPct(ticket);
+                                const pct = Number(ticket?.discount || 0);
                                 if (ticket?.rate_type === "full") {
-                                  // Calculate offer price (discounted price) if discount exists
-                                  let ticketPrice = ticket?.full_rate;
-                                  if (ticket?.discount > 0) {
-                                    ticketPrice =
-                                      ticket.full_rate -
-                                      (ticket.full_rate * ticket.discount) /
-                                        100;
-                                  }
+                                  const afterAdmin = applyAdminCharge(
+                                    Number(ticket.full_rate || 0),
+                                    adm
+                                  );
+                                  const ticketPrice =
+                                    applyDiscountOnAmount(afterAdmin, pct);
 
                                   return (
                                     <>
                                       <p className="text-sm text-gray-800">
-                                        ₹{parseFloat(ticketPrice).toFixed(2)} ×{" "}
+                                        ₹
+                                        {parseFloat(ticketPrice).toFixed(2)} ×{" "}
                                         {totalQuantity}
                                       </p>
                                       <p className="text-base font-semibold text-primary-600">
@@ -920,37 +999,40 @@ const AttractionBookingPage = ({
                                       </p>
                                     </>
                                   );
-                                } else if (ticket?.rate_type === "pax") {
-                                  // For pax tickets, show adult and child prices separately
-                                  let adultPrice = parseFloat(
+                                }
+                                if (ticket?.rate_type === "pax") {
+                                  let adultRaw = parseFloat(
                                     ticket?.adult_price || 0
                                   );
-                                  let childPrice = parseFloat(
+                                  let childRaw = parseFloat(
                                     ticket?.child_price || 0
                                   );
-
-                                  // If adult_price or child_price is not available, fallback to full_rate
                                   if (
-                                    adultPrice === 0 &&
-                                    childPrice === 0 &&
+                                    adultRaw === 0 &&
+                                    childRaw === 0 &&
                                     ticket?.full_rate
                                   ) {
-                                    adultPrice = parseFloat(ticket.full_rate);
-                                    childPrice = parseFloat(ticket.full_rate);
+                                    adultRaw = parseFloat(ticket.full_rate);
+                                    childRaw = parseFloat(ticket.full_rate);
                                   }
 
-                                  // Apply discount if exists
-                                  if (ticket?.discount > 0) {
-                                    adultPrice =
-                                      adultPrice -
-                                      (adultPrice * ticket.discount) / 100;
-                                    childPrice =
-                                      childPrice -
-                                      (childPrice * ticket.discount) / 100;
-                                  }
+                                  const adultAfterAdmin =
+                                    applyAdminCharge(adultRaw, adm);
+                                  const childAfterAdmin =
+                                    applyAdminCharge(childRaw, adm);
+                                  const adultPrice = applyDiscountOnAmount(
+                                    adultAfterAdmin,
+                                    pct
+                                  );
+                                  const childPrice = applyDiscountOnAmount(
+                                    childAfterAdmin,
+                                    pct
+                                  );
 
-                                  const adultTotal = adultPrice * tickets.adult;
-                                  const childTotal = childPrice * tickets.child;
+                                  const adultTotal =
+                                    adultPrice * tickets.adult;
+                                  const childTotal =
+                                    childPrice * tickets.child;
                                   const grandTotal = adultTotal + childTotal;
 
                                   return (
@@ -958,13 +1040,15 @@ const AttractionBookingPage = ({
                                       <div className="text-sm text-gray-800 space-y-1">
                                         {tickets.adult > 0 && (
                                           <p>
-                                            Adult: ₹{adultPrice.toFixed(2)} ×{" "}
+                                            Adult: ₹
+                                            {adultPrice.toFixed(2)} ×{" "}
                                             {tickets.adult}
                                           </p>
                                         )}
                                         {tickets.child > 0 && (
                                           <p>
-                                            Child: ₹{childPrice.toFixed(2)} ×{" "}
+                                            Child: ₹
+                                            {childPrice.toFixed(2)} ×{" "}
                                             {tickets.child}
                                           </p>
                                         )}
@@ -1014,10 +1098,11 @@ const AttractionBookingPage = ({
                 <h3 className="text-base font-medium text-gray-800 mb-2">
                   {attractionData.name}
                 </h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  {attractionData.attraction_category_master?.name ||
-                    "Attraction"}
-                </p>
+                {attractionData.attraction_category_master?.name && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 mb-3">
+                    {attractionData.attraction_category_master.name}
+                  </span>
+                )}
 
                 <div className="space-y-1.5 text-sm">
                   <div className="flex items-center gap-2">
@@ -1065,9 +1150,23 @@ const AttractionBookingPage = ({
                   )}
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Total Amount:</span>
+                    <span className="text-sm text-gray-600">Subtotal (excl. taxes)</span>
+                    <span className="text-sm font-medium text-gray-800">
+                      ₹{subtotalForSummary.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">GST (18%)</span>
+                    <span className="text-sm font-medium text-gray-800">₹{gstAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Convenience (2%)</span>
+                    <span className="text-sm font-medium text-gray-800">₹{convenienceAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                    <span className="text-sm font-semibold text-gray-800">Total Amount:</span>
                     <span className="text-lg font-semibold text-primary-600">
-                      ₹{getTotalPrice().toFixed(2)}
+                      ₹{grandTotalForSummary.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -1123,7 +1222,7 @@ const AttractionBookingPage = ({
             <div>
               <p className="text-sm text-gray-600">Total Amount</p>
               <p className="text-lg font-semibold text-gray-800">
-                ₹{getTotalPrice().toFixed(2)}
+                ₹{grandTotalForSummary.toFixed(2)}
               </p>
             </div>
           </div>

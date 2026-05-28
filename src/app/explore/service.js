@@ -1,22 +1,45 @@
-import apiMiddleware from "../api/apiMiddleware";
+import apiServerMiddleware from "../api/serverMiddleware";
+
+/** Laravel successResponse wraps payload in { message, data, status } */
+function unwrapList(body) {
+  if (Array.isArray(body?.data)) return body.data;
+  if (Array.isArray(body)) return body;
+  return [];
+}
 
 const getExploreData = async () => {
   try {
-    const response = await apiMiddleware.get("/countries-and-states");
-    return response.data;
+    const response = await apiServerMiddleware.get("/countries-and-states");
+    const body = response?.data ?? {};
+    const rows = unwrapList(body);
+    return {
+      ...body,
+      data: rows,
+      status: body?.status ?? true,
+    };
   } catch (error) {
-    console.error("Error fetching explore data:", error.message);
-    return { data: [], status: false, message: error.message };
+    if (process.env.NODE_ENV === "development") {
+      console.warn("getExploreData failed:", error?.message || error);
+    }
+    return { data: [], status: false, message: error?.message || "Failed" };
   }
 };
 
 const getFeaturedDestinations = async () => {
   try {
-    const response = await apiMiddleware.get("/featured-destinations");
-    return response.data;
+    const response = await apiServerMiddleware.get("/featured-destinations");
+    const body = response?.data ?? {};
+    const rows = unwrapList(body);
+    return {
+      ...body,
+      data: rows,
+      status: body?.status ?? true,
+    };
   } catch (error) {
-    console.error("Error fetching featured destinations:", error.message);
-    return { data: [], status: false, message: error.message };
+    if (process.env.NODE_ENV === "development") {
+      console.warn("getFeaturedDestinations failed:", error?.message || error);
+    }
+    return { data: [], status: false, message: error?.message || "Failed" };
   }
 };
 

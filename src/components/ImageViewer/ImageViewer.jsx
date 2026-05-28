@@ -7,6 +7,10 @@ const ImageViewer = ({ images, isOpen, onClose }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  const getImageSrc = (img) => img?.image_url || img?.src || img?.image || "";
+  const getImageAlt = (img, idx) => img?.image_name || img?.alt || img?.alt_text || `Gallery image ${idx + 1}`;
+  const getImageKey = (img, idx) => img?.id || getImageSrc(img) || idx;
+
   // Reset animation state when popup opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +64,7 @@ const ImageViewer = ({ images, isOpen, onClose }) => {
         >
           {images.map((image, index) => (
             <motion.div 
-              key={image.id}
+              key={getImageKey(image, index)}
               variants={{
                 hidden: { opacity: 0, y: 20 },
                 visible: { opacity: 1, y: 0 }
@@ -72,12 +76,12 @@ const ImageViewer = ({ images, isOpen, onClose }) => {
             >
               <motion.div 
                 className="rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden"
-                layoutId={`image-${image.id}`}
+                layoutId={`image-${getImageKey(image, index)}`}
               >
                 <div className="relative aspect-[16/9]">
                   <Image
-                    src={image.image_url}
-                    alt={image.image_name || "Travel package image"}
+                    src={getImageSrc(image)}
+                    alt={getImageAlt(image, index)}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-105"
                     sizes="(max-width: 1024px) 100vw, 55vw"
@@ -107,12 +111,12 @@ const ImageViewer = ({ images, isOpen, onClose }) => {
             onClick={() => setSelectedImage(null)}
           >
             <motion.div
-              layoutId={`image-${selectedImage.id}`}
+              layoutId={`image-${getImageKey(selectedImage, 0)}`}
               className="relative w-full max-w-5xl aspect-[16/9] rounded-xl overflow-hidden"
             >
               <Image
-                src={selectedImage.image_url}
-                alt={selectedImage.image_name || "Travel package image"}
+                src={getImageSrc(selectedImage)}
+                alt={getImageAlt(selectedImage, 0)}
                 fill
                 className="object-contain"
                 sizes="100vw"

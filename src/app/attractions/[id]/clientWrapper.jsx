@@ -10,6 +10,23 @@ import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import ShareOptions from "@/components/ShareOptions/ShareOptions";
 
+const ClientOnlyHtml = ({ html, className }) => {
+  const [mountedHtml, setMountedHtml] = useState("");
+
+  useEffect(() => {
+    setMountedHtml(typeof html === "string" ? html : "");
+  }, [html]);
+
+  return (
+    <div
+      className={className}
+      // Render HTML only after hydration to avoid SSR/client mismatch
+      dangerouslySetInnerHTML={{ __html: mountedHtml }}
+      suppressHydrationWarning
+    />
+  );
+};
+
 const AttractionDetailClient = ({ attractionDetails }) => {
   const router = useRouter();
   const [selectedTickets, setSelectedTickets] = useState({});
@@ -127,12 +144,10 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                 About
               </h2>
               <div className="prose prose-gray max-w-none">
-                <p
+                <ClientOnlyHtml
                   className="text-gray-700 leading-relaxed text-sm"
-                  dangerouslySetInnerHTML={{
-                    __html: attractionDetails.description,
-                  }}
-                ></p>
+                  html={attractionDetails.description}
+                />
               </div>
             </div>
 
@@ -314,11 +329,11 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             )}
 
-            {/* Terms and Conditions */}
+            {/* Note */}
             {attractionDetails.terms && (
               <div className="space-y-4">
                 <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                  Terms & Conditions
+                  Note
                 </h2>
 
                 <Accordion

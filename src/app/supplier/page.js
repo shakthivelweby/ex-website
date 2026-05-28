@@ -9,6 +9,9 @@ import dynamic from 'next/dynamic';
 
 const SupplierHeroCarousel = dynamic(() => import('@/components/SupplierHeroCarousel'), { ssr: false });
 
+const gradientText =
+    "text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400";
+
 export default function SupplierPage() {
     const fadeInUp = {
         initial: { opacity: 0, y: 20 },
@@ -43,9 +46,9 @@ export default function SupplierPage() {
                                     Ecosystem
                                 </span>
                             </div>
-                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-[1.1] tracking-tight">
+                            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-gray-900 mb-4 leading-[1.1] tracking-tight">
                                 Powering Every Type of{" "}
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Travel Experience</span>
+                                <span className={gradientText}>Travel Experience</span>
                             </h1>
                             <p className="text-gray-600 text-base md:text-lg leading-relaxed mb-6 max-w-lg mx-auto lg:mx-0">
                                 Whether you guide small groups or manage large attractions, our platform scales to fit your unique business model.
@@ -116,9 +119,9 @@ export default function SupplierPage() {
                                         Key Benefits
                                     </span>
                                 </div>
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 tracking-tight leading-tight">
+                                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-2 tracking-tight leading-tight">
                                     Why Partner with{" "}
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Us?</span>
+                                    <span className={gradientText}>Us?</span>
                                 </h2>
                                 <p className="text-gray-600 text-sm md:text-base leading-relaxed max-w-xl">
                                     We empower suppliers with the tools, reach, and freedom they need to succeed in the modern travel marketplace.
@@ -212,8 +215,9 @@ export default function SupplierPage() {
                                     4 Simple Steps
                                 </span>
                             </div>
-                            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 tracking-tight leading-tight">
-                                From sign-up to your first payout
+                            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
+                                From sign-up to your{" "}
+                                <span className={gradientText}>first payout</span>
                             </h2>
                             <p className="text-gray-600 text-base leading-relaxed mb-6">
                                 Getting started takes minutes. List your experience, accept bookings, and get paid — we handle the rest.
@@ -290,7 +294,10 @@ export default function SupplierPage() {
             <section className="py-16 md:py-24 bg-gray-50">
                 <div className="container mx-auto px-4">
                     <div className="text-center mb-12 md:mb-16">
-                        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4 tracking-tight">Everything You Need to Succeed</h2>
+                        <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-4 tracking-tight leading-tight">
+                            Everything You Need to{" "}
+                            <span className={gradientText}>Succeed</span>
+                        </h2>
                         <p className="text-gray-600 text-lg">Powerful tools built for travel businesses.</p>
                     </div>
 
@@ -458,9 +465,9 @@ export default function SupplierPage() {
                                         Support
                                     </span>
                                 </div>
-                                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6 tracking-tight leading-tight">
+                                <h2 className="text-3xl lg:text-4xl font-semibold text-gray-900 mb-6 tracking-tight leading-tight">
                                     Frequently Asked <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-blue-600">Questions</span>
+                                    <span className={gradientText}>Questions</span>
                                 </h2>
                                 <p className="text-gray-500 text-lg leading-relaxed mb-8">
                                     Everything you need to know about partnering with us. Can’t find the answer you’re looking for?

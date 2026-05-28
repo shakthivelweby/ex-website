@@ -39,6 +39,7 @@ const Form = ({
   attractionDetails,
   isMobilePopup = false,
   enquireOnly = false,
+  embedded = false,
   selectedTickets: propSelectedTickets,
   totalPrice: propTotalPrice,
 }) => {
@@ -199,25 +200,85 @@ const Form = ({
     setChildCount((prev) => Math.max(0, prev - 1));
   };
 
+  const handleDateChange = async (date) => {
+    const dateString = date ? date.toISOString().split("T")[0] : "";
+    setSelectedDate(dateString);
+
+    if (dateString && attractionDetails?.id) {
+      try {
+        localStorage.setItem(
+          `attraction_${attractionDetails.id}_selectedDate`,
+          dateString
+        );
+        const response = await getTicketPricesForDate(
+          attractionDetails.id,
+          dateString
+        );
+        if (response?.data?.ticket_prices) {
+          setTicketPrices(response.data.ticket_prices);
+        }
+      } catch (error) {
+        console.error("Error fetching date-specific pricing:", error);
+      }
+    }
+  };
+
+  const renderDayContents = (day, date) => {
+    const isDisabled = isDateDisabled(date);
+    return (
+      <div style={{ textAlign: "center", position: "relative" }}>
+        <div>{day}</div>
+        {isDisabled ? (
+          <div
+            style={{
+              fontSize: "0.65em",
+              color: "#EF4444",
+              position: "absolute",
+              left: 0,
+              top: "23px",
+              textAlign: "center",
+              width: "100%",
+              fontWeight: "500",
+            }}
+          >
+            N/A
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const datePickerProps = {
+    minDate: new Date(),
+    filterDate: (date) => !isDateDisabled(date),
+    selected: selectedDate ? new Date(selectedDate) : null,
+    onChange: handleDateChange,
+    dateFormat: "dd/MM/yyyy",
+    renderDayContents,
+  };
+
+  const useInlineCalendar = isMobilePopup;
+
   return (
-    <div className={`${isMobilePopup ? "pb-24" : ""} hidden lg:block`}>
-      <div className="!bg-[#f7f7f7] rounded-xl p-3 shadow-sm">
-        {/* Title and Categories */}
-        <div className="bg-white rounded-xl p-4 mb-4">
-          <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-2">
-            {attractionDetails.title}
-          </h1>
-          {(attractionDetails.categoryName ||
-            attractionDetails.categories?.[0]) && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
-              {attractionDetails.categoryName ||
-                attractionDetails.categories[0]}
-            </span>
-          )}
-        </div>
+    <div className={`${isMobilePopup ? "pb-24" : ""} ${embedded ? "" : "hidden lg:block"}`}>
+      <div className={embedded ? "space-y-4" : "!bg-[#f7f7f7] rounded-xl p-3 shadow-sm"}>
+        {!embedded ? (
+          <div className="bg-white rounded-xl p-4 mb-4">
+            <h1 className="text-xl font-medium text-gray-800 tracking-tight mb-2">
+              {attractionDetails.title}
+            </h1>
+            {(attractionDetails.categoryName ||
+              attractionDetails.categories?.[0]) && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
+                {attractionDetails.categoryName ||
+                  attractionDetails.categories[0]}
+              </span>
+            )}
+          </div>
+        ) : null}
 
         {/* Attraction Info Card */}
-        <div className="bg-white rounded-xl p-4 mb-4">
+        <div className={`bg-white rounded-xl p-4 ${embedded ? "ring-1 ring-gray-100" : "mb-4"}`}>
           <div className="space-y-4 text-sm">
             <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
               <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
@@ -238,145 +299,30 @@ const Form = ({
               Select Date
             </h2>
             <div className="relative">
-              {isMobilePopup ? (
-                // Inline calendar for mobile
-                <div className="border-t border-gray-200 pt-3">
+              {useInlineCalendar ? (
+                <div
+                  className={`border border-gray-200 rounded-xl overflow-hidden bg-white ${
+                    embedded ? "mx-auto max-w-full" : "border-t border-gray-200 pt-3"
+                  }`}
+                >
                   <DatePicker
-                    selected={selectedDate ? new Date(selectedDate) : null}
-                    onChange={async (date) => {
-                      const dateString = date
-                        ? date.toISOString().split("T")[0]
-                        : "";
-                      setSelectedDate(dateString);
-
-                      if (dateString && attractionDetails?.id) {
-                        try {
-                          localStorage.setItem(
-                            `attraction_${attractionDetails.id}_selectedDate`,
-                            dateString
-                          );
-                          const response = await getTicketPricesForDate(
-                            attractionDetails.id,
-                            dateString
-                          );
-                          if (
-                            response &&
-                            response.data &&
-                            response.data.ticket_prices
-                          ) {
-                            setTicketPrices(response.data.ticket_prices);
-                          }
-                        } catch (error) {
-                          console.error(
-                            "Error fetching date-specific pricing:",
-                            error
-                          );
-                        }
-                      }
-                    }}
-                    minDate={new Date()}
-                    filterDate={(date) => !isDateDisabled(date)}
+                    {...datePickerProps}
                     inline
                     placeholderText="Choose Date"
                     className="w-full"
-                    dateFormat="dd/MM/yyyy"
-                    renderDayContents={(day, date) => {
-                      const isDisabled = isDateDisabled(date);
-                      return (
-                        <div
-                          style={{ textAlign: "center", position: "relative" }}
-                        >
-                          <div>{day}</div>
-                          {isDisabled && (
-                            <div
-                              style={{
-                                fontSize: "0.65em",
-                                color: "#EF4444",
-                                position: "absolute",
-                                left: 0,
-                                top: "23px",
-                                textAlign: "center",
-                                width: "100%",
-                                fontWeight: "500",
-                              }}
-                            >
-                              N/A
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }}
                   />
                 </div>
               ) : (
-                // Popup calendar for desktop
                 <>
                   <DatePicker
-                    minDate={new Date()}
-                    filterDate={(date) => !isDateDisabled(date)}
+                    {...datePickerProps}
                     placeholderText="Choose Date"
                     className="w-full h-12 px-4 pr-10 border border-primary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-gray-700 cursor-pointer font-medium"
-                    selected={selectedDate ? new Date(selectedDate) : null}
-                    onChange={async (date) => {
-                      const dateString = date
-                        ? date.toISOString().split("T")[0]
-                        : "";
-                      setSelectedDate(dateString);
-
-                      if (dateString && attractionDetails?.id) {
-                        try {
-                          localStorage.setItem(
-                            `attraction_${attractionDetails.id}_selectedDate`,
-                            dateString
-                          );
-                          const response = await getTicketPricesForDate(
-                            attractionDetails.id,
-                            dateString
-                          );
-                          if (
-                            response &&
-                            response.data &&
-                            response.data.ticket_prices
-                          ) {
-                            setTicketPrices(response.data.ticket_prices);
-                          }
-                        } catch (error) {
-                          console.error(
-                            "Error fetching date-specific pricing:",
-                            error
-                          );
-                        }
-                      }
-                    }}
-                    showPopperArrow={false}
-                    dateFormat="dd/MM/yyyy"
+                    portalId="react-datepicker-portal"
+                    popperClassName="attraction-datepicker-popper"
                     popperPlacement="bottom-start"
-                    renderDayContents={(day, date) => {
-                      const isDisabled = isDateDisabled(date);
-                      return (
-                        <div
-                          style={{ textAlign: "center", position: "relative" }}
-                        >
-                          <div>{day}</div>
-                          {isDisabled && (
-                            <div
-                              style={{
-                                fontSize: "0.65em",
-                                color: "#EF4444",
-                                position: "absolute",
-                                left: 0,
-                                top: "23px",
-                                textAlign: "center",
-                                width: "100%",
-                                fontWeight: "500",
-                              }}
-                            >
-                              N/A
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }}
+                    popperProps={{ strategy: "fixed" }}
+                    showPopperArrow={false}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
                     <i className="fi fi-rr-calendar text-lg"></i>
@@ -390,7 +336,7 @@ const Form = ({
         {/* Adult and Child Quantity Selector - Only show when date is selected */}
 
         {/* Price and Booking Card */}
-        <div className="bg-white rounded-xl p-4">
+        <div className={`bg-white rounded-xl p-4 ${embedded ? "ring-1 ring-gray-100" : ""}`}>
           <div className="flex items-center justify-between mb-4">
             <span className="text-gray-500 text-sm">Entry fee</span>
             <span className="text-xl lg:text-2xl font-semibold text-gray-800">

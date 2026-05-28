@@ -84,6 +84,15 @@ body {
 .react-datepicker {
   border: none !important;
   font-family: Arial, Helvetica, sans-serif !important;
+  background-color: #ffffff !important;
+}
+
+.react-datepicker-popper .react-datepicker,
+.attraction-datepicker-popper .react-datepicker {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.15) !important;
 }
 
 .react-datepicker__header {
@@ -318,6 +327,28 @@ body.datepicker-open {
 
 .react-datepicker-wrapper {
   width: 100%;
+}
+
+.react-datepicker--inline {
+  width: 100% !important;
+}
+
+.react-datepicker--inline .react-datepicker__month-container {
+  width: 100%;
+  float: none;
+}
+
+.attraction-datepicker-popper,
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.react-datepicker-popper[data-placement^="top"] {
+  padding-bottom: 8px;
+}
+
+.react-datepicker-popper[data-placement^="bottom"] {
+  padding-top: 8px;
 }
 
 /* Hide scrollbar for Chrome, Safari and Opera */

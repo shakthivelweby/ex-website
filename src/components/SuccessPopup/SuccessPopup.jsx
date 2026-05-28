@@ -1,106 +1,111 @@
+"use client";
+
 import { useEffect } from "react";
 
-const SuccessPopup = ({ show, onClose, title, message, icon, actionButton }) => {
-  // Close popup on escape key
+export const PopupErrorIcon = () => (
+  <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shadow-sm">
+    <i className="fi fi-rr-cross text-2xl text-red-500" />
+  </div>
+);
+
+const DefaultSuccessIcon = () => (
+  <div className="relative w-14 h-14">
+    <div className="absolute inset-0 rounded-2xl bg-primary-500/20 animate-ping opacity-30" />
+    <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
+      <i className="fi fi-rr-check text-2xl text-white animate-success-check" />
+    </div>
+  </div>
+);
+
+const SuccessPopup = ({
+  show,
+  onClose,
+  title,
+  message,
+  icon,
+  actionButton,
+  continueLabel = "Continue",
+}) => {
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
     if (show) {
       document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
-    return () => document.removeEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "";
+    };
   }, [show, onClose]);
 
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300" 
-          onClick={onClose}
-        />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="success-popup-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45 backdrop-blur-[3px] transition-opacity"
+        onClick={onClose}
+        aria-label="Close dialog"
+      />
 
-        {/* Modal */}
-        <div className="relative w-full max-w-sm transform rounded-2xl bg-white shadow-xl transition-all duration-300 animate-modal-pop">
-          {/* Background Decoration */}
-          <div className="absolute inset-0">
-            <div 
-              className="absolute -right-10 -top-10 h-40 w-40 rounded-full" 
-              style={{
-                background: "radial-gradient(circle at center, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0) 70%)"
-              }}
-            />
-            <div 
-              className="absolute -left-10 -bottom-10 h-40 w-40 rounded-full" 
-              style={{
-                background: "radial-gradient(circle at center, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0) 70%)"
-              }}
-            />
+      <div className="relative w-full max-w-[380px] rounded-[24px] bg-white border border-gray-100 shadow-2xl shadow-black/10 animate-modal-pop overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-400" />
+
+        <div className="relative px-5 pt-4 pb-5 sm:px-6 sm:pb-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-3 top-3 w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex items-center justify-center"
+            aria-label="Close"
+          >
+            <i className="fi fi-rr-cross text-sm" />
+          </button>
+
+          <div className="flex justify-center mb-4 pt-1">
+            {icon ?? <DefaultSuccessIcon />}
           </div>
 
-          {/* Content Container */}
-          <div className="relative px-6 pt-8 pb-6">
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          <div className="text-center space-y-1.5 mb-5 px-1">
+            <h2
+              id="success-popup-title"
+              className="text-xl font-bold text-gray-900 tracking-tight animate-fade-in"
             >
-              <i className="fi fi-rr-cross text-base"></i>
-            </button>
+              {title || "Success!"}
+            </h2>
+            <p className="text-sm text-gray-500 leading-relaxed animate-fade-in-delay">
+              {message || "Your request has been processed successfully."}
+            </p>
+          </div>
 
-            {/* Success Icon */}
-            <div className="mb-6">
-              <div className="relative w-20 h-20 mx-auto">
-                <div 
-                  className="absolute inset-0 rounded-full opacity-25"
-                  style={{
-                    background: "radial-gradient(circle at center, #22c55e 0%, transparent 70%)"
-                  }}
-                />
-                <div className="absolute inset-2 rounded-full bg-green-100/50 animate-pulse" />
-                <div className="relative h-full flex items-center justify-center">
-                  {icon ? (
-                    icon
-                  ) : (
-                    <div className="relative">
-                      <div className="absolute inset-0 rounded-full bg-green-100 animate-success-ring" />
-                      <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                        <i className="fi fi-rr-check text-2xl text-green-500 animate-success-check"></i>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="text-center space-y-2 mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 animate-fade-in">
-                {title || "Success!"}
-              </h2>
-              <p className="text-gray-600 animate-fade-in-delay">
-                {message || "Your request has been processed successfully."}
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              {actionButton && (
-                <button
-                  onClick={actionButton.onClick}
-                  className="w-full h-12 bg-primary-600 text-white font-medium rounded-full flex items-center justify-center hover:bg-primary-700 transition-all duration-200 animate-fade-in-delay-2 shadow-lg shadow-primary-600/20 hover:shadow-primary-600/30"
-                >
-                  {actionButton.label}
-                  {actionButton.icon && (
-                    <i className={`${actionButton.icon} ml-2`}></i>
-                  )}
-                </button>
-              )}
-             
-            </div>
+          <div className="space-y-2.5 animate-fade-in-delay-2">
+            {actionButton ? (
+              <button
+                type="button"
+                onClick={actionButton.onClick}
+                className="w-full h-11 bg-primary-500 text-white text-sm font-semibold rounded-full flex items-center justify-center hover:bg-primary-600 transition-all duration-200 shadow-md shadow-primary-500/25"
+              >
+                {actionButton.label}
+                {actionButton.icon ? (
+                  <i className={`${actionButton.icon} ml-2`} />
+                ) : null}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full h-11 bg-primary-500 text-white text-sm font-semibold rounded-full flex items-center justify-center hover:bg-primary-600 transition-all duration-200 shadow-md shadow-primary-500/25"
+              >
+                {continueLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>

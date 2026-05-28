@@ -11,7 +11,7 @@ import {
   verifyPayment,
   paymentFailure,
 } from "../../checkout/package/service";
-import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import SuccessPopup, { PopupErrorIcon } from "@/components/SuccessPopup/SuccessPopup";
 import {
   BookingsLoading,
   BookingsError,
@@ -200,14 +200,7 @@ const PackageBookings = () => {
             setPopupConfig({
               title: "Payment Successful!",
               message: "Your balance payment has been processed successfully.",
-              icon: (
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-green-100 animate-success-ring" />
-                  <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                    <i className="fi fi-rr-check text-2xl text-green-500 animate-success-check"></i>
-                  </div>
-                </div>
-              ),
+              icon: null,
             });
             setShowPopup(true);
             // Refresh bookings data
@@ -217,14 +210,7 @@ const PackageBookings = () => {
             setPopupConfig({
               title: "Payment Failed",
               message: "Payment verification failed. Please try again.",
-              icon: (
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-red-100" />
-                  <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                    <i className="fi fi-rr-cross text-2xl text-red-500"></i>
-                  </div>
-                </div>
-              ),
+              icon: <PopupErrorIcon />,
             });
             setShowPopup(true);
           }
@@ -235,14 +221,7 @@ const PackageBookings = () => {
             message:
               paymentResponse.error?.description ||
               "Payment failed. Please try again.",
-            icon: (
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-red-100" />
-                <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                  <i className="fi fi-rr-cross text-2xl text-red-500"></i>
-                </div>
-              </div>
-            ),
+            icon: <PopupErrorIcon />,
           });
           setShowPopup(true);
         }
@@ -252,14 +231,7 @@ const PackageBookings = () => {
           message:
             orderRes.message ||
             "Failed to create payment order. Please try again.",
-          icon: (
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-red-100" />
-              <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-                <i className="fi fi-rr-cross text-2xl text-red-500"></i>
-              </div>
-            </div>
-          ),
+          icon: <PopupErrorIcon />,
         });
         setShowPopup(true);
       }
@@ -269,14 +241,7 @@ const PackageBookings = () => {
         title: "Error",
         message:
           error.response?.data?.message || "Payment failed. Please try again.",
-        icon: (
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-red-100" />
-            <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-              <i className="fi fi-rr-cross text-2xl text-red-500"></i>
-            </div>
-          </div>
-        ),
+        icon: <PopupErrorIcon />,
       });
       setShowPopup(true);
     } finally {

@@ -968,6 +968,7 @@ export default function EventCheckoutPage() {
         }}
         title={successMessage.title}
         message={successMessage.message}
+        continueLabel="View my bookings"
       />
       
       {/* Error message */}

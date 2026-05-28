@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Button from "@/components/common/Button";
-import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import SuccessPopup, { PopupErrorIcon } from "@/components/SuccessPopup/SuccessPopup";
 import {
   BookingsLoading,
   BookingsError,
@@ -143,14 +143,7 @@ export default function RentalBookings() {
       setPopupConfig({
         title: "Payment Successful!",
         message: "Your balance payment has been processed successfully.",
-        icon: (
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-green-100 animate-success-ring" />
-            <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-              <i className="fi fi-rr-check text-2xl text-green-500 animate-success-check"></i>
-            </div>
-          </div>
-        ),
+        icon: null,
       });
       setShowPopup(true);
       refetch();
@@ -158,14 +151,7 @@ export default function RentalBookings() {
       setPopupConfig({
         title: "Payment Failed",
         message: e?.response?.data?.message || e?.message || "Payment failed. Please try again.",
-        icon: (
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-red-100" />
-            <div className="relative z-10 w-16 h-16 rounded-full bg-white flex items-center justify-center">
-              <i className="fi fi-rr-cross text-2xl text-red-500"></i>
-            </div>
-          </div>
-        ),
+        icon: <PopupErrorIcon />,
       });
       setShowPopup(true);
     } finally {

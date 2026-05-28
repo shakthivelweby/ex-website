@@ -1,5 +1,6 @@
 import apiServerMiddleware from "../api/serverMiddleware";
 import apiMiddleware from "../api/apiMiddleware";
+import { getApiErrorMessage } from "../api/getApiErrorMessage";
 import axios from "axios";
 
 // get all activity categories
@@ -157,26 +158,42 @@ export const getActivityGallery = async (activityId) => {
 
 // Create activity booking
 export const createActivityBooking = async (bookingData) => {
-  const response = await apiMiddleware.post("/create-activity-booking", bookingData);
-  return response.data;
-}
+  try {
+    const response = await apiMiddleware.post("/create-activity-booking", bookingData);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to create activity booking"));
+  }
+};
 
 // Create activity order (payment)
 export const createActivityOrder = async (data) => {
-  const response = await apiMiddleware.post("/create-activity-order", data);
-  return response.data;
-}
+  try {
+    const response = await apiMiddleware.post("/create-activity-order", data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to create payment order"));
+  }
+};
 
 // Verify activity payment
 export const verifyActivityPayment = async (data) => {
-  const response = await apiMiddleware.post("/activity-payment-verify", data, {
-    timeout: 60000,
-  });
-  return response.data;
-}
+  try {
+    const response = await apiMiddleware.post("/activity-payment-verify", data, {
+      timeout: 60000,
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Payment verification failed"));
+  }
+};
 
 // Payment failed
 export const activityPaymentFailed = async (data) => {
-  const response = await apiMiddleware.post("/activity-payment-failed", data);
-  return response.data;
-}
+  try {
+    const response = await apiMiddleware.post("/activity-payment-failed", data);
+    return response.data;
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to update payment status"));
+  }
+};

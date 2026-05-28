@@ -41,11 +41,6 @@ const apiServerMiddleware = axios.create({
 
 apiServerMiddleware.interceptors.request.use(
   async (config) => {
-    const baseURL = getApiBaseUrl();
-    if (!baseURL) {
-      return Promise.reject(new Error("NEXT_PUBLIC_API_URL is not configured"));
-    }
-    config.baseURL = baseURL;
     config.headers["X-Server-Key"] = process.env.SERVER_API_KEY || "";
 
     if (typeof window !== "undefined") {

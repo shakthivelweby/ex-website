@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Button from "@/components/common/Button";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import {
+  BookingsLoading,
+  BookingsError,
+  BookingsEmpty,
+  BookingsPagination,
+  BookingsList,
+  bookingCardClass,
+  BookingCardImage,
+  resolveBookingImage,
+} from "@/components/my-bookings/BookingsUI";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import {
   createRentalBalanceOrder,
@@ -164,11 +174,7 @@ export default function RentalBookings() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-[400px] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <BookingsLoading />;
   }
 
   const pagination = data?.data || {};
@@ -180,48 +186,29 @@ export default function RentalBookings() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-red-100">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
-            <i className="fi fi-rr-exclamation text-xl text-red-500"></i>
-          </div>
-          <p className="text-red-600 font-medium">
-            {error.response?.data?.message || error.message || "Failed to load rental bookings"}
-          </p>
-        </div>
-      </div>
+      <BookingsError
+        message={
+          error.response?.data?.message || error.message || "Failed to load rental bookings"
+        }
+        onRetry={() => refetch()}
+      />
     );
   }
 
   if (!bookings.length) {
     return (
-      <div className="p-6">
-        <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 flex items-center justify-center">
-            <i className="fi fi-rr-car text-2xl text-gray-400"></i>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No rental bookings yet
-          </h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Explore rentals and book your next ride.
-          </p>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => router.push("/rentals")}
-            className="!rounded-full !px-6 !py-2.5 !text-sm !font-medium"
-          >
-            <i className="fi fi-rr-search mr-2"></i>
-            Explore Rentals
-          </Button>
-        </div>
-      </div>
+      <BookingsEmpty
+        icon="fi fi-rr-car"
+        title="No rental bookings yet"
+        description="Explore rentals and book your next ride."
+        actionLabel="Explore Rentals"
+        onAction={() => router.push("/rentals")}
+      />
     );
   }
 
   return (
-    <div className="p-6">
+    <>
       <SuccessPopup
         show={showPopup}
         onClose={() => setShowPopup(false)}
@@ -229,7 +216,7 @@ export default function RentalBookings() {
         message={popupConfig.message}
         icon={popupConfig.icon}
       />
-      <div className="space-y-4">
+      <BookingsList>
         {bookings.map((b) => {
           const title = b.item?.title || "Rental";
           const full = parseFloat(b.total_full_amount || 0);
@@ -251,23 +238,35 @@ export default function RentalBookings() {
           return (
             <div
               key={b.id}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+              className={bookingCardClass}
             >
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-5">
+                <BookingCardImage
+                  src={resolveBookingImage(b, "rental")}
+                  alt={title}
+                  fallbackIcon="fi fi-rr-car"
+                  href={
+                    b.rental_item_id
+                      ? `/rentals/${b.rental_item_id}`
+                      : undefined
+                  }
+                />
+                <div className="flex-1 min-w-0">
               <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
                 <div className="flex-1">
                   <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                     <h3 className="text-base font-semibold text-gray-900">{title}</h3>
                     <div className="flex flex-wrap gap-2">
                       <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                        <i className="fi fi-rr-calendar text-blue-500"></i>
+                        <i className="fi fi-rr-calendar text-primary-500"></i>
                         {formatDateTime(b.start_datetime)}
                       </span>
                       <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                        <i className="fi fi-rr-calendar text-blue-500"></i>
+                        <i className="fi fi-rr-calendar text-primary-500"></i>
                         {formatDateTime(b.end_datetime)}
                       </span>
                       {locationLabel !== "-" ? (
-                        <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
+                        <span className="text-xs px-3 py-1 rounded-full bg-primary-50 text-primary-600 flex items-center gap-1.5">
                           <i className="fi fi-rr-marker"></i>
                           {locationLabel}
                         </span>
@@ -499,42 +498,24 @@ export default function RentalBookings() {
                   </div>
                 </div>
               ) : null}
+                </div>
+              </div>
             </div>
           );
         })}
-      </div>
+      </BookingsList>
 
-      {lastPage > 1 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            Showing {(currentPageData - 1) * perPage + 1} to{" "}
-            {Math.min(currentPageData * perPage, total)} of {total} results
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPageData - 1)}
-              disabled={currentPageData <= 1}
-              className="!px-3 !py-2"
-            >
-              <i className="fi fi-rr-angle-left mr-1"></i>
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(currentPageData + 1)}
-              disabled={currentPageData >= lastPage}
-              className="!px-3 !py-2"
-            >
-              Next
-              <i className="fi fi-rr-angle-right ml-1"></i>
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+      <BookingsPagination
+        currentPage={currentPageData}
+        lastPage={lastPage}
+        total={total}
+        perPage={perPage}
+        onPageChange={(page) => {
+          setCurrentPage(page);
+          setExpandedBooking(null);
+        }}
+      />
+    </>
   );
 }
 

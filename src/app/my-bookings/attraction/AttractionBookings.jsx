@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { getAttractionBookings } from "./service";
 import { useQuery } from "@tanstack/react-query";
+import {
+  BookingsLoading,
+  BookingsError,
+  BookingsEmpty,
+  BookingsPagination,
+  BookingsList,
+  bookingCardClass,
+  BookingCardImage,
+  resolveBookingImage,
+} from "@/components/my-bookings/BookingsUI";
 
 const AttractionBookings = () => {
   const router = useRouter();
@@ -165,34 +175,18 @@ const AttractionBookings = () => {
   };
 
   if (attractionBookingsLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <BookingsLoading />;
   }
 
   if (attractionBookingsError) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-600 mb-4">
-          <i className="fi fi-rr-exclamation-triangle text-4xl"></i>
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Failed to Load Bookings
-        </h3>
-        <p className="text-gray-600 mb-4">
-          {attractionBookingsError.response?.data?.message ||
-            "Something went wrong while loading your attraction bookings."}
-        </p>
-        <Button
-          onClick={() => window.location.reload()}
-          variant="outline"
-          size="sm"
-        >
-          Try Again
-        </Button>
-      </div>
+      <BookingsError
+        message={
+          attractionBookingsError.response?.data?.message ||
+          "Something went wrong while loading your attraction bookings."
+        }
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
@@ -262,37 +256,36 @@ const AttractionBookings = () => {
 
   if (attractionBookings.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-400 mb-4">
-          <i className="fi fi-rr-ticket text-6xl"></i>
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          No Attraction Bookings Yet
-        </h3>
-        <p className="text-gray-600 mb-6">
-          You haven't booked any attractions yet. Explore our amazing
-          attractions and book your next adventure!
-        </p>
-        <Button
-          onClick={() => router.push("/attractions")}
-          variant="primary"
-          size="md"
-        >
-          <i className="fi fi-rr-ticket mr-2"></i>
-          Explore Attractions
-        </Button>
-      </div>
+      <BookingsEmpty
+        icon="fi fi-rr-map-marker"
+        title="No attraction bookings yet"
+        description="You haven't booked any attractions yet. Explore our amazing attractions and book your next adventure!"
+        actionLabel="Explore Attractions"
+        onAction={() => router.push("/attractions")}
+      />
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="space-y-4">
+    <>
+      <BookingsList>
         {attractionBookings.map((booking) => (
           <div
             key={booking.id}
-            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+            className={bookingCardClass}
           >
+            <div className="flex flex-col sm:flex-row gap-4 md:gap-5">
+              <BookingCardImage
+                src={resolveBookingImage(booking, "attraction")}
+                alt={booking.attraction?.name || "Attraction"}
+                fallbackIcon="fi fi-rr-map-marker"
+                href={
+                  booking.attraction_id
+                    ? `/attractions/${booking.attraction_id}`
+                    : undefined
+                }
+              />
+              <div className="flex-1 min-w-0">
             {/* Attraction Info */}
             <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
               <div className="flex-1">
@@ -302,20 +295,20 @@ const AttractionBookings = () => {
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                      <i className="fi fi-rr-calendar text-blue-500"></i>
+                      <i className="fi fi-rr-calendar text-primary-500"></i>
                       {booking.visit_date
                         ? formatDate(booking.visit_date)
                         : formatDate(booking.created_at)}
                     </span>
                     <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                      <i className="fi fi-rr-users text-blue-500"></i>
+                      <i className="fi fi-rr-users text-primary-500"></i>
                       {booking.total_count ||
                         parseInt(booking.adult_count || 0) +
                           parseInt(booking.child_count || 0)}{" "}
                       Visitors
                     </span>
                     {booking.attraction?.location && (
-                      <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
+                      <span className="text-xs px-3 py-1 rounded-full bg-primary-50 text-primary-600 flex items-center gap-1.5">
                         <i className="fi fi-rr-marker"></i>
                         {booking.attraction.location}
                       </span>
@@ -507,10 +500,10 @@ const AttractionBookings = () => {
                             return (
                               <div
                                 key={index}
-                                className="mb-2 text-xs text-gray-600 bg-blue-50 p-3 rounded-lg border border-blue-100"
+                                className="mb-2 text-xs text-gray-600 bg-primary-50 p-3 rounded-lg border border-primary-100"
                               >
                                 <div className="flex justify-between items-center">
-                                  <span className="font-semibold text-blue-600">
+                                  <span className="font-semibold text-primary-600">
                                     {ticket.ticket_type_name ||
                                       ticket?.attraction_ticket_type?.attraction_ticket_type_master?.name ||
                                       ticket?.attractionTicketType?.attractionTicketTypeMaster?.name ||
@@ -704,61 +697,20 @@ const AttractionBookings = () => {
                 )}
               </div>
             )}
+                  </div>
+                </div>
           </div>
         ))}
-      </div>
+      </BookingsList>
 
-      {/* Pagination */}
-      {lastPage > 1 && (
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
-            Showing {(currentPageData - 1) * (pagination.per_page || 10) + 1} to{" "}
-            {Math.min(currentPageData * (pagination.per_page || 10), total)} of{" "}
-            {total} bookings
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPageData - 1)}
-              disabled={currentPageData <= 1}
-              className="!px-3 !py-2"
-            >
-              <i className="fi fi-rr-angle-left mr-1"></i>
-              Previous
-            </Button>
-
-            <div className="flex items-center space-x-1">
-              {Array.from({ length: lastPage }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    page === currentPageData
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPageData + 1)}
-              disabled={currentPageData >= lastPage}
-              className="!px-3 !py-2"
-            >
-              Next
-              <i className="fi fi-rr-angle-right ml-1"></i>
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+      <BookingsPagination
+        currentPage={currentPageData}
+        lastPage={lastPage}
+        total={total}
+        perPage={pagination.per_page || 10}
+        onPageChange={handlePageChange}
+      />
+    </>
   );
 };
 

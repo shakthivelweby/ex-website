@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { getEventBookings } from "./service";
 import { useQuery } from "@tanstack/react-query";
+import {
+  BookingsLoading,
+  BookingsError,
+  BookingsEmpty,
+  BookingsPagination,
+  BookingsList,
+  bookingCardClass,
+  BookingCardImage,
+  resolveBookingImage,
+} from "@/components/my-bookings/BookingsUI";
 
 const EventBookings = () => {
   const router = useRouter();
@@ -68,11 +78,7 @@ const EventBookings = () => {
   };
 
   if (eventBookingsLoading) {
-    return (
-      <div className="min-h-[400px] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <BookingsLoading />;
   }
 
   // Extract pagination data and bookings from the API structure
@@ -84,45 +90,39 @@ const EventBookings = () => {
   const perPage = paginationData.per_page || 10;
 
   return (
-    <div className="p-6">
+    <>
       {eventBookingsError ? (
-        <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-red-100">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
-            <i className="fi fi-rr-exclamation text-xl text-red-500"></i>
-          </div>
-          <p className="text-red-600 font-medium">
-            {eventBookingsError.message || "Failed to load event bookings"}
-          </p>
-        </div>
+        <BookingsError
+          message={eventBookingsError.message || "Failed to load event bookings"}
+        />
       ) : eventBookings.length === 0 ? (
-        <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 flex items-center justify-center">
-            <i className="fi fi-rr-calendar text-2xl text-gray-400"></i>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No event bookings yet
-          </h3>
-          <p className="text-gray-500 mb-6 max-w-md mx-auto">
-            Start your adventure today by exploring our exciting events
-          </p>
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => router.push("/events")}
-            className="!rounded-full !px-6 !py-2.5 !text-sm !font-medium"
-          >
-            <i className="fi fi-rr-search mr-2"></i>
-            Explore Events
-          </Button>
-        </div>
+        <BookingsEmpty
+          icon="fi fi-rr-calendar-star"
+          title="No event bookings yet"
+          description="Start your adventure today by exploring our exciting events."
+          actionLabel="Explore Events"
+          onAction={() => router.push("/events")}
+        />
       ) : (
         <>
-          <div className="space-y-4">
+          <BookingsList>
             {eventBookings.map((booking) => (
               <div
                 key={booking.id}
-                className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+                className={bookingCardClass}
               >
+                <div className="flex flex-col sm:flex-row gap-4 md:gap-5">
+                  <BookingCardImage
+                    src={resolveBookingImage(booking, "event")}
+                    alt={booking.event?.name || "Event"}
+                    fallbackIcon="fi fi-rr-calendar-star"
+                    href={
+                      booking.event_id
+                        ? `/events/${booking.event_id}`
+                        : undefined
+                    }
+                  />
+                  <div className="flex-1 min-w-0">
                 {/* Event Info */}
                 <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
                   <div className="flex-1">
@@ -132,17 +132,17 @@ const EventBookings = () => {
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                          <i className="fi fi-rr-calendar text-blue-500"></i>
+                          <i className="fi fi-rr-calendar text-primary-500"></i>
                           {booking.event?.starting_date
                             ? formatDate(booking.event.starting_date)
                             : formatDate(booking.created_at)}
                         </span>
                         <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
-                          <i className="fi fi-rr-clock text-blue-500"></i>
+                          <i className="fi fi-rr-clock text-primary-500"></i>
                           {booking.event?.duration || "Duration not specified"}
                         </span>
                         {booking.event?.location && (
-                          <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
+                          <span className="text-xs px-3 py-1 rounded-full bg-primary-50 text-primary-600 flex items-center gap-1.5">
                             <i className="fi fi-rr-marker"></i>
                             {booking.event.location}
                           </span>
@@ -401,7 +401,7 @@ const EventBookings = () => {
                                       <span
                                         className={`text-xs px-2 py-1 rounded-full ${
                                           payment.payment_method === "razorpay"
-                                            ? "bg-blue-50 text-blue-600"
+                                            ? "bg-primary-50 text-primary-600"
                                             : "bg-purple-50 text-purple-600"
                                         }`}
                                       >
@@ -433,63 +433,22 @@ const EventBookings = () => {
                       )}
                   </div>
                 )}
+                  </div>
+                </div>
               </div>
             ))}
-          </div>
+          </BookingsList>
 
-          {/* Pagination */}
-          {lastPage > 1 && (
-            <div className="mt-6 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing {(currentPageData - 1) * perPage + 1} to{" "}
-                {Math.min(currentPageData * perPage, total)} of {total} results
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPageData - 1)}
-                  disabled={currentPageData <= 1}
-                  className="!px-3 !py-2"
-                >
-                  <i className="fi fi-rr-angle-left mr-1"></i>
-                  Previous
-                </Button>
-
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: lastPage }, (_, i) => i + 1).map(
-                    (page) => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          page === currentPageData
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  )}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePageChange(currentPageData + 1)}
-                  disabled={currentPageData >= lastPage}
-                  className="!px-3 !py-2"
-                >
-                  Next
-                  <i className="fi fi-rr-angle-right ml-1"></i>
-                </Button>
-              </div>
-            </div>
-          )}
+          <BookingsPagination
+            currentPage={currentPageData}
+            lastPage={lastPage}
+            total={total}
+            perPage={perPage}
+            onPageChange={handlePageChange}
+          />
         </>
       )}
-    </div>
+    </>
   );
 };
 

@@ -8,6 +8,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import EventCard from "@/components/eventCard";
 import PackageCard from "@/components/PackageCard";
 import DestinationCard from "@/components/DestinationCard";
+import { ListingCard } from "@/components/attractionCard";
 import Search from "@/components/Search/Search";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -1214,71 +1215,35 @@ export default function HomePage() {
               });
 
               return trendingItems.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 max-w-7xl mx-auto">
                   {trendingItems.map((item, index) => (
-                    <Link key={index} href={item.href}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.4, delay: index * 0.1 }}
-                        className="group relative h-[400px] w-full rounded-3xl overflow-hidden cursor-pointer shadow-md hover:shadow-xl transition-all duration-500"
-                      >
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform duration-700"
-                        />
-
-                        {/* Gradient Overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                        {/* Top Badges */}
-                        <div className="absolute top-4 left-4 flex gap-2">
-                          <span className="bg-white/20 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-full border border-white/10">
-                            {item.type}
-                          </span>
-                        </div>
-                        <div className="absolute top-4 right-4">
-                          <div className="flex items-center gap-1 bg-white rounded-full px-2 py-1 shadow-sm">
-                            <i className="fi fi-sr-star text-yellow-400 text-xs"></i>
-                            <span className="text-xs font-bold text-gray-900">
-                              {item.rating}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Bottom Content */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                          <h3 className="text-xl font-bold mb-2 leading-snug">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center gap-2 text-white/80 text-sm mb-4">
-                            <i className="fi fi-rr-marker text-xs"></i>
-                            <span className="line-clamp-1">
-                              {item.location}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-4 border-t border-white/20">
-                            <div className="flex flex-col">
-                              <span className="text-xs text-white/60 uppercase tracking-wider">
-                                Prices from
-                              </span>
-                              <span className="text-lg font-bold">
-                                {item.price > 0
-                                  ? `₹${item.price.toLocaleString()}`
-                                  : "Price TBA"}
-                              </span>
-                            </div>
-                            <div className="w-10 h-10 rounded-full bg-white text-gray-900 flex items-center justify-center opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all duration-300">
-                              <i className="fi fi-rr-arrow-right"></i>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </Link>
+                    <motion.div
+                      key={`${item.type}-${item.id ?? index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: index * 0.1 }}
+                      className="h-full"
+                    >
+                      <ListingCard
+                        href={item.href}
+                        title={item.title}
+                        image={item.image}
+                        location={item.location}
+                        metaLabel={item.type}
+                        metaIcon={
+                          item.type === "Event"
+                            ? "fi fi-rr-calendar"
+                            : item.type === "Package"
+                            ? "fi fi-rr-umbrella-beach"
+                            : "fi fi-rr-ferris-wheel"
+                        }
+                        price={item.price}
+                        rating={item.rating}
+                        typeBadge={item.type}
+                        ctaLabel={item.type === "Package" ? "Explore" : "Book Now"}
+                      />
+                    </motion.div>
                   ))}
                 </div>
               ) : (

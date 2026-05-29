@@ -256,8 +256,9 @@ const ClientWrapper = ({
   }, [categories]);
 
   return (
-    <main className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
+    <main className="relative min-h-screen bg-[#f6f8fa]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-primary-50/50 to-transparent" />
+      <div className="container relative mx-auto px-4 sm:px-6 py-5 sm:py-7 mt-3 lg:mt-10">
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Sidebar Filters - Desktop Only */}
@@ -450,7 +451,7 @@ const ClientWrapper = ({
                 </div>
               </div>
             ) : attractions.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                 {attractions.map((attraction) => (
                   <AttractionCard key={attraction.id} attraction={attraction} />
                 ))}

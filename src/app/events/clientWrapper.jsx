@@ -2,6 +2,8 @@
 
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
+import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
@@ -144,6 +146,16 @@ const ClientWrapper = ({
     window.history.pushState({}, "", newUrl);
   };
 
+  // Function to toggle filter popup
+  const toggleFilter = () => {
+    setIsFilterOpen(!isFilterOpen);
+    if (!isFilterOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  };
+
   // Function to handle filter changes immediately
   const handleFilterChange = async (newFilters) => {
     setFilters(newFilters);
@@ -231,9 +243,76 @@ const ClientWrapper = ({
     }
   };
 
+  const activeCategory = categories.find((c) => c.slug === filters.category);
+
+  const bannerImage = "/event/banner.webp";
+  const bannerEyebrow = "FEEL THE ENERGY";
+  const bannerHeading = "Celebrate Every Moment";
+
   return (
-    <main className="min-h-screen bg-white">
-      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
+    <main className="min-h-screen bg-white pb-8">
+      {/* Hero banner */}
+      <section className="relative h-[45vh] min-h-[300px] w-full overflow-hidden md:h-[50vh] md:min-h-[360px]">
+        <div className="absolute inset-0">
+          <Image
+            src={bannerImage}
+            alt={bannerHeading}
+            fill
+            className="object-cover object-center"
+            priority
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60" />
+        </div>
+
+        <div className="relative container mx-auto h-full px-4 sm:px-6 lg:px-8">
+          <div className="absolute right-0 top-4 z-10 lg:hidden">
+            <button
+              type="button"
+              onClick={toggleFilter}
+              className="relative inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/30 px-3 py-1.5 text-sm font-medium text-white backdrop-blur-md transition-colors hover:bg-black/45"
+            >
+              <i className="fi fi-rr-settings-sliders text-[13px]" />
+              Filters
+              {hasActiveFilters() && (
+                <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary-400 ring-2 ring-black/50" />
+              )}
+            </button>
+          </div>
+
+          <div className="absolute bottom-[12%] left-0 max-w-3xl md:bottom-[15%]">
+            <span className="mb-2 inline-block text-xs font-light uppercase tracking-[0.2em] text-white/80">
+              {bannerEyebrow}
+            </span>
+            <h1 className="text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl">
+              {bannerHeading}
+            </h1>
+          </div>
+        </div>
+      </section>
+
+      {/* Breadcrumb */}
+      <div className="border-b border-gray-100">
+        <div className="container mx-auto flex items-center gap-2 px-4 py-4 text-sm sm:px-6 lg:px-8">
+          <Link href="/" className="text-gray-600 transition-colors hover:text-primary-600">
+            Home
+          </Link>
+          <span className="text-gray-400">
+            <i className="fi fi-rr-angle-right text-xs" />
+          </span>
+          <span className="font-medium text-primary-600">Events</span>
+          {activeCategory && (
+            <>
+              <span className="text-gray-400">
+                <i className="fi fi-rr-angle-right text-xs" />
+              </span>
+              <span className="font-medium text-primary-600">{activeCategory.name}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 pt-6 sm:px-6 lg:px-8">
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Filters Section - Desktop */}
@@ -251,34 +330,17 @@ const ClientWrapper = ({
           {/* Events Content */}
           <div className="flex-grow">
             {/* Top Bar */}
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="mb-4 flex items-center justify-between sm:mb-6">
               <div className="flex items-center gap-3 sm:gap-4">
-                <h2 className="text-sm sm:text-base font-medium text-gray-900">
+                <h2 className="text-sm font-medium text-gray-900 sm:text-base">
                   Events in{" "}
                   <span className="text-primary-600">
                     {filters.location || "Mumbai"}
                   </span>
                 </h2>
-                <span className="text-xs sm:text-sm text-gray-500">
+                <span className="text-xs text-gray-500 sm:text-sm">
                   {events.length} events available
                 </span>
-              </div>
-
-              {/* Location and Filter Buttons */}
-              <div className="flex items-center gap-2 lg:gap-3">
-                {/* Mobile Filter Button */}
-                <div className="lg:hidden">
-                  <button
-                    onClick={() => setIsFilterOpen(true)}
-                    className="relative flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 text-white shadow-sm hover:bg-black transition-colors text-sm"
-                  >
-                    <i className="fi fi-rr-settings-sliders text-[13px]"></i>
-                    <span className="text-white">Filters</span>
-                    {Object.values(filters).some((value) => value) && (
-                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary-500 rounded-full border-2 border-white"></span>
-                    )}
-                  </button>
-                </div>
               </div>
             </div>
 
@@ -453,7 +515,10 @@ const ClientWrapper = ({
         {/* Mobile Filters */}
         <EventFilters
           isOpen={isFilterOpen}
-          onClose={() => setIsFilterOpen(false)}
+          onClose={() => {
+            setIsFilterOpen(false);
+            document.body.style.overflow = "unset";
+          }}
           isMobile
           categories={categories}
           languages={languages}

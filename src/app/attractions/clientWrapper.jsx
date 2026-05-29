@@ -278,7 +278,7 @@ const ClientWrapper = ({
           <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/60" />
         </div>
 
-        <div className="relative mx-auto h-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative container mx-auto h-full px-4 sm:px-6 lg:px-8">
           <div className="absolute right-0 top-4 z-10 lg:hidden">
             <button
               type="button"
@@ -293,7 +293,7 @@ const ClientWrapper = ({
             </button>
           </div>
 
-          <div className="absolute bottom-[12%] max-w-3xl md:bottom-[15%]">
+          <div className="absolute bottom-[12%] left-0 max-w-3xl md:bottom-[15%]">
             <span className="mb-2 inline-block text-xs font-light uppercase tracking-[0.2em] text-white/80">
               {bannerEyebrow}
             </span>

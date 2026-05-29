@@ -248,7 +248,7 @@ export default function ClientWrapper({
             </button>
           </div>
 
-          <div className="absolute bottom-[12%] max-w-3xl md:bottom-[15%]">
+          <div className="absolute bottom-[12%] left-0 max-w-3xl md:bottom-[15%]">
             <span className="mb-2 inline-block text-xs font-light uppercase tracking-[0.2em] text-white/80">
               {bannerEyebrow}
             </span>

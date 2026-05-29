@@ -273,12 +273,10 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
 
     // Handle price range change
     const handlePriceRangeChange = (value) => {
+        const [from, to] = Array.isArray(value) ? value : [value, value + 10000];
         const newFilters = {
             ...filters,
-            priceRange: {
-                from: value,
-                to: value + 10000 // Assuming 10000 is your range step
-            }
+            priceRange: { from, to },
         };
         setFilters(newFilters);
         updateURL(newFilters);
@@ -308,6 +306,184 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
         setIsFilterOpen(false);
         document.body.style.overflow = 'unset';
     };
+
+    const getActiveFilterCount = () => {
+        return [
+            filters.tourType,
+            filters.priceRange,
+            filters.suitableFor,
+            filters.sortBy,
+            filters.destination,
+        ].filter(Boolean).length;
+    };
+
+    const clearSingleFilter = (name) => {
+        const newFilters = { ...filters, [name]: "" };
+        setFilters(newFilters);
+        updateURL(newFilters);
+        setResetKey((prev) => prev + 1);
+    };
+
+    const filterFieldClass =
+        "min-h-[36px] w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5";
+
+    const dropdownFieldClass =
+        "w-full [&_button]:flex [&_button]:h-8 [&_button]:w-full [&_button]:items-center [&_button]:border-0 [&_button]:bg-transparent [&_button]:p-0 [&_button]:pr-7 [&_button]:text-left [&_button]:text-sm [&_button]:font-normal [&_button_span]:font-normal";
+
+    const rangeSliderFieldClass =
+        "flex min-h-[28px] w-full items-center border-0 py-0 text-left text-sm font-normal text-gray-600";
+
+    const isPriceRangeActive =
+        filters.priceRange &&
+        (filters.priceRange.from !== 1000 || filters.priceRange.to !== 50000);
+
+    const renderFilterSection = (icon, title, isActive, onClear, children) => (
+        <div className="rounded-lg bg-gray-100 p-3">
+            <div className="mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <i className={`${icon} text-gray-400`} />
+                    <span className="text-sm text-gray-700">{title}</span>
+                </div>
+                {isActive && (
+                    <button
+                        type="button"
+                        onClick={onClear}
+                        className="text-xs text-primary-600 hover:text-primary-700"
+                    >
+                        Clear
+                    </button>
+                )}
+            </div>
+            {children}
+        </div>
+    );
+
+    const PackageFiltersHeader = () => (
+        <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <div className="flex items-center gap-2">
+                <i className="fi fi-rr-settings-sliders text-gray-400" />
+                <span className="font-medium text-gray-800">Filters</span>
+                {getActiveFilterCount() > 0 && (
+                    <span className="text-sm text-gray-500">({getActiveFilterCount()})</span>
+                )}
+            </div>
+            {getActiveFilterCount() > 0 && (
+                <button
+                    type="button"
+                    onClick={handleClearAllFilters}
+                    className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                >
+                    Clear All
+                </button>
+            )}
+        </div>
+    );
+
+    const PackageFiltersContent = () => (
+        <div className="space-y-3">
+            {renderFilterSection(
+                "fi fi-rr-backpack",
+                "Tour Type",
+                !!filters.tourType,
+                () => clearSingleFilter("tourType"),
+                <div className={`${filterFieldClass} flex items-center`}>
+                    <Dropdown
+                        key={`tourType-${resetKey}`}
+                        options={tourTypeOptions}
+                        value={filters.tourType}
+                        onChange={(option) => updateFilter("tourType", option)}
+                        placeholder="Select tour type"
+                        className={dropdownFieldClass}
+                    />
+                </div>
+            )}
+
+            {renderFilterSection(
+                "fi fi-rr-indian-rupee-sign",
+                "Price Range",
+                isPriceRangeActive,
+                () => clearSingleFilter("priceRange"),
+                <div className={`${filterFieldClass} flex items-center`}>
+                    <RangeSlider
+                        key={`price-${resetKey}`}
+                        min={1000}
+                        max={50000}
+                        step={1000}
+                        variant="field"
+                        initialValue={
+                            filters.priceRange
+                                ? [filters.priceRange.from, filters.priceRange.to]
+                                : [1000, 50000]
+                        }
+                        onChange={handlePriceRangeChange}
+                        formatDisplay={(value) => {
+                            if (!value || value.length !== 2) return "Any Price";
+                            if (value[0] === 1000 && value[1] === 50000) return "Any Price";
+                            return `₹${value[0].toLocaleString()} - ₹${value[1].toLocaleString()}`;
+                        }}
+                        minLabel="₹1,000"
+                        maxLabel="₹50,000+"
+                        title="Price Range"
+                        className={rangeSliderFieldClass}
+                    />
+                </div>
+            )}
+
+            {renderFilterSection(
+                "fi fi-rr-users",
+                "Suitable For",
+                !!filters.suitableFor,
+                () => clearSingleFilter("suitableFor"),
+                <div className={`${filterFieldClass} flex items-center`}>
+                    <Dropdown
+                        key={`suitable-${resetKey}`}
+                        options={suitableForOptions}
+                        value={filters.suitableFor}
+                        onChange={(option) => updateFilter("suitableFor", option)}
+                        placeholder="Select group type"
+                        isLoading={isSuitableForLoading}
+                        className={dropdownFieldClass}
+                    />
+                </div>
+            )}
+
+            {renderFilterSection(
+                "fi fi-rr-sort",
+                "Sort By",
+                !!filters.sortBy,
+                () => clearSingleFilter("sortBy"),
+                <div className={`${filterFieldClass} flex items-center`}>
+                    <Dropdown
+                        key={`sort-${resetKey}`}
+                        options={sortOptions}
+                        value={filters.sortBy}
+                        onChange={(option) => updateFilter("sortBy", option)}
+                        placeholder="Select sorting"
+                        className={dropdownFieldClass}
+                    />
+                </div>
+            )}
+        </div>
+    );
+
+    const PackageFiltersFooter = ({ onClear, onApply, applyLabel = "Apply Filters" }) => (
+        <div className="flex gap-3 border-t border-gray-100 pt-4">
+            <button
+                type="button"
+                onClick={onClear}
+                className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+                Clear All
+            </button>
+            <button
+                type="button"
+                onClick={onApply}
+                className="flex-1 rounded-full bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary-600"
+            >
+                {applyLabel}
+            </button>
+        </div>
+    );
 
     const handleDestinationSelect = (destinationId) => {
         setSelectedDestination(destinationId);
@@ -690,94 +866,13 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                         
                             {/* Filters Sidebar - Desktop */}
                             <div className="hidden lg:block lg:w-1/4">
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6 sticky top-4">
-                                    <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                                        <h3 className="font-medium text-gray-900">Filters</h3>
-                                        <button
-                                            onClick={handleClearAllFilters}
-                                            className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                                        >
-                                            Clear All
-                                        </button>
-                                    </div>
-
-                                    {/* Tour Type Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Tour Type</label>
-                                        {filters.tourType && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`tourType-${resetKey}`}
-                                            options={tourTypeOptions}
-                                            value={filters.tourType}
-                                            onChange={(option) => updateFilter("tourType", option)}
-                                            placeholder="Select tour type"
-                                            className={filters.tourType ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Price Range Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Price Range</label>
-                                        {filters.priceRange && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <RangeSlider
-                                            key={`price-${resetKey}`}
-                                            min={1000}
-                                            max={50000}
-                                            step={1000}
-                                            initialValue={filters.priceRange ? filters.priceRange.from : undefined}
-                                            onChange={handlePriceRangeChange}
-                                            formatDisplay={(val) => {
-                                                if (!val) return "Select price range";
-                                                return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
-                                            }}
-                                            className={filters.priceRange ? "border-b-2 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Suitable For Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Suitable For</label>
-                                        {filters.suitableFor && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`suitable-${resetKey}`}
-                                            options={suitableForOptions}
-                                            value={filters.suitableFor}
-                                            onChange={(option) => updateFilter("suitableFor", option)}
-                                            placeholder="Select group type"
-                                            isLoading={isSuitableForLoading}
-                                            className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Sort By */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Sort By</label>
-                                        {filters.sortBy && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`sort-${resetKey}`}
-                                            options={sortOptions}
-                                            value={filters.sortBy}
-                                            onChange={(option) => updateFilter("sortBy", option)}
-                                            placeholder="Select sorting"
-                                            className={filters.sortBy ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Apply Button */}
-                                    <button
-                                        onClick={handleApplyFilters}
-                                        className="w-full py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-                                    >
-                                        Apply Filters
-                                    </button>
+                                <div className="sticky top-4 space-y-4 rounded-lg border border-gray-100 bg-white p-4 shadow-sm">
+                                    <PackageFiltersHeader />
+                                    <PackageFiltersContent />
+                                    <PackageFiltersFooter
+                                        onClear={handleClearAllFilters}
+                                        onApply={handleApplyFilters}
+                                    />
                                 </div>
                             </div>
 
@@ -790,92 +885,13 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                                 className="lg:hidden"
                                 draggable={true}
                             >
-                                <div className="p-6 space-y-6">
-                                    {/* Tour Type Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Tour Type</label>
-                                        {filters.tourType && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`tourType-${resetKey}`}
-                                            options={tourTypeOptions}
-                                            value={filters.tourType}
-                                            onChange={(option) => updateFilter("tourType", option)}
-                                            placeholder="Select tour type"
-                                            className={filters.tourType ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Price Range Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Price Range</label>
-                                        {filters.priceRange && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <RangeSlider
-                                            key={`price-${resetKey}`}
-                                            min={1000}
-                                            max={50000}
-                                            step={1000}
-                                            initialValue={filters.priceRange ? filters.priceRange.from : undefined}
-                                            onChange={handlePriceRangeChange}
-                                            formatDisplay={(val) => {
-                                                if (!val) return "Select price range";
-                                                return `₹${val.toLocaleString()} - ₹${(val + 10000).toLocaleString()}`;
-                                            }}
-                                            className={filters.priceRange ? "border-b-2 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Suitable For Filter */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Suitable For</label>
-                                        {filters.suitableFor && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`suitable-${resetKey}`}
-                                            options={suitableForOptions}
-                                            value={filters.suitableFor}
-                                            onChange={(option) => updateFilter("suitableFor", option)}
-                                            placeholder="Select group type"
-                                            isLoading={isSuitableForLoading}
-                                            className={filters.suitableFor ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Sort By */}
-                                    <div className="space-y-2 relative">
-                                        <label className="text-sm font-medium text-gray-700">Sort By</label>
-                                        {filters.sortBy && (
-                                            <span className="absolute top-2 right-0 w-2 h-2 bg-primary-500 rounded-full"></span>
-                                        )}
-                                        <Dropdown
-                                            key={`sort-${resetKey}`}
-                                            options={sortOptions}
-                                            value={filters.sortBy}
-                                            onChange={(option) => updateFilter("sortBy", option)}
-                                            placeholder="Select sorting"
-                                            className={filters.sortBy ? "border-b-1 border-primary-500" : ""}
-                                        />
-                                    </div>
-
-                                    {/* Bottom Buttons */}
-                                    <div className="flex gap-3 mt-8">
-                                        <button
-                                            onClick={handleClearAllFilters}
-                                            className="flex-1 py-2.5 px-4 rounded-lg border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
-                                        >
-                                            Clear Filters
-                                        </button>
-                                        <button
-                                            onClick={handleApplyFilters}
-                                            className="flex-1 py-2.5 px-4 rounded-lg bg-primary-500 text-white text-sm font-medium hover:bg-primary-600 transition-colors"
-                                        >
-                                            Apply Now
-                                        </button>
-                                    </div>
+                                <div className="space-y-4 p-4">
+                                    <PackageFiltersContent />
+                                    <PackageFiltersFooter
+                                        onClear={handleClearAllFilters}
+                                        onApply={handleApplyFilters}
+                                        applyLabel="Apply Now"
+                                    />
                                 </div>
                             </Popup>
                     

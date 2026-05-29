@@ -468,7 +468,11 @@ const AttractionFilters = ({
               Price Range
             </span>
           </div>
-          {(tempFilters.price_from || tempFilters.price_to) && (
+          {(tempFilters.price_from || tempFilters.price_to) &&
+            !(
+              (parseInt(tempFilters.price_from) || 0) === 0 &&
+              (parseInt(tempFilters.price_to) || 1000) === 1000
+            ) && (
             <button
               onClick={() => {
                 const newFilters = {
@@ -485,29 +489,28 @@ const AttractionFilters = ({
             </button>
           )}
         </div>
-        <div className="px-2">
+        <div className="min-h-[44px] w-full rounded-lg border border-gray-300 bg-white px-3 py-2">
           <RangeSlider
             min={0}
             max={1000}
             step={50}
+            variant="field"
             initialValue={[
               parseInt(tempFilters.price_from) || 0,
               parseInt(tempFilters.price_to) || 1000,
             ]}
             onChange={handlePriceChange}
             formatDisplay={(value) => {
-              if (!value || value.length !== 2) return "Select Price Range";
+              if (!value || value.length !== 2) return "Any Price";
               if (value[0] === 0 && value[1] === 1000) return "Any Price";
               if (value[0] === 0) return `Under ₹${value[1]}`;
               if (value[1] === 1000) return `₹${value[0]}+`;
               return `₹${value[0]} - ₹${value[1]}`;
             }}
+            minLabel="Under ₹0"
+            maxLabel="₹1000+"
             title="Price Range"
           />
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <span>Free</span>
-            <span>₹1000+</span>
-          </div>
         </div>
       </div>
     </div>

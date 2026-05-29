@@ -472,10 +472,7 @@ export default function SupplierPage() {
                                 <p className="text-gray-500 text-lg leading-relaxed mb-8">
                                     Everything you need to know about partnering with us. Can’t find the answer you’re looking for?
                                 </p>
-                                <a href="#" className="inline-flex items-center text-lg font-bold text-blue-600 hover:text-blue-700 transition-colors group">
-                                    Contact Support Team
-                                    <i className="fi fi-rr-arrow-right ml-2 text-sm transition-transform group-hover:translate-x-1"></i>
-                                </a>
+                         
                             </motion.div>
                         </div>
 

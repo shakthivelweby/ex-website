@@ -28,7 +28,7 @@ export default function SupplierPage() {
     return (
         <main className="min-h-screen bg-white">
             {/* 1. Supplier Hero Section */}
-            <section className="relative pt-24 pb-10 md:pt-28 md:pb-12 bg-gray-50 overflow-hidden">
+            <section className="relative pt-16 md:pb-12 bg-gray-50 overflow-hidden">
                 <div className="absolute top-0 right-0 w-[480px] h-[480px] bg-blue-100/40 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-100/30 rounded-full blur-3xl pointer-events-none"></div>
 

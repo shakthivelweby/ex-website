@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Button from "@/components/common/Button";
 import ChangePassword from "@/components/ChangePassword/ChangePassword";
 import DeleteAccount from "@/components/DeleteAccount/DeleteAccount";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { updateProfile, updateProfileImage, getProfile } from "./service";
+import { updateProfile, getProfile } from "./service";
+
+const inputClass =
+  "w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed";
 
 const ProfilePage = () => {
   const router = useRouter();
@@ -19,62 +21,41 @@ const ProfilePage = () => {
     name: "",
     email: "",
     phone: "",
-    profile_image: "",
   });
 
-  // Fetch profile data
   const { data: profileData, isLoading: isProfileLoading } = useQuery({
     queryKey: ["profile"],
     queryFn: getProfile,
   });
 
-  // Update form data when profile data changes
   useEffect(() => {
     if (profileData?.data) {
       setFormData({
         name: profileData.data.name || "",
         email: profileData.data.email || "",
         phone: profileData.data.phone || "",
-        profile_image: profileData.data.profile_image || "",
       });
     }
   }, [profileData]);
 
-  // Update Profile Mutation
   const updateProfileMutation = useMutation({
     mutationFn: updateProfile,
     onSuccess: (response) => {
-      // Update local storage with new user data
       localStorage.setItem("user", JSON.stringify(response.data));
       setIsEditing(false);
-      // Refresh profile data
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
     onError: (error) => {
-      alert(error.response?.data?.message || "Failed to update profile. Please try again.");
-    }
-  });
-
-  // Update Profile Image Mutation
-  const updateProfileImageMutation = useMutation({
-    mutationFn: updateProfileImage,
-    onSuccess: (response) => {
-      // Update local storage with new user data
-      localStorage.setItem("user", JSON.stringify(response.data));
-      // Refresh profile data
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      alert(
+        error.response?.data?.message || "Failed to update profile. Please try again."
+      );
     },
-    onError: (error) => {
-      alert(error.response?.data?.message || "Failed to upload image. Please try again.");
-    }
   });
 
   useEffect(() => {
-    // Check if user is logged in
     const userData = localStorage.getItem("user");
     if (!userData) {
       router.push("/");
-      return;
     }
   }, [router]);
 
@@ -91,255 +72,253 @@ const ProfilePage = () => {
     updateProfileMutation.mutate(formData);
   };
 
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size should be less than 5MB");
-      return;
-    }
-
-    try {
-      const formData = new FormData();
-      formData.append("profile_image", file);
-      await updateProfileImageMutation.mutateAsync(formData);
-    } catch (error) {
-      // Error is handled by the mutation
-    }
+  const handleCancelEdit = () => {
+    const data = profileData?.data || {};
+    setIsEditing(false);
+    setFormData({
+      name: data.name || "",
+      email: data.email || "",
+      phone: data.phone || "",
+    });
   };
 
   if (isProfileLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-primary-600">
+          <svg
+            className="animate-spin h-8 w-8"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            />
+          </svg>
+          <span className="font-medium">Loading profile...</span>
+        </div>
+      </div>
+    );
   }
 
   const userData = profileData?.data || {};
 
   return (
-    <main className="min-h-screen bg-[#F8FAFC]">
-      <div className="max-w-[1000px] mx-auto">
-        <div className="p-4 md:p-6 pt-8 md:pt-12">
-          {/* Profile Information Section */}
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center">
-                <i className="fi fi-rr-user text-primary-500"></i>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Profile
-              </h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header — matches my-bookings / home typography */}
+      <section className="relative overflow-hidden bg-white border-b border-gray-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-50/70 via-white to-white pointer-events-none" />
+        <div className="absolute -top-20 right-0 w-64 h-64 bg-primary-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 left-0 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-8 md:pt-12 md:pb-10">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-8 h-[2px] bg-primary-500 rounded-full" />
+              <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
+                Account
+              </span>
             </div>
-            <p className="text-sm text-gray-500">Update your personal details and account settings</p>
+            <h1 className="text-3xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-tight">
+              Your{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">
+                Profile
+              </span>
+            </h1>
+            <p className="text-gray-600 mt-3 text-sm md:text-base leading-relaxed max-w-xl">
+              Manage your personal details and keep your Explore World account up to date.
+            </p>
           </div>
 
-          <div className="max-w-2xl w-full">
-            {/* Profile Information Section */}
-            <div className="mb-8" id="profile">
-              <div className="md:flex items-center justify-between mb-6">
-              
-                {!isEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    icon={<i className="fi fi-rr-edit"></i>}
-                    className="hover:bg-gray-50 !rounded-full"
-                  >
-                    Edit Profile
-                  </Button>
-                )}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
+            {[
+              { icon: "fi fi-rr-user", label: "Personal info", hint: "Name & contact" },
+              { icon: "fi fi-rr-envelope", label: userData.email || "Email", hint: "Login email" },
+              { icon: "fi fi-rr-shield-check", label: "Secure account", hint: "Password & privacy" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-2xl p-4 border bg-white/70 backdrop-blur-sm border-gray-100"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 border bg-white text-primary-600 border-gray-100 shadow-sm">
+                  <i className={`${item.icon} text-base`} />
+                </div>
+                <p className="text-sm font-semibold text-gray-900 truncate">{item.label}</p>
+                <p className="text-[11px] text-gray-500 mt-0.5">{item.hint}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Profile Picture Section */}
-                <div className="flex flex-col items-center text-center gap-4 pb-6 border-b border-gray-200">
-                  <div className="relative">
-                    <div className="w-32 h-32 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden border-2 border-primary-100">
-                      {userData.profile_image ? (
-                        <Image
-                          src={userData.profile_image}
-                          alt={userData.name}
-                          width={128}
-                          height={128}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <i className="fi fi-rr-user text-primary-600 text-4xl"></i>
-                      )}
-                    </div>
-                    {isEditing && (
-                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-                        <input
-                          type="file"
-                          id="profile_image"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => document.getElementById("profile_image").click()}
-                          disabled={updateProfileImageMutation.isPending}
-                          className="bg-primary-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg hover:bg-primary-700 transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
-                        >
-                          <i className="fi fi-rr-camera text-[10px]"></i>
-                          <span>{updateProfileImageMutation.isPending ? "Uploading..." : "Change"}</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <h4 className="text-xl font-semibold text-gray-900">{userData.name}</h4>
-                    <p className="text-sm text-gray-500">{userData.email}</p>
-                    {isEditing && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Recommended: Square image, at least 400x400 pixels
-                      </p>
-                    )}
-                  </div>
+      <section className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Personal details */}
+          <div className="lg:col-span-2 rounded-[28px] bg-white border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 sm:px-7 py-5 border-b border-gray-100 bg-gray-50/50">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-primary-500 text-white flex items-center justify-center shadow-sm shadow-primary-500/20 shrink-0">
+                  <i className="fi fi-rr-id-badge text-lg" />
                 </div>
-
-                {/* Form Fields */}
-                <div className="space-y-6">
-                  <div className="space-y-1">
-                    <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-2">
-                      Full Name <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                        className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        required
-                        placeholder="Enter your full name"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                      Email Address <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                        className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        required
-                        placeholder="Enter your email"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-2">
-                      Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                        className="w-full h-12 px-4 border-b text-[16px] text-gray-800 bg-white placeholder:text-[16px] focus:outline-none focus:ring-0 transition-colors font-medium tracking-tight border-gray-300 focus:border-primary-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                        placeholder="Enter your phone number"
-                      />
-                    </div>
-                  </div>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 tracking-tight">
+                    Personal details
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 truncate">
+                    {userData.name || "Your name"} · {userData.email || "your email"}
+                  </p>
                 </div>
-
-                {isEditing && (
-                  <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsEditing(false);
-                        setFormData({
-                          name: userData.name || "",
-                          email: userData.email || "",
-                          phone: userData.phone || "",
-                          profile_image: userData.profile_image || "",
-                        });
-                      }}
-                      className="hover:bg-gray-50 !rounded-full"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      size="sm"
-                      isLoading={updateProfileMutation.isPending}
-                      className="bg-primary-600 hover:bg-primary-700 !rounded-full"
-                    >
-                      Save Changes
-                    </Button>
-                  </div>
-                )}
-              </form>
+              </div>
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  icon={<i className="fi fi-rr-edit" />}
+                  className="hover:bg-gray-50 !rounded-full shrink-0"
+                >
+                  Edit profile
+                </Button>
+              )}
             </div>
 
-            {/* Security Section */}
-            <div className="mb-8 pt-8 border-t border-gray-200" id="security">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 tracking-tighter">Security Settings</h3>
-                  <p className="text-sm text-gray-500 mt-1">Manage your account security</p>
-                </div>
+            <form onSubmit={handleSubmit} className="p-5 sm:p-6 md:p-8 space-y-5">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Full name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  className={inputClass}
+                  required
+                  placeholder="Enter your full name"
+                />
               </div>
 
-              <div className="space-y-4">
-                {/* Password Change */}
-                <div className="md:flex items-center justify-between py-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
-                      <i className="fi fi-rr-lock text-primary-600"></i>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900">Password</h4>
-                      <p className="text-sm text-gray-500">Last changed 3 months ago</p>
-                    </div>
-                  </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Email address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  className={inputClass}
+                  required
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Phone number
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  disabled={!isEditing}
+                  className={inputClass}
+                  placeholder="Enter your phone number"
+                />
+              </div>
+
+              {isEditing && (
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-gray-100">
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowChangePassword(true)}
-                    className="hover:bg-gray-50 !rounded-full mt-4 md:mt-0"
+                    onClick={handleCancelEdit}
+                    className="hover:bg-gray-50 !rounded-full"
                   >
-                    Change Password
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    isLoading={updateProfileMutation.isPending}
+                    className="bg-primary-600 hover:bg-primary-700 !rounded-full"
+                  >
+                    Save changes
                   </Button>
                 </div>
+              )}
+            </form>
+          </div>
 
-               
+          {/* Security */}
+          <div className="rounded-[28px] bg-white border border-gray-100 shadow-sm overflow-hidden h-fit">
+            <div className="flex items-center gap-3 px-5 sm:px-7 py-5 border-b border-gray-100 bg-gray-50/50">
+              <div className="w-11 h-11 rounded-xl bg-primary-500 text-white flex items-center justify-center shadow-sm shadow-primary-500/20 shrink-0">
+                <i className="fi fi-rr-lock text-lg" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900 tracking-tight">
+                  Security
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">Password & account access</p>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 md:p-8 space-y-4">
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-primary-600 shrink-0">
+                    <i className="fi fi-rr-key text-base" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900">Password</h3>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                      Use a strong password to keep your account secure.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowChangePassword(true)}
+                      className="hover:bg-white !rounded-full mt-3"
+                    >
+                      Change password
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Change Password Modal */}
-      <ChangePassword 
+      <ChangePassword
         show={showChangePassword}
-        onClose={() => setShowChangePassword(false)} 
+        onClose={() => setShowChangePassword(false)}
       />
 
-      {/* Delete Account Modal */}
       {showDeleteAccount && (
         <DeleteAccount onClose={() => setShowDeleteAccount(false)} />
       )}
-    </main>
+    </div>
   );
 };
 

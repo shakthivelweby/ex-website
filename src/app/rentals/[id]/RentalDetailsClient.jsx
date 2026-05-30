@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
-import { rentalHourlyRateWithAdmin } from "@/app/rentals/rentalPricingCalc";
+import { rentalDisplayRate } from "@/app/rentals/rentalPricingCalc";
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -177,7 +177,11 @@ export default function RentalDetailsClient({ rental }) {
         )}`
       : null);
 
-  const priceHourLabel = `₹${formatMoney(rentalHourlyRateWithAdmin(pricing))}/hr`;
+  const displayRate = rentalDisplayRate(pricing);
+  const priceLabel =
+    displayRate.amount != null
+      ? `₹${formatMoney(displayRate.amount)}${displayRate.unit === "/ day" ? "/day" : "/hr"}`
+      : "—";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -485,9 +489,11 @@ export default function RentalDetailsClient({ rental }) {
                         <i className="fi fi-rr-indian-rupee-sign text-base text-primary-500"></i>
                       </div>
                       <div>
-                        <p className="text-gray-500 text-xs">Price / Hour</p>
+                        <p className="text-gray-500 text-xs">
+                          {displayRate.unit === "/ day" ? "Price / Day" : "Price / Hour"}
+                        </p>
                         <p className="text-gray-700 font-medium">
-                          ₹{formatMoney(rentalHourlyRateWithAdmin(pricing))}
+                          ₹{formatMoney(displayRate.amount ?? 0)}
                         </p>
                       </div>
                     </div>
@@ -584,7 +590,7 @@ export default function RentalDetailsClient({ rental }) {
         >
           <span className="text-sm">Book Now</span>
           <div className="flex items-center">
-            <span className="text-sm font-bold">{priceHourLabel}</span>
+            <span className="text-sm font-bold">{priceLabel}</span>
             <i className="fi fi-rr-car ml-2 text-sm"></i>
           </div>
         </button>

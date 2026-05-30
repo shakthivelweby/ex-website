@@ -12,6 +12,61 @@ function round2(n) {
 }
 
 /**
+ * @param {Record<string, unknown>} pricing
+ * @param {Record<string, unknown> | null | undefined} [quote]
+ * @returns {'hour' | 'day' | null}
+ */
+export function rentalPricingBasis(pricing, quote) {
+  const fromQuote = quote?.pricing_basis || quote?.effective_rates?.pricing_basis;
+  if (fromQuote === "day" || fromQuote === "hour") return fromQuote;
+  const p = pricing || {};
+  const hourly = Number(p.price_per_hour || 0) || 0;
+  if (hourly > 0) return "hour";
+  const daily = Number(p.price_per_day || 0) || 0;
+  if (daily > 0) return "day";
+  return null;
+}
+
+export function computeBillingDaysCeilFromParts(startDate, endDate, pickupTime, dropoffTime) {
+  if (!startDate || !endDate || !pickupTime || !dropoffTime) return 0;
+  const start = new Date(`${startDate}T${pickupTime}:00`);
+  const end = new Date(`${endDate}T${dropoffTime}:00`);
+  const ms = end.getTime() - start.getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * @param {Record<string, unknown>} pricing
+ * @returns {number}
+ */
+export function rentalDailyRateWithAdmin(pricing) {
+  const basePerDay = Number((pricing || {}).price_per_day || 0) || 0;
+  return applyRentalAdminChargeOnly(basePerDay, pricing);
+}
+
+/**
+ * Display rate and unit suffix for listing cards.
+ * @param {Record<string, unknown>} pricing
+ * @returns {{ amount: number | null, unit: string }}
+ */
+export function rentalDisplayRate(pricing) {
+  const basis = rentalPricingBasis(pricing);
+  if (basis === "day") {
+    const amount = Number((pricing || {}).price_per_day ?? 0);
+    return {
+      amount: Number.isFinite(amount) && amount > 0 ? rentalDailyRateWithAdmin(pricing) : null,
+      unit: "/ day",
+    };
+  }
+  const amount = Number((pricing || {}).price_per_hour ?? 0);
+  return {
+    amount: Number.isFinite(amount) && amount > 0 ? rentalHourlyRateWithAdmin(pricing) : null,
+    unit: "/ hour",
+  };
+}
+
+/**
  * Returns base amount only; admin charge is not added to the price.
  * @param {number} baseAmount
  * @param {Record<string, unknown>} pricing

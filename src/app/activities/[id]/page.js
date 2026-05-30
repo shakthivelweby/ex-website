@@ -1,5 +1,6 @@
 import ActivityDetailClient from "./clientWrapper";
 import { getActivityDetails, getActivityGallery } from "../service";
+import { normalizeCloseoutDates } from "./closeoutUtils";
 
 // Force dynamic rendering to prevent build-time API calls
 export const dynamic = "force-dynamic";
@@ -155,7 +156,9 @@ const ActivityDetailPage = async ({ params }) => {
     time_slot_based: activity.time_slot_based === 1 || activity.time_slot_based === "1" || activity.time_slot_based === true,
     time_slot_pricing: Array.isArray(activityData?.time_slot_pricing) ? activityData.time_slot_pricing : [],
     seasonal_dates: Array.isArray(activityData?.seasonal_dates) ? activityData.seasonal_dates : [],
-    closeout_dates: Array.isArray(activityData?.closeout_dates) ? activityData.closeout_dates : [],
+    closeout_dates: normalizeCloseoutDates(
+      Array.isArray(activityData?.closeout_dates) ? activityData.closeout_dates : []
+    ),
     current_pricing: activityData?.current_pricing || null,
     cancellation_policies: Array.isArray(activityData?.cancellation_policies) ? activityData.cancellation_policies : [],
   };

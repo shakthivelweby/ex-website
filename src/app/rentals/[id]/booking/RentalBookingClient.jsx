@@ -10,13 +10,31 @@ import Button from "@/components/common/Button";
 import { getRentalDetails } from "../../service";
 import { checkRentalAvailability, getRentalUnavailableDates } from "../../clientService";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
-import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown } from "../../rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts } from "../../rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
 };
+
+const parseAvailabilityPayload = (res) => {
+  if (!res || typeof res !== "object") return null;
+  if (res.is_available !== undefined || res.available_units !== undefined) return res;
+  if (res.data && typeof res.data === "object" && !Array.isArray(res.data)) return res.data;
+  return null;
+};
+
+const isAvailabilityOpen = (payload) =>
+  payload?.is_available === true && Number(payload?.available_units ?? 1) > 0;
+
+const isAvailabilityClosed = (payload) =>
+  Boolean(
+    payload &&
+      (payload.is_available === false ||
+        payload.is_available === 0 ||
+        (payload.available_units != null && Number(payload.available_units) <= 0))
+  );
 
 const computeBillingHoursCeil = (b) => {
   if (!b.start_date || !b.end_date || !b.pickup_time || !b.dropoff_time) return 0;
@@ -52,7 +70,12 @@ export default function RentalBookingClient() {
   const [unavailable, setUnavailable] = useState({ bookings: [], blocked: [] });
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
+  const pricingBasis = useMemo(
+    () => rentalPricingBasis(pricing, avail?.pricing_quote),
+    [pricing, avail?.pricing_quote]
+  );
   const basePerHour = Number(pricing.price_per_hour || 0) || 0;
+  const basePerDay = Number(pricing.price_per_day || 0) || 0;
 
   const primaryUnit = Array.isArray(rental?.units) && rental.units.length ? rental.units[0] : null;
   const displayTransmission = rental?.transmission ?? primaryUnit?.transmission;
@@ -83,6 +106,15 @@ export default function RentalBookingClient() {
 
     return basePerHour;
   }, [avail, rental, booking.start_date, basePerHour]);
+
+  const effectivePerDay = useMemo(() => {
+    const fromQuote = avail?.pricing_quote?.effective_rates?.price_per_day;
+    if (fromQuote !== undefined && fromQuote !== null && String(fromQuote) !== "") {
+      const n = Number(fromQuote);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return basePerDay;
+  }, [avail, basePerDay]);
   const depositAmount = Number(pricing.security_deposit || 0) || 0;
   const effectiveHours = useMemo(() => computeBillingHoursCeil(booking), [
     booking.start_date,
@@ -91,15 +123,30 @@ export default function RentalBookingClient() {
     booking.dropoff_time,
   ]);
 
+  const effectiveDays = useMemo(
+    () =>
+      computeBillingDaysCeilFromParts(
+        booking.start_date,
+        booking.end_date,
+        booking.pickup_time,
+        booking.dropoff_time
+      ),
+    [booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time]
+  );
+
   const minBookingHours =
     avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
       ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
       : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
 
   const rentSubtotal = useMemo(() => {
+    if (pricingBasis === "day") {
+      if (effectiveDays <= 0) return 0;
+      return effectiveDays * effectivePerDay;
+    }
     if (effectiveHours <= 0) return 0;
     return effectiveHours * effectivePerHour;
-  }, [effectiveHours, effectivePerHour]);
+  }, [pricingBasis, effectiveDays, effectivePerDay, effectiveHours, effectivePerHour]);
 
   const monetary = useMemo(
     () => computeRentalBookingMonetaryBreakdown(rentSubtotal, pricing),
@@ -114,10 +161,12 @@ export default function RentalBookingClient() {
   const convenienceFeePercent = monetary.convenienceFeePercent;
   const totalCostIncludingDeposit = monetary.grandTotal;
 
-  const displayPerHourWithAdmin = useMemo(() => applyRentalAdminChargeOnly(effectivePerHour, pricing), [
-    effectivePerHour,
-    pricing,
-  ]);
+  const displayRateWithAdmin = useMemo(() => {
+    if (pricingBasis === "day") return rentalDailyRateWithAdmin({ ...pricing, price_per_day: effectivePerDay });
+    return applyRentalAdminChargeOnly(effectivePerHour, pricing);
+  }, [pricingBasis, effectivePerDay, effectivePerHour, pricing]);
+
+  const displayPerHourWithAdmin = displayRateWithAdmin;
 
   // For summary display: merge admin into the hourly subtotal line (do not show separately).
   // Backend computes admin on rent subtotal after discount; we still keep totals consistent by
@@ -127,11 +176,18 @@ export default function RentalBookingClient() {
     [rentSubtotalGross, adminChargeAmount]
   );
 
-  const hourlySubtotalWithAdminForDisplay = useMemo(() => {
+  const periodSubtotalWithAdminForDisplay = useMemo(() => {
+    if (pricingBasis === "day") {
+      const days = Number(effectiveDays || 0) || 0;
+      if (days <= 0) return 0;
+      return days * displayRateWithAdmin;
+    }
     const hrs = Number(effectiveHours || 0) || 0;
     if (hrs <= 0) return 0;
-    return hrs * displayPerHourWithAdmin;
-  }, [effectiveHours, displayPerHourWithAdmin]);
+    return hrs * displayRateWithAdmin;
+  }, [pricingBasis, effectiveDays, effectiveHours, displayRateWithAdmin]);
+
+  const hourlySubtotalWithAdminForDisplay = periodSubtotalWithAdminForDisplay;
 
   const discountAmountForDisplay = useMemo(() => {
     const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
@@ -345,12 +401,14 @@ export default function RentalBookingClient() {
       return "Pickup and dropoff locations must be at most 255 characters each.";
     }
     const hours = computeBillingHoursCeil(booking);
-    const minH =
-      avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
-        ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
-        : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
-    if (hours > 0 && hours < minH) {
-      return `Minimum rental length is ${minH} hours (selected: ${hours}). Please extend your drop-off time.`;
+    if (pricingBasis !== "day") {
+      const minH =
+        avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
+          ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
+          : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+      if (hours > 0 && hours < minH) {
+        return `Minimum rental length is ${minH} hours (selected: ${hours}). Please extend your drop-off time.`;
+      }
     }
     return "";
   };
@@ -365,16 +423,23 @@ export default function RentalBookingClient() {
       setError("");
       try {
         const res = await checkRentalAvailability(rentalId, booking);
-        const d = res?.data || null;
+        const d = parseAvailabilityPayload(res);
         if (cancelled) return;
         setAvail(d);
-        if (d?.minimum_hours_not_met) {
+        if (d?.minimum_hours_not_met && pricingBasis !== "day") {
           const mh = d?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
           setError(
             `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
           );
-        } else if (d?.is_available === false) {
-          setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
+        } else if (isAvailabilityClosed(d)) {
+          const total = Number(d?.eligible_units ?? 1);
+          setError(
+            total > 1
+              ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
+              : "This item is already booked for the selected date/time. Please choose another slot."
+          );
+        } else {
+          setError("");
         }
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || "Failed to check availability.");
@@ -396,15 +461,20 @@ export default function RentalBookingClient() {
       return;
     }
     if (checking) return;
-    if (avail?.minimum_hours_not_met) {
+    if (avail?.minimum_hours_not_met && pricingBasis !== "day") {
       const mh = avail?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
       setError(
         `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
       );
       return;
     }
-    if (avail?.is_available === false) {
-      setError("This vehicle is already booked for the selected date/time. Please choose another slot.");
+    if (!isAvailabilityOpen(avail)) {
+      const total = Number(avail?.eligible_units ?? 1);
+      setError(
+        total > 1
+          ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
+          : "This item is already booked for the selected date/time. Please choose another slot."
+      );
       return;
     }
     const params = new URLSearchParams({
@@ -421,7 +491,9 @@ export default function RentalBookingClient() {
   };
 
   const continueDisabled =
-    checking || avail?.is_available === false || avail?.minimum_hours_not_met === true;
+    checking ||
+    !isAvailabilityOpen(avail) ||
+    (pricingBasis !== "day" && avail?.minimum_hours_not_met === true);
   const thumb = rental?.thumbnail_image_url;
 
   if (!rentalId) {
@@ -525,8 +597,10 @@ export default function RentalBookingClient() {
               <div className="px-4 py-3 border-b border-gray-200">
                 <h2 className="text-base font-medium text-gray-800">Select dates &amp; times</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Choose when you need the vehicle. We will check availability automatically. Minimum rental:{" "}
-                  {minBookingHours} hours.
+                  Choose your rental dates and times. We will check availability automatically.
+                  {pricingBasis === "day"
+                    ? " Billed per day."
+                    : ` Minimum rental: ${minBookingHours} hours.`}
                 </p>
               </div>
               <div className="p-4 sm:p-6 space-y-5">
@@ -596,9 +670,24 @@ export default function RentalBookingClient() {
                   </div>
                 ) : null}
 
-                {avail?.is_available === true && !avail?.minimum_hours_not_met ? (
+                {isAvailabilityClosed(avail) ? (
+                  <div className="text-sm text-red-800 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 font-medium">
+                    {Number(avail?.eligible_units ?? 1) > 1
+                      ? `All ${avail.eligible_units} units are booked for this time slot.`
+                      : "This item is sold out for the selected time slot."}
+                  </div>
+                ) : null}
+
+                {isAvailabilityOpen(avail) && !(pricingBasis !== "day" && avail?.minimum_hours_not_met) ? (
                   <div className="text-sm text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5">
-                    This slot is available. You can continue to payment.
+                    {Number(avail?.eligible_units ?? 1) > 1 ? (
+                      <>
+                        {avail.available_units} of {avail.eligible_units} units available — you can continue to
+                        payment.
+                      </>
+                    ) : (
+                      <>This slot is available. You can continue to payment.</>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -639,10 +728,12 @@ export default function RentalBookingClient() {
                       <span className="text-gray-700">{vehicleLocation}</span>
                     </div>
                   ) : null}
-                  {effectivePerHour > 0 ? (
+                  {(pricingBasis === "day" ? effectivePerDay > 0 : effectivePerHour > 0) ? (
                     <div className="flex items-center gap-2">
                       <i className="fi fi-rr-indian-rupee-sign text-primary-500 text-sm shrink-0" />
-                      <span className="text-gray-700">From ₹{money(displayPerHourWithAdmin)} / hour</span>
+                      <span className="text-gray-700">
+                        From ₹{money(displayRateWithAdmin)} {pricingBasis === "day" ? "/ day" : "/ hour"}
+                      </span>
                     </div>
                   ) : null}
                 </div>
@@ -653,7 +744,9 @@ export default function RentalBookingClient() {
                 <div className="space-y-2.5 mb-4 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-gray-600">
-                      {effectiveHours || 0} h × ₹{money(displayPerHourWithAdmin)}
+                      {pricingBasis === "day"
+                        ? `${effectiveDays || 0} day(s) × ₹${money(displayRateWithAdmin)}`
+                        : `${effectiveHours || 0} h × ₹${money(displayRateWithAdmin)}`}
                     </span>
                     <span className="font-medium text-gray-900">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
                   </div>
@@ -713,8 +806,10 @@ export default function RentalBookingClient() {
               <p className="text-lg font-bold text-primary-600">₹{money(totalCostIncludingDeposit)}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">Total hours</p>
-              <p className="text-base font-semibold text-gray-900">{effectiveHours || 0}</p>
+              <p className="text-xs text-gray-500">{pricingBasis === "day" ? "Total days" : "Total hours"}</p>
+              <p className="text-base font-semibold text-gray-900">
+                {pricingBasis === "day" ? effectiveDays || 0 : effectiveHours || 0}
+              </p>
             </div>
           </div>
           <div className="px-4 pb-4">

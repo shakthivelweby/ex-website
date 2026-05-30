@@ -6,6 +6,7 @@ import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { isActivityCloseoutDate, normalizeCloseoutDates } from "./closeoutUtils";
 
 function formatTime(timeString) {
   if (!timeString) return "TBD";
@@ -120,26 +121,6 @@ function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
   if (oChild !== undefined && oChild !== null && oChild !== "") merged.child_price = oChild;
 
   return merged;
-}
-
-function isCloseoutDate(closeouts, ymd, weekdayName) {
-  if (!Array.isArray(closeouts) || !ymd) return false;
-  return closeouts.some((c) => {
-    const start = c.start_date ?? c.startDate;
-    const end = c.end_date ?? c.endDate;
-    if (!isDateInRange(ymd, start, end)) return false;
-
-    const days = c.applicable_days || c.applicableDays || [];
-    if (!Array.isArray(days) || days.length === 0) return true;
-
-    // Try to match weekday
-    const dayNames = days
-      .map((d) => d.day_name || d.day || d.name || d.weekday)
-      .filter(Boolean)
-      .map((s) => String(s).toLowerCase());
-    if (dayNames.length === 0) return true;
-    return dayNames.includes(String(weekdayName || "").toLowerCase());
-  });
 }
 
 function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
@@ -808,8 +789,11 @@ const Form = ({
                 minDate={new Date()}
                 filterDate={(date) => {
                   const ymd = toYmd(date);
-                  const weekdayName = new Date(date).toLocaleDateString("en-US", { weekday: "long" });
-                  return !isCloseoutDate(activityDetails?.closeout_dates, ymd, weekdayName);
+                  return !isActivityCloseoutDate(
+                    normalizeCloseoutDates(activityDetails?.closeout_dates),
+                    ymd,
+                    date
+                  );
                 }}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="Choose a date"

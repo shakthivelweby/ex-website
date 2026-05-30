@@ -10,7 +10,7 @@ import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
-import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown } from "../../rentals/rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts } from "../../rentals/rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -50,6 +50,8 @@ export default function RentalCheckoutPage() {
   const [successMessage, setSuccessMessage] = useState({ title: "", message: "" });
   const [pricingQuote, setPricingQuote] = useState(null);
   const [reservationBookingId, setReservationBookingId] = useState(null);
+  const [reserving, setReserving] = useState(false);
+  const [reserveReady, setReserveReady] = useState(false);
   const [minBookingHours, setMinBookingHours] = useState(RENTAL_MIN_BOOKING_HOURS_DEFAULT);
 
   useEffect(() => {
@@ -120,10 +122,15 @@ export default function RentalCheckoutPage() {
   }, [rentalItemId, start_date, end_date, pickup_time, dropoff_time, pickup_location, dropoff_location]);
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
+  const pricingBasis = useMemo(
+    () => rentalPricingBasis(pricing, pricingQuote),
+    [pricing, pricingQuote]
+  );
 
   const startISO = start_date && pickup_time ? `${start_date}T${pickup_time}:00` : "";
   const endISO = end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
   const basePerHour = Number(pricing.price_per_hour || 0) || 0;
+  const basePerDay = Number(pricing.price_per_day || 0) || 0;
 
   const effectivePerHour = useMemo(() => {
     const fromQuote = pricingQuote?.effective_rates?.price_per_hour;
@@ -151,6 +158,15 @@ export default function RentalCheckoutPage() {
 
     return basePerHour;
   }, [pricingQuote, rental, start_date, basePerHour]);
+
+  const effectivePerDay = useMemo(() => {
+    const fromQuote = pricingQuote?.effective_rates?.price_per_day;
+    if (fromQuote !== undefined && fromQuote !== null && String(fromQuote) !== "") {
+      const n = Number(fromQuote);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return basePerDay;
+  }, [pricingQuote, basePerDay]);
   const advanceType = pricing.advance_type || null;
   const advanceValueRaw = pricing.advance_value;
   const advanceValue =
@@ -161,7 +177,16 @@ export default function RentalCheckoutPage() {
   const depositAmount = Number(pricing.security_deposit || 0) || 0;
 
   const totalHours = useMemo(() => diffHoursCeil(startISO, endISO), [startISO, endISO]);
-  const rentSubtotal = useMemo(() => (totalHours > 0 ? totalHours * effectivePerHour : 0), [totalHours, effectivePerHour]);
+  const totalDays = useMemo(
+    () => computeBillingDaysCeilFromParts(start_date, end_date, pickup_time, dropoff_time),
+    [start_date, end_date, pickup_time, dropoff_time]
+  );
+  const rentSubtotal = useMemo(() => {
+    if (pricingBasis === "day") {
+      return totalDays > 0 ? totalDays * effectivePerDay : 0;
+    }
+    return totalHours > 0 ? totalHours * effectivePerHour : 0;
+  }, [pricingBasis, totalDays, effectivePerDay, totalHours, effectivePerHour]);
   const monetary = useMemo(
     () => computeRentalBookingMonetaryBreakdown(rentSubtotal, pricing),
     [rentSubtotal, pricing]
@@ -176,10 +201,12 @@ export default function RentalCheckoutPage() {
   const convenienceFeeAmount = monetary.convenienceFeeAmount;
   const convenienceFeePercent = monetary.convenienceFeePercent;
 
-  const displayPerHourWithAdmin = useMemo(() => applyRentalAdminChargeOnly(effectivePerHour, pricing), [
-    effectivePerHour,
-    pricing,
-  ]);
+  const displayRateWithAdmin = useMemo(() => {
+    if (pricingBasis === "day") return rentalDailyRateWithAdmin({ ...pricing, price_per_day: effectivePerDay });
+    return applyRentalAdminChargeOnly(effectivePerHour, pricing);
+  }, [pricingBasis, effectivePerDay, effectivePerHour, pricing]);
+
+  const displayPerHourWithAdmin = displayRateWithAdmin;
 
   const rentSubtotalWithAdminForDisplay = useMemo(
     () => (adminChargeAmount > 0 ? rentSubtotalGross + adminChargeAmount : rentSubtotalGross),
@@ -187,10 +214,15 @@ export default function RentalCheckoutPage() {
   );
 
   const hourlySubtotalWithAdminForDisplay = useMemo(() => {
+    if (pricingBasis === "day") {
+      const days = Number(totalDays || 0) || 0;
+      if (days <= 0) return 0;
+      return days * displayRateWithAdmin;
+    }
     const hrs = Number(totalHours || 0) || 0;
     if (hrs <= 0) return 0;
-    return hrs * displayPerHourWithAdmin;
-  }, [totalHours, displayPerHourWithAdmin]);
+    return hrs * displayRateWithAdmin;
+  }, [pricingBasis, totalDays, totalHours, displayRateWithAdmin]);
 
   const discountAmountForDisplay = useMemo(() => {
     const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
@@ -268,41 +300,54 @@ export default function RentalCheckoutPage() {
   useEffect(() => {
     if (!rentalItemId || !start_datetime || !end_datetime) return;
     const h = diffHoursCeil(startISO, endISO);
-    if (h < minBookingHours) {
+    if (pricingBasis !== "day" && h < minBookingHours) {
       setError(
         `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
       );
+      setReserveReady(false);
       return;
     }
     setError("");
-    const existing = reservationKey ? sessionStorage.getItem(reservationKey) : null;
-    if (existing) {
-      setReservationBookingId(existing);
-      return;
-    }
+    setReserveReady(false);
     let cancelled = false;
     (async () => {
+      setReserving(true);
       try {
+        if (reservationKey) {
+          try {
+            sessionStorage.removeItem(reservationKey);
+          } catch (_) {}
+        }
+        setReservationBookingId(null);
         const bookingId = await reserveSlot();
         if (cancelled) return;
-        if (!bookingId) return;
+        if (!bookingId) {
+          setError("Unable to reserve this slot. Please go back and choose another time.");
+          setReserveReady(false);
+          return;
+        }
+        setReserveReady(true);
       } catch (e) {
-        // If reservation fails (already reserved), show message and prevent paying.
         if (!cancelled) {
-          // Clear any stale reservation and show error.
           try {
             if (reservationKey) sessionStorage.removeItem(reservationKey);
           } catch (_) {}
           setReservationBookingId(null);
-          setError(e?.response?.data?.message || "Unable to reserve this slot. Please go back and choose another time.");
+          setReserveReady(false);
+          setError(
+            e?.response?.data?.message ||
+              "Unable to reserve this slot. Please go back and choose another time."
+          );
         }
+      } finally {
+        if (!cancelled) setReserving(false);
       }
     })();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rentalItemId, start_datetime, end_datetime, reservationKey, minBookingHours, startISO, endISO]);
+  }, [rentalItemId, start_datetime, end_datetime, reservationKey, minBookingHours, startISO, endISO, pricingBasis]);
 
   const handleContinue = async () => {
     setError("");
@@ -314,8 +359,12 @@ export default function RentalCheckoutPage() {
       setError("Invalid start/end date & time.");
       return;
     }
+    if (!reserveReady || !reservationBookingId) {
+      setError("This slot is not reserved yet. Please wait or go back and choose another time.");
+      return;
+    }
     const slotHours = diffHoursCeil(startISO, endISO);
-    if (slotHours < minBookingHours) {
+    if (pricingBasis !== "day" && slotHours < minBookingHours) {
       setError(
         `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
       );
@@ -347,7 +396,9 @@ export default function RentalCheckoutPage() {
         const shouldRetry =
           msg.toLowerCase().includes("expired") ||
           msg.toLowerCase().includes("not in a reservable state") ||
-          msg.toLowerCase().includes("booking not found");
+          msg.toLowerCase().includes("booking not found") ||
+          msg.toLowerCase().includes("fully booked") ||
+          msg.toLowerCase().includes("not available");
         if (shouldRetry) {
           try {
             if (reservationKey) sessionStorage.removeItem(reservationKey);
@@ -560,12 +611,16 @@ export default function RentalCheckoutPage() {
             </button>
             <button
               className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-60"
-              disabled={isPaying}
+              disabled={isPaying || reserving || !reserveReady || !reservationBookingId}
               onClick={handleContinue}
             >
-              {isPaying ? "Processing…" : "Continue"}
+              {reserving ? "Reserving slot…" : isPaying ? "Processing…" : "Continue"}
             </button>
           </div>
+
+          {reserving ? (
+            <div className="mt-3 text-sm text-gray-500">Checking availability and reserving your slot…</div>
+          ) : null}
 
           {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
         </div>
@@ -588,8 +643,8 @@ export default function RentalCheckoutPage() {
                 {[rental.brand, rental.subtitle].filter(Boolean).join(" • ")}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                ₹/hour (effective):{" "}
-                <span className="font-semibold text-gray-900">₹{money(displayPerHourWithAdmin)}</span>
+                {pricingBasis === "day" ? "₹/day" : "₹/hour"} (effective):{" "}
+                <span className="font-semibold text-gray-900">₹{money(displayRateWithAdmin)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Advance: <span className="font-semibold text-gray-900">₹{money(payAdvanceAmount)}</span>
@@ -625,7 +680,9 @@ export default function RentalCheckoutPage() {
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">
-                  {totalHours || "-"} h × ₹{money(displayPerHourWithAdmin)}
+                  {pricingBasis === "day"
+                    ? `${totalDays || "-"} day(s) × ₹${money(displayRateWithAdmin)}`
+                    : `${totalHours || "-"} h × ₹${money(displayRateWithAdmin)}`}
                 </span>
                 <span className="text-gray-900 font-semibold text-right">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
               </div>
@@ -674,7 +731,7 @@ export default function RentalCheckoutPage() {
               <p className="text-[11px] text-gray-500 pt-1 leading-snug">
                 Pay now + remaining equals your total (taxes included).
               </p>
-              {totalHours === 0 && (
+              {(pricingBasis === "day" ? totalDays === 0 : totalHours === 0) && (
                 <div className="text-xs text-red-600">
                   Invalid start/end date &amp; time (still showing deposit as booking amount).
                 </div>

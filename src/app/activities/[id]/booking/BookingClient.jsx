@@ -15,6 +15,7 @@ import {
 import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import { isActivityCloseoutDate, normalizeCloseoutDates } from "../closeoutUtils";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";
@@ -162,25 +163,6 @@ function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
   return merged;
 }
 
-function isCloseoutDate(closeouts, ymd, weekdayName) {
-  if (!Array.isArray(closeouts) || !ymd) return false;
-  return closeouts.some((c) => {
-    const start = c.start_date ?? c.startDate;
-    const end = c.end_date ?? c.endDate;
-    if (!isDateInRange(ymd, start, end)) return false;
-
-    const days = c.applicable_days || c.applicableDays || [];
-    if (!Array.isArray(days) || days.length === 0) return true;
-
-    const dayNames = days
-      .map((d) => d.day_name || d.day || d.name || d.weekday)
-      .filter(Boolean)
-      .map((s) => String(s).toLowerCase());
-    if (dayNames.length === 0) return true;
-    return dayNames.includes(String(weekdayName || "").toLowerCase());
-  });
-}
-
 function normalizeRateType(rateTypeRaw, { adultPrice, childPrice, fullRate } = {}) {
   const rt = String(rateTypeRaw || "pax").toLowerCase();
   const adult = Number(adultPrice || 0);
@@ -313,9 +295,14 @@ const BookingClient = ({ activityId }) => {
           const policies = Array.isArray(inner?.cancellation_policies)
             ? inner.cancellation_policies
             : [];
+          const closeoutDates = normalizeCloseoutDates(inner?.closeout_dates);
           if (!cancelled && details) {
-            details = { ...details, cancellation_policies: policies };
-          } else if (!cancelled && !details && policies.length) {
+            details = {
+              ...details,
+              cancellation_policies: policies,
+              closeout_dates: closeoutDates,
+            };
+          } else if (!cancelled && !details && (policies.length || closeoutDates.length)) {
             details = {
               id: activityId,
               title: inner?.activity?.name || "Activity",
@@ -325,6 +312,7 @@ const BookingClient = ({ activityId }) => {
               time_slot_based: Boolean(inner?.activity?.time_slot_based),
               time_slot_pricing: Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [],
               cancellation_policies: policies,
+              closeout_dates: closeoutDates,
             };
           }
         } catch {
@@ -1114,8 +1102,11 @@ const BookingClient = ({ activityId }) => {
                           minDate={new Date()}
                           filterDate={(date) => {
                             const ymd = toYmd(date);
-                            const weekdayName = new Date(date).toLocaleDateString("en-US", { weekday: "long" });
-                            return !isCloseoutDate(activityDetails?.closeout_dates, ymd, weekdayName);
+                            return !isActivityCloseoutDate(
+                              normalizeCloseoutDates(activityDetails?.closeout_dates),
+                              ymd,
+                              date
+                            );
                           }}
                           dateFormat="dd/MM/yyyy"
                           placeholderText="Choose a date"

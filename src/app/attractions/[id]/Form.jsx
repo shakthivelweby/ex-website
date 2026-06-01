@@ -7,6 +7,10 @@ import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getDetailsForBooking, getTicketPricesForDate } from "./service";
+import {
+  isActivityCloseoutDate,
+  normalizeCloseoutDates,
+} from "../../activities/[id]/closeoutUtils";
 
 /** Same rule as `attractions/[id]/page.js`: shown amount = base + admin % (no discount on detail). */
 function applyAdminChargeOnly(amountRaw, adminPctRaw) {
@@ -57,42 +61,18 @@ const Form = ({
     attractionDetails?.dateSpecificPricing || []
   );
 
-  // Function to check if a date should be disabled
+  // Function to check if a date should be disabled (closeout)
   const isDateDisabled = (date) => {
-    // Use local date format to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
 
-    // Check closeout_dates for date range restrictions
-    if (
-      attractionDetails?.closeoutDates &&
-      attractionDetails.closeoutDates.length > 0
-    ) {
-      for (const closeout of attractionDetails.closeoutDates) {
-        // Check date range restrictions
-        if (closeout.start_date && closeout.end_date) {
-          if (dateStr >= closeout.start_date && dateStr <= closeout.end_date) {
-            return true;
-          }
-        }
-
-        // Check day-of-week restrictions from applicable_days
-        if (closeout.applicable_days) {
-          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-          const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-          const dayName = dayNames[dayOfWeek];
-
-          // If the day is set to 0 in applicable_days, disable it
-          if (closeout.applicable_days[dayName] === 0) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
+    return isActivityCloseoutDate(
+      normalizeCloseoutDates(attractionDetails?.closeoutDates || []),
+      dateStr,
+      date
+    );
   };
 
   // Initialize with pre-loaded data on component mount

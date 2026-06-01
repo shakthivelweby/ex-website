@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import Accordion from "@/components/Accordion";
 import Footer from "@/components/Footer/Footer";
 import dynamic from 'next/dynamic';
+import SupplierDashboardPreview from '@/components/supplier/SupplierDashboardPreview';
 
 const SupplierHeroCarousel = dynamic(() => import('@/components/SupplierHeroCarousel'), { ssr: false });
 
@@ -231,29 +232,21 @@ export default function SupplierPage() {
                             viewport={{ once: true }}
                             transition={{ duration: 0.5 }}
                             whileHover={{ y: -5 }}
-                            className="col-span-1 lg:col-span-2 bg-black rounded-3xl p-6 md:p-12 text-white relative overflow-hidden flex flex-col justify-between"
+                            className="col-span-1 lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-900 to-teal-950 rounded-3xl p-6 md:p-10 text-white relative overflow-hidden"
                         >
-                            <div className="relative z-10 max-w-md">
-                                <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-6 text-2xl">
-                                    <i className="fi fi-rr-dashboard"></i>
+                            <div className="absolute top-0 right-0 w-72 h-72 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
+                            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                                <div>
+                                    <div className="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center mb-6 text-2xl">
+                                        <i className="fi fi-rr-dashboard"></i>
+                                    </div>
+                                    <h3 className="text-2xl md:text-3xl font-bold mb-4">Comprehensive Dashboard</h3>
+                                    <p className="text-slate-300 leading-relaxed">
+                                        Track bookings, collected revenue, pending payouts, and performance by service — the same view you get after signing in to the supplier portal.
+                                    </p>
                                 </div>
-                                <h3 className="text-2xl md:text-3xl font-bold mb-4">Comprehensive Dashboard</h3>
-                                <p className="text-gray-400 mb-8 leading-relaxed">
-                                    Track your performance, view upcoming bookings, and analyze your revenue growth all in one intuitive interface. Get real-time insights to make better business decisions.
-                                </p>
-                            </div>
-                            <div className="absolute right-0 bottom-0 top-0 w-1/2 opacity-20 lg:opacity-100 lg:w-[45%] bg-gradient-to-l from-primary-900/50 to-transparent">
-                                {/* Abstract UI representation */}
-                                <div className="absolute right-[-40px] top-[20%] w-full h-full bg-slate-800 rounded-tl-3xl border-t border-l border-slate-700 p-6">
-                                    <div className="flex gap-4 mb-6">
-                                        <div className="w-1/2 h-24 bg-slate-700/50 rounded-xl"></div>
-                                        <div className="w-1/2 h-24 bg-slate-700/50 rounded-xl"></div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                        <div className="h-12 bg-slate-700/30 rounded-lg w-full"></div>
-                                    </div>
+                                <div className="w-full lg:translate-x-2">
+                                    <SupplierDashboardPreview className="w-full shadow-teal-900/30" />
                                 </div>
                             </div>
                         </motion.div>

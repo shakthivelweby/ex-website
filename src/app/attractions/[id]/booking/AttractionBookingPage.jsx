@@ -12,6 +12,10 @@ import {
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+import {
+  isActivityCloseoutDate,
+  normalizeCloseoutDates,
+} from "../../activities/[id]/closeoutUtils";
 
 function attractionAdminPct(ticket) {
   return Math.max(0, Number(ticket?.admin_charge ?? 0));
@@ -72,37 +76,16 @@ const AttractionBookingPage = ({
 
   // Function to check if a date should be disabled (same as Form.jsx)
   const isDateDisabled = (date) => {
-    // Use local date format to avoid timezone issues
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
 
-    // Check closeout_dates for date range restrictions
-    if (closeoutDates && closeoutDates.length > 0) {
-      for (const closeout of closeoutDates) {
-        // Check date range restrictions
-        if (closeout.start_date && closeout.end_date) {
-          if (dateStr >= closeout.start_date && dateStr <= closeout.end_date) {
-            return true;
-          }
-        }
-
-        // Check day-of-week restrictions from applicable_days
-        if (closeout.applicable_days) {
-          const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-          const dayNames = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-          const dayName = dayNames[dayOfWeek];
-
-          // If the day is set to 0 in applicable_days, disable it
-          if (closeout.applicable_days[dayName] === 0) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
+    return isActivityCloseoutDate(
+      normalizeCloseoutDates(closeoutDates),
+      dateStr,
+      date
+    );
   };
 
   // Initialise visit date from localStorage (detail page) or today, then load tickets for that date.

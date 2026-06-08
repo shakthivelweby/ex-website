@@ -1,6 +1,6 @@
 import ActivityDetailClient from "./clientWrapper";
 import { getActivityDetails, getActivityGallery } from "../service";
-import { normalizeCloseoutDates } from "./closeoutUtils";
+import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
 
 // Force dynamic rendering to prevent build-time API calls
 export const dynamic = "force-dynamic";

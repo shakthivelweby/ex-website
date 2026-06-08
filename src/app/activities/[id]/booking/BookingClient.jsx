@@ -15,7 +15,7 @@ import {
 import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
-import { isActivityCloseoutDate, normalizeCloseoutDates } from "../closeoutUtils";
+import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";

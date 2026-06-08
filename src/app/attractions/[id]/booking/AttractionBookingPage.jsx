@@ -15,7 +15,7 @@ import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
-} from "../../activities/[id]/closeoutUtils";
+} from "@/utils/closeoutUtils";
 
 function attractionAdminPct(ticket) {
   return Math.max(0, Number(ticket?.admin_charge ?? 0));

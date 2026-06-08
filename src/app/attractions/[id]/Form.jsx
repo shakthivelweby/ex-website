@@ -10,7 +10,7 @@ import { getDetailsForBooking, getTicketPricesForDate } from "./service";
 import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
-} from "../../activities/[id]/closeoutUtils";
+} from "@/utils/closeoutUtils";
 
 /** Same rule as `attractions/[id]/page.js`: shown amount = base + admin % (no discount on detail). */
 function applyAdminChargeOnly(amountRaw, adminPctRaw) {

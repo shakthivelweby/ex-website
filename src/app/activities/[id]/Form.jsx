@@ -6,7 +6,7 @@ import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { isActivityCloseoutDate, normalizeCloseoutDates } from "./closeoutUtils";
+import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
 
 function formatTime(timeString) {
   if (!timeString) return "TBD";

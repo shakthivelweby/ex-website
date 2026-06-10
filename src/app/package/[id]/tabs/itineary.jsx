@@ -1,4 +1,5 @@
 import Accordion from "@/components/Accordion";
+import { sanitizeRichText } from "@/utils/sanitizeRichText";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import Image from "next/image";
@@ -19,7 +20,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
 
   return (
     <div
-      className={`prose max-w-none text-gray-800 ${
+      className={`prose max-w-none w-full min-w-0 text-gray-800 ${
         activeTab === "itinerary" ? "block" : "hidden"
       }`}
     >
@@ -37,7 +38,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
               <div>
                 <div
                   className="itineary-description render-html"
-                  dangerouslySetInnerHTML={{ __html: description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(description) }}
                 />
               </div>
 

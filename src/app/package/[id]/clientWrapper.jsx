@@ -420,10 +420,10 @@ export default function ClientWrapper({
       </Popup>
 
       <main className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-8 pb-24 md:pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-8 pb-44 md:pb-8">
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left content */}
-            <div className="w-full lg:w-2/3">
+            <div className="w-full min-w-0 lg:w-2/3">
               {/* Image Gallery */}
               <div className="mb-3 overflow-hidden">
                 {/* Mobile View */}
@@ -642,7 +642,7 @@ export default function ClientWrapper({
             </div>
 
             {/* Right side booking form */}
-            <div className="w-full lg:w-1/3 hidden lg:block">
+            <div className="w-full lg:w-1/3 lg:shrink-0 hidden lg:block">
               <Form
                 date={date}
                 packageData={packageData}

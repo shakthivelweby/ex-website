@@ -153,7 +153,7 @@ const Tab = ({ packageData, selectedStayCategory }) => {
         </div>
       </div>
       {/* tab content */}
-      <div className="tab-content pt-4 text-sm">
+      <div className="tab-content pt-4 pb-8 lg:pb-4 text-sm min-w-0 w-full max-w-full">
         <GeneralTab packageData={packageData} activeTab={activeTab} />
         <StayTab
           packageData={packageData}

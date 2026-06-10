@@ -1,4 +1,5 @@
 import Accordion from "@/components/Accordion";
+import { sanitizeRichText } from "@/utils/sanitizeRichText";
 
 function GeneralTab({ packageData, activeTab }) {
   const {
@@ -18,15 +19,15 @@ function GeneralTab({ packageData, activeTab }) {
 
   return (
     <div
-      className={`prose max-w-none text-gray-800 ${
+      className={`w-full max-w-full min-w-0 text-gray-800 leading-relaxed ${
         activeTab === "details" ? "block" : "hidden"
       }`}
     >
       {/* Main description */}
       {about && (
         <div
-          className="mb-4 render-html"
-          dangerouslySetInnerHTML={{ __html: about }}
+          className="mb-4 render-html w-full max-w-full"
+          dangerouslySetInnerHTML={{ __html: sanitizeRichText(about) }}
         />
       )}
 
@@ -121,7 +122,7 @@ function GeneralTab({ packageData, activeTab }) {
       <Accordion title="Additional information" defaultOpen={false}>
         <div
           className="text-gray-800 render-html"
-          dangerouslySetInnerHTML={{ __html: additional_info }}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichText(additional_info) }}
         />
       </Accordion>
 

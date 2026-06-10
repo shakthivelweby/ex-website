@@ -1,3 +1,5 @@
+import { sanitizeRichText } from "@/utils/sanitizeRichText";
+
 const TermsConditionTab = ({ packageData, activeTab }) => {
   const { terms_and_conditions } = packageData.data;
   return (
@@ -11,7 +13,7 @@ const TermsConditionTab = ({ packageData, activeTab }) => {
       </h3>
       <div className="render-html">
         {terms_and_conditions && (
-          <div dangerouslySetInnerHTML={{ __html: terms_and_conditions }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(terms_and_conditions) }} />
         )}
       </div>
     </div>

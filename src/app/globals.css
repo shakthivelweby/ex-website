@@ -455,14 +455,65 @@ select {
 
 /* prefixes */
 
-/* TinyMCE Content Formatting */
+/* Rich text content (Quill / legacy TinyMCE) */
 .render-html {
   color: #333;
-  line-height: 1.6;
+  line-height: 1.75;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: normal;
+  word-wrap: normal;
+  hyphens: none;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.render-html p,
+.render-html div,
+.render-html span,
+.render-html li,
+.render-html h1,
+.render-html h2,
+.render-html h3,
+.render-html h4,
+.render-html h5,
+.render-html h6 {
+  max-width: 100%;
+  width: auto;
+  box-sizing: border-box;
+  overflow-wrap: normal;
+  word-break: normal;
+  word-wrap: normal;
+  hyphens: none;
+  white-space: normal !important;
 }
 
 .render-html p {
   margin-bottom: 1rem;
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+.render-html .ql-align-left {
+  text-align: left !important;
+}
+
+.render-html .ql-align-center {
+  text-align: center !important;
+}
+
+.render-html .ql-align-right {
+  text-align: right !important;
+}
+
+.render-html .ql-align-justify,
+.render-html [style*="text-align: justify"],
+.render-html [style*="text-align:justify"] {
+  text-align: justify !important;
+  text-justify: inter-word;
 }
 
 .render-html h1,
@@ -516,6 +567,11 @@ select {
   max-width: 100%;
   height: auto;
   margin: 1rem 0;
+}
+
+.render-html iframe,
+.render-html video {
+  max-width: 100%;
 }
 
 .render-html table {

@@ -92,6 +92,17 @@ function restoreParagraphBreaks(html) {
   return html.replace(new RegExp(PARAGRAPH_BREAK, "g"), "</p><p>");
 }
 
+/** Collapse consecutive empty Quill spacer paragraphs before display. */
+function collapseSpacerParagraphs(html) {
+  let result = html
+    .replace(/<p(?:\s[^>]*)?>\s*<\/p>/gi, "<p><br></p>")
+    .replace(/<p(?:\s[^>]*)?>\s*<br\s*\/?>\s*<\/p>/gi, "<p><br></p>");
+
+  result = result.replace(/(?:<p><br><\/p>\s*){2,}/gi, "<p><br></p>");
+
+  return result;
+}
+
 /** Prepare Quill/TinyMCE HTML for display inside a constrained column. */
 export function sanitizeRichText(html) {
   if (!html || typeof html !== "string") return "";
@@ -108,6 +119,7 @@ export function sanitizeRichText(html) {
   cleaned = normalizeLineBreaks(cleaned);
   cleaned = mergeSplitParagraphs(cleaned);
   cleaned = restoreParagraphBreaks(cleaned);
+  cleaned = collapseSpacerParagraphs(cleaned);
 
   return cleaned.trim();
 }

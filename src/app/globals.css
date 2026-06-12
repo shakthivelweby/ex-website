@@ -492,9 +492,23 @@ select {
 }
 
 .render-html p {
-  margin-bottom: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
   text-align: justify;
   text-justify: inter-word;
+}
+
+.render-html p:last-child {
+  margin-bottom: 0;
+}
+
+/* Quill blank-line paragraphs — line height only, no stacked margins */
+.render-html p:empty,
+.render-html p:has(> br:only-child) {
+  margin-top: 0;
+  margin-bottom: 0;
+  min-height: 1.25em;
+  line-height: 1.25;
 }
 
 .render-html .ql-align-left {

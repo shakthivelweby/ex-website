@@ -461,6 +461,7 @@ select {
   line-height: 1.75;
   width: 100%;
   max-width: 100%;
+  margin-bottom: 0;
   box-sizing: border-box;
   overflow: visible;
   overflow-wrap: normal;
@@ -493,16 +494,12 @@ select {
 
 .render-html p {
   margin-top: 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   text-align: justify;
   text-justify: inter-word;
 }
 
-.render-html p:last-child {
-  margin-bottom: 0;
-}
-
-/* Quill blank-line paragraphs — line height only, no stacked margins */
+/* Quill blank-line paragraphs */
 .render-html p:empty,
 .render-html p:has(> br:only-child) {
   margin-top: 0;
@@ -544,7 +541,7 @@ select {
 
 .render-html ul,
 .render-html ol {
-  margin-bottom: 1rem;
+  margin-bottom: 0rem;
   padding-left: 2rem;
 }
 

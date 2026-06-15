@@ -14,6 +14,22 @@ export function isOnlineBookingAllowed(selectedDate) {
   return getDaysUntilDate(selectedDate) > MIN_BOOKING_LEAD_DAYS;
 }
 
+/** First calendar date on which online booking is allowed (today + 11 days). */
+export function getFirstBookableDate() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + MIN_BOOKING_LEAD_DAYS + 1);
+  return date;
+}
+
+export function formatBookableFromDate(date) {
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export function shouldShowEnquiryOnly(selectedDate, rateAvailable) {
   return !isOnlineBookingAllowed(selectedDate) || !rateAvailable;
 }

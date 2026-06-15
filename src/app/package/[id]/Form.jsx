@@ -17,6 +17,8 @@ import {
   isOnlineBookingAllowed,
   shouldShowEnquiryOnly,
   MIN_BOOKING_LEAD_DAYS,
+  getFirstBookableDate,
+  formatBookableFromDate,
 } from "@/utils/packageBookingLeadTime";
 
 /**
@@ -199,7 +201,7 @@ const Form = ({
   };
 
   // Fetch calendar rates using React Query
-  const { data: calendarRates, isLoading: calendarRatesLoading } = useQuery({
+  const { data: calendarRates } = useQuery({
     queryKey: [
       "package-calendar-rates",
       packageData.data.id,
@@ -218,18 +220,8 @@ const Form = ({
     enabled: !!selectedDate,
   });
 
-  console.log(calendarRates);
-
-  // Process calendar rates for display
-  const ratesByDate = useMemo(() => {
-    if (!calendarRates?.data) return {};
-    return calendarRates.data.reduce((acc, rate) => {
-      if (rate.adultPrice !== null) {
-        acc[rate.date] = parseFloat(rate.adultPrice).toFixed(2);
-      }
-      return acc;
-    }, {});
-  }, [calendarRates]);
+  const firstBookableDate = useMemo(() => getFirstBookableDate(), []);
+  const bookableFromLabel = formatBookableFromDate(firstBookableDate);
 
   // Function to check if a date should be disabled
   const isDateDisabled = (date) => {
@@ -238,6 +230,52 @@ const Form = ({
       (rate) => rate.date === formattedDate
     );
     return rateData?.stopSale === true;
+  };
+
+  const renderCalendarDayContents = (day, date) => {
+    const dateStr = formatDate(date);
+    const rateData = calendarRates?.data?.find((rate) => rate.date === dateStr);
+    const isFirstBookable = dateStr === formatDate(firstBookableDate);
+
+    let subLabel = null;
+    let subColor = "#059669";
+
+    if (rateData?.stopSale) {
+      subLabel = "N/A";
+      subColor = "#EF4444";
+    } else if (isFirstBookable) {
+      subLabel = bookableFromLabel;
+      subColor = "#059669";
+    } else if (!isOnlineBookingAllowed(date)) {
+      subLabel = "Enquiry";
+      subColor = "#D97706";
+    } else {
+      subLabel = "Book";
+      subColor = "#059669";
+    }
+
+    return (
+      <div style={{ textAlign: "center", position: "relative" }}>
+        <div>{day}</div>
+        {subLabel && (
+          <div
+            style={{
+              fontSize: isFirstBookable ? "0.55em" : "0.65em",
+              color: subColor,
+              position: "absolute",
+              left: 0,
+              top: "23px",
+              textAlign: "center",
+              width: "100%",
+              fontWeight: "500",
+              lineHeight: 1.1,
+            }}
+          >
+            {subLabel}
+          </div>
+        )}
+      </div>
+    );
   };
 
   /**
@@ -556,9 +594,14 @@ const Form = ({
 
         {/* Date picker section */}
         <div className="mb-4 bg-white rounded-xl p-4">
-          <label className="block text-sm font-medium text-gray-800 mb-2">
+          <label className="block text-sm font-medium text-gray-800 mb-1">
             Starting Date
           </label>
+          <p className="text-xs text-gray-500 mb-2">
+            Online booking from{" "}
+            <span className="font-medium text-green-700">{bookableFromLabel}</span>
+            . Dates before that are enquiry only.
+          </p>
           <div className="relative">
             {isMobilePopup ? (
               // Inline calendar for mobile
@@ -574,53 +617,7 @@ const Form = ({
                   inline
                   minDate={new Date()}
                   filterDate={(date) => !isDateDisabled(date)}
-                  renderDayContents={(day, date) => {
-                    const dateStr = formatDate(date);
-                    const rateData = calendarRates?.data?.find(
-                      (rate) => rate.date === dateStr
-                    );
-                    const rate = ratesByDate[dateStr];
-                    return (
-                      <div
-                        style={{ textAlign: "center", position: "relative" }}
-                      >
-                        <div>{day}</div>
-                        {rateData?.stopSale ? (
-                          <div
-                            style={{
-                              fontSize: "0.65em",
-                              color: "#EF4444",
-                              position: "absolute",
-                              left: 0,
-                              top: "23px",
-                              textAlign: "center",
-                              width: "100%",
-                              fontWeight: "500",
-                            }}
-                          >
-                            N/A
-                          </div>
-                        ) : (
-                          rate && (
-                            <div
-                              style={{
-                                fontSize: "0.7em",
-                                color: "#FF385C",
-                                position: "absolute",
-                                left: 0,
-                                top: "23px",
-                                textAlign: "center",
-                                width: "100%",
-                                fontWeight: "500",
-                              }}
-                            >
-                              ₹{rate}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    );
-                  }}
+                  renderDayContents={renderCalendarDayContents}
                 />
               </div>
             ) : (
@@ -638,53 +635,7 @@ const Form = ({
                   dateFormat="dd/MM/yyyy"
                   filterDate={(date) => !isDateDisabled(date)}
                   popperPlacement="bottom-start"
-                  renderDayContents={(day, date) => {
-                    const dateStr = formatDate(date);
-                    const rateData = calendarRates?.data?.find(
-                      (rate) => rate.date === dateStr
-                    );
-                    const rate = ratesByDate[dateStr];
-                    return (
-                      <div
-                        style={{ textAlign: "center", position: "relative" }}
-                      >
-                        <div>{day}</div>
-                        {rateData?.stopSale ? (
-                          <div
-                            style={{
-                              fontSize: "0.65em",
-                              color: "#057676",
-                              position: "absolute",
-                              left: 0,
-                              top: "23px",
-                              textAlign: "center",
-                              width: "100%",
-                              fontWeight: "500",
-                            }}
-                          >
-                            N/A
-                          </div>
-                        ) : (
-                          rate && (
-                            <div
-                              style={{
-                                fontSize: "0.7em",
-                                color: "#057676",
-                                position: "absolute",
-                                left: 0,
-                                top: "23px",
-                                textAlign: "center",
-                                width: "100%",
-                                fontWeight: "500",
-                              }}
-                            >
-                              ₹{rate}
-                            </div>
-                          )
-                        )}
-                      </div>
-                    );
-                  }}
+                  renderDayContents={renderCalendarDayContents}
                 />
                 <div className="absolute right-0 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-800">
                   <i className="fi fi-rr-calendar text-lg"></i>

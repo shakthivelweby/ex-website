@@ -1004,10 +1004,10 @@ const BookingClient = ({ activityId }) => {
 
 
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
 
           {/* Booking Form */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 max-w-full">
             <form onSubmit={handleSubmit} className="space-y-6">
               {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
@@ -1378,7 +1378,7 @@ const BookingClient = ({ activityId }) => {
           </div>
 
           {/* Booking Summary - Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="min-w-0 lg:shrink-0">
             <div className="bg-white rounded-xl p-6 shadow-sm sticky top-6">
               <h2 className="text-xl font-medium text-gray-900 mb-4 tracking-tight">
                 Booking Summary

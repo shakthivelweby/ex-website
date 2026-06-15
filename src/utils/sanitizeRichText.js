@@ -92,6 +92,14 @@ function restoreParagraphBreaks(html) {
   return html.replace(new RegExp(PARAGRAPH_BREAK, "g"), "</p><p>");
 }
 
+/** Normalize any CMS value to a safe HTML string for display. */
+export function prepareRichHtml(html) {
+  if (html == null || html === false) return "";
+  const raw = typeof html === "string" ? html : String(html);
+  const trimmed = raw.trim();
+  return trimmed ? sanitizeRichText(trimmed) : "";
+}
+
 /** Prepare Quill/TinyMCE HTML for display inside a constrained column. */
 export function sanitizeRichText(html) {
   if (!html || typeof html !== "string") return "";

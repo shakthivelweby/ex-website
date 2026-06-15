@@ -50,7 +50,7 @@ const StayTab = ({ packageData, activeTab, selectedStayCategory }) => {
 
   return (
     <div
-      className={`prose max-w-none text-gray-800 ${
+      className={`w-full min-w-0 max-w-full text-gray-800 ${
         activeTab === "stay" ? "block" : "hidden"
       }`}
     >

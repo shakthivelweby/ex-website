@@ -8,6 +8,8 @@ import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
 import Form from "./Form";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import RichTextContent from "@/components/common/RichTextContent";
+import DetailPageLayout from "@/components/layout/DetailPageLayout";
 
 const ActivityDetailPage = ({ activityDetails }) => {
   const router = useRouter();
@@ -426,11 +428,12 @@ const ActivityDetailPage = ({ activityDetails }) => {
                     <i className="fi fi-rr-info text-primary-600"></i>
                     Brief Details
                   </h3>
-                  <div
-                    className="text-sm text-gray-600 leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: selectedTicketForDetails.briefDetails || getDummyBriefDetails(selectedTicketForDetails),
-                    }}
+                  <RichTextContent
+                    html={
+                      selectedTicketForDetails.briefDetails ||
+                      getDummyBriefDetails(selectedTicketForDetails)
+                    }
+                    className="text-gray-600"
                   />
                 </div>
 
@@ -472,11 +475,12 @@ const ActivityDetailPage = ({ activityDetails }) => {
                     <i className="fi fi-rr-calendar-check text-primary-600"></i>
                     Itinerary
                   </h3>
-                  <div
-                    className="text-sm text-gray-600 leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: selectedTicketForDetails.itinerary || getDummyItinerary(selectedTicketForDetails),
-                    }}
+                  <RichTextContent
+                    html={
+                      selectedTicketForDetails.itinerary ||
+                      getDummyItinerary(selectedTicketForDetails)
+                    }
+                    className="text-gray-600"
                   />
                 </div>
 
@@ -486,11 +490,12 @@ const ActivityDetailPage = ({ activityDetails }) => {
                     <i className="fi fi-rr-shield-exclamation text-orange-600"></i>
                     Cancellation Policy
                   </h3>
-                  <div
-                    className="text-sm text-gray-600 leading-relaxed"
-                    dangerouslySetInnerHTML={{
-                      __html: selectedTicketForDetails.cancellationPolicy || getDummyCancellationPolicy(selectedTicketForDetails),
-                    }}
+                  <RichTextContent
+                    html={
+                      selectedTicketForDetails.cancellationPolicy ||
+                      getDummyCancellationPolicy(selectedTicketForDetails)
+                    }
+                    className="text-gray-600"
                   />
                 </div>
               </div>
@@ -767,10 +772,22 @@ const ActivityDetailPage = ({ activityDetails }) => {
             </div>
           </div>
 
-          {/* Activity Details and Form in Flex Layout */}
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Column - Content */}
-            <div className="w-full lg:w-2/3 space-y-8">
+          <DetailPageLayout
+            containerClassName="!px-0 pb-0"
+            stickyTop="top-20"
+            sidebar={
+              <Form
+                activityDetails={activityDetails}
+                enquireOnly={enquireOnly}
+                selectedTicket={
+                  activityDetails.ticketOptions?.find(
+                    (ticket) => ticket.id === selectedTicketId
+                  ) || null
+                }
+              />
+            }
+          >
+            <div className="space-y-8">
               {/* Activity Details Sections */}
               <div>
                 {/* Activity Guide */}
@@ -833,11 +850,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
                   </h2>
                   <div className="text-gray-700 leading-relaxed text-sm">
                     {activityDetails.description ? (
-                      <div
-                        dangerouslySetInnerHTML={{
-                          __html: activityDetails.description,
-                        }}
-                      />
+                      <RichTextContent html={activityDetails.description} />
                     ) : (
                       <p>No description available.</p>
                     )}
@@ -1213,35 +1226,13 @@ const ActivityDetailPage = ({ activityDetails }) => {
                       title="Activity Terms & Conditions"
                       defaultOpen={true}
                     >
-                      <div className="space-y-3">
-                        <div
-                          className="text-gray-600 text-sm"
-                          dangerouslySetInnerHTML={{
-                            __html: activityDetails.terms,
-                          }}
-                        />
-                      </div>
+                      <RichTextContent html={activityDetails.terms} className="text-gray-600" />
                     </Accordion>
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Desktop Right Column - Activity Details */}
-            <div className="w-full lg:w-1/3 hidden lg:block">
-              <div className="lg:sticky lg:top-20">
-                <Form 
-                  activityDetails={activityDetails} 
-                  enquireOnly={enquireOnly}
-                  selectedTicket={
-                    activityDetails.ticketOptions?.find(
-                      ticket => ticket.id === selectedTicketId
-                    ) || null
-                  }
-                />
-              </div>
-            </div>
-          </div>
+          </DetailPageLayout>
         </div>
       </div>
 

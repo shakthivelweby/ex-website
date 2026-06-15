@@ -591,8 +591,8 @@ export default function RentalBookingClient() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4 lg:mt-8">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-4 lg:mt-8">
+          <div className="min-w-0 max-w-full">
             <div className="bg-white rounded-lg shadow border overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200">
                 <h2 className="text-base font-medium text-gray-800">Select dates &amp; times</h2>
@@ -694,7 +694,7 @@ export default function RentalBookingClient() {
             </div>
           </div>
 
-          <div className="hidden lg:block lg:col-span-1">
+          <div className="hidden min-w-0 lg:block lg:shrink-0">
             <div className="sticky top-6 space-y-4">
               <div className="bg-white rounded-lg shadow border p-4">
                 <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3 bg-gray-100">

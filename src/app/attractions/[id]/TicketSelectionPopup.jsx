@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Popup from "@/components/Popup";
+import RichTextContent from "@/components/common/RichTextContent";
 import { getDetailsForBooking } from "./service";
 
 const TicketSelectionPopup = ({
@@ -209,11 +210,9 @@ const TicketSelectionPopup = ({
                             </span>
                           </div>
                           {ticketPrice.description && (
-                            <div
-                              className="text-xs text-gray-600 mt-2"
-                              dangerouslySetInnerHTML={{
-                                __html: ticketPrice.description,
-                              }}
+                            <RichTextContent
+                              html={ticketPrice.description}
+                              className="mt-2 text-xs text-gray-600"
                             />
                           )}
                         </div>

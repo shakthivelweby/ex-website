@@ -8,6 +8,8 @@ import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
 import Form from "./Form";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import RichTextContent from "@/components/common/RichTextContent";
+import DetailPageLayout from "@/components/layout/DetailPageLayout";
 
 const EventDetailPage = ({ eventDetails }) => {
   const router = useRouter();
@@ -59,10 +61,12 @@ const EventDetailPage = ({ eventDetails }) => {
 
       {/* Hero Section */}
       <div className="w-full bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-6 mt-10">
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Column - Content */}
-            <div className="w-full lg:w-2/3 space-y-8">
+        <DetailPageLayout
+          containerClassName="mt-10"
+          stickyTop="top-20"
+          sidebar={<Form eventDetails={eventDetails} enquireOnly={enquireOnly} />}
+        >
+          <div className="space-y-8">
               {/* Image */}
               <div className="relative aspect-[4/3] w-full h-[500px] rounded-xl overflow-hidden">
                 {eventDetails.image ? (
@@ -88,13 +92,7 @@ const EventDetailPage = ({ eventDetails }) => {
                   <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
                     About the Event
                   </h2>
-                  <div className="text-gray-700 leading-relaxed text-sm">
-                    <div
-                      dangerouslySetInnerHTML={{
-                        __html: eventDetails.description,
-                      }}
-                    />
-                  </div>
+                  <RichTextContent html={eventDetails.description} />
                 </div>
 
                 {/* Gallery Section */}
@@ -284,28 +282,13 @@ const EventDetailPage = ({ eventDetails }) => {
                       title="Event Terms & Conditions"
                       defaultOpen={true}
                     >
-                      <div className="space-y-3">
-                        <div
-                          className="text-gray-600 text-sm"
-                          dangerouslySetInnerHTML={{
-                            __html: eventDetails.terms,
-                          }}
-                        />
-                      </div>
+                      <RichTextContent html={eventDetails.terms} />
                     </Accordion>
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Desktop Right Column - Event Details */}
-            <div className="w-full lg:w-1/3 hidden lg:block">
-              <div className="lg:sticky lg:top-20">
-                <Form eventDetails={eventDetails} enquireOnly={enquireOnly} />
-              </div>
-            </div>
           </div>
-        </div>
+        </DetailPageLayout>
       </div>
 
       {/* Fixed Mobile Booking Button */}

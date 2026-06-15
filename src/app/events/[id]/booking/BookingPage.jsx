@@ -6,6 +6,7 @@ import Image from "next/image";
 import { getDetailsForBooking } from "../service";
 import { eventInfo } from "../service";
 import Button from "@/components/common/Button";
+import RichTextContent from "@/components/common/RichTextContent";
 import isLogin from "@/utils/isLogin";
 
 const BookingPage = ({ eventId }) => {
@@ -330,9 +331,9 @@ const BookingPage = ({ eventId }) => {
             </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-10">
           {/* Left Column - Ticket Selection */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 max-w-full">
             {currentStep === 1 ? (
               <div className="bg-white rounded-lg shadow border">
                 <div className="px-4 py-3 border-b border-gray-200">
@@ -593,12 +594,9 @@ const BookingPage = ({ eventId }) => {
 
                                                 {/* Description */}
                                                 {ticketPrice.description && (
-                                                  <div
-                                                    className="text-xs text-gray-600 leading-relaxed"
-                                                    dangerouslySetInnerHTML={{
-                                                      __html:
-                                                        ticketPrice.description,
-                                                    }}
+                                                  <RichTextContent
+                                                    html={ticketPrice.description}
+                                                    className="text-xs leading-relaxed text-gray-600"
                                                   />
                                                 )}
                                               </div>
@@ -749,7 +747,7 @@ const BookingPage = ({ eventId }) => {
           </div>
 
           {/* Right Column - Event Details & Summary - Hidden on mobile */}
-          <div className="hidden lg:block lg:col-span-1">
+          <div className="hidden min-w-0 lg:block lg:shrink-0">
             <div className="sticky top-6 space-y-4">
               {/* Event Details Card */}
               <div className="bg-white rounded-lg shadow border p-4">

@@ -9,23 +9,8 @@ import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import ShareOptions from "@/components/ShareOptions/ShareOptions";
-
-const ClientOnlyHtml = ({ html, className }) => {
-  const [mountedHtml, setMountedHtml] = useState("");
-
-  useEffect(() => {
-    setMountedHtml(typeof html === "string" ? html : "");
-  }, [html]);
-
-  return (
-    <div
-      className={className}
-      // Render HTML only after hydration to avoid SSR/client mismatch
-      dangerouslySetInnerHTML={{ __html: mountedHtml }}
-      suppressHydrationWarning
-    />
-  );
-};
+import DetailPageLayout from "@/components/layout/DetailPageLayout";
+import RichTextContent from "@/components/common/RichTextContent";
 
 const AttractionDetailClient = ({ attractionDetails }) => {
   const router = useRouter();
@@ -113,10 +98,16 @@ const AttractionDetailClient = ({ attractionDetails }) => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+      <DetailPageLayout
+        sidebar={
+          <Form
+            attractionDetails={attractionDetails}
+            selectedTickets={selectedTickets}
+            totalPrice={totalPrice}
+          />
+        }
+      >
+        <div className="space-y-6">
             {/* Hero Image */}
             <div className="relative">
               <div className="aspect-video rounded-2xl overflow-hidden bg-gray-200">
@@ -143,12 +134,7 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
                 About
               </h2>
-              <div className="prose prose-gray max-w-none">
-                <ClientOnlyHtml
-                  className="text-gray-700 leading-relaxed text-sm"
-                  html={attractionDetails.description}
-                />
-              </div>
+              <RichTextContent html={attractionDetails.description} />
             </div>
 
             {/* Gallery */}
@@ -337,31 +323,12 @@ const AttractionDetailClient = ({ attractionDetails }) => {
                 </h2>
 
                 <Accordion
-                  children={
-                    <div
-                      className="text-gray-700"
-                      dangerouslySetInnerHTML={{
-                        __html: attractionDetails.terms,
-                      }}
-                    ></div>
-                  }
+                  children={<RichTextContent html={attractionDetails.terms} />}
                 />
               </div>
             )}
-          </div>
-
-          {/* Sidebar - Booking Form */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24">
-              <Form
-                attractionDetails={attractionDetails}
-                selectedTickets={selectedTickets}
-                totalPrice={totalPrice}
-              />
-            </div>
-          </div>
         </div>
-      </div>
+      </DetailPageLayout>
 
       {/* Ticket Selection Popup */}
       <TicketSelectionPopup

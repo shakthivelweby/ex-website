@@ -10,6 +10,7 @@ import {
   getDetailsForBooking,
 } from "../service";
 import Button from "@/components/common/Button";
+import RichTextContent from "@/components/common/RichTextContent";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
@@ -501,9 +502,9 @@ const AttractionBookingPage = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-10">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-10">
           {/* Left Column - Ticket Selection */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 max-w-full">
             {currentStep === 1 ? (
               <div className="bg-white rounded-lg shadow border">
                 <div className="p-4 space-y-6">
@@ -655,11 +656,9 @@ const AttractionBookingPage = ({
 
                                   {/* Description */}
                                   {ticket.description && (
-                                    <div
-                                      className="text-xs text-gray-600 leading-relaxed"
-                                      dangerouslySetInnerHTML={{
-                                        __html: ticket.description,
-                                      }}
+                                    <RichTextContent
+                                      html={ticket.description}
+                                      className="text-xs leading-relaxed text-gray-600"
                                     />
                                   )}
                                 </div>
@@ -1057,7 +1056,7 @@ const AttractionBookingPage = ({
           </div>
 
           {/* Right Column - Attraction Details & Summary - Hidden on mobile */}
-          <div className="hidden lg:block lg:col-span-1">
+          <div className="hidden min-w-0 lg:block lg:shrink-0">
             <div className="sticky top-6 space-y-4">
               {/* Attraction Details Card */}
               <div className="bg-white rounded-lg shadow border p-4">

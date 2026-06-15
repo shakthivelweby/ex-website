@@ -1,5 +1,5 @@
 import Accordion from "@/components/Accordion";
-import { sanitizeRichText } from "@/utils/sanitizeRichText";
+import RichTextContent from "@/components/common/RichTextContent";
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Navigation, Pagination } from 'swiper/modules';
 import Image from "next/image";
@@ -35,12 +35,10 @@ const ItinearyTab = ({ packageData, activeTab }) => {
             <div className="">
             
 
-              <div>
-                <div
-                  className="itineary-description render-html"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(description) }}
-                />
-              </div>
+              <RichTextContent
+                html={description}
+                className="itineary-description"
+              />
 
               {/* Meal Inclusion Display */}
               {day.foods.length > 0 && (

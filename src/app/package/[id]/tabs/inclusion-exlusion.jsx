@@ -4,7 +4,7 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
   const { detailed_inclusions, exclusions, things_to_carry } = packageData.data;
   return (
     <div
-      className={`prose max-w-none text-gray-800 ${
+      className={`w-full min-w-0 max-w-full text-gray-800 ${
         activeTab === "inclusion" ? "block" : "hidden"
       }`}
     >

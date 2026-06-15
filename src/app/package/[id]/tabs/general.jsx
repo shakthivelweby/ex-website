@@ -1,5 +1,5 @@
 import Accordion from "@/components/Accordion";
-import { sanitizeRichText } from "@/utils/sanitizeRichText";
+import RichTextContent from "@/components/common/RichTextContent";
 
 function GeneralTab({ packageData, activeTab }) {
   const {
@@ -24,12 +24,7 @@ function GeneralTab({ packageData, activeTab }) {
       }`}
     >
       {/* Main description */}
-      {about && (
-        <div
-          className="mb-4 render-html w-full max-w-full"
-          dangerouslySetInnerHTML={{ __html: sanitizeRichText(about) }}
-        />
-      )}
+      {about && <RichTextContent html={about} className="mb-4" />}
 
       {/* Trip details in pill layout with fixed icons */}
       <div
@@ -120,10 +115,7 @@ function GeneralTab({ packageData, activeTab }) {
 
       {/* Additional Information Section as Accordion */}
       <Accordion title="Additional information" defaultOpen={false}>
-        <div
-          className="text-gray-800 render-html"
-          dangerouslySetInnerHTML={{ __html: sanitizeRichText(additional_info) }}
-        />
+        <RichTextContent html={additional_info} className="text-gray-800" />
       </Accordion>
 
       {/* Frequently Asked Questions */}

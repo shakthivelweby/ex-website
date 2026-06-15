@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
+import RichTextContent from "@/components/common/RichTextContent";
 import { rentalDisplayRate } from "@/app/rentals/rentalPricingCalc";
 
 const formatMoney = (v) => {
@@ -212,8 +213,8 @@ export default function RentalDetailsClient({ rental }) {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
+          <div className="min-w-0 max-w-full space-y-6">
             <div className="relative">
               <div className="aspect-video rounded-2xl overflow-hidden bg-gray-200">
                 {heroImage ? (
@@ -271,16 +272,11 @@ export default function RentalDetailsClient({ rental }) {
 
             <div className="space-y-4">
               <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">About</h2>
-              <div className="prose prose-gray max-w-none">
-                {rental.description ? (
-                  <div
-                    className="text-gray-700 leading-relaxed text-sm"
-                    dangerouslySetInnerHTML={{ __html: rental.description }}
-                  />
-                ) : (
-                  <p className="text-gray-700 leading-relaxed text-sm">No description added.</p>
-                )}
-              </div>
+              {rental.description ? (
+                <RichTextContent html={rental.description} />
+              ) : (
+                <p className="text-gray-700 leading-relaxed text-sm">No description added.</p>
+              )}
             </div>
 
             {specs.length > 0 && (
@@ -409,13 +405,11 @@ export default function RentalDetailsClient({ rental }) {
                 )}
 
                 {activeTab === "terms" && (
-                  <div className="prose prose-gray max-w-none text-sm text-gray-700">
-                    {termsContent ? (
-                      <div dangerouslySetInnerHTML={{ __html: termsContent }} />
-                    ) : (
-                      <p className="text-sm text-gray-500">No terms added.</p>
-                    )}
-                  </div>
+                  termsContent ? (
+                    <RichTextContent html={termsContent} />
+                  ) : (
+                    <p className="text-sm text-gray-500">No terms added.</p>
+                  )
                 )}
               </div>
             </div>
@@ -461,7 +455,7 @@ export default function RentalDetailsClient({ rental }) {
             )}
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="min-w-0 lg:shrink-0">
             <div className="sticky top-24">
               <div className="!bg-[#f7f7f7] rounded-xl p-3 shadow-sm">
                 <div className="bg-white rounded-xl p-4 mb-4">

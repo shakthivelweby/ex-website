@@ -1,17 +1,27 @@
-import apiMiddleware from "@/app/api/apiMiddleware"
+import publicApiMiddleware from "@/app/api/publicApiMiddleware";
+import apiMiddleware from "@/app/api/apiMiddleware";
 
 const checkoutData = async (params) => {
-    const queryString = new URLSearchParams({
+    const queryParams = {
         package_id: params.package_id,
         stay_category_id: params.stay_category_id,
         booking_date: params.booking_date,
         adult_count: params.adult_count,
         child_count: params.child_count,
         infant_count: params.infant_count,
-        package_price_rate_id: params.package_price_rate_id
-    }).toString();
+    };
 
-    const response = await apiMiddleware.get(`/package-checkout-data?${queryString}`);
+    if (params.use_base_price) {
+        queryParams.use_base_price = "1";
+    } else if (params.package_price_rate_id) {
+        queryParams.package_price_rate_id = params.package_price_rate_id;
+    }
+
+    const queryString = new URLSearchParams(queryParams).toString();
+
+    const response = await publicApiMiddleware.get(
+        `/package-checkout-data?${queryString}`
+    );
     return response.data;
 };
 

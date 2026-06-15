@@ -7,10 +7,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import apiMiddleware from "@/app/api/apiMiddleware";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import Button from "@/components/common/Button";
-import isLogin, { setRedirectAfterLogin } from "@/utils/isLogin";
+import isLogin from "@/utils/isLogin";
 import { useQuery } from "@tanstack/react-query";
 import { getPackageCalendarRates } from "./service";
 import { formatDate } from "@/utils/formatDate";
+import { usePackageRate } from "./query";
+import {
+  getDaysUntilDate,
+  isOnlineBookingAllowed,
+  shouldShowEnquiryOnly,
+  MIN_BOOKING_LEAD_DAYS,
+} from "@/utils/packageBookingLeadTime";
 
 /**
  * Form Component for Package Booking/Enquiry
@@ -21,7 +28,6 @@ import { formatDate } from "@/utils/formatDate";
  * @param {Object} props.selectedStayCategory - Selected accommodation category
  * @param {string} props.date - Initial selected date
  * @param {number} props.packagePrice - Price per person
- * @param {boolean} props.enquireOnly - Flag to determine if form is for enquiry only
  * @param {Object} props.packagePriceData - Contains pricing details including rate ID
  * @param {boolean} props.isMobilePopup - Flag to determine if form is in mobile popup view
  */
@@ -30,7 +36,6 @@ const Form = ({
   selectedStayCategory,
   date,
   packagePrice,
-  enquireOnly,
   packagePriceData,
   isMobilePopup = false,
   downloadHandler,
@@ -84,6 +89,51 @@ const Form = ({
   const [selectedDate, setSelectedDate] = useState(new Date(date));
   const [currentMonth, setCurrentMonth] = useState(new Date(date));
   const [isLoading, setIsLoading] = useState(false);
+
+  const { data: livePackageRate } = usePackageRate(
+    packageData.data.id,
+    selectedStayCategory.package_stay_category_id,
+    formatDate(selectedDate)
+  );
+
+  const effectivePriceData = livePackageRate?.data || packagePriceData;
+
+  const isEnquiryOnly = useMemo(
+    () =>
+      shouldShowEnquiryOnly(
+        selectedDate,
+        effectivePriceData?.rateAvailable ?? false
+      ),
+    [selectedDate, effectivePriceData?.rateAvailable]
+  );
+
+  const isWithinBookingLeadTime = !isOnlineBookingAllowed(selectedDate);
+  const daysUntilTrip = getDaysUntilDate(selectedDate);
+
+  const canProceedToCheckout =
+    effectivePriceData?.usesBasePrice || effectivePriceData?.packagePriceRateId;
+
+  const buildCheckoutQuery = () => {
+    const params = new URLSearchParams({
+      package_id: String(packageData.data.id),
+      stay_category_id: String(selectedStayCategory.stay_category_id),
+      booking_date: formatDate(selectedDate),
+      adult_count: String(adultCount),
+      child_count: String(childCount),
+      infant_count: String(infantCount),
+    });
+
+    if (effectivePriceData?.usesBasePrice) {
+      params.set("use_base_price", "1");
+    } else if (effectivePriceData?.packagePriceRateId) {
+      params.set(
+        "package_price_rate_id",
+        String(effectivePriceData.packagePriceRateId)
+      );
+    }
+
+    return params.toString();
+  };
 
   // Enquiry form fields
   const [fullName, setFullName] = useState("");
@@ -319,7 +369,7 @@ const Form = ({
   async function submitHandler() {
     setIsLoading(true);
 
-    if (enquireOnly) {
+    if (isEnquiryOnly) {
       if (!validateAndScroll()) {
         setIsLoading(false);
         return;
@@ -347,13 +397,13 @@ const Form = ({
       adult: adultCount,
       child: childCount,
       infant: infantCount,
-      package_price_rate_id: packagePriceData.packagePriceRateId,
+      package_price_rate_id: effectivePriceData.packagePriceRateId,
       type: "booking",
       stay_category_id: selectedStayCategory.stay_category_id,
     };
 
     // Add additional fields for enquiry
-    if (enquireOnly) {
+    if (isEnquiryOnly) {
       data.type = "enquire";
       data.name = fullName.trim();
       data.email = email.trim();
@@ -372,37 +422,29 @@ const Form = ({
         setShowSuccess(true);
       } else {
         // Handle booking submission
-        if (!isLogin()) {
-          // Store checkout URL using the utility function
-          const checkoutUrl = `/checkout/package?package_id=${
-            packageData.data.id
-          }&stay_category_id=${
-            selectedStayCategory.stay_category_id
-          }&booking_date=${formatDate(
-            selectedDate
-          )}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${
-            packagePriceData.packagePriceRateId
-          }`;
-          setRedirectAfterLogin(checkoutUrl);
-          // Show login modal
-          const event = new CustomEvent("showLogin");
-          window.dispatchEvent(event);
+        if (isEnquiryOnly) {
+          setErrorMessage({
+            title: "Enquiry Required",
+            message:
+              "Online booking is not available for this date. Please submit an enquiry instead.",
+          });
+          setShowError(true);
           setIsLoading(false);
           return;
         }
 
-        // If already logged in, redirect directly to checkout
-        router.push(
-          `/checkout/package?package_id=${
-            packageData.data.id
-          }&stay_category_id=${
-            selectedStayCategory.stay_category_id
-          }&booking_date=${formatDate(
-            selectedDate
-          )}&adult_count=${adultCount}&child_count=${childCount}&infant_count=${infantCount}&package_price_rate_id=${
-            packagePriceData.packagePriceRateId
-          }`
-        );
+        if (!canProceedToCheckout) {
+          setErrorMessage({
+            title: "Rate Unavailable",
+            message:
+              "No booking rate is configured for this date. Please submit an enquiry instead.",
+          });
+          setShowError(true);
+          setIsLoading(false);
+          return;
+        }
+
+        router.push(`/checkout/package?${buildCheckoutQuery()}`);
 
         // const formattedData = {
         //   package_id: packageData.data.id,
@@ -424,7 +466,7 @@ const Form = ({
       //
 
       // Reset form for enquiry
-      if (enquireOnly) {
+      if (isEnquiryOnly) {
         setFullName("");
         setEmail("");
         setPhone("");
@@ -446,12 +488,12 @@ const Form = ({
     <>
       {/* Main form container */}
       <div
-        className={`${!enquireOnly && !isMobilePopup ? "sticky top-6" : ""} ${
+        className={`${!isEnquiryOnly && !isMobilePopup ? "sticky top-6" : ""} ${
           isMobilePopup ? "pb-24" : "bg-[#f7f7f7] rounded-xl p-3 shadow-sm"
         }`}
       >
         {/* Enquiry Only Message */}
-        {enquireOnly && (
+        {isEnquiryOnly && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -462,9 +504,25 @@ const Form = ({
                   Enquiry Only
                 </h3>
                 <div className="mt-1 text-sm text-yellow-700">
-                  Online booking is not available for your selected dates.
-                  Please submit an enquiry and our team will get back to you
-                  with availability.
+                  {isWithinBookingLeadTime ? (
+                    <>
+                      Online booking is available for travel dates more than{" "}
+                      {MIN_BOOKING_LEAD_DAYS} days from today. Your selected
+                      date is{" "}
+                      {daysUntilTrip <= 0
+                        ? "today or in the past"
+                        : `only ${daysUntilTrip} day${
+                            daysUntilTrip === 1 ? "" : "s"
+                          } away`}
+                      . Please submit an enquiry and our team will assist you.
+                    </>
+                  ) : (
+                    <>
+                      Online booking is not available for your selected dates.
+                      Please submit an enquiry and our team will get back to you
+                      with availability.
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -473,12 +531,12 @@ const Form = ({
 
         {/* Package status badge */}
         <span
-          className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${enquireOnly ? 'bg-blue-200' : tourTypeConfig[tour_type].color}`}
+          className={`text-xs font-medium text-gray-800  rounded-full px-2 py-1 mb-2 ${isEnquiryOnly ? 'bg-blue-200' : tourTypeConfig[tour_type].color}`}
         >
           <i
-            className={`${enquireOnly ? 'fi fi-rr-umbrella-beach' : tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}
+            className={`${isEnquiryOnly ? 'fi fi-rr-umbrella-beach' : tourTypeConfig[tour_type].icon} mr-2 relative !top-0.5`}
           ></i>
-          {enquireOnly ? 'Private Package' : tourTypeConfig[tour_type].title}
+          {isEnquiryOnly ? 'Private Package' : tourTypeConfig[tour_type].title}
         </span>
 
         {/* Price and duration display */}
@@ -726,7 +784,7 @@ const Form = ({
         </div>
 
         {/* Enquiry form fields */}
-        {enquireOnly && (
+        {isEnquiryOnly && (
           <div className="mb-6 bg-white rounded-xl p-4">
             {/* Full Name field */}
             <div className="mb-2">
@@ -827,7 +885,7 @@ const Form = ({
               isLoading={isLoading}
               icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
             >
-              {enquireOnly ? "Enquire Now" : "Book Now"}
+              {isEnquiryOnly ? "Enquire Now" : "Book Now"}
             </Button>
           </div>
         ) : (
@@ -839,7 +897,7 @@ const Form = ({
               isLoading={isLoading}
               icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
             >
-              {enquireOnly ? "Enquire Now" : "Book Now"}
+              {isEnquiryOnly ? "Enquire Now" : "Book Now"}
             </Button>
 
             {/* Download Itinerary Section */}

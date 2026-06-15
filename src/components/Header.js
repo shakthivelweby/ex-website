@@ -118,11 +118,24 @@ export default function Header() {
   }, [pathname]);
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    const syncUser = () => {
+      const nextToken = localStorage.getItem("token");
+      const nextUser = localStorage.getItem("user");
+      if (nextToken && nextUser) {
+        setUser(JSON.parse(nextUser));
+      } else {
+        if (nextUser && !nextToken) {
+          localStorage.removeItem("user");
+        }
+        setUser(null);
+      }
+    };
+
+    syncUser();
+
+    window.addEventListener("auth:logout", syncUser);
+    window.addEventListener("auth:login", syncUser);
+    window.addEventListener("storage", syncUser);
 
     // Close menu when clicking outside
     const handleClickOutside = (event) => {
@@ -134,7 +147,12 @@ export default function Header() {
     if (showMobileNav) {
       document.addEventListener('mousedown', handleClickOutside);
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener("auth:logout", syncUser);
+      window.removeEventListener("auth:login", syncUser);
+      window.removeEventListener("storage", syncUser);
+    };
   }, [showMobileNav]);
 
   useEffect(() => {

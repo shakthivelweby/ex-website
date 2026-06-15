@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Image from "next/image";
 import Tab from "./Tab";
 import Form from "./Form";
@@ -15,6 +15,8 @@ import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { formatDate } from "@/utils/formatDate";
+import { useSearchParams } from "next/navigation";
+import { shouldShowEnquiryOnly } from "@/utils/packageBookingLeadTime";
 
 export default function ClientWrapper({
   packageData,
@@ -57,13 +59,27 @@ export default function ClientWrapper({
     return `${mb} MB`;
   };
 
+  const searchParams = useSearchParams();
+  const selectedDate = searchParams.get("date") || date;
+
   const { data: packageRate } = usePackageRate(
     packageData.data.id,
     selectedStayCategory.package_stay_category_id,
-    date
+    selectedDate
   );
 
-  const [enquireOnly, setEnquireOnly] = useState(false);
+  const isEnquiryOnly = useMemo(
+    () =>
+      shouldShowEnquiryOnly(
+        selectedDate,
+        packageRate?.data?.rateAvailable ?? packagePriceData.rateAvailable ?? false
+      ),
+    [
+      selectedDate,
+      packageRate?.data?.rateAvailable,
+      packagePriceData.rateAvailable,
+    ]
+  );
 
   const [isClient, setIsClient] = useState(false);
 
@@ -98,12 +114,6 @@ export default function ClientWrapper({
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      setEnquireOnly(!packagePriceData.rateAvailable);
-    }
-  }, [isClient, packagePriceData.rateAvailable]);
 
   // Add effect for loading text animation
   useEffect(() => {
@@ -149,7 +159,6 @@ export default function ClientWrapper({
   useEffect(() => {
     if (packageRate?.data) {
       setPackagePrice(packageRate.data.adultPrice);
-      setEnquireOnly(!packageRate.data.rateAvailable);
     }
   }, [packageRate, selectedStayCategory]);
 
@@ -402,12 +411,10 @@ export default function ClientWrapper({
       >
         <div className="flex-1 overflow-y-auto p-4">
           <Form
-            date={date}
+            date={selectedDate}
             packageData={packageData}
             selectedStayCategory={selectedStayCategory}
             packagePrice={packagePrice}
-            enquireOnly={enquireOnly}
-            setEnquireOnly={setEnquireOnly}
             packagePriceData={packagePriceData}
             downloadHandler={downloadHandler}
             isDownloading={isDownloading}
@@ -644,12 +651,10 @@ export default function ClientWrapper({
             {/* Right side booking form */}
             <div className="w-full lg:w-1/3 lg:shrink-0 hidden lg:block">
               <Form
-                date={date}
+                date={selectedDate}
                 packageData={packageData}
                 selectedStayCategory={selectedStayCategory}
                 packagePrice={packagePrice}
-                enquireOnly={enquireOnly}
-                setEnquireOnly={setEnquireOnly}
                 packagePriceData={packagePriceData}
                 downloadHandler={downloadHandler}
                 isDownloading={isDownloading}
@@ -668,19 +673,19 @@ export default function ClientWrapper({
         <button
           onClick={() => setShowMobileForm(true)}
           className={`w-full ${
-            enquireOnly ? "bg-yellow-500" : "bg-primary-500"
+            isEnquiryOnly ? "bg-yellow-500" : "bg-primary-500"
           } text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg`}
         >
           <div className="flex items-center">
             <span className="text-sm">
-              {enquireOnly ? "Send Enquiry" : "Check Availability"}
+              {isEnquiryOnly ? "Send Enquiry" : "Book Now"}
             </span>
           </div>
           <div className="flex items-center">
             <span className="text-sm font-bold">₹{packagePrice}</span>
             <i
               className={`${
-                enquireOnly ? "fi fi-rr-envelope" : "fi fi-rr-calendar-clock"
+                isEnquiryOnly ? "fi fi-rr-envelope" : "fi fi-rr-calendar-clock"
               } ml-2 text-sm`}
             ></i>
           </div>

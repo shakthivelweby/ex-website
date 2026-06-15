@@ -2,10 +2,10 @@
  * Utility functions for handling login state and redirect URLs
  */
 
-// Check if user is logged in
+// Check if user is logged in (requires a valid auth token)
 const isLogin = () => {
-  const token = localStorage.getItem("token");
-  return token ? true : false;
+  if (typeof window === "undefined") return false;
+  return Boolean(localStorage.getItem("token") && localStorage.getItem("user"));
 };
 
 // Set redirect URL to be used after login

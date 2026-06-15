@@ -28,6 +28,7 @@ const Login = ({show, onClose, onSignupClick, loginFormData, setloginFormData, o
         // Store token and user data in localStorage
         localStorage.setItem('token', response.data.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
+        window.dispatchEvent(new CustomEvent("auth:login"));
         
         // Close modal
         onClose();

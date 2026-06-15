@@ -7,6 +7,7 @@ import Link from "next/link";
 import { checkoutData, book, createOrder, verifyPayment, paymentFailure } from "./service";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
+import isLogin, { setRedirectAfterLogin } from "@/utils/isLogin";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -36,17 +37,44 @@ export default function CheckoutPage() {
   // Fetch package details from API
   useEffect(() => {
     const fetchPackageDetails = async () => {
+      const packageId = searchParams.get("package_id");
+      const stayCategoryId = searchParams.get("stay_category_id");
+      const bookingDate = searchParams.get("booking_date");
+      const useBasePrice = searchParams.get("use_base_price");
+      const packagePriceRateId = searchParams.get("package_price_rate_id");
+
+      if (!packageId || !stayCategoryId || !bookingDate) {
+        setError("Invalid checkout link. Please go back and click Book Now again.");
+        setIsLoadingPackage(false);
+        return;
+      }
+
+      if (!useBasePrice && !packagePriceRateId) {
+        setError(
+          "Missing pricing information. Please return to the package page and select your date again."
+        );
+        setIsLoadingPackage(false);
+        return;
+      }
+
       try {
         setIsLoadingPackage(true);
+        setError(null);
+
         const params = {
-          package_id: searchParams.get("package_id"),
-          stay_category_id: searchParams.get("stay_category_id"),
-          booking_date: searchParams.get("booking_date"),
-          adult_count: searchParams.get("adult_count"),
-          child_count: searchParams.get("child_count"),
-          infant_count: searchParams.get("infant_count"),
-          package_price_rate_id: searchParams.get("package_price_rate_id")
+          package_id: packageId,
+          stay_category_id: stayCategoryId,
+          booking_date: bookingDate,
+          adult_count: searchParams.get("adult_count") || "1",
+          child_count: searchParams.get("child_count") || "0",
+          infant_count: searchParams.get("infant_count") || "0",
         };
+
+        if (useBasePrice) {
+          params.use_base_price = useBasePrice;
+        } else {
+          params.package_price_rate_id = packagePriceRateId;
+        }
 
         const response = await checkoutData(params);
         if (response.status) {
@@ -60,11 +88,14 @@ export default function CheckoutPage() {
             startDate: params.booking_date
           });
         } else {
-          setError("Failed to load package details");
+          setError(response.message || "Failed to load package details");
         }
       } catch (error) {
         console.error("Error fetching package details:", error);
-        setError("Failed to load package details. Please try again.");
+        setError(
+          error.response?.data?.message ||
+            "Failed to load package details. Please try again."
+        );
       } finally {
         setIsLoadingPackage(false);
       }
@@ -99,6 +130,13 @@ export default function CheckoutPage() {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    if (!isLogin()) {
+      setRedirectAfterLogin(window.location.pathname + window.location.search);
+      window.dispatchEvent(new CustomEvent("showLogin"));
+      setIsLoading(false);
+      return;
+    }
   
     let pendingPackagePaymentId = null;
     try {
@@ -120,14 +158,19 @@ export default function CheckoutPage() {
         adult_count: searchParams.get("adult_count"),
         child_count: searchParams.get("child_count"),
         infant_count: searchParams.get("infant_count"),
-        package_price_rate_id: searchParams.get("package_price_rate_id"),
-        payment_type: formData.paymentOption, // 'full' or 'partial'
+        payment_type: formData.paymentOption,
         name: formData.firstName,
         email: formData.email,
         phone: formData.phone,
         total_amount: packageDetails.total_price,
-        discount_amount : packageDetails.discount_price
+        discount_amount: packageDetails.discount_price,
       };
+
+      if (searchParams.get("use_base_price")) {
+        bookingData.use_base_price = true;
+      } else {
+        bookingData.package_price_rate_id = searchParams.get("package_price_rate_id");
+      }
 
       // First create booking to get order ID
       const response = await book(bookingData);

@@ -1,6 +1,7 @@
 "use client";
 // src/services/apiMiddleware.js
 import axios from "axios";
+import { clearAuthSession } from "@/utils/authSession";
 
 // Same-origin /api/web is proxied to Laravel via next.config.mjs rewrites.
 const apiMiddleware = axios.create({
@@ -32,8 +33,7 @@ apiMiddleware.interceptors.response.use(
     // You can handle specific error statuses globally here
     if (error.response) {
       if (error.response.status === 401) {
-        // Trigger login UI (do NOT eagerly clear token; some 401s can be transient / racey).
-        // Login will overwrite token on success.
+        clearAuthSession();
         try {
           // Preserve current page so login can return user here.
           localStorage.setItem("redirectAfterLogin", window.location.href);

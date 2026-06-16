@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -33,6 +33,16 @@ export default function CheckoutPage() {
   const [packageDetails, setPackageDetails] = useState(null);
   const [isLoadingPackage, setIsLoadingPackage] = useState(true);
   const [error, setError] = useState(null);
+
+  const backToPackageHref = useMemo(() => {
+    const packageId = searchParams.get("package_id");
+    const bookingDate = searchParams.get("booking_date");
+    if (!packageId) return "/home";
+    const params = new URLSearchParams();
+    if (bookingDate) params.set("date", bookingDate);
+    const query = params.toString();
+    return `/package/${packageId}${query ? `?${query}` : ""}`;
+  }, [searchParams]);
 
   // Fetch package details from API
   useEffect(() => {
@@ -321,7 +331,7 @@ export default function CheckoutPage() {
     <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="mb-3">
-          <Link href="/package" className="text-primary-600 hover:text-primary-700 flex items-center transition-colors group">
+          <Link href={backToPackageHref} className="text-primary-600 hover:text-primary-700 flex items-center transition-colors group">
             <div className="w-7 h-7 bg-primary-50 group-hover:bg-primary-100 rounded-full flex items-center justify-center mr-2 transition-colors">
             <svg
               xmlns="http://www.w3.org/2000/svg"

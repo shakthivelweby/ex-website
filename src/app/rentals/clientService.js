@@ -16,3 +16,12 @@ export const getRentalUnavailableDates = async (rentalItemId, params = {}) => {
   return response.data;
 };
 
+export const getRentalDetailsClient = async (id) => {
+  const response = await apiMiddleware.get(`/rental-details/${id}`);
+  const body = response.data;
+  return {
+    ...body,
+    data: body?.data ?? null,
+  };
+};
+

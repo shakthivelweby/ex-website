@@ -1,13 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import RichTextContent from "@/components/common/RichTextContent";
+import PickupLocationPicker from "@/components/rentals/PickupLocationPicker";
 import { rentalDisplayRate } from "@/app/rentals/rentalPricingCalc";
+import {
+  normalizeRentalPickupOptions,
+  getDefaultPickupOption,
+} from "@/app/rentals/rentalPickupUtils";
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -27,8 +32,25 @@ const linesToList = (value) => {
 export default function RentalDetailsClient({ rental }) {
   const router = useRouter();
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
+  const [selectedPickupName, setSelectedPickupName] = useState("");
 
-  const onBookNow = () => router.push(`/rentals/${rental.id}/booking`);
+  const pickupOptions = useMemo(() => normalizeRentalPickupOptions(rental), [rental]);
+
+  useEffect(() => {
+    const def = getDefaultPickupOption(pickupOptions);
+    if (def?.name) setSelectedPickupName(def.name);
+  }, [rental?.id, pickupOptions]);
+
+  const selectedPickup =
+    getDefaultPickupOption(pickupOptions, selectedPickupName) || pickupOptions[0] || null;
+
+  const onBookNow = () => {
+    const pickup = getDefaultPickupOption(pickupOptions, selectedPickupName);
+    const qs = pickup?.name
+      ? `?pickup_location=${encodeURIComponent(pickup.name)}`
+      : "";
+    router.push(`/rentals/${rental.id}/booking${qs}`);
+  };
 
   const faqs = Array.isArray(rental?.faqs) ? rental.faqs : [];
   const termsContent = rental?.terms_and_condition?.content || "";
@@ -161,22 +183,19 @@ export default function RentalDetailsClient({ rental }) {
 
   const handleMobileBooking = () => onBookNow();
 
-  const addressLine =
-    rental?.address ||
-    rental?.location ||
-    (typeof rental?.pickup_address === "string" ? rental.pickup_address : "") ||
-    "";
+  const pickupLocations = pickupOptions;
 
-  const mapLink =
-    rental?.map_link ||
-    (rental?.latitude != null &&
-    rental?.longitude != null &&
-    String(rental.latitude) !== "" &&
-    String(rental.longitude) !== ""
-      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-          `${rental.latitude},${rental.longitude}`
-        )}`
-      : null);
+  const getMapLinkForPickup = (loc) => {
+    const lat = loc?.latitude;
+    const lng = loc?.longitude;
+    if (lat != null && lng != null && String(lat) !== "" && String(lng) !== "") {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+    }
+    if (loc?.name) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.name)}`;
+    }
+    return null;
+  };
 
   const displayRate = rentalDisplayRate(pricing);
   const priceLabel =
@@ -414,43 +433,84 @@ export default function RentalDetailsClient({ rental }) {
               </div>
             </div>
 
-            {(addressLine || rental?.location) && (
+            {pickupLocations.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">Location</h2>
-                <div className="bg-white rounded-xl p-4 border border-gray-200">
-                  <div className="flex flex-col space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
-                        <i className="fi fi-rr-marker text-lg text-primary-500"></i>
+                <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
+                  {pickupLocations.length > 1 ? "Pickup locations" : "Location"}
+                </h2>
+
+                {pickupLocations.length > 1 ? (
+                  <div className="space-y-4">
+                    <PickupLocationPicker
+                      options={pickupOptions}
+                      selectedName={selectedPickupName}
+                      onSelect={(opt) => setSelectedPickupName(opt.name)}
+                      label="Select your preferred pickup location"
+                      required
+                    />
+                    {selectedPickup ? (
+                      <div className="bg-white rounded-xl p-4 border border-gray-200">
+                        <div className="flex flex-col space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
+                              <i className="fi fi-rr-marker text-lg text-primary-500"></i>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-500 mb-1">Your selected pickup</p>
+                              <p className="text-gray-700 font-medium leading-relaxed">
+                                {selectedPickup.name}
+                              </p>
+                            </div>
+                          </div>
+                          {getMapLinkForPickup(selectedPickup) ? (
+                            <button
+                              type="button"
+                              onClick={() => window.open(getMapLinkForPickup(selectedPickup), "_blank")}
+                              className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-2 py-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors cursor-pointer"
+                            >
+                              Get Directions
+                              <i className="fi fi-rr-arrow-right text-xs"></i>
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-500 mb-1">Address</p>
-                        <p className="text-gray-700 font-medium leading-relaxed">
-                          {addressLine || rental?.location || "Address not available"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (mapLink) {
-                              window.open(mapLink, "_blank");
-                            } else {
-                              const q = encodeURIComponent(addressLine || rental?.location || "");
-                              window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, "_blank");
-                            }
-                          }}
-                          className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-2 py-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors cursor-pointer"
-                        >
-                          Get Directions
-                          <i className="fi fi-rr-arrow-right text-xs"></i>
-                        </button>
-                      </div>
-                    </div>
+                    ) : null}
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {pickupLocations.map((loc) => {
+                      const directionsLink = getMapLinkForPickup(loc);
+                      return (
+                        <div
+                          key={String(loc.id)}
+                          className="bg-white rounded-xl p-4 border border-gray-200"
+                        >
+                          <div className="flex flex-col space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
+                                <i className="fi fi-rr-marker text-lg text-primary-500"></i>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-500 mb-1">Address</p>
+                                <p className="text-gray-700 font-medium leading-relaxed">{loc.name}</p>
+                              </div>
+                            </div>
+                            {directionsLink ? (
+                              <button
+                                type="button"
+                                onClick={() => window.open(directionsLink, "_blank")}
+                                className="inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-2 py-1 text-primary-600 hover:text-primary-700 font-medium text-sm transition-colors cursor-pointer"
+                              >
+                                Get Directions
+                                <i className="fi fi-rr-arrow-right text-xs"></i>
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -502,14 +562,23 @@ export default function RentalDetailsClient({ rental }) {
                       </div>
                     </div>
 
-                    {rental.location && (
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center">
+                    {pickupLocations.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <div className="w-8 h-8 rounded-full bg-primary-50 flex items-center justify-center shrink-0">
                           <i className="fi fi-rr-marker text-base text-primary-500"></i>
                         </div>
-                        <div>
-                          <p className="text-gray-500 text-xs">Default location</p>
-                          <p className="text-gray-700 font-medium">{rental.location}</p>
+                        <div className="min-w-0">
+                          <p className="text-gray-500 text-xs">
+                            {pickupLocations.length > 1 ? "Your pickup location" : "Location"}
+                          </p>
+                          <p className="text-gray-700 font-medium text-sm leading-snug">
+                            {selectedPickup?.name || pickupLocations[0]?.name}
+                          </p>
+                          {pickupLocations.length > 1 ? (
+                            <p className="text-[11px] text-gray-500 mt-0.5">
+                              Change on the booking page if needed
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     )}

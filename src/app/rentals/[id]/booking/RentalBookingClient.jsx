@@ -8,11 +8,13 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Button from "@/components/common/Button";
 import PickupLocationPicker from "@/components/rentals/PickupLocationPicker";
-import { checkRentalAvailability, getRentalUnavailableDates, getRentalDetailsClient } from "../../clientService";
+import { checkRentalAvailability, getRentalUnavailableDates, getRentalDetailsClient, getRentalPickupLocationsClient } from "../../clientService";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
 import {
   normalizeRentalPickupOptions,
   getDefaultPickupOption,
+  mergePickupLocationRows,
+  extractRentalPickupRows,
 } from "../../rentalPickupUtils";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts } from "../../rentalPricingCalc";
 
@@ -63,6 +65,7 @@ const initialBooking = {
 export default function RentalBookingClient({
   rentalId: rentalIdProp,
   initialRental = null,
+  initialPickupLocations = [],
   initialPickupFromUrl = "",
 }) {
   const router = useRouter();
@@ -73,6 +76,12 @@ export default function RentalBookingClient({
     initialPickupFromUrl || searchParams.get("pickup_location") || "";
 
   const [rental, setRental] = useState(initialRental);
+  const [pickupLocationRows, setPickupLocationRows] = useState(() =>
+    mergePickupLocationRows(initialPickupLocations, extractRentalPickupRows(initialRental))
+  );
+  const [loadingPickupLocations, setLoadingPickupLocations] = useState(
+    () => mergePickupLocationRows(initialPickupLocations, extractRentalPickupRows(initialRental)).length === 0
+  );
   const [loading, setLoading] = useState(!initialRental);
   const [booking, setBooking] = useState(initialBooking);
   const [checking, setChecking] = useState(false);
@@ -213,7 +222,10 @@ export default function RentalBookingClient({
     return 0;
   }, [hourlySubtotalWithAdminForDisplay, pricing]);
 
-  const pickupOptions = useMemo(() => normalizeRentalPickupOptions(rental), [rental]);
+  const pickupOptions = useMemo(
+    () => normalizeRentalPickupOptions(rental, pickupLocationRows),
+    [rental, pickupLocationRows]
+  );
 
   const selectedPickupOption = useMemo(
     () => getDefaultPickupOption(pickupOptions, booking.pickup_location),
@@ -248,11 +260,55 @@ export default function RentalBookingClient({
     if (!rentalId) return;
     let cancelled = false;
     (async () => {
+      setLoadingPickupLocations(true);
+      try {
+        const rows = await getRentalPickupLocationsClient(rentalId);
+        if (!cancelled && rows.length) {
+          setPickupLocationRows((prev) => mergePickupLocationRows(prev, rows));
+        }
+      } catch (_) {
+        // keep SSR / rental-details rows
+      } finally {
+        if (!cancelled) setLoadingPickupLocations(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rentalId]);
+
+  useEffect(() => {
+    if (!rentalId) return;
+    let cancelled = false;
+    (async () => {
       if (!initialRental) setLoading(true);
       try {
         const res = await getRentalDetailsClient(rentalId);
         if (!cancelled) {
-          setRental(res?.data || null);
+          const next = res?.data || null;
+          if (next) {
+            setRental((prev) => {
+              const mergedLocations = mergePickupLocationRows(
+                extractRentalPickupRows(prev),
+                extractRentalPickupRows(next),
+                initialPickupLocations
+              );
+              return {
+                ...next,
+                pickup_locations: mergedLocations.length
+                  ? mergedLocations
+                  : next.pickup_locations,
+              };
+            });
+            const fromDetails = extractRentalPickupRows(next);
+            if (fromDetails.length) {
+              setPickupLocationRows((prev) =>
+                mergePickupLocationRows(prev, fromDetails, initialPickupLocations)
+              );
+            }
+          } else if (!initialRental) {
+            setRental(null);
+          }
         }
       } catch (_) {
         if (!cancelled && !initialRental) setRental(null);
@@ -263,7 +319,7 @@ export default function RentalBookingClient({
     return () => {
       cancelled = true;
     };
-  }, [rentalId, initialRental]);
+  }, [rentalId, initialRental, initialPickupLocations]);
 
   useEffect(() => {
     if (!rentalId) return;
@@ -647,28 +703,25 @@ export default function RentalBookingClient({
               <div className="p-4 sm:p-6 space-y-5">
                 <div>
                   <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide block mb-1.5">
-                    {pickupOptions.length > 1 ? "Choose your pickup location *" : "Pickup location"}
+                    Vehicle location {pickupOptions.length > 1 ? "*" : ""}
                   </label>
-                  {loading ? (
+                  {loading || loadingPickupLocations ? (
                     <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
                       Loading pickup locations…
                     </div>
                   ) : (
-                    <>
-                      {pickupOptions.length > 1 ? (
-                        <p className="text-xs text-gray-600 mb-2">
-                          {pickupOptions.length} pickup points available — select where you want to collect the item.
-                        </p>
-                      ) : null}
-                      <PickupLocationPicker
-                        options={pickupOptions}
-                        selectedName={booking.pickup_location || selectedPickupOption?.name || ""}
-                        onSelect={selectPickupLocation}
-                        label="Select your preferred pickup location"
-                        required={pickupOptions.length > 1}
-                      />
-                    </>
+                    <PickupLocationPicker
+                      options={pickupOptions}
+                      selectedName={booking.pickup_location || selectedPickupOption?.name || ""}
+                      onSelect={selectPickupLocation}
+                      placeholder="Select pickup location"
+                    />
                   )}
+                  {pickupOptions.length > 1 && !booking.pickup_location ? (
+                    <p className="text-xs text-amber-600 mt-1.5">
+                      Please select where you want to pick up the vehicle.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

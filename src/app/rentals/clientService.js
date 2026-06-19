@@ -25,3 +25,9 @@ export const getRentalDetailsClient = async (id) => {
   };
 };
 
+export const getRentalPickupLocationsClient = async (id) => {
+  const response = await apiMiddleware.get(`/rental-pickup-locations/${id}`);
+  const rows = response.data?.data;
+  return Array.isArray(rows) ? rows : [];
+};
+

@@ -441,12 +441,14 @@ export default function RentalDetailsClient({ rental }) {
 
                 {pickupLocations.length > 1 ? (
                   <div className="space-y-4">
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+                      Vehicle location
+                    </label>
                     <PickupLocationPicker
                       options={pickupOptions}
                       selectedName={selectedPickupName}
                       onSelect={(opt) => setSelectedPickupName(opt.name)}
-                      label="Select your preferred pickup location"
-                      required
+                      placeholder="Select pickup location"
                     />
                     {selectedPickup ? (
                       <div className="bg-white rounded-xl p-4 border border-gray-200">

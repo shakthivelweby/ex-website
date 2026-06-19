@@ -84,3 +84,13 @@ export const getRentalDetails = async (id) => {
   }
 };
 
+export const getRentalPickupLocations = async (id) => {
+  try {
+    const response = await apiServerMiddleware.get(`/rental-pickup-locations/${id}`);
+    const rows = response.data?.data;
+    return Array.isArray(rows) ? rows : [];
+  } catch (_) {
+    return [];
+  }
+};
+

@@ -1,3 +1,35 @@
+export const normalizeRowsToPickupOptions = (rows) => {
+  if (!Array.isArray(rows)) return [];
+
+  const seen = new Set();
+  const options = [];
+
+  for (const [index, row] of rows.entries()) {
+    const name = String(row?.name || "").trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    options.push({
+      id: row.id ?? `loc-${index}`,
+      name,
+      latitude: row.latitude ?? "",
+      longitude: row.longitude ?? "",
+      is_primary: Boolean(row.is_primary),
+    });
+  }
+
+  return options.sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+};
+
+export const mergePickupLocationRows = (...sources) => {
+  const merged = [];
+  for (const source of sources) {
+    if (Array.isArray(source)) merged.push(...source);
+  }
+  return normalizeRowsToPickupOptions(merged);
+};
+
 export const extractRentalPickupRows = (rental) => {
   if (!rental || typeof rental !== "object") return [];
 
@@ -13,20 +45,14 @@ export const extractRentalPickupRows = (rental) => {
   return [];
 };
 
-export const normalizeRentalPickupOptions = (rental) => {
-  const rows = extractRentalPickupRows(rental);
-  const normalized = rows
-    .map((row, index) => ({
-      id: row.id ?? `loc-${index}`,
-      name: String(row.name || "").trim(),
-      latitude: row.latitude ?? "",
-      longitude: row.longitude ?? "",
-      is_primary: Boolean(row.is_primary),
-    }))
-    .filter((row) => row.name);
+export const normalizeRentalPickupOptions = (rental, explicitRows = null) => {
+  const normalized = mergePickupLocationRows(
+    extractRentalPickupRows(rental),
+    Array.isArray(explicitRows) ? explicitRows : []
+  );
 
   if (normalized.length) {
-    return normalized.sort((a, b) => Number(b.is_primary) - Number(a.is_primary));
+    return normalized;
   }
 
   const name = String(rental?.location || "").trim();

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getRentalDetails } from "../../service";
+import { getRentalDetails, getRentalPickupLocations } from "../../service";
 import RentalBookingClient from "./RentalBookingClient";
 
 export default async function RentalBookingPage({ params, searchParams }) {
@@ -8,12 +8,24 @@ export default async function RentalBookingPage({ params, searchParams }) {
   const pickupFromUrl = typeof sp?.pickup_location === "string" ? sp.pickup_location : "";
 
   let initialRental = null;
+  let initialPickupLocations = [];
   if (id) {
     try {
-      const res = await getRentalDetails(id);
+      const [res, pickupRows] = await Promise.all([
+        getRentalDetails(id),
+        getRentalPickupLocations(id),
+      ]);
       initialRental = res?.data ?? null;
+      initialPickupLocations = Array.isArray(pickupRows) ? pickupRows : [];
+      if (
+        !initialPickupLocations.length &&
+        Array.isArray(initialRental?.pickup_locations)
+      ) {
+        initialPickupLocations = initialRental.pickup_locations;
+      }
     } catch (_) {
       initialRental = null;
+      initialPickupLocations = [];
     }
   }
 
@@ -28,6 +40,9 @@ export default async function RentalBookingPage({ params, searchParams }) {
       <RentalBookingClient
         rentalId={id}
         initialRental={initialRental}
+        initialPickupLocations={
+          Array.isArray(initialPickupLocations) ? initialPickupLocations : []
+        }
         initialPickupFromUrl={pickupFromUrl}
       />
     </Suspense>

@@ -12,19 +12,38 @@ function round2(n) {
 }
 
 /**
+ * Catalog-level basis (no dates selected yet).
+ * @param {Record<string, unknown>} pricing
+ * @returns {'hour' | 'day' | 'hybrid' | null}
+ */
+export function rentalCatalogPricingBasis(pricing) {
+  const p = pricing || {};
+  const hourly = Number(p.price_per_hour || 0) || 0;
+  const daily = Number(p.price_per_day || 0) || 0;
+  if (hourly > 0 && daily > 0) return "hybrid";
+  if (hourly > 0) return "hour";
+  if (daily > 0) return "day";
+  return null;
+}
+
+/**
  * @param {Record<string, unknown>} pricing
  * @param {Record<string, unknown> | null | undefined} [quote]
- * @returns {'hour' | 'day' | null}
+ * @returns {'hour' | 'day' | 'hybrid' | null}
  */
 export function rentalPricingBasis(pricing, quote) {
   const fromQuote = quote?.pricing_basis || quote?.effective_rates?.pricing_basis;
   if (fromQuote === "day" || fromQuote === "hour") return fromQuote;
-  const p = pricing || {};
-  const hourly = Number(p.price_per_hour || 0) || 0;
-  if (hourly > 0) return "hour";
-  const daily = Number(p.price_per_day || 0) || 0;
-  if (daily > 0) return "day";
-  return null;
+  return rentalCatalogPricingBasis(pricing);
+}
+
+export function computeBillingHoursCeilFromParts(startDate, endDate, pickupTime, dropoffTime) {
+  if (!startDate || !endDate || !pickupTime || !dropoffTime) return 0;
+  const start = new Date(`${startDate}T${pickupTime}:00`);
+  const end = new Date(`${endDate}T${dropoffTime}:00`);
+  const ms = end.getTime() - start.getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return 0;
+  return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
 }
 
 export function computeBillingDaysCeilFromParts(startDate, endDate, pickupTime, dropoffTime) {
@@ -51,19 +70,127 @@ export function rentalDailyRateWithAdmin(pricing) {
  * @returns {{ amount: number | null, unit: string }}
  */
 export function rentalDisplayRate(pricing) {
-  const basis = rentalPricingBasis(pricing);
+  const basis = rentalCatalogPricingBasis(pricing);
+  const p = pricing || {};
+  if (basis === "hybrid") {
+    const hourly = Number(p.price_per_hour ?? 0);
+    const daily = Number(p.price_per_day ?? 0);
+    return {
+      amount: Number.isFinite(hourly) && hourly > 0 ? rentalHourlyRateWithAdmin(pricing) : null,
+      amountDay: Number.isFinite(daily) && daily > 0 ? rentalDailyRateWithAdmin(pricing) : null,
+      unit: "/ hour",
+      unitDay: "/ day",
+      hybrid: true,
+    };
+  }
   if (basis === "day") {
-    const amount = Number((pricing || {}).price_per_day ?? 0);
+    const amount = Number(p.price_per_day ?? 0);
     return {
       amount: Number.isFinite(amount) && amount > 0 ? rentalDailyRateWithAdmin(pricing) : null,
       unit: "/ day",
+      hybrid: false,
     };
   }
-  const amount = Number((pricing || {}).price_per_hour ?? 0);
+  const amount = Number(p.price_per_hour ?? 0);
   return {
     amount: Number.isFinite(amount) && amount > 0 ? rentalHourlyRateWithAdmin(pricing) : null,
     unit: "/ hour",
+    hybrid: false,
   };
+}
+
+/**
+ * Resolve hour vs day for a specific booking window (matches API RentalPricingTotals).
+ * @returns {{ basis: 'hour'|'day'|null, units: number, rate: number, subtotal: number }}
+ */
+export function resolveRentalWindowPricing({
+  pricing,
+  startDate,
+  endDate,
+  pickupTime,
+  dropoffTime,
+  weekdayPrices = [],
+  quote = null,
+}) {
+  const p = pricing || {};
+  const hours = computeBillingHoursCeilFromParts(startDate, endDate, pickupTime, dropoffTime);
+  const days = computeBillingDaysCeilFromParts(startDate, endDate, pickupTime, dropoffTime);
+  const catalogBasis = rentalCatalogPricingBasis(p);
+
+  const quoteBasis = quote?.pricing_basis || quote?.effective_rates?.pricing_basis;
+
+  // Hybrid rentals: always resolve basis from duration (matches API RentalPricingTotals).
+  if (catalogBasis === "hybrid" && hours > 0) {
+    const basis = hours < 24 ? "hour" : "day";
+    const units = basis === "day" ? days : hours;
+    let rate = basis === "day" ? Number(p.price_per_day || 0) || 0 : Number(p.price_per_hour || 0) || 0;
+    if (basis === "hour" && startDate && Array.isArray(weekdayPrices) && weekdayPrices.length) {
+      const dow = new Date(`${startDate}T12:00:00`).getDay();
+      const match = weekdayPrices.find((r) => Number(r?.day_of_week) === dow);
+      const v = match?.price_per_hour;
+      if (v !== undefined && v !== null && String(v) !== "") {
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) rate = n;
+      }
+    }
+    if (quoteBasis === basis) {
+      const quoteRate =
+        basis === "day"
+          ? Number(quote?.effective_rates?.price_per_day ?? rate) || rate
+          : Number(quote?.effective_rates?.price_per_hour ?? rate) || rate;
+      if (quoteRate > 0) rate = quoteRate;
+      const quoteUnits =
+        basis === "day"
+          ? Number(quote?.billing_days ?? units) || units
+          : Number(quote?.billing_hours ?? units) || units;
+      const subtotal =
+        quoteBasis === basis && Number(quote?.estimated_rental_subtotal) > 0
+          ? Number(quote.estimated_rental_subtotal)
+          : quoteUnits * rate;
+      return { basis, units: quoteUnits, rate, subtotal: round2(subtotal) };
+    }
+    return { basis, units, rate, subtotal: round2(units * rate) };
+  }
+
+  if (
+    (quoteBasis === "hour" || quoteBasis === "day") &&
+    hours > 0
+  ) {
+    const units =
+      quoteBasis === "day"
+        ? Number(quote?.billing_days ?? days) || days
+        : Number(quote?.billing_hours ?? hours) || hours;
+    const rate =
+      quoteBasis === "day"
+        ? Number(quote?.effective_rates?.price_per_day ?? p.price_per_day ?? 0) || 0
+        : Number(quote?.effective_rates?.price_per_hour ?? p.price_per_hour ?? 0) || 0;
+    const subtotal =
+      Number(quote?.estimated_rental_subtotal) > 0
+        ? Number(quote.estimated_rental_subtotal)
+        : units * rate;
+    return { basis: quoteBasis, units, rate, subtotal: round2(subtotal) };
+  }
+
+  if (hours <= 0) {
+    return { basis: null, units: 0, rate: 0, subtotal: 0 };
+  }
+
+  if (catalogBasis === "day") {
+    const rate = Number(p.price_per_day || 0) || 0;
+    return { basis: "day", units: days, rate, subtotal: round2(days * rate) };
+  }
+
+  let rate = Number(p.price_per_hour || 0) || 0;
+  if (startDate && Array.isArray(weekdayPrices) && weekdayPrices.length) {
+    const dow = new Date(`${startDate}T12:00:00`).getDay();
+    const match = weekdayPrices.find((r) => Number(r?.day_of_week) === dow);
+    const v = match?.price_per_hour;
+    if (v !== undefined && v !== null && String(v) !== "") {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) rate = n;
+    }
+  }
+  return { basis: "hour", units: hours, rate, subtotal: round2(hours * rate) };
 }
 
 /**

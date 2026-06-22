@@ -10,7 +10,7 @@ import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
-import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts } from "../../rentals/rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing } from "../../rentals/rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -122,10 +122,24 @@ export default function RentalCheckoutPage() {
   }, [rentalItemId, start_date, end_date, pickup_time, dropoff_time, pickup_location, dropoff_location]);
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
-  const pricingBasis = useMemo(
-    () => rentalPricingBasis(pricing, pricingQuote),
-    [pricing, pricingQuote]
+  const weekdayPrices = rental?.weekday_prices || rental?.weekdayPrices || [];
+  const catalogBasis = useMemo(() => rentalCatalogPricingBasis(pricing), [pricing]);
+
+  const windowPricing = useMemo(
+    () =>
+      resolveRentalWindowPricing({
+        pricing,
+        startDate: start_date,
+        endDate: end_date,
+        pickupTime: pickup_time,
+        dropoffTime: dropoff_time,
+        weekdayPrices,
+        quote: pricingQuote,
+      }),
+    [pricing, start_date, end_date, pickup_time, dropoff_time, weekdayPrices, pricingQuote]
   );
+
+  const pricingBasis = windowPricing.basis || catalogBasis;
 
   const startISO = start_date && pickup_time ? `${start_date}T${pickup_time}:00` : "";
   const endISO = end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
@@ -181,12 +195,7 @@ export default function RentalCheckoutPage() {
     () => computeBillingDaysCeilFromParts(start_date, end_date, pickup_time, dropoff_time),
     [start_date, end_date, pickup_time, dropoff_time]
   );
-  const rentSubtotal = useMemo(() => {
-    if (pricingBasis === "day") {
-      return totalDays > 0 ? totalDays * effectivePerDay : 0;
-    }
-    return totalHours > 0 ? totalHours * effectivePerHour : 0;
-  }, [pricingBasis, totalDays, effectivePerDay, totalHours, effectivePerHour]);
+  const rentSubtotal = useMemo(() => windowPricing.subtotal, [windowPricing]);
   const monetary = useMemo(
     () => computeRentalBookingMonetaryBreakdown(rentSubtotal, pricing),
     [rentSubtotal, pricing]
@@ -202,9 +211,15 @@ export default function RentalCheckoutPage() {
   const convenienceFeePercent = monetary.convenienceFeePercent;
 
   const displayRateWithAdmin = useMemo(() => {
-    if (pricingBasis === "day") return rentalDailyRateWithAdmin({ ...pricing, price_per_day: effectivePerDay });
+    if (windowPricing.basis === "day") {
+      return rentalDailyRateWithAdmin({ ...pricing, price_per_day: windowPricing.rate });
+    }
+    if (windowPricing.basis === "hour") {
+      return applyRentalAdminChargeOnly(windowPricing.rate, pricing);
+    }
+    if (catalogBasis === "day") return rentalDailyRateWithAdmin({ ...pricing, price_per_day: effectivePerDay });
     return applyRentalAdminChargeOnly(effectivePerHour, pricing);
-  }, [pricingBasis, effectivePerDay, effectivePerHour, pricing]);
+  }, [windowPricing, catalogBasis, effectivePerDay, effectivePerHour, pricing]);
 
   const displayPerHourWithAdmin = displayRateWithAdmin;
 
@@ -214,15 +229,10 @@ export default function RentalCheckoutPage() {
   );
 
   const hourlySubtotalWithAdminForDisplay = useMemo(() => {
-    if (pricingBasis === "day") {
-      const days = Number(totalDays || 0) || 0;
-      if (days <= 0) return 0;
-      return days * displayRateWithAdmin;
-    }
-    const hrs = Number(totalHours || 0) || 0;
-    if (hrs <= 0) return 0;
-    return hrs * displayRateWithAdmin;
-  }, [pricingBasis, totalDays, totalHours, displayRateWithAdmin]);
+    const { basis, units } = windowPricing;
+    if (!basis || units <= 0) return 0;
+    return units * displayRateWithAdmin;
+  }, [windowPricing, displayRateWithAdmin]);
 
   const discountAmountForDisplay = useMemo(() => {
     const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
@@ -643,7 +653,7 @@ export default function RentalCheckoutPage() {
                 {[rental.brand, rental.subtitle].filter(Boolean).join(" • ")}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {pricingBasis === "day" ? "₹/day" : "₹/hour"} (effective):{" "}
+                {windowPricing.basis === "day" ? "₹/day" : "₹/hour"} (effective):{" "}
                 <span className="font-semibold text-gray-900">₹{money(displayRateWithAdmin)}</span>
               </div>
               <div className="text-xs text-gray-500 mt-1">
@@ -680,9 +690,11 @@ export default function RentalCheckoutPage() {
             <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
               <div className="flex justify-between gap-3">
                 <span className="text-gray-500">
-                  {pricingBasis === "day"
-                    ? `${totalDays || "-"} day(s) × ₹${money(displayRateWithAdmin)}`
-                    : `${totalHours || "-"} h × ₹${money(displayRateWithAdmin)}`}
+                  {windowPricing.basis === "day"
+                    ? `${windowPricing.units || "-"} day(s) × ₹${money(displayRateWithAdmin)}`
+                    : windowPricing.basis === "hour"
+                      ? `${windowPricing.units || "-"} h × ₹${money(displayRateWithAdmin)}`
+                      : "—"}
                 </span>
                 <span className="text-gray-900 font-semibold text-right">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
               </div>
@@ -731,7 +743,7 @@ export default function RentalCheckoutPage() {
               <p className="text-[11px] text-gray-500 pt-1 leading-snug">
                 Pay now + remaining equals your total (taxes included).
               </p>
-              {(pricingBasis === "day" ? totalDays === 0 : totalHours === 0) && (
+              {windowPricing.units === 0 && (
                 <div className="text-xs text-red-600">
                   Invalid start/end date &amp; time (still showing deposit as booking amount).
                 </div>

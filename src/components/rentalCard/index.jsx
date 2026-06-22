@@ -31,7 +31,7 @@ const RentalCard = ({ rental, userCoords }) => {
   } = rental || {};
 
   const pricing = pricing_rule || pricingRule || {};
-  const { amount: displayRate, unit: rateUnit } = rentalDisplayRate(pricing);
+  const displayRate = rentalDisplayRate(pricing);
   const primaryUnit = Array.isArray(units) && units.length ? units[0] : null;
   const effectiveTransmission = transmission ?? primaryUnit?.transmission;
   const effectiveFuelType = fuel_type ?? primaryUnit?.fuel_type;
@@ -108,13 +108,29 @@ const RentalCard = ({ rental, userCoords }) => {
           )}
 
           <div className="mt-auto pt-2 flex items-start justify-between gap-2">
-            <div className="flex items-baseline flex-shrink-0">
-              <span className="text-gray-900 font-bold text-xl leading-none">
-                ₹{displayRate ?? 0}
-              </span>
-              <span className="text-gray-500 text-sm font-normal ml-1 leading-none">
-                {rateUnit}
-              </span>
+            <div className="flex flex-col flex-shrink-0">
+              {displayRate.hybrid && displayRate.amount != null && displayRate.amountDay != null ? (
+                <>
+                  <div className="flex items-baseline">
+                    <span className="text-gray-500 text-xs font-normal mr-1">From</span>
+                    <span className="text-gray-900 font-bold text-lg leading-none">₹{displayRate.amount}</span>
+                    <span className="text-gray-500 text-sm font-normal ml-1 leading-none">/ hr</span>
+                  </div>
+                  <div className="flex items-baseline mt-0.5">
+                    <span className="text-gray-900 font-bold text-lg leading-none">₹{displayRate.amountDay}</span>
+                    <span className="text-gray-500 text-sm font-normal ml-1 leading-none">/ day</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-baseline">
+                  <span className="text-gray-900 font-bold text-xl leading-none">
+                    ₹{displayRate.amount ?? 0}
+                  </span>
+                  <span className="text-gray-500 text-sm font-normal ml-1 leading-none">
+                    {displayRate.unit}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="text-sm text-gray-500">
               {quantity ? `${quantity} units` : ""}

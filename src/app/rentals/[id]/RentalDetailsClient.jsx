@@ -198,8 +198,15 @@ export default function RentalDetailsClient({ rental }) {
   };
 
   const displayRate = rentalDisplayRate(pricing);
-  const priceLabel =
-    displayRate.amount != null
+  const priceLabel = displayRate.hybrid
+    ? displayRate.amount != null && displayRate.amountDay != null
+      ? `From ₹${formatMoney(displayRate.amount)}/hr · ₹${formatMoney(displayRate.amountDay)}/day`
+      : displayRate.amount != null
+        ? `From ₹${formatMoney(displayRate.amount)}/hr`
+        : displayRate.amountDay != null
+          ? `From ₹${formatMoney(displayRate.amountDay)}/day`
+          : "—"
+    : displayRate.amount != null
       ? `₹${formatMoney(displayRate.amount)}${displayRate.unit === "/ day" ? "/day" : "/hr"}`
       : "—";
 

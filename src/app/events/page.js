@@ -47,7 +47,7 @@ export default async function Events({ searchParams }) {
   const transformedEvents = eventsList?.data?.map((event) => ({
     id: event.id,
     title: event.name,
-    date: event.starting_date,
+    date: event.event_days?.[0]?.date || event.starting_date,
     venue: event.location,
     type: event.event_category_master?.name || "",
     image: event.thumb_image || event.cover_image,

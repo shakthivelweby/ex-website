@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
-    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev --hostname 0.0.0.0",
+    "dev": "next dev --hostname 0.0.0.0 -p 3000",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev --hostname 0.0.0.0 -p 3000",
     "dev:turbopack": "next dev --hostname 0.0.0.0 --turbopack",
     "turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
+    "prestart": "node ./scripts/ensure-next-build.mjs",
     "start:prod": "npm run build && next start",
     "lint": "next lint"
   },

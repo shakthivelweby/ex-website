@@ -1,3 +1,4 @@
+import "@flaticon/flaticon-uicons/css/all/all.css";
 import "./globals.css";
 import Providers from "./providers";
 

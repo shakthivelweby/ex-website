@@ -23,7 +23,8 @@ const ClientWrapper = ({
 
   const [initialFilters, setInitialFilters] = useState(() =>
     normalizeRentalFilters({
-      date: initialSearchParams.date || "",
+      date_from: initialSearchParams.date_from || initialSearchParams.date || "",
+      date_to: initialSearchParams.date_to || initialSearchParams.date || "",
       location: initialSearchParams.location || "",
       category: initialSearchParams.category || "",
       sub_category: initialSearchParams.sub_category || "",
@@ -48,7 +49,9 @@ const ClientWrapper = ({
       if (value) params.set(key, value);
       else params.delete(key);
     };
-    setOrDelete("date", newFilters.date);
+    setOrDelete("date_from", newFilters.date_from);
+    setOrDelete("date_to", newFilters.date_to);
+    params.delete("date");
     setOrDelete("location", newFilters.location);
     setOrDelete("category", newFilters.category);
     setOrDelete("sub_category", newFilters.sub_category);

@@ -9,6 +9,7 @@ import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import RichTextContent from "@/components/common/RichTextContent";
 import PickupLocationPicker from "@/components/rentals/PickupLocationPicker";
 import { rentalDisplayRate } from "@/app/rentals/rentalPricingCalc";
+import { isVehicleRental } from "@/app/rentals/rentalFilterUtils";
 import {
   normalizeRentalPickupOptions,
   getDefaultPickupOption,
@@ -197,16 +198,9 @@ export default function RentalDetailsClient({ rental }) {
     return null;
   };
 
-  const displayRate = rentalDisplayRate(pricing);
-  const priceLabel = displayRate.hybrid
-    ? displayRate.amount != null && displayRate.amountDay != null
-      ? `From ₹${formatMoney(displayRate.amount)}/hr · ₹${formatMoney(displayRate.amountDay)}/day`
-      : displayRate.amount != null
-        ? `From ₹${formatMoney(displayRate.amount)}/hr`
-        : displayRate.amountDay != null
-          ? `From ₹${formatMoney(displayRate.amountDay)}/day`
-          : "—"
-    : displayRate.amount != null
+  const displayRate = rentalDisplayRate(pricing, { preferDay: isVehicleRental(rental) });
+  const priceLabel =
+    displayRate.amount != null
       ? `₹${formatMoney(displayRate.amount)}${displayRate.unit === "/ day" ? "/day" : "/hr"}`
       : "—";
 

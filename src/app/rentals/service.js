@@ -6,7 +6,12 @@ export const getRentals = async (filters = {}) => {
     const normalized = normalizeRentalFilters(filters);
     const params = new URLSearchParams();
     if (normalized.search && String(normalized.search).trim()) params.append("search", String(normalized.search).trim());
-    if (normalized.date && /^\d{4}-\d{2}-\d{2}$/.test(String(normalized.date))) params.append("date", String(normalized.date));
+    if (normalized.date_from && /^\d{4}-\d{2}-\d{2}$/.test(String(normalized.date_from))) {
+      params.append("date_from", String(normalized.date_from));
+    }
+    if (normalized.date_to && /^\d{4}-\d{2}-\d{2}$/.test(String(normalized.date_to))) {
+      params.append("date_to", String(normalized.date_to));
+    }
     const hasCoords =
       normalized.latitude !== "" &&
       normalized.latitude !== undefined &&
@@ -14,7 +19,7 @@ export const getRentals = async (filters = {}) => {
       normalized.longitude !== "" &&
       normalized.longitude !== undefined &&
       normalized.longitude !== null;
-    if (!hasCoords && normalized.location && String(normalized.location).trim()) {
+    if (normalized.location && String(normalized.location).trim()) {
       params.append("location", String(normalized.location).trim());
     }
     if (normalized.latitude !== "" && normalized.latitude !== undefined && normalized.latitude !== null) params.append("latitude", String(normalized.latitude));

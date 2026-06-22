@@ -22,7 +22,8 @@ const RentalFilters = ({
 }) => {
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [subCategories, setSubCategories] = useState([]);
   const prevInitialFiltersRef = useRef();
   /** Ignore stale subcategory API responses (e.g. "all subs" finishing after a category-scoped request). */
@@ -36,8 +37,16 @@ const RentalFilters = ({
       setTempFilters(initialFilters || {});
     }
 
-    if (initialFilters?.date && /^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date)) {
-      setSelectedDate(new Date(initialFilters.date));
+    if (initialFilters?.date_from && /^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date_from)) {
+      setStartDate(new Date(initialFilters.date_from));
+    } else {
+      setStartDate(null);
+    }
+
+    if (initialFilters?.date_to && /^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date_to)) {
+      setEndDate(new Date(initialFilters.date_to));
+    } else {
+      setEndDate(null);
     }
   }, [initialFilters]);
 
@@ -79,16 +88,44 @@ const RentalFilters = ({
     setIsLocationOpen(false);
   };
 
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    if (!date) return;
-    patchFilters({ date: date.toISOString().split("T")[0] });
+  const toYmd = (date) => (date ? date.toISOString().split("T")[0] : "");
+
+  const handleStartDateChange = (date) => {
+    setStartDate(date);
+    if (!date) {
+      setEndDate(null);
+      patchFilters({ date_from: "", date_to: "" });
+      return;
+    }
+    const dateFrom = toYmd(date);
+    let dateTo = tempFilters.date_to || "";
+    if (dateFrom && dateTo && dateTo < dateFrom) {
+      dateTo = dateFrom;
+      setEndDate(date);
+    }
+    patchFilters({ date_from: dateFrom, date_to: dateTo });
+  };
+
+  const handleEndDateChange = (date) => {
+    setEndDate(date);
+    if (!date) {
+      patchFilters({ date_to: "" });
+      return;
+    }
+    patchFilters({ date_to: toYmd(date) });
+  };
+
+  const clearDateRange = () => {
+    setStartDate(null);
+    setEndDate(null);
+    patchFilters({ date_from: "", date_to: "" });
   };
 
   const clearAllFilters = () => {
     const hadCategory = Boolean(String(tempFilters?.category || "").trim());
     const clearedFilters = {
-      date: "",
+      date_from: "",
+      date_to: "",
       location: "",
       category: "",
       sub_category: "",
@@ -103,7 +140,8 @@ const RentalFilters = ({
       search: "",
     };
     setTempFilters(clearedFilters);
-    setSelectedDate(new Date());
+    setStartDate(null);
+    setEndDate(null);
     onFilterChange(clearedFilters);
     // If a category was selected, useEffect(category → "") refetches all subs.
     // If category was already empty, that effect does not re-run — refetch here.
@@ -140,17 +178,47 @@ const RentalFilters = ({
       </div>
 
       <div className="p-3 bg-gray-100 rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
-          <i className="fi fi-rr-calendar text-gray-400"></i>
-          <span className="text-sm font-medium text-gray-700">Date</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <i className="fi fi-rr-calendar text-gray-400"></i>
+            <span className="text-sm font-medium text-gray-700">Date range</span>
+          </div>
+          {(tempFilters.date_from || tempFilters.date_to) && (
+            <button
+              type="button"
+              onClick={clearDateRange}
+              className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Clear
+            </button>
+          )}
         </div>
-        <DatePicker
-          selected={selectedDate}
-          onChange={handleDateChange}
-          minDate={new Date()}
-          dateFormat="dd MMM yyyy"
-          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
-        />
+        <div className="grid grid-cols-1 gap-2">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">From</label>
+            <DatePicker
+              selected={startDate}
+              onChange={handleStartDateChange}
+              minDate={new Date()}
+              dateFormat="dd MMM yyyy"
+              placeholderText="Select start date"
+              isClearable
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">To</label>
+            <DatePicker
+              selected={endDate}
+              onChange={handleEndDateChange}
+              minDate={startDate || new Date()}
+              dateFormat="dd MMM yyyy"
+              placeholderText="Select end date"
+              isClearable
+              className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-600"
+            />
+          </div>
+        </div>
       </div>
 
       {!hideCategory && (

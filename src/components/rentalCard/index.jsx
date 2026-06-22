@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { rentalDisplayRate } from "@/app/rentals/rentalPricingCalc";
+import { isVehicleRental } from "@/app/rentals/rentalFilterUtils";
 
 const haversineKm = (lat1, lon1, lat2, lon2) => {
   const toRad = (d) => (Number(d) * Math.PI) / 180;
@@ -31,7 +32,7 @@ const RentalCard = ({ rental, userCoords }) => {
   } = rental || {};
 
   const pricing = pricing_rule || pricingRule || {};
-  const displayRate = rentalDisplayRate(pricing);
+  const displayRate = rentalDisplayRate(pricing, { preferDay: isVehicleRental(rental) });
   const primaryUnit = Array.isArray(units) && units.length ? units[0] : null;
   const effectiveTransmission = transmission ?? primaryUnit?.transmission;
   const effectiveFuelType = fuel_type ?? primaryUnit?.fuel_type;

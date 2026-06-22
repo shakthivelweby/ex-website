@@ -9,7 +9,8 @@ export default async function RentalsPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
 
   const filters = normalizeRentalFilters({
-    date: resolvedSearchParams.date || "",
+    date_from: resolvedSearchParams.date_from || resolvedSearchParams.date || "",
+    date_to: resolvedSearchParams.date_to || resolvedSearchParams.date || "",
     location: resolvedSearchParams.location || "",
     category: resolvedSearchParams.category || "",
     sub_category: resolvedSearchParams.sub_category || "",

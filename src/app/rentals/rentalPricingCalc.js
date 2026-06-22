@@ -67,11 +67,25 @@ export function rentalDailyRateWithAdmin(pricing) {
 /**
  * Display rate and unit suffix for listing cards.
  * @param {Record<string, unknown>} pricing
- * @returns {{ amount: number | null, unit: string }}
+ * @param {{ preferDay?: boolean }} [opts]
+ * @returns {{ amount: number | null, unit: string, hybrid?: boolean, amountDay?: number | null, unitDay?: string }}
  */
-export function rentalDisplayRate(pricing) {
+export function rentalDisplayRate(pricing, opts = {}) {
+  const preferDay = Boolean(opts.preferDay);
   const basis = rentalCatalogPricingBasis(pricing);
   const p = pricing || {};
+
+  if (preferDay) {
+    const daily = Number(p.price_per_day ?? 0);
+    if (Number.isFinite(daily) && daily > 0) {
+      return {
+        amount: rentalDailyRateWithAdmin(pricing),
+        unit: "/ day",
+        hybrid: false,
+      };
+    }
+  }
+
   if (basis === "hybrid") {
     const hourly = Number(p.price_per_hour ?? 0);
     const daily = Number(p.price_per_day ?? 0);

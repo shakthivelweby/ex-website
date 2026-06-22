@@ -10,6 +10,32 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 
+function ItineraryAttractionImage({ src, alt }) {
+  const [hasError, setHasError] = useState(false);
+  const imageSrc = src && String(src).trim() ? String(src).trim() : "";
+  const showImage = Boolean(imageSrc) && !hasError;
+
+  return (
+    <div className="relative h-40 rounded-lg overflow-hidden mb-2 bg-gray-50">
+      {showImage ? (
+        <Image
+          src={imageSrc}
+          alt={alt || "Attraction"}
+          fill
+          blurDataURL="/blur.webp"
+          placeholder="blur"
+          className="object-cover"
+          onError={() => setHasError(true)}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center border border-dashed border-gray-200 text-xs font-medium text-gray-400">
+          No images
+        </div>
+      )}
+    </div>
+  );
+}
+
 const ItinearyTab = ({ packageData, activeTab }) => {
   const [isClient, setIsClient] = useState(false);
   const { itineraries } = packageData.data;
@@ -162,50 +188,28 @@ const ItinearyTab = ({ packageData, activeTab }) => {
                         className="attraction-swiper"
                       >
                         {day.attractions.map((attr) => {
-                          const { id, name, image_url } = attr.attraction;
+                          const { name, image_url } = attr.attraction;
 
                           return (
-                            <>
-                            <SwiperSlide key={attr.id + `1`} className="w-[85%] sm:w-[45%] lg:w-[30%]">
+                            <SwiperSlide key={attr.id} className="w-[85%] sm:w-[45%] lg:w-[30%]">
                               <div className="flex flex-col h-full">
-                                <div className="relative h-40 rounded-lg overflow-hidden mb-2">
-                                  <Image
-                                    src={image_url}
-                                    alt={name}
-                                    fill
-                                    blurDataURL="/blur.webp"
-                                    placeholder="blur"
-                                    className="object-cover"
-                                  />
-                                </div>
+                                <ItineraryAttractionImage src={image_url} alt={name} />
                                 <p className="font-medium text-gray-800">
                                   {name}
                                 </p>
                               </div>
-                            </SwiperSlide >
-                           
-                            </>
+                            </SwiperSlide>
                           );
                         })}
                       </Swiper>
                     ) : (
                       <div className="flex items-center justify-center h-40">
-                        {day.attractions?.length > 0 &&
-                          day.attractions.map((attr) => {
-                            const { id, name, image_url } = attr.attraction;
+                        {day.attractions.map((attr) => {
+                            const { name, image_url } = attr.attraction;
                             return (
                               <div className="px-2 w-full" key={attr.id}>
                                 <div className="flex flex-col h-full">
-                                  <div className="relative h-40 rounded-lg overflow-hidden mb-2">
-                                    <Image
-                                      src={image_url}
-                                      alt={name}
-                                      fill
-                                      blurDataURL="/blur.webp"
-                                      placeholder="blur"
-                                      className="object-cover"
-                                    />
-                                  </div>
+                                  <ItineraryAttractionImage src={image_url} alt={name} />
                                   <p className="font-medium text-gray-800">
                                     {name}
                                   </p>

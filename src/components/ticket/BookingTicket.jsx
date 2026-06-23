@@ -17,6 +17,12 @@ const SHARE_PATHS = {
   attraction: (id) => `/my-bookings/attraction/ticket/${id}`,
 };
 
+const BOOKING_TYPE_LABELS = {
+  activity: "Activity",
+  event: "Event",
+  attraction: "Attraction",
+};
+
 function getExperience(ticket) {
   return (
     ticket?.experience ||
@@ -216,6 +222,17 @@ export default function BookingTicket({
         )}
 
         <div className="overflow-hidden rounded-[28px] border border-white/20 bg-white/90 shadow-2xl backdrop-blur-xl dark:border-gray-700 dark:bg-gray-900/90">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800 sm:px-5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={isDark ? "/exploreworld-logo-white.png" : "/exploreworld-logo.png"}
+              alt="Explore World"
+              className="h-7 w-auto"
+            />
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#069494]">
+              {BOOKING_TYPE_LABELS[bookingType] || "Booking"}
+            </span>
+          </div>
           <div className="relative p-4 sm:p-5">
             <div className="flex gap-4">
               <div className="relative h-24 w-20 shrink-0 overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800">

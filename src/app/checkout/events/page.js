@@ -14,6 +14,7 @@ export default function EventCheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [completedBookingId, setCompletedBookingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState({
     title: "",
     message: "",
@@ -354,11 +355,16 @@ export default function EventCheckoutPage() {
             });
 
             if (verificationResponse.status) {
+              setCompletedBookingId(response.data.id);
               setSuccessMessage({
                 title: "Booking Successful!",
-                message: "Your event tickets have been booked successfully. Check your email for details.",
+                message: "Your event tickets have been booked successfully. Opening your ticket…",
               });
               setShowSuccess(true);
+              setTimeout(() => {
+                setShowSuccess(false);
+                router.push(`/my-bookings/event/ticket/${response.data.id}`);
+              }, 1800);
             } else {
               // Payment verification failed - mark payment as failed
               const failRes = await paymentFailure(orderRes.data.event_payment_id);
@@ -964,7 +970,11 @@ export default function EventCheckoutPage() {
         show={showSuccess}
         onClose={() => {
           setShowSuccess(false);
-          router.push("/my-bookings?tab=events");
+          if (completedBookingId) {
+            router.push(`/my-bookings/event/ticket/${completedBookingId}`);
+          } else {
+            router.push("/my-bookings?tab=events");
+          }
         }}
         title={successMessage.title}
         message={successMessage.message}

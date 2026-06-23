@@ -9,4 +9,17 @@ const getAttractionBookings = async (page = 1) => {
   }
 };
 
-export { getAttractionBookings };
+const getAttractionTicket = async (bookingId) => {
+  const response = await apiMiddleware.get(`/attraction-booking/${bookingId}/ticket`);
+  return response.data?.data ?? response.data;
+};
+
+const downloadAttractionTicketPdf = async (bookingId) => {
+  const response = await apiMiddleware.get(`/attraction-booking/${bookingId}/ticket/pdf`, {
+    responseType: "blob",
+    timeout: 60000,
+  });
+  return response.data;
+};
+
+export { getAttractionBookings, getAttractionTicket, downloadAttractionTicketPdf };

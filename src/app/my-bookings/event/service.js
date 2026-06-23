@@ -11,3 +11,17 @@ export const getEventBookings = async (page = 1) => {
         throw error;
     }
 }
+
+export const getEventTicket = async (bookingId) => {
+  const response = await apiMiddleware.get(`/event-booking/${bookingId}/ticket`);
+  return response.data?.data ?? response.data;
+};
+
+export const downloadEventTicketPdf = async (bookingId) => {
+  const response = await apiMiddleware.get(`/event-booking/${bookingId}/ticket/pdf`, {
+    responseType: "blob",
+    timeout: 60000,
+  });
+  return response.data;
+};
+

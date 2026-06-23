@@ -13,6 +13,7 @@ export default function AttractionCheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [completedBookingId, setCompletedBookingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState({
     title: "",
     message: "",
@@ -243,14 +244,27 @@ export default function AttractionCheckoutPage() {
             });
 
 
-            if (verificationResponse.status) {     
-              
-  
+            if (verificationResponse.status) {
+              const bookingId =
+                verificationResponse?.data?.attraction_booking_id ??
+                verificationResponse?.data?.attractionBooking?.id ??
+                response?.data?.id;
+
+              if (!bookingId) {
+                setError("Booking completed but ticket id is missing. Check My Bookings.");
+                return;
+              }
+
+              setCompletedBookingId(bookingId);
               setSuccessMessage({
                 title: "Booking Successful!",
-                message: "Your attraction tickets have been booked successfully. Check your email for details.",
+                message: "Your attraction tickets have been booked successfully. Opening your ticket…",
               });
               setShowSuccess(true);
+              setTimeout(() => {
+                setShowSuccess(false);
+                router.push(`/my-bookings/attraction/ticket/${bookingId}`);
+              }, 1800);
             } else {
               // Payment verification failed - mark payment as failed
               const failRes = await paymentFailure(orderRes.data.attraction_payment_id);   
@@ -797,13 +811,21 @@ export default function AttractionCheckoutPage() {
           message={successMessage.message}
           onClose={() => {
             setShowSuccess(false);
-            router.push("/my-bookings?tab=attractions");
+            if (completedBookingId) {
+              router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
+            } else {
+              router.push("/my-bookings?tab=attractions");
+            }
           }}
           actionButton={{
-            label: "My bookings",
+            label: "View Ticket",
             onClick: () => {
               setShowSuccess(false);
-              router.push("/my-bookings?tab=attractions");
+              if (completedBookingId) {
+                router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
+              } else {
+                router.push("/my-bookings?tab=attractions");
+              }
             },
           }}
         />

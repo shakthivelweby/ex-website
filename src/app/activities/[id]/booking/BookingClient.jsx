@@ -222,6 +222,7 @@ const BookingClient = ({ activityId }) => {
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [completedBookingId, setCompletedBookingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState({
     title: "",
     message: "",
@@ -866,6 +867,7 @@ const BookingClient = ({ activityId }) => {
       const apiBookingData = {
         activity_id: activityId,
         visit_date: formData.selectedDate.toISOString().split('T')[0],
+        visit_time_slot_label: isSlotBased ? (selectedSlotLabel || formData.selectedTimeSlot || null) : null,
         total_amount: totalAmountForApi,
         discount_amount: discountAmountForApi,
         adult_count: formData.adultCount,
@@ -945,13 +947,18 @@ const BookingClient = ({ activityId }) => {
         };
         sessionStorage.setItem("bookingConfirmation", JSON.stringify(confirmationData));
 
+        setCompletedBookingId(bookingId);
         setSuccessMessage({
           title: "Booking Successful!",
           message: bookingData.booking_reference
-            ? `Your booking reference is ${bookingData.booking_reference}. Redirecting to My Bookings...`
-            : "Your activity has been booked successfully. Redirecting to My Bookings...",
+            ? `Your booking reference is ${bookingData.booking_reference}. Opening your ticket…`
+            : "Your activity has been booked successfully. Opening your ticket…",
         });
         setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          router.push(`/my-bookings/activity/ticket/${bookingId}`);
+        }, 1800);
       } else {
         if (orderData.activity_payment_id) {
           await activityPaymentFailed({ activity_payment_id: orderData.activity_payment_id });
@@ -1619,7 +1626,11 @@ const BookingClient = ({ activityId }) => {
           message={successMessage.message}
           onClose={() => {
             setShowSuccess(false);
-            router.push("/my-bookings?tab=activities");
+            if (completedBookingId) {
+              router.push(`/my-bookings/activity/ticket/${completedBookingId}`);
+            } else {
+              router.push("/my-bookings?tab=activities");
+            }
           }}
         />
       )}

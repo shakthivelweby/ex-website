@@ -396,6 +396,16 @@ const AttractionBookings = () => {
               </Button>
 
               <Button
+                onClick={() => router.push(`/my-bookings/attraction/ticket/${booking.id}`)}
+                variant="primary"
+                size="sm"
+                className="!rounded-full !text-xs !px-4 !py-2 flex items-center justify-center"
+              >
+                <i className="fi fi-rr-ticket mr-1.5"></i>
+                View Ticket
+              </Button>
+
+              <Button
                 onClick={() =>
                   router.push(`/attractions/${booking.attraction_id}`)
                 }

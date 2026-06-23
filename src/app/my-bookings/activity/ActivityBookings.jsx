@@ -396,6 +396,16 @@ const ActivityBookings = () => {
                 </Button>
 
                 <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push(`/my-bookings/activity/ticket/${booking.id}`)}
+                  className="!rounded-full !text-xs !px-4 !py-2"
+                >
+                  <i className="fi fi-rr-ticket mr-1.5"></i>
+                  View Ticket
+                </Button>
+
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => router.push(`/activities/${booking.activity_id}`)}

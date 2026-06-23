@@ -50,6 +50,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
         activeTab === "itinerary" ? "block" : "hidden"
       }`}
     >
+      <div className="not-prose flex flex-col gap-4">
       {itineraries.map((day, index) => {
         const { id, description, destination, day_number } = day;
         return (
@@ -226,6 +227,7 @@ const ItinearyTab = ({ packageData, activeTab }) => {
           </Accordion>
         );
       })}
+      </div>
 
       {/* Add Swiper styles */}
       <style jsx global>{`

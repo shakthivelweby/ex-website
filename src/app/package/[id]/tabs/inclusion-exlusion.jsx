@@ -8,8 +8,9 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
         activeTab === "inclusion" ? "block" : "hidden"
       }`}
     >
+      <div className="flex flex-col gap-4">
       <Accordion title="Included Services" defaultOpen={true}>
-        <ul className="space-y-3 m-0">
+        <ul className="flex flex-col gap-3 m-0 p-0 list-none">
           {detailed_inclusions &&
             detailed_inclusions.map((inclusion) => {
               if (inclusion.description === "") {
@@ -26,7 +27,7 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
       </Accordion>
 
       <Accordion title="Excluded Services" defaultOpen={false}>
-        <ul className="space-y-3 m-0">
+        <ul className="flex flex-col gap-3 m-0 p-0 list-none">
           {exclusions &&
             exclusions.map((exclusion) => {
               if (exclusion.description === "") {
@@ -43,7 +44,7 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
       </Accordion>
 
       <Accordion title="Things to Carry" defaultOpen={false}>
-        <ul className="space-y-3 m-0">
+        <ul className="flex flex-col gap-3 m-0 p-0 list-none">
           {things_to_carry &&
             things_to_carry.map((thing) => {
               if (thing.description === "") {
@@ -58,6 +59,7 @@ const InclusionExlusionTab = ({ packageData, activeTab }) => {
             })}
         </ul>
       </Accordion>
+      </div>
     </div>
   );
 };

@@ -9,6 +9,43 @@ import Button from "@/components/common/Button";
 import RichTextContent from "@/components/common/RichTextContent";
 import isLogin from "@/utils/isLogin";
 
+/** One row per ticket type — API can return duplicate price rows for the same day. */
+function dedupeTicketPrices(prices) {
+  if (!Array.isArray(prices)) return [];
+  const byType = new Map();
+  for (const row of prices) {
+    const typeId = row?.event_ticket_type_id ?? row?.eventTicketTypeId;
+    if (!typeId || byType.has(typeId)) continue;
+    byType.set(typeId, row);
+  }
+  return Array.from(byType.values());
+}
+
+/** One row per show — duplicate show rows have been observed for the same slot. */
+function dedupeEventShows(shows) {
+  if (!Array.isArray(shows)) return [];
+  const byKey = new Map();
+  for (const show of shows) {
+    const key =
+      show?.id ??
+      `${show?.name || ""}|${show?.start_time || ""}|${show?.end_time || ""}`;
+    if (byKey.has(key)) continue;
+    byKey.set(key, show);
+  }
+  return Array.from(byKey.values());
+}
+
+function normalizeBookingDays(days) {
+  if (!Array.isArray(days)) return [];
+  return days.map((date) => ({
+    ...date,
+    event_ticket_prices: dedupeTicketPrices(
+      date.event_ticket_prices || date.eventTicketPrices
+    ),
+    event_shows: dedupeEventShows(date.event_shows || date.eventShows),
+  }));
+}
+
 const BookingPage = ({ eventId }) => {
   const router = useRouter();
   const [eventData, setEventData] = useState(null);
@@ -33,7 +70,7 @@ const BookingPage = ({ eventId }) => {
       ]);
 
       setEventData(eventResponse.data);
-      setBookingData(bookingResponse.data);
+      setBookingData(normalizeBookingDays(bookingResponse.data));
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -495,7 +532,7 @@ const BookingPage = ({ eventId }) => {
 
                                       return (
                                         <div
-                                          key={ticketPrice.id}
+                                          key={`${show.id}-${ticketPrice.event_ticket_type_id}`}
                                           className={`${
                                             isSelected
                                               ? "bg-primary-50 border-primary-200"

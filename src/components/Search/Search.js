@@ -3,6 +3,7 @@ import Image from "next/image";
 import Popup from "../Popup";
 import { useSearch } from "@/app/search/query";
 import { useFeaturedDestinations } from "@/app/search/query";
+import { hasStoredImage } from "@/utils/imageUrl";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -341,9 +342,8 @@ export default function Search({
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="w-12 h-12 rounded-xl overflow-hidden relative bg-gray-100 flex-shrink-0">
-                        {destination.thumb_image_url &&
-                        destination.thumb_image_url !==
-                          "http://192.168.1.38:8000/images/destination" ? (
+                        {hasStoredImage(destination.thumb_image) &&
+                        destination.thumb_image_url ? (
                           <Image
                             src={destination.thumb_image_url}
                             alt={destination.name}
@@ -352,8 +352,8 @@ export default function Search({
                             sizes="48px"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <i className="fi fi-rr-map-marker text-gray-500 text-xl z-10"></i>
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
+                            <i className="fi fi-rr-picture text-gray-500 text-lg z-10" />
                           </div>
                         )}
                       </div>

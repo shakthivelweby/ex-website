@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import ResolvableCoverImage from "@/components/common/ResolvableCoverImage";
+import { pickImageSource } from "@/utils/imageUrl";
 import { getExploreData, getFeaturedDestinations, getPackageCount } from "./service";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -188,7 +190,13 @@ export default function Explore() {
                 className="w-full"
               >
           
-                {country.state.map((state) => (
+                {country.state.map((state) => {
+                  const stateImage = pickImageSource([
+                    { url: state.cover_image_url, filename: state.cover_image },
+                    { url: state.thumb_image_url, filename: state.thumb_image },
+                  ]);
+
+                  return (
                   <SwiperSlide key={`${country.id}-${state.id}`}>
                     <Link
                       href={`/packages/${country.id}?state=${state.id}`}
@@ -197,11 +205,10 @@ export default function Explore() {
                       <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
                         {/* Main Image */}
                         <div className="absolute inset-0">
-                          <Image
-                            src={state.thumb_image_url}
+                          <ResolvableCoverImage
+                            src={stateImage?.url}
+                            filename={stateImage?.filename}
                             alt={state.name}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-110"
                             sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                           />
                         </div>
@@ -253,7 +260,8 @@ export default function Explore() {
                       </div>
                     </Link>
                   </SwiperSlide>
-                ))}
+                  );
+                })}
               </Swiper>
             </div>
           </section>
@@ -344,6 +352,10 @@ export default function Explore() {
                 const packagesHref = `/packages/${destination.state.country_id}?state=${destination.state_id}&destination=${destination.id}`;
                 // Text `location` filter only: geo + HAVING(distance) drops rows with null lat/lng in DB.
                 const activitiesHref = `/activities?location=${encodeURIComponent(destination.name)}`;
+                const destinationImage = pickImageSource([
+                  { url: destination.cover_image_url, filename: destination.cover_image },
+                  { url: destination.thumb_image_url, filename: destination.thumb_image },
+                ]);
 
                 return (
                 <SwiperSlide key={destination.id}>
@@ -355,11 +367,10 @@ export default function Explore() {
                     <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
                       {/* Main Image */}
                       <div className="absolute inset-0">
-                        <Image
-                          src={destination.cover_image_url}
+                        <ResolvableCoverImage
+                          src={destinationImage?.url}
+                          filename={destinationImage?.filename}
                           alt={destination.name}
-                          fill
-                          className="object-cover transition-transform duration-700 group-hover:scale-110"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
                       </div>

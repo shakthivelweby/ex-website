@@ -2,6 +2,7 @@
 
 import PackageCard from "@/components/PackageCard";
 import Image from "next/image";
+import ChipThumbImage from "@/components/common/ChipThumbImage";
 import { useState, useEffect, useMemo } from "react";
 import RangeSlider from "@/components/RangeSlider/RangeSlider";
 import Dropdown from "@/components/Dropdown/Dropdown";
@@ -395,15 +396,12 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                                 >
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all 
                                             bg-white border-gray-200 hover:border-primary-500 hover:bg-primary-50`}>
-                                        <div className="w-6 h-6 rounded-full overflow-hidden relative">
-                                            <Image
-                                                src={state.thumb_image_url}
-                                                alt={state.name}
-                                                fill
-                                                className="object-cover"
-                                              
-                                            />
-                                        </div>
+                                        <ChipThumbImage
+                                            src={state.thumb_image_url}
+                                            filename={state.thumb_image}
+                                            alt={state.name}
+                                            iconClass="fi fi-rr-map"
+                                        />
                                         <span className="text-sm font-medium whitespace-nowrap text-gray-700 group-hover:text-primary-600">
                                             {state.name}
                                         </span>
@@ -472,14 +470,12 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                                     <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all 
                                             bg-white border-gray-200 hover:border-primary-500 hover:bg-primary-50 ${selectedDestination === destination.id ? 'border-primary-500 bg-primary-50' : ''
                                         }`}>
-                                        <div className="w-6 h-6 rounded-full overflow-hidden relative">
-                                            <Image
-                                                src={destination.thumb_image_url}
-                                                alt={destination.name}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        </div>
+                                        <ChipThumbImage
+                                            src={destination.thumb_image_url}
+                                            filename={destination.thumb_image}
+                                            alt={destination.name}
+                                            iconClass="fi fi-rr-map-marker"
+                                        />
                                         <span className={`text-sm font-medium whitespace-nowrap ${selectedDestination === destination.id ? 'text-primary-600' : 'text-gray-700'
                                             } group-hover:text-primary-600`}>
                                             {destination.name}

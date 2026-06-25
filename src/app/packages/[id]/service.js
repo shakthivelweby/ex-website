@@ -41,12 +41,16 @@ const suitableFor = async () => {
 };
 
 const countryInfo = async (id) => {
-    const response = await apiServerMiddleware.get(`/country-info?id=${id}`);
+    const response = await apiServerMiddleware.get(`/country-info`, {
+        params: { id },
+    });
     return response.data;
 };
 
 const getStates = async (id) => {
-    const response = await apiServerMiddleware.get(`/states-under-country?id=${id}`);
+    const response = await apiServerMiddleware.get(`/states-under-country`, {
+        params: { id },
+    });
     return response.data;
 };
 

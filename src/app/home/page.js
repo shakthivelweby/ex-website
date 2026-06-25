@@ -262,6 +262,11 @@ export default function HomePage() {
         destination.type === "destination" ? destination.id : null,
     };
 
+    if (!destinationData.country_id) {
+      setIsLocationPopupOpen(true);
+      return;
+    }
+
     // Store in localStorage
     localStorage.setItem("choosedDestination", JSON.stringify(destinationData));
 
@@ -448,6 +453,11 @@ export default function HomePage() {
     }
 
     const destination = JSON.parse(savedDestination);
+
+    if (!destination?.country_id) {
+      setIsLocationPopupOpen(true);
+      return;
+    }
 
     // Get the redirect URL for the selected trip type
     const tripType = selectedTrip.split(" ")[0];
@@ -1046,14 +1056,15 @@ export default function HomePage() {
                         <DestinationCard
                           destination={{
                             name: dest.name,
-                            image:
-                              dest.image ||
-                              "https://images.unsplash.com/photo-1596422846543-75c6a197f070?q=80&w=1000",
+                            cover_image: dest.cover_image,
+                            thumb_image: dest.thumb_image,
+                            cover_image_url: dest.cover_image_url,
+                            thumb_image_url: dest.thumb_image_url,
                             packageCount: dest.package_count || 0,
                             description:
                               dest.description ||
                               `${dest.package_count || 0} Tours available`,
-                            trending: idx < 2, // First 2 are trending
+                            trending: idx < 2,
                             href: dest.country_id
                               ? `/packages/${dest.country_id}?state=${
                                   dest.state_id || ""

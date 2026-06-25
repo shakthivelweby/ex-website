@@ -114,20 +114,26 @@ function GeneralTab({ packageData, activeTab }) {
       </div>
 
       {/* Additional Information Section as Accordion */}
-      <Accordion title="Additional information" defaultOpen={false}>
+      <Accordion title="Additional information" defaultOpen={false} className="mt-4">
         <RichTextContent html={additional_info} className="text-gray-800" />
       </Accordion>
 
       {/* Frequently Asked Questions */}
-      <h3 className="text-lg font-medium text-gray-800 mt-8 mb-4">
-        Frequently Asked Questions
-      </h3>
+      {faqs?.length > 0 && (
+        <>
+          <h3 className="text-lg font-medium text-gray-800 mt-8 mb-4">
+            Frequently Asked Questions
+          </h3>
 
-      {faqs.map((faq) => (
-        <Accordion key={faq.id} title={faq.question} defaultOpen={false}>
-          <p className="text-gray-800">{faq.answer}</p>
-        </Accordion>
-      ))}
+          <div className="flex flex-col gap-3">
+            {faqs.map((faq) => (
+              <Accordion key={faq.id} title={faq.question} defaultOpen={false}>
+                <p className="text-gray-800">{faq.answer}</p>
+              </Accordion>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

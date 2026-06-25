@@ -1,42 +1,110 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import ResolvableCoverImage from "@/components/common/ResolvableCoverImage";
+import { pickImageSource } from "@/utils/imageUrl";
+
+function isExternalImageUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  return (
+    trimmed.startsWith("http") && !trimmed.includes("/images/destination/")
+  );
+}
 
 const DestinationCard = ({ destination, className = "" }) => {
   const {
     name,
     image,
+    cover_image,
+    cover_image_url,
+    coverImage,
+    coverImageUrl,
+    thumb_image,
+    thumb_image_url,
+    thumbImage,
+    thumbImageUrl,
     packageCount,
     description = "Discover amazing tour packages",
     trending = false,
   } = destination;
 
+  const [legacyImageFailed, setLegacyImageFailed] = useState(false);
+
+  const storedImage = useMemo(
+    () =>
+      pickImageSource([
+        {
+          url: cover_image_url || coverImageUrl,
+          filename: cover_image || coverImage,
+        },
+        {
+          url: thumb_image_url || thumbImageUrl,
+          filename: thumb_image || thumbImage,
+        },
+      ]),
+    [
+      cover_image,
+      cover_image_url,
+      coverImage,
+      coverImageUrl,
+      thumb_image,
+      thumb_image_url,
+      thumbImage,
+      thumbImageUrl,
+    ]
+  );
+
+  const legacyImage =
+    !storedImage && isExternalImageUrl(image) && !legacyImageFailed
+      ? image.trim()
+      : null;
+
   return (
-    <Link href={destination.href || `/packages/${name.toLowerCase().replace(/\s+/g, "-")}`}>
+    <Link
+      href={
+        destination.href ||
+        `/packages/${name.toLowerCase().replace(/\s+/g, "-")}`
+      }
+    >
       <div
-        className={`relative w-full rounded-[32px] overflow-hidden group cursor-pointer bg-gray-900 ${className || "h-[500px]"
-          }`}
+        className={`relative w-full rounded-[32px] overflow-hidden group cursor-pointer bg-gray-900 ${
+          className || "h-[500px]"
+        }`}
       >
-        {/* Background Image */}
         <div className="absolute inset-0">
-          <Image
-            src={image}
-            alt={name}
-            fill
-            className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          {/* Gradient Overlay */}
+          {storedImage || !legacyImage ? (
+            <ResolvableCoverImage
+              src={storedImage?.url}
+              filename={storedImage?.filename}
+              alt={name}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
+            />
+          ) : (
+            <Image
+              src={legacyImage}
+              alt={name}
+              fill
+              className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              onError={() => setLegacyImageFailed(true)}
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-all duration-500" />
         </div>
 
-        {/* Top Badges */}
         <div className="absolute top-6 left-6 right-6 z-10 flex justify-between items-start">
           {trending ? (
             <span className="bg-red-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg border border-red-500/20">
               Trending
             </span>
-          ) : <div></div>}
+          ) : (
+            <div />
+          )}
 
           <div className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg group-hover:bg-white/20 transition-colors">
             <i className="fi fi-rr-umbrella-beach text-white"></i>
@@ -44,7 +112,6 @@ const DestinationCard = ({ destination, className = "" }) => {
           </div>
         </div>
 
-        {/* Bottom Content with Reveal Animation */}
         <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
           <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 ease-out">
             <h3 className="text-2xl md:text-3xl font-bold text-white mb-1 leading-tight drop-shadow-sm group-hover:text-primary-100 transition-colors">
@@ -68,7 +135,6 @@ const DestinationCard = ({ destination, className = "" }) => {
               </div>
             </div>
 
-            {/* Simple decorative line that disappears on hover */}
             <div className="w-12 h-1 bg-primary-500 mt-4 rounded-full group-hover:w-0 group-hover:opacity-0 transition-all duration-500 origin-left delay-100"></div>
           </div>
         </div>

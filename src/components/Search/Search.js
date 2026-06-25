@@ -59,12 +59,20 @@ export default function Search({
   }, [type]);
 
   const handleSelect = (item) => {
+    const countryId =
+      item.type === "country" ? item.id : item.country_id;
+
+    if (!countryId) {
+      console.error("Missing country for selected location:", item);
+      return;
+    }
+
     // Save destination data to localStorage with proper structure for both types
     const destinationData = {
       id: item.id,
       name: item.name,
       type: item.type,
-      country_id: item.type === "country" ? item.id : item.country_id,
+      country_id: countryId,
       state_id: item.type === "state" ? item.id : item.state_id,
       destination_id: item.type === "destination" ? item.id : null,
     };
@@ -79,9 +87,9 @@ export default function Search({
       if (item.type === "country") {
         url = `/packages/${item.id}`;
       } else if (item.type === "state") {
-        url = `/packages/${item.country_id}?state=${item.id}`;
+        url = `/packages/${countryId}?state=${item.id}`;
       } else if (item.type === "destination") {
-        url = `/packages/${item.country_id}?state=${item.state_id}&destination=${item.id}`;
+        url = `/packages/${countryId}?state=${item.state_id}&destination=${item.id}`;
       }
 
       if (url) {

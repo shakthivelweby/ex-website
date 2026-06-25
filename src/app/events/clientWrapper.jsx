@@ -2,6 +2,7 @@
 
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
+import ChipThumbImage from "@/components/common/ChipThumbImage";
 import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
@@ -335,15 +336,14 @@ const ClientWrapper = ({
                               : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
                           }`}
                         >
-                          {category.image ? (
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                            />
-                          ) : (
-                            <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
-                          )}
+                          <ChipThumbImage
+                            src={category.image}
+                            filename={category.image_file}
+                            alt={category.name}
+                            iconClass="fi fi-rr-ticket text-lg"
+                            className="w-full h-full rounded-lg overflow-hidden relative"
+                            sizes="48px"
+                          />
                         </div>
                         <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
                           {category.name}
@@ -383,15 +383,14 @@ const ClientWrapper = ({
                             : "bg-gray-50 group-hover:bg-primary-50"
                         }`}
                       >
-                        {category.image ? (
-                          <img
-                            src={category.image}
-                            alt={category.name}
-                            className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                          />
-                        ) : (
-                          <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
-                        )}
+                        <ChipThumbImage
+                          src={category.image}
+                          filename={category.image_file}
+                          alt={category.name}
+                          iconClass="fi fi-rr-ticket text-lg"
+                          className="w-full h-full rounded-lg overflow-hidden relative"
+                          sizes="48px"
+                        />
                       </div>
                       <span className="text-xs font-medium text-center leading-tight">
                         {category.name}

@@ -11,6 +11,7 @@ const Signup = ({show, onClose, onLoginClick, setloginFormData}) => {
     confirmPassword: ''
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -23,8 +24,9 @@ const Signup = ({show, onClose, onLoginClick, setloginFormData}) => {
       password: '',
       confirmPassword: ''
     });
-    setErrors({});
     setShowPassword(false);
+    setShowConfirmPassword(false);
+    setErrors({});
     setIsLoading(false);
   };
 
@@ -273,7 +275,7 @@ const Signup = ({show, onClose, onLoginClick, setloginFormData}) => {
                     <i className={`fi fi-rr-lock ${errors.confirmPassword ? 'text-red-400' : 'text-gray-400'}`}></i>
                   </div>
                   <input 
-                    type={showPassword ? "text" : "password"} 
+                    type={showConfirmPassword ? "text" : "password"} 
                     id="confirmPassword" 
                     name="confirmPassword"
                     value={formData.confirmPassword}
@@ -283,6 +285,14 @@ const Signup = ({show, onClose, onLoginClick, setloginFormData}) => {
                     placeholder="Confirm your password"
                     minLength={8}
                   />
+                  <button 
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  >
+                    <i className={`fi ${showConfirmPassword ? 'fi-rr-eye' : 'fi-rr-eye-crossed'}`}></i>
+                  </button>
                 </div>
                 {renderFieldError('confirmPassword')}
               </div>

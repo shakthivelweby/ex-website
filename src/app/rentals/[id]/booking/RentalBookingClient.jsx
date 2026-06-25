@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,13 +9,27 @@ import "react-datepicker/dist/react-datepicker.css";
 import Button from "@/components/common/Button";
 import PickupLocationPicker from "@/components/rentals/PickupLocationPicker";
 import { checkRentalAvailability, getRentalUnavailableDates, getRentalDetailsClient, getRentalPickupLocationsClient } from "../../clientService";
-import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentalBookingConstants";
+import { RENTAL_MIN_BOOKING_HOURS_DEFAULT, RENTAL_MIN_BILLING_HOURS } from "../../rentalBookingConstants";
+import { requiresExtendedMinBookingHours } from "../../rentalFilterUtils";
 import {
   normalizeRentalPickupOptions,
   getDefaultPickupOption,
   mergePickupLocationRows,
   extractRentalPickupRows,
 } from "../../rentalPickupUtils";
+import {
+  emptyRentalBooking,
+  hydrateRentalBookingDraft,
+  mergeRentalBookingDraft,
+  writeRentalBookingDraft,
+  hasRentalBookingSchedule,
+  buildRentalBookingFields,
+  rentalBookingQueryString,
+  restoreRentalBookingDraft,
+  bookingDraftNeedsRestore,
+  isRentalBookingCheckoutRestore,
+  forceRentalBookingRestore,
+} from "../../rentalBookingDraft";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing } from "../../rentalPricingCalc";
 
 const money = (v) => {
@@ -31,8 +45,14 @@ const parseAvailabilityPayload = (res) => {
   return null;
 };
 
-const isAvailabilityOpen = (payload) =>
-  payload?.is_available === true && Number(payload?.available_units ?? 1) > 0;
+const isTruthyAvailabilityFlag = (value) =>
+  value === true || value === 1 || value === "1" || value === "true";
+
+const isAvailabilityOpen = (payload) => {
+  if (!payload) return false;
+  const units = Number(payload.available_units ?? 1);
+  return isTruthyAvailabilityFlag(payload.is_available) && Number.isFinite(units) && units > 0;
+};
 
 const isAvailabilityClosed = (payload) =>
   Boolean(
@@ -51,15 +71,17 @@ const computeBillingHoursCeil = (b) => {
   return Math.max(1, Math.ceil(ms / (1000 * 60 * 60)));
 };
 
-const initialBooking = {
-  pickup_location: "",
-  dropoff_location: "",
-  pickup_lat: "",
-  pickup_lng: "",
-  start_date: "",
-  end_date: "",
-  pickup_time: "",
-  dropoff_time: "",
+const bookingFieldsEqual = (a, b) => {
+  const left = buildRentalBookingFields(a);
+  const right = buildRentalBookingFields(b);
+  return (
+    left.pickup_location === right.pickup_location &&
+    left.dropoff_location === right.dropoff_location &&
+    left.start_date === right.start_date &&
+    left.end_date === right.end_date &&
+    left.pickup_time === right.pickup_time &&
+    left.dropoff_time === right.dropoff_time
+  );
 };
 
 export default function RentalBookingClient({
@@ -67,6 +89,7 @@ export default function RentalBookingClient({
   initialRental = null,
   initialPickupLocations = [],
   initialPickupFromUrl = "",
+  initialBookingFromUrl = null,
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -83,11 +106,40 @@ export default function RentalBookingClient({
     () => mergePickupLocationRows(initialPickupLocations, extractRentalPickupRows(initialRental)).length === 0
   );
   const [loading, setLoading] = useState(!initialRental);
-  const [booking, setBooking] = useState(initialBooking);
+  const searchParamsKey = searchParams.toString();
+  const [booking, setBooking] = useState(() => {
+    if (typeof window === "undefined") return emptyRentalBooking();
+    const id = rentalIdProp || "";
+    if (!id) return emptyRentalBooking();
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("from_checkout") === "1") {
+      return forceRentalBookingRestore(id, params, initialBookingFromUrl);
+    }
+    return hydrateRentalBookingDraft(id, { initialFromUrl: initialBookingFromUrl });
+  });
   const [checking, setChecking] = useState(false);
   const [avail, setAvail] = useState(null);
   const [error, setError] = useState("");
   const [unavailable, setUnavailable] = useState({ bookings: [], blocked: [] });
+  const initialBookingFromUrlRef = useRef(initialBookingFromUrl);
+  initialBookingFromUrlRef.current = initialBookingFromUrl;
+  const bookingRef = useRef(booking);
+  bookingRef.current = booking;
+
+  const applyDraftRestore = (previous = null, paramsOverride = searchParams) => {
+    if (!rentalId) return;
+    setBooking((prev) => {
+      const base = previous ?? prev;
+      const merged = mergeRentalBookingDraft(base, rentalId, {
+        searchParams: paramsOverride,
+        initialFromUrl: initialBookingFromUrlRef.current,
+      });
+      return bookingFieldsEqual(prev, merged) ? prev : merged;
+    });
+    setAvail(null);
+  };
+  const applyDraftRestoreRef = useRef(applyDraftRestore);
+  applyDraftRestoreRef.current = applyDraftRestore;
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
   const weekdayPrices = rental?.weekday_prices || rental?.weekdayPrices || [];
@@ -120,6 +172,7 @@ export default function RentalBookingClient({
   const basePerDay = Number(pricing.price_per_day || 0) || 0;
 
   const primaryUnit = Array.isArray(rental?.units) && rental.units.length ? rental.units[0] : null;
+  const eligibleUnits = Math.max(1, Number(rental?.quantity ?? 1));
   const displayTransmission = rental?.transmission ?? primaryUnit?.transmission;
   const displayFuel = rental?.fuel_type ?? primaryUnit?.fuel_type;
 
@@ -176,10 +229,28 @@ export default function RentalBookingClient({
     [booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time]
   );
 
-  const minBookingHours =
-    avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
+  const enforceExtendedMinHours = requiresExtendedMinBookingHours(rental);
+
+  const effectiveMinBookingHours = enforceExtendedMinHours
+    ? avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
       ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
-      : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+      : RENTAL_MIN_BOOKING_HOURS_DEFAULT
+    : RENTAL_MIN_BILLING_HOURS;
+
+  const minBookingHours = effectiveMinBookingHours;
+
+  const minHoursViolated = (hours) =>
+    pricingBasis !== "day" &&
+    enforceExtendedMinHours &&
+    hours > 0 &&
+    hours < effectiveMinBookingHours;
+
+  const availabilityMinHoursBlocked = (payload) =>
+    Boolean(
+      payload?.minimum_hours_not_met &&
+        pricingBasis !== "day" &&
+        enforceExtendedMinHours
+    );
 
   const rentSubtotal = useMemo(() => windowPricing.subtotal, [windowPricing]);
 
@@ -248,6 +319,18 @@ export default function RentalBookingClient({
     [pickupOptions, booking.pickup_location]
   );
 
+  const effectiveBooking = useMemo(() => {
+    const pickup = String(
+      booking.pickup_location || selectedPickupOption?.name || rental?.location || ""
+    ).trim();
+    const dropoff = String(booking.dropoff_location || pickup).trim();
+    return {
+      ...booking,
+      pickup_location: pickup,
+      dropoff_location: dropoff,
+    };
+  }, [booking, selectedPickupOption, rental?.location]);
+
   const vehicleLocation = selectedPickupOption?.name || (rental?.location || "").toString().trim();
 
   const applyPickupOption = (option) => {
@@ -263,11 +346,126 @@ export default function RentalBookingClient({
     setAvail(null);
   };
 
+  useLayoutEffect(() => {
+    if (!rentalId) return;
+
+    if (isRentalBookingCheckoutRestore(searchParams)) {
+      const restored = forceRentalBookingRestore(
+        rentalId,
+        searchParams,
+        initialBookingFromUrlRef.current
+      );
+      setBooking(restored);
+      writeRentalBookingDraft(rentalId, restored);
+      setAvail(null);
+      setError("");
+      const cleanUrl = rentalBookingQueryString(rentalId, restored);
+      if (cleanUrl && typeof window !== "undefined") {
+        router.replace(cleanUrl, { scroll: false });
+      }
+      return;
+    }
+
+    applyDraftRestore();
+  }, [rentalId, searchParamsKey, initialBookingFromUrl]);
+
+  // Browser back/forward restores this page from bfcache with stale React state — re-hydrate draft.
+  useEffect(() => {
+    if (!rentalId || typeof window === "undefined") return;
+
+    const onPageShow = (event) => {
+      if (event.persisted) {
+        applyDraftRestoreRef.current(emptyRentalBooking(), null);
+        return;
+      }
+      setBooking((prev) => {
+        if (!bookingDraftNeedsRestore(prev, rentalId)) return prev;
+        const merged = restoreRentalBookingDraft(
+          rentalId,
+          emptyRentalBooking(),
+          initialBookingFromUrlRef.current
+        );
+        return bookingFieldsEqual(prev, merged) ? prev : merged;
+      });
+    };
+
+    const onPopState = () => {
+      window.requestAnimationFrame(() =>
+        applyDraftRestoreRef.current(emptyRentalBooking(), null)
+      );
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      setBooking((prev) => {
+        if (!bookingDraftNeedsRestore(prev, rentalId)) return prev;
+        const merged = restoreRentalBookingDraft(rentalId, prev, initialBookingFromUrlRef.current);
+        return bookingFieldsEqual(prev, merged) ? prev : merged;
+      });
+    };
+
+    const onPageHide = () => {
+      writeRentalBookingDraft(rentalId, bookingRef.current);
+    };
+
+    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("popstate", onPopState);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("popstate", onPopState);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [rentalId]);
+
+  useEffect(() => {
+    if (!rentalId || !hasRentalBookingSchedule(booking)) return;
+    if (typeof window === "undefined") return;
+    const current = new URLSearchParams(window.location.search);
+    const missingSchedule =
+      !current.get("start_date") ||
+      !current.get("end_date") ||
+      !current.get("pickup_time") ||
+      !current.get("dropoff_time");
+    if (!missingSchedule) return;
+    const href = rentalBookingQueryString(rentalId, booking);
+    router.replace(href, { scroll: false });
+  }, [
+    rentalId,
+    booking.start_date,
+    booking.end_date,
+    booking.pickup_time,
+    booking.dropoff_time,
+    booking.pickup_location,
+    booking.dropoff_location,
+    router,
+  ]);
+
+  useEffect(() => {
+    writeRentalBookingDraft(rentalId, booking);
+  }, [
+    rentalId,
+    booking.start_date,
+    booking.end_date,
+    booking.pickup_time,
+    booking.dropoff_time,
+    booking.pickup_location,
+    booking.dropoff_location,
+  ]);
+
   useEffect(() => {
     if (!rental) return;
     const preferred = getDefaultPickupOption(pickupOptions, pickupFromUrl || booking.pickup_location);
     if (!preferred?.name) return;
-    if (booking.pickup_location === preferred.name) return;
+    if (booking.pickup_location === preferred.name) {
+      if (!booking.pickup_lat && (preferred.latitude || preferred.longitude)) {
+        applyPickupOption(preferred);
+      }
+      return;
+    }
     applyPickupOption(preferred);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rental?.id, pickupOptions, pickupFromUrl]);
@@ -360,6 +558,29 @@ export default function RentalBookingClient({
     };
   }, [rentalId]);
 
+  const overlapsWindow = (windowStartISO, windowEndISO, itemStartISO, itemEndISO) => {
+    const ws = new Date(windowStartISO);
+    const we = new Date(windowEndISO);
+    const s = new Date(itemStartISO);
+    const e = new Date(itemEndISO);
+    if (![ws, we, s, e].every((d) => Number.isFinite(d.getTime()))) return false;
+    return s < we && e > ws;
+  };
+
+  const countWindowBookingOverlaps = (windowStartISO, windowEndISO) => {
+    let count = 0;
+    for (const b of unavailable.bookings || []) {
+      if (
+        b?.start_datetime &&
+        b?.end_datetime &&
+        overlapsWindow(windowStartISO, windowEndISO, b.start_datetime, b.end_datetime)
+      ) {
+        count += 1;
+      }
+    }
+    return count;
+  };
+
   const isDateUnavailable = (dateObj) => {
     if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return false;
     const dayStart = new Date(dateObj);
@@ -374,22 +595,18 @@ export default function RentalBookingClient({
       return s <= dayEnd && e >= dayStart;
     };
 
-    for (const b of unavailable.bookings || []) {
-      if (b?.start_datetime && b?.end_datetime && overlaps(b.start_datetime, b.end_datetime)) return true;
+    if (eligibleUnits <= 1) {
+      for (const b of unavailable.bookings || []) {
+        if (b?.start_datetime && b?.end_datetime && overlaps(b.start_datetime, b.end_datetime)) {
+          return true;
+        }
+      }
     }
+
     for (const r of unavailable.blocked || []) {
       if (r?.start_datetime && r?.end_datetime && overlaps(r.start_datetime, r.end_datetime)) return true;
     }
     return false;
-  };
-
-  const overlapsWindow = (windowStartISO, windowEndISO, itemStartISO, itemEndISO) => {
-    const ws = new Date(windowStartISO);
-    const we = new Date(windowEndISO);
-    const s = new Date(itemStartISO);
-    const e = new Date(itemEndISO);
-    if (![ws, we, s, e].every((d) => Number.isFinite(d.getTime()))) return false;
-    return s < we && e > ws;
   };
 
   const blockedAppliesToWindow = (blockedRow, windowStartISO, windowEndISO) => {
@@ -423,17 +640,13 @@ export default function RentalBookingClient({
     if (![ws, we].every((d) => Number.isFinite(d.getTime()))) return false;
     if (we <= ws) return false;
 
-    for (const b of unavailable.bookings || []) {
-      if (b?.start_datetime && b?.end_datetime && overlapsWindow(windowStartISO, windowEndISO, b.start_datetime, b.end_datetime)) {
-        return true;
-      }
-    }
     for (const r of unavailable.blocked || []) {
       if (!r?.start_datetime || !r?.end_datetime) continue;
       if (!blockedAppliesToWindow(r, windowStartISO, windowEndISO)) continue;
       if (overlapsWindow(windowStartISO, windowEndISO, r.start_datetime, r.end_datetime)) return true;
     }
-    return false;
+
+    return countWindowBookingOverlaps(windowStartISO, windowEndISO) >= eligibleUnits;
   };
 
   const isStartDateSelectable = (dateObj) => {
@@ -495,52 +708,65 @@ export default function RentalBookingClient({
   const timeRe = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
   const validateBooking = () => {
+    const b = effectiveBooking;
     const required = ["start_date", "end_date", "pickup_time", "dropoff_time"];
     for (const k of required) {
-      if (!String(booking[k] || "").trim()) return `Please fill ${k.replaceAll("_", " ")}.`;
+      if (!String(b[k] || "").trim()) return `Please fill ${k.replaceAll("_", " ")}.`;
     }
-    if (!timeRe.test(String(booking.pickup_time || "").trim())) {
+    if (!timeRe.test(String(b.pickup_time || "").trim())) {
       return "Pickup time must be in HH:MM format (24h).";
     }
-    if (!timeRe.test(String(booking.dropoff_time || "").trim())) {
+    if (!timeRe.test(String(b.dropoff_time || "").trim())) {
       return "Dropoff time must be in HH:MM format (24h).";
     }
-    const pu = String(booking.pickup_location || "").trim();
-    const du = String(booking.dropoff_location || "").trim();
+    const pu = String(b.pickup_location || "").trim();
+    const du = String(b.dropoff_location || "").trim();
     if (pickupOptions.length > 1 && !pu) return "Please select your preferred pickup location.";
     if (!pu) return "Pickup location is required.";
     if (!du) return "Dropoff location is required.";
     if (pu.length > 255 || du.length > 255) {
       return "Pickup and dropoff locations must be at most 255 characters each.";
     }
-    const hours = computeBillingHoursCeil(booking);
-    if (pricingBasis !== "day") {
-      const minH =
-        avail?.min_booking_hours != null && String(avail.min_booking_hours) !== ""
-          ? Math.max(1, Number(avail.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT)
-          : RENTAL_MIN_BOOKING_HOURS_DEFAULT;
-      if (hours > 0 && hours < minH) {
-        return `Minimum rental length is ${minH} hours (selected: ${hours}). Please extend your drop-off time.`;
-      }
+    const hours = computeBillingHoursCeil(b);
+    if (minHoursViolated(hours)) {
+      return `Minimum rental length is ${effectiveMinBookingHours} hours (selected: ${hours}). Please extend your drop-off time.`;
     }
     return "";
   };
 
   useEffect(() => {
     const msg = validateBooking();
-    if (msg) return;
+    if (msg) {
+      setAvail(null);
+      setError(msg);
+      return;
+    }
     if (!rentalId) return;
     let cancelled = false;
     const run = async () => {
       setChecking(true);
       setError("");
       try {
-        const res = await checkRentalAvailability(rentalId, booking);
+        const res = await checkRentalAvailability(rentalId, effectiveBooking);
         const d = parseAvailabilityPayload(res);
         if (cancelled) return;
         setAvail(d);
-        if (d?.minimum_hours_not_met && pricingBasis !== "day") {
-          const mh = d?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+        if (
+          d?.minimum_hours_not_met &&
+          !enforceExtendedMinHours &&
+          pricingBasis !== "day" &&
+          computeBillingHoursCeil(effectiveBooking) >= RENTAL_MIN_BILLING_HOURS
+        ) {
+          setAvail({
+            ...d,
+            is_available: true,
+            available_units: Math.max(1, Number(d?.eligible_units ?? 1)),
+            minimum_hours_not_met: false,
+            min_booking_hours: RENTAL_MIN_BILLING_HOURS,
+          });
+          setError("");
+        } else if (availabilityMinHoursBlocked(d)) {
+          const mh = d?.min_booking_hours ?? effectiveMinBookingHours;
           setError(
             `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
           );
@@ -565,7 +791,54 @@ export default function RentalBookingClient({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rentalId, booking.start_date, booking.end_date, booking.pickup_time, booking.dropoff_time, booking.pickup_location, booking.dropoff_location]);
+  }, [
+    rentalId,
+    effectiveBooking.start_date,
+    effectiveBooking.end_date,
+    effectiveBooking.pickup_time,
+    effectiveBooking.dropoff_time,
+    effectiveBooking.pickup_location,
+    effectiveBooking.dropoff_location,
+  ]);
+
+  const checkoutHref = useMemo(() => {
+    if (!rentalId) return "";
+    const b = effectiveBooking;
+    if (!b.start_date || !b.end_date || !b.pickup_time || !b.dropoff_time) return "";
+    if (!b.pickup_location || !b.dropoff_location) return "";
+    const checkoutParams = new URLSearchParams({
+      rental_item_id: String(rentalId),
+      rental_item_unit_id: String(0),
+      pickup_location: b.pickup_location,
+      dropoff_location: b.dropoff_location,
+      start_date: b.start_date,
+      end_date: b.end_date,
+      pickup_time: b.pickup_time,
+      dropoff_time: b.dropoff_time,
+    });
+    return `/checkout/rentals?${checkoutParams.toString()}`;
+  }, [rentalId, effectiveBooking]);
+
+  const slotUnavailableMessage = () => {
+    const total = Number(avail?.eligible_units ?? 1);
+    return total > 1
+      ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
+      : "This item is already booked for the selected date/time. Please choose another slot.";
+  };
+
+  const slotIsBookable = (payload) => {
+    if (!payload) return false;
+    if (availabilityMinHoursBlocked(payload)) return false;
+    if (isAvailabilityOpen(payload)) return true;
+    if (
+      !enforceExtendedMinHours &&
+      payload.minimum_hours_not_met &&
+      computeBillingHoursCeil(effectiveBooking) >= RENTAL_MIN_BILLING_HOURS
+    ) {
+      return true;
+    }
+    return false;
+  };
 
   const onContinue = () => {
     const msg = validateBooking();
@@ -573,40 +846,40 @@ export default function RentalBookingClient({
       setError(msg);
       return;
     }
-    if (checking) return;
-    if (avail?.minimum_hours_not_met && pricingBasis !== "day") {
-      const mh = avail?.min_booking_hours ?? RENTAL_MIN_BOOKING_HOURS_DEFAULT;
+    if (checking) {
+      setError("Still checking availability. Please wait a moment.");
+      return;
+    }
+    if (availabilityMinHoursBlocked(avail)) {
+      const mh = avail?.min_booking_hours ?? effectiveMinBookingHours;
       setError(
         `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
       );
       return;
     }
-    if (!isAvailabilityOpen(avail)) {
-      const total = Number(avail?.eligible_units ?? 1);
-      setError(
-        total > 1
-          ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
-          : "This item is already booked for the selected date/time. Please choose another slot."
-      );
+    if (!slotIsBookable(avail)) {
+      setError(avail ? slotUnavailableMessage() : "Checking availability for your selected times…");
       return;
     }
-    const params = new URLSearchParams({
-      rental_item_id: String(rentalId),
-      rental_item_unit_id: String(0),
-      pickup_location: booking.pickup_location,
-      dropoff_location: booking.dropoff_location,
-      start_date: booking.start_date,
-      end_date: booking.end_date,
-      pickup_time: booking.pickup_time,
-      dropoff_time: booking.dropoff_time,
-    });
-    router.push(`/checkout/rentals?${params.toString()}`);
+    if (!checkoutHref) {
+      setError("Please complete all booking fields before continuing.");
+      return;
+    }
+    writeRentalBookingDraft(rentalId, effectiveBooking);
+    const bookingUrl = rentalBookingQueryString(rentalId, effectiveBooking);
+    if (typeof window !== "undefined" && bookingUrl) {
+      window.history.replaceState(null, "", bookingUrl);
+      window.location.assign(checkoutHref);
+      return;
+    }
+    router.push(checkoutHref);
   };
 
-  const continueDisabled =
-    checking ||
-    !isAvailabilityOpen(avail) ||
-    (pricingBasis !== "day" && avail?.minimum_hours_not_met === true);
+  const continueDisabled = checking;
+
+  const handleContinueClick = () => {
+    onContinue();
+  };
   const thumb = rental?.thumbnail_image_url;
 
   if (!rentalId) {
@@ -714,7 +987,9 @@ export default function RentalBookingClient({
                   {windowPricing.basis === "day"
                     ? " Billed per day."
                     : windowPricing.basis === "hour" || catalogBasis === "hybrid" || catalogBasis === "hour"
-                      ? ` Minimum rental: ${minBookingHours} hours. Under 24 hours billed hourly; 24+ hours billed daily.`
+                      ? requiresExtendedMinBookingHours(rental)
+                        ? ` Minimum rental: ${minBookingHours} hours. Under 24 hours billed hourly; 24+ hours billed daily.`
+                        : " Any rental duration accepted. Shorter rentals are billed for at least 1 hour. Under 24 hours billed hourly; 24+ hours billed daily."
                       : " Billed per day."}
                 </p>
               </div>
@@ -747,6 +1022,7 @@ export default function RentalBookingClient({
                     <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Start date *</label>
                     <div className="mt-1.5">
                       <DatePicker
+                        key={`start-${booking.start_date || "empty"}`}
                         selected={parseYmdToDate(booking.start_date)}
                         onChange={(d) => updateBooking("start_date", formatDateYmd(d))}
                         filterDate={isStartDateSelectable}
@@ -760,6 +1036,7 @@ export default function RentalBookingClient({
                     <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">End date *</label>
                     <div className="mt-1.5">
                       <DatePicker
+                        key={`end-${booking.end_date || "empty"}`}
                         selected={parseYmdToDate(booking.end_date)}
                         onChange={(d) => updateBooking("end_date", formatDateYmd(d))}
                         filterDate={isEndDateSelectable}
@@ -809,7 +1086,7 @@ export default function RentalBookingClient({
                   </div>
                 ) : null}
 
-                {isAvailabilityOpen(avail) && !(pricingBasis !== "day" && avail?.minimum_hours_not_met) ? (
+                {slotIsBookable(avail) ? (
                   <div className="text-sm text-green-800 bg-green-50 border border-green-100 rounded-xl px-3 py-2.5">
                     {Number(avail?.eligible_units ?? 1) > 1 ? (
                       <>
@@ -942,7 +1219,14 @@ export default function RentalBookingClient({
                 <p className="text-[11px] text-gray-500 mb-4 leading-snug">
                   Total includes taxes and refundable deposit.
                 </p>
-                <Button onClick={onContinue} size="lg" className="w-full" disabled={continueDisabled}>
+                {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
+                {!error && checking ? (
+                  <p className="text-sm text-gray-500 mb-3">Checking availability for your selected times…</p>
+                ) : null}
+                {!error && !checking && avail && !isAvailabilityOpen(avail) ? (
+                  <p className="text-sm text-red-600 mb-3">{slotUnavailableMessage()}</p>
+                ) : null}
+                <Button onClick={handleContinueClick} size="lg" className="w-full" disabled={continueDisabled}>
                   {checking ? "Checking…" : "Continue to payment"}
                 </Button>
               </div>
@@ -970,7 +1254,8 @@ export default function RentalBookingClient({
             </div>
           </div>
           <div className="px-4 pb-4">
-            <Button onClick={onContinue} size="lg" className="w-full" disabled={continueDisabled}>
+            {error ? <p className="text-sm text-red-600 mb-2">{error}</p> : null}
+            <Button onClick={handleContinueClick} size="lg" className="w-full" disabled={continueDisabled}>
               {checking ? "Checking…" : "Continue to payment"}
             </Button>
           </div>

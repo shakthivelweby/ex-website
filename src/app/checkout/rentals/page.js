@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,8 +8,16 @@ import { getRentalDetails } from "../../rentals/service";
 import { checkRentalAvailability } from "../../rentals/clientService";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
-import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot } from "./service";
-import { RENTAL_MIN_BOOKING_HOURS_DEFAULT } from "../../rentals/rentalBookingConstants";
+import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot, cancelRentalReservation } from "./service";
+import { RENTAL_MIN_BOOKING_HOURS_DEFAULT, RENTAL_MIN_BILLING_HOURS } from "../../rentals/rentalBookingConstants";
+import { requiresExtendedMinBookingHours } from "../../rentals/rentalFilterUtils";
+import {
+  readRentalBookingDraft,
+  rentalBookingBackUrlFromCheckout,
+  buildRentalBookingFields,
+  hasRentalBookingSchedule,
+  writeRentalBookingDraft,
+} from "../../rentals/rentalBookingDraft";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing } from "../../rentals/rentalPricingCalc";
 
 const money = (v) => {
@@ -52,7 +60,13 @@ export default function RentalCheckoutPage() {
   const [reservationBookingId, setReservationBookingId] = useState(null);
   const [reserving, setReserving] = useState(false);
   const [reserveReady, setReserveReady] = useState(false);
-  const [minBookingHours, setMinBookingHours] = useState(RENTAL_MIN_BOOKING_HOURS_DEFAULT);
+  const [minBookingHours, setMinBookingHours] = useState(RENTAL_MIN_BILLING_HOURS);
+  const isPayingRef = useRef(false);
+  const reservationBookingIdRef = useRef(null);
+
+  useEffect(() => {
+    reservationBookingIdRef.current = reservationBookingId;
+  }, [reservationBookingId]);
 
   useEffect(() => {
     const run = async () => {
@@ -64,6 +78,15 @@ export default function RentalCheckoutPage() {
     };
     run();
   }, [rentalItemId]);
+
+  const enforceExtendedMinHours = requiresExtendedMinBookingHours(rental);
+
+  useEffect(() => {
+    if (!rental) return;
+    setMinBookingHours(
+      enforceExtendedMinHours ? RENTAL_MIN_BOOKING_HOURS_DEFAULT : RENTAL_MIN_BILLING_HOURS
+    );
+  }, [rental, enforceExtendedMinHours]);
 
   useEffect(() => {
     try {
@@ -87,6 +110,30 @@ export default function RentalCheckoutPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!rentalItemId) return;
+    const payload = {
+      pickup_location,
+      dropoff_location,
+      start_date,
+      end_date,
+      pickup_time,
+      dropoff_time,
+    };
+    writeRentalBookingDraft(rentalItemId, payload);
+    const onPageHide = () => writeRentalBookingDraft(rentalItemId, payload);
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [
+    rentalItemId,
+    pickup_location,
+    dropoff_location,
+    start_date,
+    end_date,
+    pickup_time,
+    dropoff_time,
+  ]);
+
   // Availability quote kept for compatibility, but totals are computed on UI.
   useEffect(() => {
     if (!rentalItemId || !start_date || !end_date || !pickup_time || !dropoff_time) {
@@ -107,8 +154,15 @@ export default function RentalCheckoutPage() {
         const inner = res?.data;
         if (!cancelled && inner) {
           if (inner.pricing_quote) setPricingQuote(inner.pricing_quote);
-          if (inner.min_booking_hours != null && inner.min_booking_hours !== "") {
-            const m = Math.max(1, Number(inner.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT);
+          if (
+            enforceExtendedMinHours &&
+            inner.min_booking_hours != null &&
+            inner.min_booking_hours !== ""
+          ) {
+            const m = Math.max(
+              1,
+              Number(inner.min_booking_hours) || RENTAL_MIN_BOOKING_HOURS_DEFAULT
+            );
             setMinBookingHours(m);
           }
         }
@@ -119,7 +173,7 @@ export default function RentalCheckoutPage() {
     return () => {
       cancelled = true;
     };
-  }, [rentalItemId, start_date, end_date, pickup_time, dropoff_time, pickup_location, dropoff_location]);
+  }, [rentalItemId, start_date, end_date, pickup_time, dropoff_time, pickup_location, dropoff_location, enforceExtendedMinHours]);
 
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
   const weekdayPrices = rental?.weekday_prices || rental?.weekdayPrices || [];
@@ -143,6 +197,27 @@ export default function RentalCheckoutPage() {
 
   const startISO = start_date && pickup_time ? `${start_date}T${pickup_time}:00` : "";
   const endISO = end_date && dropoff_time ? `${end_date}T${dropoff_time}:00` : "";
+
+  const checkoutBookingFields = useMemo(
+    () =>
+      buildRentalBookingFields({
+        pickup_location,
+        dropoff_location,
+        start_date,
+        end_date,
+        pickup_time,
+        dropoff_time,
+      }),
+    [
+      pickup_location,
+      dropoff_location,
+      start_date,
+      end_date,
+      pickup_time,
+      dropoff_time,
+    ]
+  );
+
   const basePerHour = Number(pricing.price_per_hour || 0) || 0;
   const basePerDay = Number(pricing.price_per_day || 0) || 0;
 
@@ -287,6 +362,49 @@ export default function RentalCheckoutPage() {
     return `rental_reservation_${rentalItemId}_${start_datetime}_${end_datetime}`;
   }, [rentalItemId, start_datetime, end_datetime]);
 
+  const releaseReservation = async (bookingId = reservationBookingIdRef.current) => {
+    if (!bookingId || isPayingRef.current) return;
+    try {
+      await cancelRentalReservation(bookingId);
+    } catch (_) {
+      // ignore release errors; reservation will expire automatically
+    }
+    if (reservationKey) {
+      try {
+        sessionStorage.removeItem(reservationKey);
+      } catch (_) {}
+    }
+  };
+
+  const handleBackToBooking = async () => {
+    if (!rentalItemId) {
+      window.location.assign("/rentals");
+      return;
+    }
+    const fields = checkoutBookingFields;
+    if (!hasRentalBookingSchedule(fields)) {
+      const stored = readRentalBookingDraft(rentalItemId);
+      if (stored && hasRentalBookingSchedule(stored)) {
+        writeRentalBookingDraft(rentalItemId, stored);
+        window.location.assign(rentalBookingBackUrlFromCheckout(rentalItemId, stored));
+        return;
+      }
+      setError("Booking details are missing. Please go to rentals and try again.");
+      return;
+    }
+    writeRentalBookingDraft(rentalItemId, fields);
+    await releaseReservation();
+    window.location.assign(rentalBookingBackUrlFromCheckout(rentalItemId, fields));
+  };
+
+  useEffect(() => {
+    return () => {
+      const bookingId = reservationBookingIdRef.current;
+      if (!bookingId || isPayingRef.current) return;
+      void cancelRentalReservation(bookingId).catch(() => {});
+    };
+  }, []);
+
   const reserveSlot = async () => {
     if (!rentalItemId || !start_datetime || !end_datetime) return null;
     const res = await reserveRentalSlot({
@@ -310,7 +428,7 @@ export default function RentalCheckoutPage() {
   useEffect(() => {
     if (!rentalItemId || !start_datetime || !end_datetime) return;
     const h = diffHoursCeil(startISO, endISO);
-    if (pricingBasis !== "day" && h < minBookingHours) {
+    if (pricingBasis !== "day" && enforceExtendedMinHours && h < minBookingHours) {
       setError(
         `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
       );
@@ -374,7 +492,7 @@ export default function RentalCheckoutPage() {
       return;
     }
     const slotHours = diffHoursCeil(startISO, endISO);
-    if (pricingBasis !== "day" && slotHours < minBookingHours) {
+    if (pricingBasis !== "day" && enforceExtendedMinHours && slotHours < minBookingHours) {
       setError(
         `Minimum rental length is ${minBookingHours} hours. Please go back and choose a longer period.`
       );
@@ -382,6 +500,7 @@ export default function RentalCheckoutPage() {
     }
 
     setIsPaying(true);
+    isPayingRef.current = true;
     try {
       const buildFormData = (bookingId) => {
         const fd = new FormData();
@@ -480,6 +599,7 @@ export default function RentalCheckoutPage() {
       setError(e?.response?.data?.message || e?.message || "Payment failed.");
     } finally {
       setIsPaying(false);
+      isPayingRef.current = false;
     }
   };
 
@@ -531,11 +651,47 @@ export default function RentalCheckoutPage() {
           },
         }}
       />
-      <div className="mb-5 text-sm text-gray-500">
-        <Link href="/rentals" className="underline">
-          Rentals
-        </Link>{" "}
-        / Checkout
+      <div className="mb-5 flex flex-col gap-3">
+        <nav aria-label="Breadcrumb" className="text-sm text-gray-500 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+          <Link href="/rentals" className="underline hover:text-gray-800">
+            Rentals
+          </Link>
+          <span aria-hidden className="text-gray-400">
+            /
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleBackToBooking()}
+            className="underline hover:text-gray-800 text-gray-500 font-normal"
+          >
+            {rental?.title ? `Book ${rental.title}` : "Booking"}
+          </button>
+          <span aria-hidden className="text-gray-400">
+            /
+          </span>
+          <span className="text-gray-800 font-medium">Checkout</span>
+        </nav>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-gray-500">
+            Need to change dates, times, or location? Use{" "}
+            <button
+              type="button"
+              onClick={() => void handleBackToBooking()}
+              className="underline font-medium text-primary hover:opacity-90"
+            >
+              Back to booking
+            </button>
+            .
+          </p>
+          <button
+            type="button"
+            onClick={() => void handleBackToBooking()}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 shadow-sm hover:bg-gray-50 shrink-0"
+          >
+            <i className="fi fi-rr-arrow-left text-base" aria-hidden />
+            Back to booking
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -612,19 +768,21 @@ export default function RentalCheckoutPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 flex flex-col sm:flex-row gap-3">
             <button
-              className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold"
-              onClick={() => router.back()}
+              type="button"
+              onClick={() => void handleBackToBooking()}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-sm font-semibold text-gray-800 hover:bg-gray-50"
             >
-              Back
+              <i className="fi fi-rr-arrow-left text-base" aria-hidden />
+              Back to booking
             </button>
             <button
-              className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-60"
+              className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-60"
               disabled={isPaying || reserving || !reserveReady || !reservationBookingId}
               onClick={handleContinue}
             >
-              {reserving ? "Reserving slot…" : isPaying ? "Processing…" : "Continue"}
+              {reserving ? "Reserving slot…" : isPaying ? "Processing…" : "Continue to payment"}
             </button>
           </div>
 

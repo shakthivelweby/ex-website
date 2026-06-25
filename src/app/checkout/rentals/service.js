@@ -14,6 +14,13 @@ export const reserveRentalSlot = async (payload) => {
   return response.data;
 };
 
+export const cancelRentalReservation = async (rentalBookingId) => {
+  const response = await apiMiddleware.post("/rental-reserve-cancel", {
+    rental_booking_id: Number(rentalBookingId),
+  });
+  return response.data;
+};
+
 export const verifyPayment = async (data) => {
   const response = await apiMiddleware.post("/rental-payment-verify", data, {
     timeout: 60000,

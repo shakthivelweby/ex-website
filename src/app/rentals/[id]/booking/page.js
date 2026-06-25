@@ -2,10 +2,25 @@ import { Suspense } from "react";
 import { getRentalDetails, getRentalPickupLocations } from "../../service";
 import RentalBookingClient from "./RentalBookingClient";
 
+export const dynamic = "force-dynamic";
+
+const pickSearchParam = (sp, key) => {
+  const v = sp?.[key];
+  return typeof v === "string" ? v.trim() : "";
+};
+
 export default async function RentalBookingPage({ params, searchParams }) {
   const { id } = await params;
   const sp = await searchParams;
-  const pickupFromUrl = typeof sp?.pickup_location === "string" ? sp.pickup_location : "";
+  const pickupFromUrl = pickSearchParam(sp, "pickup_location");
+  const initialBookingFromUrl = {
+    pickup_location: pickupFromUrl,
+    dropoff_location: pickSearchParam(sp, "dropoff_location") || pickupFromUrl,
+    start_date: pickSearchParam(sp, "start_date"),
+    end_date: pickSearchParam(sp, "end_date"),
+    pickup_time: pickSearchParam(sp, "pickup_time"),
+    dropoff_time: pickSearchParam(sp, "dropoff_time"),
+  };
 
   let initialRental = null;
   let initialPickupLocations = [];
@@ -44,6 +59,7 @@ export default async function RentalBookingPage({ params, searchParams }) {
           Array.isArray(initialPickupLocations) ? initialPickupLocations : []
         }
         initialPickupFromUrl={pickupFromUrl}
+        initialBookingFromUrl={initialBookingFromUrl}
       />
     </Suspense>
   );

@@ -340,20 +340,28 @@ export default function HomePage() {
           getHomeData(),
         ]);
 
-        if (destinationsRes.status && destinationsRes.data) {
-          setDestinations(destinationsRes.data);
+        if (destinationsRes.status) {
+          setDestinations(
+            Array.isArray(destinationsRes.data) ? destinationsRes.data : []
+          );
         }
 
-        if (packagesRes.status && packagesRes.data) {
-          setTrendingPackages(packagesRes.data);
+        if (packagesRes.status) {
+          setTrendingPackages(
+            Array.isArray(packagesRes.data) ? packagesRes.data : []
+          );
         }
 
-        if (eventsRes.status && eventsRes.data) {
-          setTrendingEvents(eventsRes.data);
+        if (eventsRes.status) {
+          setTrendingEvents(
+            Array.isArray(eventsRes.data) ? eventsRes.data : []
+          );
         }
 
-        if (attractionsRes.status && attractionsRes.data) {
-          setTrendingAttractions(attractionsRes.data);
+        if (attractionsRes.status) {
+          setTrendingAttractions(
+            Array.isArray(attractionsRes.data) ? attractionsRes.data : []
+          );
         }
 
         if (homeDataRes.status && homeDataRes.data) {
@@ -1019,7 +1027,7 @@ export default function HomePage() {
                       ></div>
                     ))}
                   </div>
-                ) : destinations.length > 0 ? (
+                ) : Array.isArray(destinations) && destinations.length > 0 ? (
                   <div
                     ref={destinationScrollRef}
                     className="flex gap-6 overflow-x-auto pb-8 pt-4 snap-x snap-mandatory scrollbar-hide -mr-4 pr-4 lg:pr-0 lg:mr-0"

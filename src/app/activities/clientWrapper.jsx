@@ -8,6 +8,17 @@ import { useEffect, useRef, useState } from "react";
 import { getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
+const normalizeActivityFilters = (raw = {}) => {
+  const dateFrom = raw.date_from || raw.date || "";
+  const dateTo = raw.date_to || dateFrom;
+  return {
+    ...raw,
+    date_from: dateFrom,
+    date_to: dateTo,
+    date: dateFrom,
+  };
+};
+
 export default function ClientWrapper({
   searchParams: initialSearchParams = {},
   initialActivities,
@@ -24,8 +35,13 @@ export default function ClientWrapper({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Get initial filters from server-side search params
-  const initialFilters = {
-    date: initialSearchParams.date || "",
+  const initialFilters = normalizeActivityFilters({
+    date_from: initialSearchParams.date_from || initialSearchParams.date || "",
+    date_to:
+      initialSearchParams.date_to ||
+      initialSearchParams.date_from ||
+      initialSearchParams.date ||
+      "",
     location: initialSearchParams.location || "",
     category: initialSearchParams.category || "",
     rating: initialSearchParams.rating || "",
@@ -33,7 +49,7 @@ export default function ClientWrapper({
     price_to: initialSearchParams.price_to || "",
     longitude: initialSearchParams.longitude || "",
     latitude: initialSearchParams.latitude || "",
-  };
+  });
 
   const [filters, setFilters] = useState(initialFilters);
 
@@ -49,11 +65,19 @@ export default function ClientWrapper({
     const params = new URLSearchParams(window.location.search);
 
     // Update or remove date parameter
-    if (newFilters.date) {
-      params.set("date", newFilters.date);
+    if (newFilters.date_from) {
+      params.set("date_from", newFilters.date_from);
     } else {
-      params.delete("date");
+      params.delete("date_from");
     }
+
+    if (newFilters.date_to) {
+      params.set("date_to", newFilters.date_to);
+    } else {
+      params.delete("date_to");
+    }
+
+    params.delete("date");
 
     // Update or remove location parameter
     if (newFilters.location) {
@@ -113,13 +137,14 @@ export default function ClientWrapper({
   // Function to handle filter changes immediately
 
   const handleFilterChange = async (newFilters) => {
-    setFilters(newFilters);
-    updateURL(newFilters);
+    const normalized = normalizeActivityFilters(newFilters);
+    setFilters(normalized);
+    updateURL(normalized);
 
     // Refetch activities with new filters
     try {
       setLoading(true);
-      const activitiesResponse = await getActivities(newFilters);
+      const activitiesResponse = await getActivities(normalized);
 
       // Transform activities data (Laravel: { data: { data: [], pagination } })
       const list = activitiesResponse?.data?.data;

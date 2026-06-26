@@ -15,6 +15,17 @@ import {
 } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 
+const normalizeAttractionFilters = (raw = {}) => {
+  const dateFrom = raw.date_from || raw.date || "";
+  const dateTo = raw.date_to || dateFrom;
+  return {
+    ...raw,
+    date_from: dateFrom,
+    date_to: dateTo,
+    date: dateFrom,
+  };
+};
+
 const ClientWrapper = ({
   searchParams: initialSearchParams,
   initialAttractions,
@@ -34,16 +45,23 @@ const ClientWrapper = ({
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   // Get initial filters from server-side search params - Make it reactive state
-  const [initialFilters, setInitialFilters] = useState({
-    date: initialSearchParams.date || "",
-    location: initialSearchParams.location || "",
-    category: initialSearchParams.category || "",
-    rating: initialSearchParams.rating || "",
-    price_from: initialSearchParams.price_from || "",
-    price_to: initialSearchParams.price_to || "",
-    longitude: initialSearchParams.longitude || "",
-    latitude: initialSearchParams.latitude || "",
-  });
+  const [initialFilters, setInitialFilters] = useState(
+    normalizeAttractionFilters({
+      date_from: initialSearchParams.date_from || initialSearchParams.date || "",
+      date_to:
+        initialSearchParams.date_to ||
+        initialSearchParams.date_from ||
+        initialSearchParams.date ||
+        "",
+      location: initialSearchParams.location || "",
+      category: initialSearchParams.category || "",
+      rating: initialSearchParams.rating || "",
+      price_from: initialSearchParams.price_from || "",
+      price_to: initialSearchParams.price_to || "",
+      longitude: initialSearchParams.longitude || "",
+      latitude: initialSearchParams.latitude || "",
+    })
+  );
 
   // Mark component as client-side after mount
   useEffect(() => {
@@ -68,11 +86,19 @@ const ClientWrapper = ({
     const params = new URLSearchParams(window.location.search);
 
     // Update or remove date parameter
-    if (newFilters.date) {
-      params.set("date", newFilters.date);
+    if (newFilters.date_from) {
+      params.set("date_from", newFilters.date_from);
     } else {
-      params.delete("date");
+      params.delete("date_from");
     }
+
+    if (newFilters.date_to) {
+      params.set("date_to", newFilters.date_to);
+    } else {
+      params.delete("date_to");
+    }
+
+    params.delete("date");
 
     // Update or remove location parameter
     if (newFilters.location) {
@@ -146,15 +172,16 @@ const ClientWrapper = ({
   // Function to handle filter changes immediately
 
   const handleFilterChange = async (newFilters) => {
-    updateURL(newFilters);
+    const normalized = normalizeAttractionFilters(newFilters);
+    updateURL(normalized);
 
     // Update initialFilters state so it's passed down to child components
-    setInitialFilters(newFilters);
+    setInitialFilters(normalized);
 
     // Refetch attractions with new filters
     try {
       setLoading(true);
-      const attractionsResponse = await getAttractions(newFilters);
+      const attractionsResponse = await getAttractions(normalized);
 
       // Transform attractions data
       if (attractionsResponse?.data?.data) {

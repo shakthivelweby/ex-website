@@ -96,12 +96,21 @@ export const getActivities = async (filters = {}) => {
       params.append("latitude", filters.latitude);
     }
 
-    // Parse and add date parameter
-    if (filters.date && filters.date.trim()) {
+    // Date range (or legacy single date)
+    const dateFrom = filters.date_from || filters.dateFrom;
+    const dateTo = filters.date_to || filters.dateTo;
+
+    if (dateFrom) {
+      const parsedFrom = parseDateParameter(dateFrom);
+      if (parsedFrom) params.append("date_from", parsedFrom);
+    }
+    if (dateTo) {
+      const parsedTo = parseDateParameter(dateTo);
+      if (parsedTo) params.append("date_to", parsedTo);
+    }
+    if (!dateFrom && filters.date && filters.date.trim()) {
       const parsedDate = parseDateParameter(filters.date);
-      if (parsedDate) {
-        params.append("date", parsedDate);
-      }
+      if (parsedDate) params.append("date", parsedDate);
     }
 
     if (filters.search && filters.search.trim()) {

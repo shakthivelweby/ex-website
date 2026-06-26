@@ -12,7 +12,8 @@ export default async function Attractions({ searchParams }) {
 
   // Extract filters from search params
   const filters = {
-    date: resolvedSearchParams.date || "",
+    date_from: resolvedSearchParams.date_from || resolvedSearchParams.date || "",
+    date_to: resolvedSearchParams.date_to || resolvedSearchParams.date_from || resolvedSearchParams.date || "",
     location: resolvedSearchParams.location || "",
     category: resolvedSearchParams.category || "",
     rating: resolvedSearchParams.rating || "",

@@ -7,7 +7,7 @@ import DateRangeSearchField from "./DateRangeSearchField";
 const PRICE_MIN = 0;
 const PRICE_MAX = 1000;
 
-export default function AttractionsSearchFilters({
+export default function ActivitiesSearchFilters({
   filters,
   onFilterChange,
   categories = [],
@@ -89,8 +89,8 @@ export default function AttractionsSearchFilters({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-ferris-wheel text-gray-400" />
-            Attraction Type
+            <i className="fi fi-rr-hiking text-gray-400" />
+            Activity Type
           </label>
           {filters.category && (
             <button

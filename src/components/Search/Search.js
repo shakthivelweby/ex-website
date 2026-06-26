@@ -1,19 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Popup from "../Popup";
-import { useAllDestinations, useEventCategories, useEventLanguages, useAttractionCategories } from "@/app/search/query";
+import { useAllDestinations, useEventCategories, useEventLanguages, useAttractionCategories, useActivityCategories } from "@/app/search/query";
 import { hasStoredImage } from "@/utils/imageUrl";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import EventsSearchFilters from "./EventsSearchFilters";
 import AttractionsSearchFilters from "./AttractionsSearchFilters";
+import ActivitiesSearchFilters from "./ActivitiesSearchFilters";
 
 const SEARCH_MODULES = [
   { id: "package", label: "Packages", icon: "fi-rr-umbrella-beach", enabled: true },
   { id: "schedule", label: "Scheduled Trips", icon: "fi-rr-pending", enabled: true },
   { id: "events", label: "Events", icon: "fi-rr-glass-cheers", enabled: true },
   { id: "attractions", label: "Attractions", icon: "fi-rr-ferris-wheel", enabled: true },
-  { id: "activities", label: "Activities", icon: "fi-rr-hiking", enabled: false },
+  { id: "activities", label: "Activities", icon: "fi-rr-hiking", enabled: true },
   { id: "rentals", label: "Rentals", icon: "fi-rr-car", enabled: false },
 ];
 
@@ -64,7 +65,24 @@ const createDefaultAttractionFilters = () => {
     location: "",
     longitude: "",
     latitude: "",
-    date: todayStr,
+    dateFrom: todayStr,
+    dateTo: todayStr,
+    category: "",
+    price_from: "",
+    price_to: "",
+  };
+};
+
+const createDefaultActivityFilters = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = formatEventDate(today);
+  return {
+    location: "",
+    longitude: "",
+    latitude: "",
+    dateFrom: todayStr,
+    dateTo: todayStr,
     category: "",
     price_from: "",
     price_to: "",
@@ -77,15 +95,21 @@ export default function Search({ isOpen, onClose, type }) {
   const [selectedDestinations, setSelectedDestinations] = useState([]);
   const [eventFilters, setEventFilters] = useState(createDefaultEventFilters);
   const [attractionFilters, setAttractionFilters] = useState(createDefaultAttractionFilters);
+  const [activityFilters, setActivityFilters] = useState(createDefaultActivityFilters);
   const router = useRouter();
 
   const isPackageModule = selectedModule === "package";
   const isScheduleModule = selectedModule === "schedule";
   const isEventsModule = selectedModule === "events";
   const isAttractionsModule = selectedModule === "attractions";
+  const isActivitiesModule = selectedModule === "activities";
   const showDestinationPicker = isPackageModule || isScheduleModule;
   const showComingSoon =
-    !isPackageModule && !isScheduleModule && !isEventsModule && !isAttractionsModule;
+    !isPackageModule &&
+    !isScheduleModule &&
+    !isEventsModule &&
+    !isAttractionsModule &&
+    !isActivitiesModule;
   const { data: destinationsData, isLoading: isDestinationsLoading } =
     useAllDestinations(isOpen && showDestinationPicker);
   const { data: eventCategoriesData } = useEventCategories(isOpen && isEventsModule);
@@ -93,10 +117,14 @@ export default function Search({ isOpen, onClose, type }) {
   const { data: attractionCategoriesData } = useAttractionCategories(
     isOpen && isAttractionsModule
   );
+  const { data: activityCategoriesData } = useActivityCategories(
+    isOpen && isActivitiesModule
+  );
 
   const eventCategories = eventCategoriesData?.data || [];
   const eventLanguages = eventLanguagesData?.data || [];
   const attractionCategories = attractionCategoriesData?.data || [];
+  const activityCategories = activityCategoriesData?.data || [];
 
   const allDestinations = destinationsData?.data || [];
 
@@ -112,6 +140,7 @@ export default function Search({ isOpen, onClose, type }) {
       setSelectedDestinations([]);
       setEventFilters(createDefaultEventFilters());
       setAttractionFilters(createDefaultAttractionFilters());
+      setActivityFilters(createDefaultActivityFilters());
       if (!type) {
         setSelectedModule("package");
       }
@@ -232,10 +261,11 @@ export default function Search({ isOpen, onClose, type }) {
     Boolean(eventFilters.dateFrom) && Boolean(eventFilters.dateTo);
 
   const handleRunAttractionSearch = () => {
-    if (!attractionFilters.date) return;
+    if (!attractionFilters.dateFrom || !attractionFilters.dateTo) return;
 
     const params = new URLSearchParams();
-    params.set("date", attractionFilters.date);
+    params.set("date_from", attractionFilters.dateFrom);
+    params.set("date_to", attractionFilters.dateTo);
     if (attractionFilters.category) params.set("category", attractionFilters.category);
     if (attractionFilters.price_from) params.set("price_from", attractionFilters.price_from);
     if (attractionFilters.price_to) params.set("price_to", attractionFilters.price_to);
@@ -247,7 +277,28 @@ export default function Search({ isOpen, onClose, type }) {
     onClose();
   };
 
-  const isAttractionSearchReady = Boolean(attractionFilters.date);
+  const isAttractionSearchReady =
+    Boolean(attractionFilters.dateFrom) && Boolean(attractionFilters.dateTo);
+
+  const handleRunActivitySearch = () => {
+    if (!activityFilters.dateFrom || !activityFilters.dateTo) return;
+
+    const params = new URLSearchParams();
+    params.set("date_from", activityFilters.dateFrom);
+    params.set("date_to", activityFilters.dateTo);
+    if (activityFilters.category) params.set("category", activityFilters.category);
+    if (activityFilters.price_from) params.set("price_from", activityFilters.price_from);
+    if (activityFilters.price_to) params.set("price_to", activityFilters.price_to);
+    if (activityFilters.longitude) params.set("longitude", activityFilters.longitude);
+    if (activityFilters.latitude) params.set("latitude", activityFilters.latitude);
+    if (activityFilters.location) params.set("location", activityFilters.location);
+
+    router.push(`/activities?${params.toString()}`);
+    onClose();
+  };
+
+  const isActivitySearchReady =
+    Boolean(activityFilters.dateFrom) && Boolean(activityFilters.dateTo);
 
   const handleModuleSelect = (module) => {
     if (!module.enabled) return;
@@ -256,6 +307,7 @@ export default function Search({ isOpen, onClose, type }) {
     setSelectedDestinations([]);
     setEventFilters(createDefaultEventFilters());
     setAttractionFilters(createDefaultAttractionFilters());
+    setActivityFilters(createDefaultActivityFilters());
   };
 
   const moduleTabs = (
@@ -564,7 +616,33 @@ export default function Search({ isOpen, onClose, type }) {
                 <i className="fi fi-rr-search text-sm" />
                 {isAttractionSearchReady
                   ? "Search Attractions"
-                  : "Select a date to search"}
+                  : "Select a date range to search"}
+              </button>
+            </section>
+          </>
+        ) : isActivitiesModule ? (
+          <>
+            <ActivitiesSearchFilters
+              filters={activityFilters}
+              onFilterChange={setActivityFilters}
+              categories={activityCategories}
+            />
+
+            <section className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
+              <button
+                type="button"
+                onClick={handleRunActivitySearch}
+                disabled={!isActivitySearchReady}
+                className={`w-full h-11 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                  isActivitySearchReady
+                    ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                <i className="fi fi-rr-search text-sm" />
+                {isActivitySearchReady
+                  ? "Search Activities"
+                  : "Select a date range to search"}
               </button>
             </section>
           </>

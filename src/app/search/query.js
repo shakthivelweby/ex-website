@@ -62,3 +62,12 @@ export const useAttractionCategories = (enabled = true) => {
     staleTime: 1000 * 60 * 30,
   });
 };
+
+export const useActivityCategories = (enabled = true) => {
+  return useQuery({
+    queryKey: ["activity-categories"],
+    queryFn: () => searchService.getActivityCategories(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};

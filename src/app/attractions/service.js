@@ -218,12 +218,20 @@ export const getAttractions = async (filters = {}) => {
       params.append("latitude", filters.latitude);
     }
     
-    // Parse and add date parameter
-    if (filters.date && filters.date.trim()) {
+    const dateFrom = filters.date_from || filters.dateFrom;
+    const dateTo = filters.date_to || filters.dateTo;
+
+    if (dateFrom) {
+      const parsedFrom = parseDateParameter(dateFrom);
+      if (parsedFrom) params.append("date_from", parsedFrom);
+    }
+    if (dateTo) {
+      const parsedTo = parseDateParameter(dateTo);
+      if (parsedTo) params.append("date_to", parsedTo);
+    }
+    if (!dateFrom && filters.date && filters.date.trim()) {
       const parsedDate = parseDateParameter(filters.date);
-      if (parsedDate) {
-        params.append("date", parsedDate);
-      }
+      if (parsedDate) params.append("date", parsedDate);
     }
     
     const queryString = params.toString();
@@ -232,7 +240,7 @@ export const getAttractions = async (filters = {}) => {
  
     
     // Check if we're sending unsupported parameters
-    const supportedParams = ['location', 'category', 'date'];
+    const supportedParams = ['location', 'category', 'date', 'date_from', 'date_to'];
     const unsupportedParams = Object.keys(filters).filter(key => 
       filters[key] && !supportedParams.includes(key) && key !== 'price_from' && key !== 'price_to'
     );

@@ -26,6 +26,8 @@ const ClientWrapper = ({
   // Get initial filters from server-side search params
   const initialFilters = {
     date: initialSearchParams.date || "",
+    date_from: initialSearchParams.date_from || "",
+    date_to: initialSearchParams.date_to || "",
     language: initialSearchParams.language || "",
     category: initialSearchParams.category || "",
     price_from: initialSearchParams.price_from || "",
@@ -94,14 +96,26 @@ const ClientWrapper = ({
 
     const params = new URLSearchParams(window.location.search);
 
-    // Update or remove date parameter
+    // Update or remove date parameters
     if (newFilters.date) {
       params.set("date", newFilters.date);
     } else {
       params.delete("date");
     }
 
-    // Update or remove language parameter (using slug)
+    if (newFilters.date_from) {
+      params.set("date_from", newFilters.date_from);
+    } else {
+      params.delete("date_from");
+    }
+
+    if (newFilters.date_to) {
+      params.set("date_to", newFilters.date_to);
+    } else {
+      params.delete("date_to");
+    }
+
+    // Update or remove language parameter (comma-separated slugs)
     if (newFilters.language) {
       params.set("language", newFilters.language);
     } else {

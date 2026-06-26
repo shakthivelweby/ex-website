@@ -16,4 +16,49 @@ export const useFeaturedDestinations = () => {
     queryKey: ["featured-destinations"],
     queryFn: getFeaturedDestinations,
   });
-}; 
+};
+
+export const useAllDestinations = (enabled = true) => {
+  return useQuery({
+    queryKey: ["all-destinations"],
+    queryFn: () => searchService.getAllDestinations(),
+    enabled,
+    staleTime: 1000 * 60 * 10,
+  });
+};
+
+export const useSuitableMasters = (enabled = true) => {
+  return useQuery({
+    queryKey: ["suitable-masters"],
+    queryFn: () => searchService.getSuitableMasters(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};
+
+export const useEventCategories = (enabled = true) => {
+  return useQuery({
+    queryKey: ["event-categories"],
+    queryFn: () => searchService.getEventCategories(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};
+
+export const useEventLanguages = (enabled = true) => {
+  return useQuery({
+    queryKey: ["event-languages"],
+    queryFn: () => searchService.getEventLanguages(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};
+
+export const useAttractionCategories = (enabled = true) => {
+  return useQuery({
+    queryKey: ["attraction-categories"],
+    queryFn: () => searchService.getAttractionCategories(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};

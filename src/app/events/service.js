@@ -47,11 +47,21 @@ const parseDateParameter = (dateParam) => {
 export const list = async (filters = {}) => {
     const params = new URLSearchParams();
     
-    // Add filters to query parameters
     if (filters.language) params.append("language", filters.language);
     if (filters.category) params.append("category", filters.category);
     
-    // Parse and add date parameter
+    if (filters.date_from) {
+        params.append("date_from", filters.date_from);
+    } else if (filters.dateFrom) {
+        params.append("date_from", filters.dateFrom);
+    }
+    if (filters.date_to) {
+        params.append("date_to", filters.date_to);
+    } else if (filters.dateTo) {
+        params.append("date_to", filters.dateTo);
+    }
+
+    // Legacy single date support
     if (filters.date) {
         const parsedDate = parseDateParameter(filters.date);
         if (parsedDate) {

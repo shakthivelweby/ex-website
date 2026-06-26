@@ -198,13 +198,13 @@ export const getAttractions = async (filters = {}) => {
       params.append("category", filters.category.trim());
     }
     
-    // Temporarily disable price filtering until backend supports it
-    // if (filters.price_from && !isNaN(filters.price_from) && filters.price_from !== "0") {
-    //   params.append("price_from", filters.price_from);
-    // }
-    // if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== "1000") {
-    //   params.append("price_to", filters.price_to);
-    // }
+    // Price filters
+    if (filters.price_from && !isNaN(filters.price_from) && filters.price_from !== "0") {
+      params.append("price_from", filters.price_from);
+    }
+    if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== "1000") {
+      params.append("price_to", filters.price_to);
+    }
     
     // Temporarily disable other filters until backend supports them
     // if (filters.rating && filters.rating.trim()) {

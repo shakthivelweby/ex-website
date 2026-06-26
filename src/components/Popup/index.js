@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 
 // PopupHeader component
-const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dragControls }) => {
+const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dragControls, isFullscreen }) => {
   if (!title && !showCloseButton) return null;
   
   const startDragging = (event) => {
@@ -23,11 +23,11 @@ const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dra
           <div className="w-12 h-1 rounded-full bg-gray-300 transition-colors duration-200 group-hover:bg-primary-400" />
         </div>
       )}
-      <div className="flex items-center justify-between px-6 pb-4">
+      <div className={`flex items-center justify-between pb-4 ${isFullscreen ? "max-w-4xl mx-auto w-full px-6 md:px-8 pt-4" : "px-6"}`}>
         {title && (
           <div className="flex-1">
             {typeof title === "string" ? (
-              <h3 className="text-lg font-medium text-gray-800">{title}</h3>
+              <h3 className={`font-medium text-gray-800 ${isFullscreen ? "text-xl" : "text-lg"}`}>{title}</h3>
             ) : (
               title
             )}
@@ -88,19 +88,21 @@ const panelVariants = {
         return { x: "100%" };
       case "left":
         return { x: "-100%" };
+      case "fullscreen":
+        return { opacity: 0 };
       default:
         return { y: 20, opacity: 0 };
     }
   },
-  visible: {
+  visible: (pos) => ({
     x: 0,
     y: 0,
     opacity: 1,
     transition: {
-      duration: 0.25,
-      ease: [0.16, 1, 0.3, 1]
-    }
-  },
+      duration: pos === "fullscreen" ? 0.2 : 0.25,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  }),
   exit: (pos) => {
     switch(pos) {
       case "bottom":
@@ -109,6 +111,8 @@ const panelVariants = {
         return { x: "100%" };
       case "left":
         return { x: "-100%" };
+      case "fullscreen":
+        return { opacity: 0 };
       default:
         return { y: 20, opacity: 0 };
     }
@@ -144,7 +148,12 @@ export default function Popup({
   }, []);
 
   // Get effective position based on mobile state
-  const effectivePosition = isMobile && (pos === 'right' || pos === 'left') ? 'bottom' : pos;
+  const effectivePosition =
+    pos === "fullscreen"
+      ? "fullscreen"
+      : isMobile && (pos === "right" || pos === "left")
+        ? "bottom"
+        : pos;
 
   // Get position classes based on current position and mobile state
   const getPositionClasses = () => {
@@ -181,6 +190,11 @@ export default function Popup({
         return {
           container: 'items-stretch justify-start min-h-screen h-full',
           panel: isMobile ? 'h-[80vh] w-full rounded-tr-[32px] overflow-hidden' : 'min-h-screen h-full w-full max-w-lg overflow-hidden'
+        };
+      case 'fullscreen':
+        return {
+          container: 'items-stretch justify-center h-screen',
+          panel: 'w-full h-screen max-h-screen max-w-none rounded-none overflow-hidden'
         };
       default:
         return baseClasses;
@@ -222,12 +236,12 @@ export default function Popup({
               animate="visible"
               exit="hidden"
               variants={overlayVariants}
-              onClick={onClose}
-              className={`fixed inset-0 backdrop-blur-sm ${overlayClassName}`}
+              onClick={pos === "fullscreen" ? undefined : onClose}
+              className={`fixed inset-0 backdrop-blur-sm ${pos === "fullscreen" ? "bg-white" : overlayClassName}`}
             />
 
-            <div className="fixed inset-0 overflow-y-auto">
-              <div className={`flex min-h-full ${effectivePosition === 'right' || effectivePosition === 'left' ? 'h-full' : ''} ${positionClasses.container}`}>
+            <div className={`fixed inset-0 ${pos === "fullscreen" ? "overflow-hidden" : "overflow-y-auto"}`}>
+              <div className={`flex min-h-full ${effectivePosition === 'right' || effectivePosition === 'left' || effectivePosition === 'fullscreen' ? 'h-full' : ''} ${positionClasses.container}`}>
                 <motion.div
                   initial="hidden"
                   animate="visible"
@@ -265,8 +279,17 @@ export default function Popup({
                     isMobile={isMobile}
                     draggable={draggable}
                     dragControls={dragControls}
+                    isFullscreen={effectivePosition === "fullscreen"}
                   />
-                  <div className="flex-1 overflow-y-auto overscroll-contain">
+                  <div
+                    className={`${
+                      effectivePosition === "fullscreen" || effectivePosition === "center"
+                        ? "flex flex-col overflow-hidden"
+                        : "flex-1 min-h-0 overflow-y-auto overscroll-contain"
+                    } ${
+                      effectivePosition === "fullscreen" ? "flex-1 min-h-0" : ""
+                    }`}
+                  >
                     {children}
                   </div>
                 </motion.div>

@@ -10,5 +10,25 @@ export const searchService = {
     } catch (error) {
       throw error;
     }
-  }
-}; 
+  },
+  getAllDestinations: async () => {
+    const response = await apiMiddleware.get("/state-destinations");
+    return response.data;
+  },
+  getSuitableMasters: async () => {
+    const response = await apiMiddleware.get("/suitable-masters");
+    return response.data;
+  },
+  getEventCategories: async () => {
+    const response = await apiMiddleware.get("/event-categories");
+    return response.data;
+  },
+  getEventLanguages: async () => {
+    const response = await apiMiddleware.get("/event-language");
+    return response.data;
+  },
+  getAttractionCategories: async () => {
+    const response = await apiMiddleware.get("/attraction-categories");
+    return response.data;
+  },
+};

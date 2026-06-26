@@ -12,12 +12,15 @@ export default async function Events({ searchParams }) {
   // Extract filters from search params
   const filters = {
     date: resolvedSearchParams.date || "",
+    date_from: resolvedSearchParams.date_from || "",
+    date_to: resolvedSearchParams.date_to || "",
     language: resolvedSearchParams.language || "",
     category: resolvedSearchParams.category || "",
     price_from: resolvedSearchParams.price_from || "",
     price_to: resolvedSearchParams.price_to || "",
     longitude: resolvedSearchParams.longitude || "",
     latitude: resolvedSearchParams.latitude || "",
+    location: resolvedSearchParams.location || "",
   };
 
   // Fetch data with error handling

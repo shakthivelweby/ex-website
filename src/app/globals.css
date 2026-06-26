@@ -152,6 +152,55 @@ body {
   display: none !important;
 }
 
+.events-search-datepicker.react-datepicker {
+  width: 100% !important;
+  font-family: inherit !important;
+}
+
+.events-search-datepicker .react-datepicker__header {
+  background: white !important;
+  border-bottom: none !important;
+  padding-top: 0.75rem !important;
+}
+
+.events-search-datepicker .react-datepicker__current-month,
+.events-search-datepicker .react-datepicker__navigation {
+  display: none !important;
+}
+
+.events-search-datepicker .react-datepicker__month-container {
+  width: 100% !important;
+  float: none !important;
+}
+
+.events-search-datepicker-popup.react-datepicker {
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.events-search-datepicker-popup .react-datepicker__month-container {
+  width: auto !important;
+}
+
+.events-search-datepicker-popup .react-datepicker__month {
+  margin: 0 !important;
+  padding: 0 0.25rem 0.5rem !important;
+}
+
+.events-search-datepicker-popup .react-datepicker__day-names,
+.events-search-datepicker-popup .react-datepicker__week {
+  display: flex !important;
+  justify-content: space-around !important;
+  margin: 0 !important;
+}
+
+.events-search-datepicker-popup .react-datepicker__day-name,
+.events-search-datepicker-popup .react-datepicker__day {
+  width: 2.25rem !important;
+  line-height: 2.25rem !important;
+  margin: 0.1rem !important;
+}
+
 /* Add these styles for react-date-range */
 .custom-date-range .rdrMonth {
   width: 100% !important;

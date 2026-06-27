@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
@@ -58,6 +58,7 @@ const linesToList = (value) => {
 
 export default function RentalDetailsClient({ rental }) {
   const router = useRouter();
+  const [isBooking, startBookingTransition] = useTransition();
   const pricing = rental?.pricing_rule || rental?.pricingRule || {};
   const [selectedPickupName, setSelectedPickupName] = useState("");
 
@@ -72,11 +73,14 @@ export default function RentalDetailsClient({ rental }) {
     getDefaultPickupOption(pickupOptions, selectedPickupName) || pickupOptions[0] || null;
 
   const onBookNow = () => {
-    const pickup = getDefaultPickupOption(pickupOptions, selectedPickupName);
-    const qs = pickup?.name
-      ? `?pickup_location=${encodeURIComponent(pickup.name)}`
-      : "";
-    router.push(`/rentals/${rental.id}/booking${qs}`);
+    if (isBooking) return;
+    startBookingTransition(() => {
+      const pickup = getDefaultPickupOption(pickupOptions, selectedPickupName);
+      const qs = pickup?.name
+        ? `?pickup_location=${encodeURIComponent(pickup.name)}`
+        : "";
+      router.push(`/rentals/${rental.id}/booking${qs}`);
+    });
   };
 
   const faqs = Array.isArray(rental?.faqs) ? rental.faqs : [];
@@ -742,7 +746,11 @@ export default function RentalDetailsClient({ rental }) {
                 </div>
 
                 <div className="hidden lg:block p-5 pt-0">
-                  <Button onClick={onBookNow} className="w-full !rounded-xl !py-3">
+                  <Button
+                    onClick={onBookNow}
+                    isLoading={isBooking}
+                    className="w-full !rounded-xl !py-3"
+                  >
                     Book now
                   </Button>
                   <p className="text-center text-xs text-gray-500 mt-3">
@@ -768,9 +776,28 @@ export default function RentalDetailsClient({ rental }) {
           <button
             type="button"
             onClick={handleMobileBooking}
-            className="w-full bg-primary-500 text-white py-3.5 px-5 rounded-2xl font-medium flex items-center justify-between shadow-xl shadow-primary-500/25 border border-primary-400/30"
+            disabled={isBooking}
+            className="w-full bg-primary-500 text-white py-3.5 px-5 rounded-2xl font-medium flex items-center justify-between shadow-xl shadow-primary-500/25 border border-primary-400/30 disabled:opacity-80"
           >
-            <span className="text-sm font-semibold">Book now</span>
+            <span className="text-sm font-semibold inline-flex items-center gap-2">
+              {isBooking ? (
+                <svg
+                  className="animate-spin h-4 w-4"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              ) : null}
+              {isBooking ? "Loading…" : "Book now"}
+            </span>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold">{priceLabel}</span>
               <i className={`${categoryIcon} text-sm opacity-90`} />

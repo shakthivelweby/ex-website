@@ -38,6 +38,63 @@ const money = (v) => {
   return n.toFixed(2);
 };
 
+const InlineSpinner = ({ className = "h-4 w-4" }) => (
+  <svg
+    className={`animate-spin shrink-0 ${className}`}
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    aria-hidden
+  >
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    />
+  </svg>
+);
+
+const BookingPageSkeleton = () => (
+  <div className="min-h-screen bg-gray-50">
+    <div className="max-w-7xl mx-auto px-4 py-4 animate-pulse">
+      <div className="hidden lg:block h-4 w-64 bg-gray-200 rounded mb-6" />
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-4 lg:mt-8">
+        <div className="bg-white rounded-lg shadow border overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 space-y-2">
+            <div className="h-5 w-48 bg-gray-200 rounded" />
+            <div className="h-4 w-full max-w-md bg-gray-100 rounded" />
+          </div>
+          <div className="p-4 sm:p-6 space-y-5">
+            <div className="h-11 bg-gray-100 rounded-xl" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="h-11 bg-gray-100 rounded-xl" />
+              <div className="h-11 bg-gray-100 rounded-xl" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="h-11 bg-gray-100 rounded-xl" />
+              <div className="h-11 bg-gray-100 rounded-xl" />
+            </div>
+          </div>
+        </div>
+        <div className="hidden lg:block space-y-4">
+          <div className="bg-white rounded-lg shadow border p-4 space-y-3">
+            <div className="aspect-video bg-gray-100 rounded-lg" />
+            <div className="h-5 w-40 bg-gray-200 rounded" />
+            <div className="h-4 w-28 bg-gray-100 rounded" />
+          </div>
+          <div className="bg-white rounded-lg shadow border p-4 space-y-3">
+            <div className="h-5 w-32 bg-gray-200 rounded" />
+            <div className="h-4 w-full bg-gray-100 rounded" />
+            <div className="h-4 w-full bg-gray-100 rounded" />
+            <div className="h-10 w-full bg-gray-200 rounded-full mt-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const parseAvailabilityPayload = (res) => {
   if (!res || typeof res !== "object") return null;
   if (res.is_available !== undefined || res.available_units !== undefined) return res;
@@ -120,6 +177,8 @@ export default function RentalBookingClient({
   const [checking, setChecking] = useState(false);
   const [avail, setAvail] = useState(null);
   const [error, setError] = useState("");
+  const [isContinuing, setIsContinuing] = useState(false);
+  const availabilityRequestRef = useRef(0);
   const [unavailable, setUnavailable] = useState({ bookings: [], blocked: [] });
   const initialBookingFromUrlRef = useRef(initialBookingFromUrl);
   initialBookingFromUrlRef.current = initialBookingFromUrl;
@@ -345,15 +404,22 @@ export default function RentalBookingClient({
 
   const applyPickupOption = (option) => {
     if (!option?.name) return;
-    setBooking((p) => ({
-      ...p,
-      pickup_location: option.name,
-      dropoff_location: option.name,
-      pickup_lat: option.latitude ?? "",
-      pickup_lng: option.longitude ?? "",
-    }));
+    setBooking((p) => {
+      const locationChanged =
+        String(p.pickup_location || "").trim() !== String(option.name).trim() ||
+        String(p.dropoff_location || "").trim() !== String(option.name).trim();
+      if (locationChanged) {
+        setAvail(null);
+      }
+      return {
+        ...p,
+        pickup_location: option.name,
+        dropoff_location: option.name,
+        pickup_lat: option.latitude ?? "",
+        pickup_lng: option.longitude ?? "",
+      };
+    });
     setError("");
-    setAvail(null);
   };
 
   useLayoutEffect(() => {
@@ -749,56 +815,66 @@ export default function RentalBookingClient({
     if (msg) {
       setAvail(null);
       setError(msg);
+      setChecking(false);
       return;
     }
     if (!rentalId) return;
-    let cancelled = false;
-    const run = async () => {
-      setChecking(true);
-      setError("");
-      try {
-        const res = await checkRentalAvailability(rentalId, effectiveBooking);
-        const d = parseAvailabilityPayload(res);
-        if (cancelled) return;
-        setAvail(d);
-        if (
-          d?.minimum_hours_not_met &&
-          !enforceExtendedMinHours &&
-          pricingBasis !== "day" &&
-          computeBillingHoursCeil(effectiveBooking) >= RENTAL_MIN_BILLING_HOURS
-        ) {
-          setAvail({
-            ...d,
-            is_available: true,
-            available_units: Math.max(1, Number(d?.eligible_units ?? 1)),
-            minimum_hours_not_met: false,
-            min_booking_hours: RENTAL_MIN_BILLING_HOURS,
-          });
-          setError("");
-        } else if (availabilityMinHoursBlocked(d)) {
-          const mh = d?.min_booking_hours ?? effectiveMinBookingHours;
-          setError(
-            `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
-          );
-        } else if (isAvailabilityClosed(d)) {
-          const total = Number(d?.eligible_units ?? 1);
-          setError(
-            total > 1
-              ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
-              : "This item is already booked for the selected date/time. Please choose another slot."
-          );
-        } else {
-          setError("");
+
+    const requestId = ++availabilityRequestRef.current;
+    const timer = window.setTimeout(() => {
+      const run = async () => {
+        setChecking(true);
+        setError("");
+        try {
+          const res = await checkRentalAvailability(rentalId, effectiveBooking);
+          if (requestId !== availabilityRequestRef.current) return;
+          const d = parseAvailabilityPayload(res);
+          setAvail(d);
+          if (
+            d?.minimum_hours_not_met &&
+            !enforceExtendedMinHours &&
+            pricingBasis !== "day" &&
+            pricingBasis !== "hybrid" &&
+            computeBillingHoursCeil(effectiveBooking) >= RENTAL_MIN_BILLING_HOURS
+          ) {
+            setAvail({
+              ...d,
+              is_available: true,
+              available_units: Math.max(1, Number(d?.eligible_units ?? 1)),
+              minimum_hours_not_met: false,
+              min_booking_hours: RENTAL_MIN_BILLING_HOURS,
+            });
+            setError("");
+          } else if (availabilityMinHoursBlocked(d)) {
+            const mh = d?.min_booking_hours ?? effectiveMinBookingHours;
+            setError(
+              `Minimum rental length is ${mh} hours. Please extend your drop-off time (or adjust dates).`
+            );
+          } else if (isAvailabilityClosed(d)) {
+            const total = Number(d?.eligible_units ?? 1);
+            setError(
+              total > 1
+                ? `All ${total} units are booked for the selected date/time. Please choose another slot.`
+                : "This item is already booked for the selected date/time. Please choose another slot."
+            );
+          } else {
+            setError("");
+          }
+        } catch (e) {
+          if (requestId !== availabilityRequestRef.current) return;
+          setAvail(null);
+          setError(e?.response?.data?.message || "Failed to check availability.");
+        } finally {
+          if (requestId === availabilityRequestRef.current) {
+            setChecking(false);
+          }
         }
-      } catch (e) {
-        if (!cancelled) setError(e?.response?.data?.message || "Failed to check availability.");
-      } finally {
-        if (!cancelled) setChecking(false);
-      }
-    };
-    run();
+      };
+      void run();
+    }, 350);
+
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -843,12 +919,15 @@ export default function RentalBookingClient({
     if (
       !enforceExtendedMinHours &&
       payload.minimum_hours_not_met &&
+      pricingBasis !== "hybrid" &&
       computeBillingHoursCeil(effectiveBooking) >= RENTAL_MIN_BILLING_HOURS
     ) {
       return true;
     }
     return false;
   };
+
+  const canContinueToCheckout = slotIsBookable(avail) && Boolean(checkoutHref);
 
   const onContinue = () => {
     const msg = validateBooking();
@@ -867,14 +946,11 @@ export default function RentalBookingClient({
       );
       return;
     }
-    if (!slotIsBookable(avail)) {
-      setError(avail ? slotUnavailableMessage() : "Checking availability for your selected times…");
+    if (!canContinueToCheckout) {
+      setError(avail ? slotUnavailableMessage() : "Waiting for availability check. Please wait a moment.");
       return;
     }
-    if (!checkoutHref) {
-      setError("Please complete all booking fields before continuing.");
-      return;
-    }
+    setIsContinuing(true);
     writeRentalBookingDraft(rentalId, effectiveBooking);
     const bookingUrl = rentalBookingQueryString(rentalId, effectiveBooking);
     if (typeof window !== "undefined" && bookingUrl) {
@@ -885,7 +961,7 @@ export default function RentalBookingClient({
     router.push(checkoutHref);
   };
 
-  const continueDisabled = checking;
+  const continueDisabled = checking || isContinuing || !canContinueToCheckout;
 
   const handleContinueClick = () => {
     onContinue();
@@ -906,11 +982,7 @@ export default function RentalBookingClient({
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500" />
-      </div>
-    );
+    return <BookingPageSkeleton />;
   }
 
   if (!rental) {
@@ -1011,7 +1083,8 @@ export default function RentalBookingClient({
                     Vehicle location {pickupOptions.length > 1 ? "*" : ""}
                   </label>
                   {loading || loadingPickupLocations ? (
-                    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
+                    <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 flex items-center gap-2.5 text-sm text-gray-500">
+                      <InlineSpinner />
                       Loading pickup locations…
                     </div>
                   ) : (
@@ -1084,9 +1157,9 @@ export default function RentalBookingClient({
                 {error ? <div className="text-sm text-red-600 font-medium">{error}</div> : null}
 
                 {checking ? (
-                  <div className="text-sm text-gray-500 flex items-center gap-2">
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-                    Checking availability…
+                  <div className="text-sm text-primary-800 bg-primary-50 border border-primary-100 rounded-xl px-3 py-2.5 flex items-center gap-2.5">
+                    <InlineSpinner className="h-4 w-4 text-primary-600" />
+                    Checking availability and updating your price estimate…
                   </div>
                 ) : null}
 
@@ -1183,10 +1256,20 @@ export default function RentalBookingClient({
               </div>
 
               <div className="bg-white rounded-lg shadow border overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
                   <h3 className="text-base font-semibold text-gray-900">Price estimate</h3>
+                  {checking ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600">
+                      <InlineSpinner className="h-3.5 w-3.5" />
+                      Updating
+                    </span>
+                  ) : null}
                 </div>
-                <div className="px-4 py-3 space-y-2 text-sm border-b border-gray-100">
+                <div
+                  className={`px-4 py-3 space-y-2 text-sm border-b border-gray-100 transition-opacity duration-200 ${
+                    checking ? "opacity-60" : "opacity-100"
+                  }`}
+                >
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
                     Rental charges
                   </p>
@@ -1257,7 +1340,11 @@ export default function RentalBookingClient({
                 </div>
 
                 {depositAmount > 0 ? (
-                  <div className="px-4 py-3 border-b border-gray-100 space-y-1">
+                  <div
+                    className={`px-4 py-3 border-b border-gray-100 space-y-1 transition-opacity duration-200 ${
+                      checking ? "opacity-60" : "opacity-100"
+                    }`}
+                  >
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="text-gray-600">Refundable deposit</span>
                       <span className="font-medium text-gray-900">₹{money(depositAmount)}</span>
@@ -1269,7 +1356,11 @@ export default function RentalBookingClient({
                 ) : null}
 
                 <div className="px-4 py-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
+                  <div
+                    className={`flex items-center justify-between gap-3 transition-opacity duration-200 ${
+                      checking ? "opacity-60" : "opacity-100"
+                    }`}
+                  >
                     <span className="text-sm font-semibold text-gray-900">Estimated total</span>
                     <span className="text-xl font-bold text-primary-600">
                       ₹{money(totalCostIncludingDeposit)}
@@ -1280,13 +1371,22 @@ export default function RentalBookingClient({
                   </p>
                 {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
                 {!error && checking ? (
-                  <p className="text-sm text-gray-500 mb-3">Checking availability for your selected times…</p>
+                  <p className="text-sm text-primary-700 mb-3 flex items-center gap-2">
+                    <InlineSpinner className="h-3.5 w-3.5" />
+                    Verifying your selected slot…
+                  </p>
                 ) : null}
                 {!error && !checking && avail && !isAvailabilityOpen(avail) ? (
                   <p className="text-sm text-red-600 mb-3">{slotUnavailableMessage()}</p>
                 ) : null}
-                <Button onClick={handleContinueClick} size="lg" className="w-full" disabled={continueDisabled}>
-                  {checking ? "Checking…" : "Continue to payment"}
+                <Button
+                  onClick={handleContinueClick}
+                  size="lg"
+                  className="w-full"
+                  disabled={continueDisabled}
+                  isLoading={isContinuing}
+                >
+                  {isContinuing ? "Redirecting to payment…" : "Continue to payment"}
                 </Button>
                 </div>
               </div>
@@ -1298,17 +1398,41 @@ export default function RentalBookingClient({
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <div>
               <p className="text-xs text-gray-500">Estimated total</p>
-              <p className="text-lg font-bold text-primary-600">₹{money(totalCostIncludingDeposit)}</p>
+              <p
+                className={`text-lg font-bold text-primary-600 transition-opacity duration-200 ${
+                  checking ? "opacity-60" : "opacity-100"
+                }`}
+              >
+                ₹{money(totalCostIncludingDeposit)}
+              </p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Rental</p>
-              <p className="text-base font-semibold text-gray-900">₹{money(feesBeforeDeposit)}</p>
+              <p
+                className={`text-base font-semibold text-gray-900 transition-opacity duration-200 ${
+                  checking ? "opacity-60" : "opacity-100"
+                }`}
+              >
+                ₹{money(feesBeforeDeposit)}
+              </p>
             </div>
           </div>
           <div className="px-4 pb-4">
             {error ? <p className="text-sm text-red-600 mb-2">{error}</p> : null}
-            <Button onClick={handleContinueClick} size="lg" className="w-full" disabled={continueDisabled}>
-              {checking ? "Checking…" : "Continue to payment"}
+            {!error && checking ? (
+              <p className="text-xs text-primary-700 mb-2 flex items-center gap-1.5">
+                <InlineSpinner className="h-3.5 w-3.5" />
+                Checking availability…
+              </p>
+            ) : null}
+            <Button
+              onClick={handleContinueClick}
+              size="lg"
+              className="w-full"
+              disabled={continueDisabled}
+              isLoading={isContinuing}
+            >
+              {isContinuing ? "Redirecting to payment…" : "Continue to payment"}
             </Button>
           </div>
         </div>

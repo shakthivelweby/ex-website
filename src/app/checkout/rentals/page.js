@@ -7,6 +7,7 @@ import Image from "next/image";
 import { getRentalDetails } from "../../rentals/service";
 import { checkRentalAvailability } from "../../rentals/clientService";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import Button from "@/components/common/Button";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot, cancelRentalReservation } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT, RENTAL_MIN_BILLING_HOURS } from "../../rentals/rentalBookingConstants";
@@ -837,13 +838,15 @@ export default function RentalCheckoutPage() {
               <i className="fi fi-rr-arrow-left text-base" aria-hidden />
               Back to booking
             </button>
-            <button
-              className="px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-60"
-              disabled={isPaying || reserving || !reserveReady || !reservationBookingId}
+            <Button
+              type="button"
               onClick={handleContinue}
+              disabled={!reserveReady || !reservationBookingId}
+              isLoading={isPaying || reserving}
+              className="!rounded-xl !py-2.5 !px-4 !text-sm !font-semibold w-full sm:w-auto"
             >
               {reserving ? "Reserving slot…" : isPaying ? "Processing…" : "Continue to payment"}
-            </button>
+            </Button>
           </div>
 
           {reserving ? (

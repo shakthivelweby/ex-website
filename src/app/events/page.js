@@ -106,6 +106,15 @@ export default async function Events({ searchParams }) {
       return event.starting_date || "";
     })(),
     interest_count: Number(event.event_bookings_count || 0),
+    kidsFriendly:
+      event.kids_friendly === true ||
+      event.kids_friendly === 1 ||
+      event.kids_friendly === "1",
+    petsFriendly:
+      event.pets_friendly === true ||
+      event.pets_friendly === 1 ||
+      event.pets_friendly === "1",
+    multiDay: (event.event_days?.length || 0) > 1,
   })) || [];
 
   return (

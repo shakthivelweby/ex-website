@@ -13,6 +13,7 @@ export default async function RentalsPage({ searchParams }) {
     date_to: resolvedSearchParams.date_to || resolvedSearchParams.date || "",
     location: resolvedSearchParams.location || "",
     category: resolvedSearchParams.category || "",
+    form_type: resolvedSearchParams.form_type || "",
     sub_category: resolvedSearchParams.sub_category || "",
     transmission: resolvedSearchParams.transmission || "",
     fuel_type: resolvedSearchParams.fuel_type || "",

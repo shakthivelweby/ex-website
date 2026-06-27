@@ -1,134 +1,69 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import RangeSlider from "../RangeSlider/RangeSlider";
-import Popup from "../Popup";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { useEffect, useRef, useState } from "react";
 import LocationSearchPopup from "../LocationSearchPopup";
+import RangeSlider from "../RangeSlider/RangeSlider";
+import DateRangeSearchField from "../Search/DateRangeSearchField";
+import {
+  FilterField,
+  FilterMobileFooter,
+  FilterSidebarShell,
+  getSelectClass,
+  inputClass,
+  pillClass,
+} from "../ListingFilters/shared";
 
 const EventFilters = ({
-  isOpen,
-  onClose,
-  isMobile,
   initialFilters,
   onFilterChange,
-  categories,
-  languages,
+  categories = [],
+  languages = [],
+  layout = "inline",
+  onClose,
 }) => {
   const [tempFilters, setTempFilters] = useState(initialFilters || {});
   const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [pendingFilters, setPendingFilters] = useState(initialFilters || {});
+  const prevInitialFiltersRef = useRef();
 
-  // Only sync with initialFilters on mount or when popup opens
   useEffect(() => {
-    if (isOpen || isOpen === undefined) {
+    const prevFilters = prevInitialFiltersRef.current;
+    const filtersChanged = JSON.stringify(initialFilters) !== JSON.stringify(prevFilters);
+    if (filtersChanged) {
+      prevInitialFiltersRef.current = initialFilters;
       setTempFilters(initialFilters || {});
-      setPendingFilters(initialFilters || {});
-      // Initialize date if it exists in filters
-      if (initialFilters?.date) {
-        if (initialFilters.date === "today") {
-          setSelectedDate(new Date());
-        } else if (initialFilters.date === "tomorrow") {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          setSelectedDate(tomorrow);
-        } else if (initialFilters.date === "weekend") {
-          const today = new Date();
-          const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
-          const weekend = new Date(today);
-          weekend.setDate(today.getDate() + daysUntilSaturday);
-          setSelectedDate(weekend);
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(initialFilters.date)) {
-          // Custom date format
-          setSelectedDate(new Date(initialFilters.date));
-        }
-      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [initialFilters]);
+
+  const patchFilters = (patch) => {
+    const next = { ...tempFilters, ...patch };
+    setTempFilters(next);
+    onFilterChange(next);
+  };
 
   const handlePlaceSelected = (place) => {
-    if (place) {
-      const longitude = place.geometry.location.lng();
-      const latitude = place.geometry.location.lat();
-      const locationName = place.name || place.formatted_address || "";
-      const newFilters = {
-        ...tempFilters,
-        longitude,
-        latitude,
-        location: locationName,
-      };
-      setTempFilters(newFilters);
-      setPendingFilters(newFilters);
-      setIsLocationOpen(false);
-      // Apply location filter immediately
-      onFilterChange(newFilters);
-    }
-  };
+    if (!place) return;
+    const locationName = place.name || place.formatted_address || place.vicinity || "";
+    const longitude =
+      typeof place.geometry?.location?.lng === "function"
+        ? place.geometry.location.lng()
+        : place.geometry?.location?.lng;
+    const latitude =
+      typeof place.geometry?.location?.lat === "function"
+        ? place.geometry.location.lat()
+        : place.geometry?.location?.lat;
 
-  const handlePriceChange = (value) => {
-    const newFilters = {
-      ...tempFilters,
-      price_from: value[0],
-      price_to: value[1],
-    };
-    setTempFilters(newFilters);
-    setPendingFilters(newFilters);
-  };
-
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    if (date) {
-      // Format date as YYYY-MM-DD for custom dates
-      const formattedDate = date.toISOString().split("T")[0];
-      const newFilters = {
-        ...tempFilters,
-        date: formattedDate,
-      };
-      setTempFilters(newFilters);
-      setPendingFilters(newFilters);
-    }
-  };
-
-  const handleQuickDateSelect = (option) => {
-    let dateParam = "";
-    let dateToSet = new Date();
-
-    switch (option) {
-      case "Today":
-        dateParam = "today";
-        dateToSet = new Date();
-        break;
-      case "Tomorrow":
-        dateParam = "tomorrow";
-        dateToSet = new Date();
-        dateToSet.setDate(dateToSet.getDate() + 1);
-        break;
-      case "This Weekend":
-        dateParam = "weekend";
-        const today = new Date();
-        const daysUntilSaturday = (6 - today.getDay() + 7) % 7;
-        dateToSet = new Date(today);
-        dateToSet.setDate(today.getDate() + daysUntilSaturday);
-        break;
-      default:
-        return;
-    }
-
-    setSelectedDate(dateToSet);
-    const newFilters = {
-      ...tempFilters,
-      date: dateParam,
-    };
-    console.log("Date filter clicked:", option, "New filters:", newFilters);
-    setTempFilters(newFilters);
-    setPendingFilters(newFilters);
+    patchFilters({
+      location: locationName,
+      longitude: longitude || "",
+      latitude: latitude || "",
+    });
+    setIsLocationOpen(false);
   };
 
   const clearAllFilters = () => {
     const clearedFilters = {
+      date_from: "",
+      date_to: "",
       date: "",
       language: "",
       category: "",
@@ -139,458 +74,198 @@ const EventFilters = ({
       location: "",
     };
     setTempFilters(clearedFilters);
-    setPendingFilters(clearedFilters);
-    setSelectedDate(new Date()); // Reset to current date for UI
     onFilterChange(clearedFilters);
-    if (onClose) onClose();
   };
 
-  const applyFilters = () => {
-    setTempFilters(pendingFilters);
-    onFilterChange(pendingFilters);
-    if (onClose) onClose();
-  };
+  const getActiveFilterCount = () =>
+    Object.entries(tempFilters || {}).filter(([key, value]) => {
+      if (key === "date" || key === "per_page") return false;
+      return Boolean(value);
+    }).length;
 
-  const hasActiveFilters = () => {
-    return Object.values(pendingFilters).some((value) => value);
-  };
-
-  const getActiveFilterCount = () => {
-    return Object.values(pendingFilters).filter((value) => value).length;
-  };
-
-  // Helper function to get the current filters for display
-  const getCurrentFilters = () => {
-    return pendingFilters;
-  };
-
-  const removeFilter = (key) => {
-    const newFilters = { ...tempFilters, [key]: "" };
-    setTempFilters(newFilters);
-
-    // Special handling for date to reset UI state
-    if (key === "date") {
-      setSelectedDate(new Date());
-    }
-
-    setPendingFilters(newFilters);
-  };
-
-  const isDateEqual = (date1, date2) => {
-    if (!date1 || !date2) return false;
-    return date1.toDateString() === date2.toDateString();
-  };
-
-  const isWeekend = (date) => {
-    if (!date) return false;
-    const day = date.getDay();
-    return day === 6; // Check if it's Saturday
-  };
-
-  // Function to check if date matches quick option
-  const checkIfDateMatchesOption = (option) => {
-    const currentFilters = getCurrentFilters();
-    if (!currentFilters.date) return false;
-
-    switch (option) {
-      case "Today":
-        return currentFilters.date === "today";
-      case "Tomorrow":
-        return currentFilters.date === "tomorrow";
-      case "This Weekend":
-        return currentFilters.date === "weekend";
-      default:
-        return false;
-    }
-  };
+  const hasPriceFilter =
+    (tempFilters.price_from && Number(tempFilters.price_from) > 0) ||
+    (tempFilters.price_to && Number(tempFilters.price_to) < 1000);
 
   const FilterContent = () => (
-    <div className="divide-y divide-gray-100">
-      {/* Location Section */}
-      <div className="py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-marker text-gray-400"></i>
-            <span className="text-sm font-medium text-gray-700">Location</span>
-          </div>
-          {(getCurrentFilters().longitude || getCurrentFilters().latitude) && (
-            <button
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  longitude: "",
-                  latitude: "",
-                  location: "",
-                };
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-                // Apply cleared location filter immediately
-                onFilterChange(newFilters);
-              }}
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => setIsLocationOpen(true)}
-          className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 text-left text-sm rounded flex items-center gap-2 transition-colors"
+    <div className="space-y-5">
+      <section className="space-y-3">
+        <FilterField
+          icon="fi fi-rr-marker"
+          label="Location"
+          showClear={Boolean(tempFilters.location)}
+          onClear={() => patchFilters({ location: "", longitude: "", latitude: "" })}
         >
-          <span className="text-gray-600">
-            {getCurrentFilters().location
-              ? getCurrentFilters().location
-              : "Choose location"}
-          </span>
-          <i className="fi fi-rr-angle-small-right ml-auto text-gray-400"></i>
-        </button>
-      </div>
-
-      {/* Date Section */}
-      <div className="py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-calendar text-gray-400"></i>
-            <span className="text-sm font-medium text-gray-700">Date</span>
-          </div>
-          {getCurrentFilters().date && (
-            <button
-              onClick={() => removeFilter("date")}
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-1.5">
-            {["Today", "Tomorrow", "This Weekend"].map((option) => (
-              <button
-                key={option}
-                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
-                  checkIfDateMatchesOption(option)
-                    ? "bg-primary-600 text-white shadow-sm"
-                    : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
-                }`}
-                onClick={() => handleQuickDateSelect(option)}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          <div className="relative">
-            <DatePicker
-              selected={selectedDate}
-              onChange={handleDateChange}
-              minDate={new Date()}
-              placeholderText="Select a date"
-              dateFormat="dd MMM yyyy"
-              className="w-full px-3 py-2 bg-gray-50 hover:bg-gray-100 text-sm text-gray-600 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:bg-white"
-              popperClassName="react-datepicker-left"
-              customInput={
-                <button className="w-full flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <i className="fi fi-rr-calendar text-gray-400"></i>
-                    <span>
-                      {selectedDate
-                        ? selectedDate.toLocaleDateString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
-                        : "Select a date"}
-                    </span>
-                  </span>
-                  <i className="fi fi-rr-angle-small-down text-gray-400"></i>
-                </button>
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Languages Section */}
-      <div className="py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-comments text-gray-400"></i>
-            <span className="text-sm font-medium text-gray-700">Languages</span>
-          </div>
-          {getCurrentFilters().language && (
-            <button
-              onClick={() => {
-                const newFilters = { ...tempFilters, language: "" };
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-              }}
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {languages.map((language) => (
-            <button
-              key={language.id}
-              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
-                tempFilters.language === language.slug
-                  ? "bg-primary-600 text-white shadow-sm"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
+          <button
+            type="button"
+            onClick={() => setIsLocationOpen(true)}
+            className={`${inputClass} flex items-center gap-2 text-left hover:border-gray-300`}
+          >
+            <span
+              className={`truncate text-xs ${
+                tempFilters.location ? "text-gray-800" : "text-[11px] text-gray-400"
               }`}
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  language:
-                    tempFilters.language === language.slug ? "" : language.slug,
-                };
-                console.log(
-                  "Language filter clicked:",
-                  language.name,
-                  "New filters:",
-                  newFilters
-                );
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-              }}
             >
-              {language.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Categories Section */}
-      <div className="py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-apps text-gray-400"></i>
-            <span className="text-sm font-medium text-gray-700">
-              Categories
+              {tempFilters.location || "Search city or area"}
             </span>
-          </div>
-          {getCurrentFilters().category && (
-            <button
-              onClick={() => {
-                const newFilters = { ...tempFilters, category: "" };
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-              }}
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
-                tempFilters.category === category.slug
-                  ? "bg-primary-600 text-white shadow-sm"
-                  : "bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200"
-              }`}
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  category:
-                    tempFilters.category === category.slug ? "" : category.slug,
-                };
-                console.log(
-                  "Category filter clicked:",
-                  category.name,
-                  "New filters:",
-                  newFilters
-                );
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-              }}
-            >
-              {category.name}
-            </button>
-          ))}
-        </div>
-      </div>
+            <i className="fi fi-rr-search ml-auto shrink-0 text-xs text-gray-400" aria-hidden />
+          </button>
+        </FilterField>
 
-      {/* Price Range Section */}
-      {/* <div className="py-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-indian-rupee-sign text-gray-400"></i>
-            <span className="text-sm font-medium text-gray-700">
-              Price Range
-            </span>
-          </div>
-          {(getCurrentFilters().price_from || getCurrentFilters().price_to) && (
-            <button
-              onClick={() => {
-                const newFilters = {
-                  ...tempFilters,
-                  price_from: "",
-                  price_to: "",
-                };
-                setTempFilters(newFilters);
-                setPendingFilters(newFilters);
-              }}
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="px-2">
-          <RangeSlider
-            min={0}
-            max={5000}
-            step={100}
-            initialValue={[
-              parseInt(getCurrentFilters().price_from) || 0,
-              parseInt(getCurrentFilters().price_to) || 5000,
-            ]}
-            onChange={handlePriceChange}
-            formatDisplay={(value) =>
-              value ? `₹${value[0]} - ₹${value[1]}` : "Select Price Range"
+        <FilterField
+          icon="fi fi-rr-calendar"
+          label="Dates"
+          showClear={Boolean(tempFilters.date_from || tempFilters.date_to || tempFilters.date)}
+          onClear={() => patchFilters({ date_from: "", date_to: "", date: "" })}
+        >
+          <DateRangeSearchField
+            embedded
+            emptyLabel="Pick event dates"
+            dateFrom={tempFilters.date_from || tempFilters.date}
+            dateTo={tempFilters.date_to || tempFilters.date}
+            onChange={({ dateFrom, dateTo }) =>
+              patchFilters({ date_from: dateFrom, date_to: dateTo, date: dateFrom })
             }
-            title="Price Range"
           />
-          <div className="mt-2 flex justify-between text-xs text-gray-500">
-            <span>₹0</span>
-            <span>₹5000+</span>
+        </FilterField>
+      </section>
+
+      <div className="border-t border-gray-100" />
+
+      <section className="space-y-3">
+        <p className="text-xs font-semibold text-gray-800">Category</p>
+        <FilterField icon="fi fi-rr-apps" label="Event category">
+          <select
+            value={tempFilters.category || ""}
+            onChange={(e) => patchFilters({ category: e.target.value })}
+            className={getSelectClass(Boolean(tempFilters.category))}
+          >
+            <option value="">All categories</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </FilterField>
+      </section>
+
+      {languages.length > 0 ? (
+        <>
+          <div className="border-t border-gray-100" />
+          <section className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
+            <p className="text-xs font-semibold text-gray-800">Language</p>
+            <FilterField icon="fi fi-rr-comments" label="Show language">
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => patchFilters({ language: "" })}
+                  className={pillClass(!tempFilters.language)}
+                >
+                  Any
+                </button>
+                {languages.map((language) => (
+                  <button
+                    key={language.id}
+                    type="button"
+                    onClick={() =>
+                      patchFilters({
+                        language: tempFilters.language === language.slug ? "" : language.slug,
+                      })
+                    }
+                    className={pillClass(tempFilters.language === language.slug)}
+                  >
+                    {language.name}
+                  </button>
+                ))}
+              </div>
+            </FilterField>
+          </section>
+        </>
+      ) : null}
+
+      <div className="border-t border-gray-100" />
+
+      <section>
+        <FilterField
+          icon="fi fi-rr-indian-rupee-sign"
+          label="Price range"
+          showClear={hasPriceFilter}
+          onClear={() => patchFilters({ price_from: "", price_to: "" })}
+        >
+          <div className="px-0.5 pt-1">
+            <RangeSlider
+              min={0}
+              max={5000}
+              step={100}
+              initialValue={[
+                parseInt(tempFilters.price_from, 10) || 0,
+                parseInt(tempFilters.price_to, 10) || 5000,
+              ]}
+              onChange={(value) => patchFilters({ price_from: value[0], price_to: value[1] })}
+              formatDisplay={(value) => {
+                if (!value || value.length !== 2) return "Any price";
+                if (value[0] === 0 && value[1] === 5000) return "Any price";
+                if (value[0] === 0) return `Under ₹${value[1]}`;
+                if (value[1] === 5000) return `₹${value[0]}+`;
+                return `₹${value[0]} – ₹${value[1]}`;
+              }}
+              title="Price range"
+            />
+            <div className="mt-2 flex justify-between text-[10px] font-medium text-gray-400">
+              <span>₹0</span>
+              <span>₹5000+</span>
+            </div>
           </div>
-        </div>
-      </div> */}
+        </FilterField>
+      </section>
     </div>
   );
 
-  // For mobile view, render in a popup
-  if (isMobile) {
-    return (
-      <Popup
-        isOpen={isOpen}
-        onClose={onClose}
-        pos="right"
-        preventScroll={true}
-        draggable={true}
-        className="md:h-auto h-[85vh]"
-        title={
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-settings-sliders text-lg text-gray-400"></i>
-            <span className="text-gray-700">Filters</span>
-            {hasActiveFilters() && (
-              <span className="text-sm font-normal text-gray-500">
-                ({getActiveFilterCount()})
-              </span>
-            )}
-          </div>
-        }
-      >
-        <div className="px-4">
-          <FilterContent />
-        </div>
-        <Popup.Footer>
-          <div className="flex items-center gap-2 px-4 py-3 border-t border-gray-100">
-            <button
-              onClick={clearAllFilters}
-              className="h-10 px-4 bg-gray-100 text-gray-700 text-sm font-medium flex-1 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 rounded-lg"
-            >
-              <i className="fi fi-rr-refresh"></i>
-              Clear All
-            </button>
-            <button
-              onClick={applyFilters}
-              className="h-10 px-6 text-sm font-medium flex items-center justify-center gap-2 rounded-lg transition-colors bg-primary-600 text-white hover:bg-primary-700"
-            >
-              <i className="fi fi-rr-check"></i>
-              Apply Filters
-            </button>
-          </div>
-        </Popup.Footer>
+  const locationPopup = (
+    <LocationSearchPopup
+      isOpen={isLocationOpen}
+      onClose={() => setIsLocationOpen(false)}
+      onPlaceSelected={handlePlaceSelected}
+      googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+      title="Choose location"
+    />
+  );
 
-        {/* Location Picker Popup for Mobile */}
-        <LocationSearchPopup
-          isOpen={isLocationOpen}
-          onClose={() => setIsLocationOpen(false)}
-          onPlaceSelected={handlePlaceSelected}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          title="Choose Location"
-        />
-      </Popup>
+  const activeCount = getActiveFilterCount();
+
+  if (layout === "mobile") {
+    return (
+      <div className="space-y-5">
+        <FilterContent />
+        <FilterMobileFooter onClearAll={clearAllFilters} onClose={() => onClose?.()} />
+        {locationPopup}
+      </div>
     );
   }
 
-  // For desktop view, render in sidebar
-  return (
-    <div className="bg-white shadow-sm border border-gray-100">
-      <div className="p-3 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <i className="fi fi-rr-settings-sliders text-gray-400"></i>
-            <span className="font-medium text-gray-800">Filters</span>
-            {hasActiveFilters() && (
-              <span className="text-sm text-gray-500">
-                ({getActiveFilterCount()})
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+  if (layout === "sidebar") {
+    return (
+      <>
+        <FilterSidebarShell activeCount={activeCount} onClearAll={clearAllFilters}>
+          <FilterContent />
+        </FilterSidebarShell>
+        {locationPopup}
+      </>
+    );
+  }
 
-      <div className="px-3">
+  return (
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+      <div className="border-b border-gray-100 px-4 py-3.5">
+        <span className="text-sm font-semibold text-gray-900">Filters</span>
+      </div>
+      <div className="px-4 py-4">
         <FilterContent />
       </div>
-
-      {/* Desktop Filter Buttons */}
-      <div className="p-3 border-t border-gray-100">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={clearAllFilters}
-            className="h-9 px-4 bg-gray-100 text-gray-700 text-sm font-medium flex-1 hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 rounded-lg"
-          >
-            Clear All
-          </button>
-          <button
-            onClick={applyFilters}
-            className="h-9 px-4 text-sm font-medium flex items-center justify-center gap-2 rounded-lg transition-colors bg-primary-600 text-white hover:bg-primary-700"
-          >
-            Apply
-          </button>
-        </div>
-      </div>
-
-      {/* Location Picker Popup */}
-      <LocationSearchPopup
-        isOpen={isLocationOpen}
-        onClose={() => setIsLocationOpen(false)}
-        onPlaceSelected={handlePlaceSelected}
-        googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        title="Choose Location"
-      />
+      {locationPopup}
     </div>
   );
 };
-
-// Add custom styles for the date picker
-const styles = `
-  .react-datepicker-wrapper {
-    width: 100%;
-  }
-  .react-datepicker__input-container {
-    width: 100%;
-  }
-  .react-datepicker-left {
-    left: 0 !important;
-  }
-  .react-datepicker__triangle {
-    left: 50% !important;
-  }
-`;
-
-// Add styles to head
-if (typeof document !== "undefined") {
-  const styleSheet = document.createElement("style");
-  styleSheet.textContent = styles;
-  document.head.appendChild(styleSheet);
-}
 
 export default EventFilters;

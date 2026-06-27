@@ -28,6 +28,9 @@ export const getRentals = async (filters = {}) => {
       const r = normalized.radius_km !== undefined && normalized.radius_km !== null && String(normalized.radius_km) !== "" ? String(normalized.radius_km) : "5";
       params.append("radius_km", r);
     }
+    if (normalized.form_type && String(normalized.form_type).trim()) {
+      params.append("form_type", String(normalized.form_type).trim());
+    }
     if (normalized.category && String(normalized.category).trim()) params.append("category", String(normalized.category).trim());
     if (normalized.sub_category && String(normalized.sub_category).trim()) params.append("sub_category", String(normalized.sub_category).trim());
     if (normalized.transmission && String(normalized.transmission).trim()) params.append("transmission", String(normalized.transmission).trim());
@@ -70,6 +73,9 @@ export const getRentalCategories = async () => {
 export const getRentalSubCategories = async (filters = {}) => {
   try {
     const params = new URLSearchParams();
+    if (filters.form_type && String(filters.form_type).trim()) {
+      params.append("form_type", String(filters.form_type).trim());
+    }
     if (filters.category && String(filters.category).trim()) params.append("category", String(filters.category).trim()); // category slug
     if (filters.category_id) params.append("category_id", String(filters.category_id));
     const url = params.toString() ? `/rental-sub-categories?${params.toString()}` : "/rental-sub-categories";

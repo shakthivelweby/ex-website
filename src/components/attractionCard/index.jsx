@@ -1,121 +1,193 @@
 import Image from "next/image";
 import Link from "next/link";
 
+const formatLocation = (location, city) => {
+  const loc = String(location || "").trim();
+  const cityName = String(city || "").trim();
+  if (loc && cityName && !loc.toLowerCase().includes(cityName.toLowerCase())) {
+    return `${cityName} · ${loc}`;
+  }
+  return loc || cityName || null;
+};
+
+
 const AttractionCard = ({ attraction }) => {
   const {
     title,
     location,
+    city,
     type,
     image,
     price,
-    duration,
+    rating,
+    reviewCount,
+    bestTimeToVisit,
+    openingHours,
+    features,
+    kidsFriendly,
+    petsFriendly,
     popular,
     recommended,
     interest_count,
-  } = attraction;
+    id,
+  } = attraction || {};
 
-  // Format price display
-  const formatPrice = (price) => {
-    if (!price || price === 0) return "Free";
-    return `₹${price} onwards`;
+  const locationLabel = formatLocation(location, city);
+  const hasPrice = price && Number(price) > 0;
+
+  const featureChips = (Array.isArray(features) ? features : [])
+    .map((item) => (typeof item === "string" ? item : item?.name || item?.title || ""))
+    .filter(Boolean)
+    .slice(0, 3);
+
+  const highlights = [
+    rating > 0
+      ? {
+          icon: "fi fi-sr-star",
+          label: `${Number(rating).toFixed(1)}${reviewCount > 0 ? ` (${reviewCount} reviews)` : ""}`,
+        }
+      : null,
+    popular ? { icon: "fi fi-rr-flame", label: "Popular" } : null,
+    recommended ? { icon: "fi fi-rr-badge-check", label: "Recommended" } : null,
+    interest_count > 0 ? { icon: "fi fi-rr-heart", label: `${interest_count} interested` } : null,
+  ].filter(Boolean);
+
+  const metaChips = [
+    openingHours
+      ? { icon: "fi fi-rr-time-check", label: openingHours, tone: "amber" }
+      : null,
+    bestTimeToVisit
+      ? { icon: "fi fi-rr-sun", label: `Best: ${bestTimeToVisit}`, tone: "amber" }
+      : null,
+    {
+      icon: "fi fi-rr-child",
+      label: kidsFriendly ? "Kids friendly" : "No kids",
+      tone: kidsFriendly ? "green" : "muted",
+    },
+    {
+      icon: "fi fi-rr-paw",
+      label: petsFriendly ? "Pet friendly" : "No pets",
+      tone: petsFriendly ? "green" : "muted",
+    },
+  ].filter(Boolean);
+
+  const chipClass = (tone) => {
+    if (tone === "green") {
+      return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    }
+    if (tone === "amber") {
+      return "bg-amber-50 text-amber-900 ring-amber-100";
+    }
+    return "bg-gray-50 text-gray-500 ring-gray-100";
   };
 
   return (
-    <Link href={`/attractions/${attraction.id}`} className="block group">
-      <div className="relative flex flex-col h-full overflow-hidden rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-        {/* Status Badges (match events) */}
-        {(popular || recommended) && (
-          <div className="absolute top-4 left-4 z-10 pointer-events-none">
-            <div className="flex flex-row flex-wrap items-center gap-2">
-              {popular && (
-                <span className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                  <span className="leading-none">Popular</span>
-                  <span
-                    aria-hidden="true"
-                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
-                  />
-                </span>
-              )}
-
-              {recommended && (
-                <span
-                  title="ExploreWorld Recommended"
-                  className="relative inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white/90 backdrop-blur-md border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[190px]"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
-                  <span className="leading-none truncate">
-                    ExploreWorld Recommended
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="absolute right-[-7px] top-1/2 -translate-y-1/2 w-0 h-0 border-y-[10px] border-y-transparent border-l-[7px] border-l-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]"
-                  />
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Image (match events) */}
-        <div className="relative w-full h-[350px] overflow-hidden shrink-0">
+    <Link href={`/attractions/${id}`} className="block h-full group">
+      <article className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-100 hover:shadow-lg">
+        <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-gray-100">
           {image ? (
             <Image
               src={image}
-              alt={title}
+              alt={title || "Attraction"}
               fill
-              className="object-cover transition-transform duration-700 group-hover:scale-110"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 34vw"
             />
           ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-amber-50 to-gray-100">
+              <i className="fi fi-rr-landmark text-3xl text-amber-500" aria-hidden />
+              <span className="text-[11px] font-medium text-gray-400">No image</span>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Interest Count Overlay (match events) */}
-          {interest_count > 50 && (
-            <div className="absolute bottom-4 left-4 z-10">
-              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium bg-black/40 text-white backdrop-blur-md border border-white/15">
-                <span className="w-2 h-2 rounded-full bg-white/80" />
-                <span>{interest_count}+ people interested</span>
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
+
+          {type ? (
+            <span className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] truncate rounded-lg bg-amber-600/90 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+              {type}
+            </span>
+          ) : null}
+
+          {(popular || recommended) && (
+            <span className="absolute right-3 top-3 z-10 rounded-lg bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-sm">
+              Must see
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2 p-3.5">
+          <div className="space-y-1">
+            <h3 className="line-clamp-1 text-[15px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-amber-700">
+              {title || "Attraction"}
+            </h3>
+
+            {highlights.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                {highlights.map((item) => (
+                  <span
+                    key={item.label}
+                    className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-600"
+                  >
+                    <i className={`${item.icon} text-[9px] text-amber-500`} aria-hidden />
+                    {item.label}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          {locationLabel ? (
+            <p className="flex items-center gap-1.5 text-xs text-gray-600">
+              <i className="fi fi-rr-marker shrink-0 text-amber-600 text-[11px]" aria-hidden />
+              <span className="line-clamp-1">{locationLabel}</span>
+            </p>
+          ) : null}
+
+          <div className="flex flex-wrap gap-1">
+            {metaChips.map((chip) => (
+              <span
+                key={chip.label}
+                className={`inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-tight ring-1 ${chipClass(chip.tone)}`}
+              >
+                <i className={`${chip.icon} shrink-0 text-[9px]`} aria-hidden />
+                <span className="truncate">{chip.label}</span>
               </span>
+            ))}
+          </div>
+
+          {featureChips.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {featureChips.map((feature) => (
+                <span
+                  key={feature}
+                  className="inline-flex items-center rounded-md bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-gray-700 ring-1 ring-gray-100"
+                >
+                  {feature}
+                </span>
+              ))}
             </div>
-          )}
-        </div>
+          ) : null}
 
-        {/* Content (match events spacing) */}
-        <div className="p-4 flex flex-col flex-grow">
-          {/* Type / Timing */}
-          <p className="text-primary-600 font-medium text-sm mb-2">
-            {type || duration || "Attraction"}
-          </p>
-
-          {/* Title */}
-          <h3 className="font-medium text-base text-gray-800 line-clamp-2 mb-2 transition-colors">
-            {title || "Untitled Attraction"}
-          </h3>
-
-          {/* Location */}
-          <div className="flex items-center gap-2 mb-3">
-            <i className="fi fi-rr-marker text-gray-400 text-sm"></i>
-            <p className="text-gray-600 text-sm line-clamp-1">
-              {location || "Location TBA"}
-            </p>
-          </div>
-
-          {/* Price + CTA */}
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600 font-medium text-sm">
-              {price && price > 0 ? formatPrice(price) : "Price TBA"}
-            </p>
-            <button className="text-sm text-primary-600 font-medium hover:text-primary-700">
-              Book Now <i className="fi fi-rr-arrow-right ml-1"></i>
-            </button>
+          <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-2.5">
+            <div>
+              {!hasPrice ? (
+                <span className="inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                  Free entry
+                </span>
+              ) : (
+                <div className="inline-flex items-baseline gap-1 rounded-md border border-gray-100 bg-gray-50 px-2 py-1">
+                  <span className="text-sm font-bold text-gray-900">₹{price}</span>
+                  <span className="text-[10px] text-gray-500">onwards</span>
+                </div>
+              )}
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-700 transition-colors group-hover:text-amber-800">
+              Explore
+              <i className="fi fi-rr-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5" />
+            </span>
           </div>
         </div>
-      </div>
+      </article>
     </Link>
   );
 };

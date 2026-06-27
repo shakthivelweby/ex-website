@@ -6,6 +6,7 @@ import Popup from "@/components/Popup";
 import { useEffect, useRef, useState } from "react";
 import { getRentals } from "./service";
 import { normalizeRentalFilters } from "./rentalFilterUtils";
+import { buildCategoryTypesFromCategories } from "./rentalCategoryTypeUtils";
 
 const ClientWrapper = ({
   searchParams: initialSearchParams,
@@ -27,6 +28,7 @@ const ClientWrapper = ({
       date_to: initialSearchParams.date_to || initialSearchParams.date || "",
       location: initialSearchParams.location || "",
       category: initialSearchParams.category || "",
+      form_type: initialSearchParams.form_type || "",
       sub_category: initialSearchParams.sub_category || "",
       transmission: initialSearchParams.transmission || "",
       fuel_type: initialSearchParams.fuel_type || "",
@@ -54,6 +56,7 @@ const ClientWrapper = ({
     params.delete("date");
     setOrDelete("location", newFilters.location);
     setOrDelete("category", newFilters.category);
+    setOrDelete("form_type", newFilters.form_type);
     setOrDelete("sub_category", newFilters.sub_category);
     setOrDelete("transmission", newFilters.transmission);
     setOrDelete("fuel_type", newFilters.fuel_type);
@@ -119,12 +122,13 @@ const ClientWrapper = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleCategorySelect = async (slug) => {
-    const nextCategory = initialFilters.category === slug ? "" : slug;
+  const handleCategoryTypeSelect = async (formType) => {
+    const nextFormType = initialFilters.form_type === formType ? "" : formType;
     await handleFilterChange(
       normalizeRentalFilters({
         ...initialFilters,
-        category: nextCategory,
+        form_type: nextFormType,
+        category: "",
         sub_category: "",
         transmission: "",
         fuel_type: "",
@@ -134,6 +138,7 @@ const ClientWrapper = ({
   };
 
   const categories = Array.isArray(initialCategories) ? initialCategories : [];
+  const categoryTypes = buildCategoryTypesFromCategories(categories);
 
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
@@ -153,13 +158,13 @@ const ClientWrapper = ({
 
   useEffect(() => {
     checkScrollPosition();
-  }, [categories]);
+  }, [categoryTypes]);
 
   return (
     <main className="min-h-screen bg-white">
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-          <div className="hidden lg:block lg:w-1/4 xl:w-1/5 shrink-0">
+          <div className="hidden lg:block w-full lg:w-[300px] xl:w-[320px] shrink-0">
             <div className="sticky top-24">
               <RentalFilters
                 initialFilters={initialFilters}
@@ -167,7 +172,6 @@ const ClientWrapper = ({
                 categories={categories}
                 locations={[]}
                 layout="sidebar"
-                hideCategory
               />
             </div>
           </div>
@@ -201,7 +205,7 @@ const ClientWrapper = ({
               </div>
             </div>
 
-            {categories.length > 0 && (
+            {categoryTypes.length > 0 && (
               <div className="mb-8">
                 <div className="lg:hidden">
                   <div className="relative">
@@ -228,36 +232,28 @@ const ClientWrapper = ({
                       onScroll={checkScrollPosition}
                       className="flex gap-3 sm:gap-4 overflow-x-auto scrollbar-hide pb-2 px-1 -mx-1"
                     >
-                      {categories.map((category) => (
+                      {categoryTypes.map((type) => (
                         <button
-                          key={category.id}
+                          key={type.form_type}
                           type="button"
-                          onClick={() => handleCategorySelect(category.slug)}
+                          onClick={() => handleCategoryTypeSelect(type.form_type)}
                           className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
-                            initialFilters.category === category.slug
+                            initialFilters.form_type === type.form_type
                               ? "text-primary-600"
                               : "text-gray-600 hover:text-primary-600"
                           }`}
                         >
                           <div
                             className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
-                              initialFilters.category === category.slug
+                              initialFilters.form_type === type.form_type
                                 ? "bg-primary-50 shadow-sm"
                                 : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
                             }`}
                           >
-                            {category.image ? (
-                              <img
-                                src={category.image}
-                                alt={category.name}
-                                className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                              />
-                            ) : (
-                              <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
-                            )}
+                            <i className={`${type.icon} text-gray-400 text-lg`}></i>
                           </div>
                           <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
-                            {category.name}
+                            {type.label}
                           </span>
                         </button>
                       ))}
@@ -269,36 +265,28 @@ const ClientWrapper = ({
 
                 <div className="hidden lg:block">
                   <div className="grid grid-cols-6 xl:grid-cols-8 gap-4">
-                    {categories.map((category) => (
+                    {categoryTypes.map((type) => (
                       <button
-                        key={category.id}
+                        key={type.form_type}
                         type="button"
-                        onClick={() => handleCategorySelect(category.slug)}
+                        onClick={() => handleCategoryTypeSelect(type.form_type)}
                         className={`flex flex-col items-center gap-2 group ${
-                          initialFilters.category === category.slug
+                          initialFilters.form_type === type.form_type
                             ? "text-primary-600"
                             : "text-gray-600 hover:text-primary-600"
                         }`}
                       >
                         <div
                           className={`w-12 h-12 p-3 rounded-lg flex items-center justify-center transition-colors ${
-                            initialFilters.category === category.slug
+                            initialFilters.form_type === type.form_type
                               ? "bg-primary-50"
                               : "bg-gray-50 group-hover:bg-primary-50"
                           }`}
                         >
-                          {category.image ? (
-                            <img
-                              src={category.image}
-                              alt={category.name}
-                              className="w-full h-full object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
-                            />
-                          ) : (
-                            <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
-                          )}
+                          <i className={`${type.icon} text-gray-400 text-lg`}></i>
                         </div>
                         <span className="text-xs font-medium text-center leading-tight">
-                          {category.name}
+                          {type.label}
                         </span>
                       </button>
                     ))}
@@ -342,7 +330,7 @@ const ClientWrapper = ({
                 </div>
               </div>
             ) : rentals.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 sm:gap-8">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {rentals.map((r) => (
                   <RentalCard
                     key={r.id}
@@ -381,7 +369,6 @@ const ClientWrapper = ({
               categories={categories}
               locations={[]}
               layout="mobile"
-              hideCategory
               onClose={() => {
                 setIsFilterOpen(false);
                 document.body.style.overflow = "unset";

@@ -70,6 +70,14 @@ export default async function Attractions({ searchParams }) {
     interest_count: attraction.interest_count || 0,
     openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
     address: attraction.address || "",
+    kidsFriendly:
+      attraction.kids_friendly === true ||
+      attraction.kids_friendly === 1 ||
+      attraction.kids_friendly === "1",
+    petsFriendly:
+      attraction.pets_friendly === true ||
+      attraction.pets_friendly === 1 ||
+      attraction.pets_friendly === "1",
     coordinates: {
       latitude: attraction.latitude || 0,
       longitude: attraction.longitude || 0,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import {
@@ -22,16 +23,43 @@ const getYearOptions = () => {
   return Array.from({ length: 11 }, (_, i) => currentYear + i);
 };
 
-export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
+const POPOVER_WIDTH = 304;
+
+export default function DateRangeSearchField({
+  dateFrom,
+  dateTo,
+  onChange,
+  embedded = false,
+  emptyLabel = "Select start and end date",
+}) {
   const [dateRange, setDateRange] = useState([
     parseDate(dateFrom),
     parseDate(dateTo),
   ]);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
   const [activeQuickPick, setActiveQuickPick] = useState(() =>
     resolveQuickDateRangePick(dateFrom, dateTo, null)
   );
-  const calendarRef = useRef(null);
+  const anchorRef = useRef(null);
+  const popoverRef = useRef(null);
+
+  const updatePopoverPosition = useCallback(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) return;
+
+    const rect = anchor.getBoundingClientRect();
+    const margin = 8;
+    let left = rect.left;
+    const maxLeft = window.innerWidth - POPOVER_WIDTH - margin;
+    if (left > maxLeft) left = Math.max(margin, maxLeft);
+    if (left < margin) left = margin;
+
+    setPopoverPosition({
+      top: rect.bottom + 6,
+      left,
+    });
+  }, []);
 
   useEffect(() => {
     setDateRange([parseDate(dateFrom), parseDate(dateTo)]);
@@ -41,10 +69,27 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
   }, [dateFrom, dateTo]);
 
   useEffect(() => {
+    if (!isCalendarOpen || !embedded) return undefined;
+
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    window.addEventListener("scroll", updatePopoverPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      window.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [embedded, isCalendarOpen, updatePopoverPosition]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-        setIsCalendarOpen(false);
+      if (
+        anchorRef.current?.contains(event.target) ||
+        popoverRef.current?.contains(event.target)
+      ) {
+        return;
       }
+      setIsCalendarOpen(false);
     };
 
     if (isCalendarOpen) {
@@ -102,7 +147,7 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
   };
 
   const formatRangeLabel = () => {
-    if (!dateRange[0] && !dateRange[1]) return "Select start and end date";
+    if (!dateRange[0] && !dateRange[1]) return emptyLabel;
     if (dateRange[0] && !dateRange[1]) {
       return `${dateRange[0].toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -136,21 +181,31 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
     prevMonthButtonDisabled,
     nextMonthButtonDisabled,
   }) => (
-    <div className="flex items-center justify-between gap-2 px-1 pb-3">
+    <div
+      className={`flex items-center justify-between px-0.5 ${
+        embedded ? "gap-1 pb-2" : "gap-2 px-1 pb-3"
+      }`}
+    >
       <button
         type="button"
         onClick={decreaseMonth}
         disabled={prevMonthButtonDisabled}
-        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        className={`flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 ${
+          embedded ? "h-7 w-7" : "h-8 w-8"
+        }`}
       >
         <i className="fi fi-rr-angle-left text-sm" />
       </button>
 
-      <div className="flex items-center gap-2 flex-1 justify-center min-w-0">
+      <div className="flex min-w-0 flex-1 items-center justify-center gap-1.5">
         <select
           value={date.getMonth()}
           onChange={({ target }) => changeMonth(Number(target.value))}
-          className="text-sm font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-primary-400 max-w-[9rem]"
+          className={`rounded-lg border border-gray-200 bg-white font-medium text-gray-900 focus:border-primary-400 focus:outline-none ${
+            embedded
+              ? "max-w-[6.5rem] px-1.5 py-1 text-[11px]"
+              : "max-w-[9rem] px-2 py-1.5 text-sm"
+          }`}
         >
           {MONTHS.map((month, index) => (
             <option key={month} value={index}>
@@ -161,7 +216,9 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
         <select
           value={date.getFullYear()}
           onChange={({ target }) => changeYear(Number(target.value))}
-          className="text-sm font-medium text-gray-900 border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:border-primary-400"
+          className={`rounded-lg border border-gray-200 bg-white font-medium text-gray-900 focus:border-primary-400 focus:outline-none ${
+            embedded ? "px-1.5 py-1 text-[11px]" : "px-2 py-1.5 text-sm"
+          }`}
         >
           {getYearOptions().map((year) => (
             <option key={year} value={year}>
@@ -175,12 +232,111 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
         type="button"
         onClick={increaseMonth}
         disabled={nextMonthButtonDisabled}
-        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+        className={`flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 ${
+          embedded ? "h-7 w-7" : "h-8 w-8"
+        }`}
       >
         <i className="fi fi-rr-angle-right text-sm" />
       </button>
     </div>
   );
+
+  const popoverContent = (
+    <>
+      <div className="mb-2 flex items-center justify-between gap-3 px-0.5">
+        <span className="text-xs font-medium text-gray-500">{calendarHint}</span>
+        <button
+          type="button"
+          onClick={() => setIsCalendarOpen(false)}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        >
+          <i className="fi fi-rr-cross-small text-sm" />
+        </button>
+      </div>
+      <DatePicker
+        selectsRange
+        inline
+        startDate={dateRange[0]}
+        endDate={dateRange[1]}
+        onChange={handleDateRangeChange}
+        minDate={new Date()}
+        renderCustomHeader={renderDateHeader}
+        calendarClassName="events-search-datepicker events-search-datepicker-popup !border-0"
+        showPopperArrow={false}
+      />
+    </>
+  );
+
+  const calendarPopover = isCalendarOpen ? (
+    embedded ? (
+      typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={popoverRef}
+              className="fixed z-[200] rounded-2xl border border-gray-200 bg-white p-3 shadow-2xl"
+              style={{
+                top: popoverPosition.top,
+                left: popoverPosition.left,
+                width: POPOVER_WIDTH,
+              }}
+            >
+              {popoverContent}
+            </div>,
+            document.body
+          )
+        : null
+    ) : (
+      <div className="absolute left-0 top-[calc(100%+0.375rem)] z-[100] w-fit max-w-full rounded-2xl border border-gray-200 bg-white p-3 shadow-2xl">
+        {popoverContent}
+      </div>
+    )
+  ) : null;
+
+  const toggleCalendar = () => {
+    setIsCalendarOpen((open) => {
+      const next = !open;
+      if (next && embedded) {
+        requestAnimationFrame(() => updatePopoverPosition());
+      }
+      return next;
+    });
+  };
+
+  const triggerButton = (
+    <button
+      type="button"
+      onClick={toggleCalendar}
+      className={
+        embedded
+          ? `flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-xs transition-colors focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/15 ${
+              hasDateRange
+                ? "border-gray-200 bg-white text-gray-800"
+                : "border-gray-200 bg-white text-gray-400 hover:border-gray-300"
+            }`
+          : `flex h-11 w-full items-center justify-between rounded-xl border px-4 text-left text-sm transition-all ${
+              hasDateRange
+                ? "border-primary-300 bg-white text-gray-900 shadow-sm"
+                : "border-gray-200 bg-gray-50 text-gray-500 hover:bg-gray-100"
+            }`
+      }
+    >
+      <span className="truncate pr-2">{formatRangeLabel()}</span>
+      <i
+        className={`fi fi-rr-calendar shrink-0 text-xs ${
+          hasDateRange ? "text-primary-500" : "text-gray-400"
+        }`}
+      />
+    </button>
+  );
+
+  if (embedded) {
+    return (
+      <div className="relative" ref={anchorRef}>
+        {triggerButton}
+        {calendarPopover}
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -216,51 +372,9 @@ export default function DateRangeSearchField({ dateFrom, dateTo, onChange }) {
           </button>
         ))}
       </div>
-      <div className="relative" ref={calendarRef}>
-        <button
-          type="button"
-          onClick={() => setIsCalendarOpen((open) => !open)}
-          className={`w-full h-11 px-4 rounded-xl text-left text-sm flex items-center justify-between transition-all border ${
-            hasDateRange
-              ? "bg-white border-primary-300 text-gray-900 shadow-sm"
-              : "bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100"
-          }`}
-        >
-          <span className="truncate pr-2">{formatRangeLabel()}</span>
-          <i
-            className={`fi fi-rr-calendar flex-shrink-0 ${
-              hasDateRange ? "text-primary-500" : "text-gray-400"
-            }`}
-          />
-        </button>
-
-        {isCalendarOpen && (
-          <div className="absolute left-0 top-[calc(100%+0.5rem)] z-[60] w-fit max-w-full bg-white rounded-2xl border border-gray-200 shadow-2xl p-3">
-            <div className="flex items-center justify-between gap-4 mb-2 px-1 min-w-[16.5rem]">
-              <span className="text-xs font-medium text-gray-500">
-                {calendarHint}
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsCalendarOpen(false)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              >
-                <i className="fi fi-rr-cross-small text-sm" />
-              </button>
-            </div>
-            <DatePicker
-              selectsRange
-              inline
-              startDate={dateRange[0]}
-              endDate={dateRange[1]}
-              onChange={handleDateRangeChange}
-              minDate={new Date()}
-              renderCustomHeader={renderDateHeader}
-              calendarClassName="events-search-datepicker events-search-datepicker-popup !border-0"
-              showPopperArrow={false}
-            />
-          </div>
-        )}
+      <div className="relative" ref={anchorRef}>
+        {triggerButton}
+        {calendarPopover}
       </div>
     </div>
   );

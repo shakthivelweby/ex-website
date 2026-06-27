@@ -239,7 +239,7 @@ export default function ClientWrapper({
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Filters Section - Desktop */}
-          <div className="hidden lg:block lg:w-1/4 xl:w-1/5 shrink-0">
+          <div className="hidden lg:block w-full lg:w-[300px] xl:w-[320px] shrink-0">
             <div className="sticky top-24">
               <ActivityFilters
                 categories={categories}
@@ -257,17 +257,8 @@ export default function ClientWrapper({
             <div className="flex items-center justify-between mb-4 sm:mb-6">
               <div className="flex items-center gap-3 sm:gap-4">
                 <h2 className="text-sm sm:text-base font-medium text-gray-900">
-                  {filters.location ? (
-                    <>
-                      Activities in{" "}
-                      <span className="text-primary-600">{filters.location}</span>
-                    </>
-                  ) : (
-                    <>
-                      Activities —{" "}
-                      <span className="text-primary-600">all locations</span>
-                    </>
-                  )}
+                  Activities in{" "}
+                  <span className="text-primary-600">{filters.location || "your area"}</span>
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
                   {activities.length} activities available
@@ -277,7 +268,10 @@ export default function ClientWrapper({
               {/* Mobile Filter Button */}
               <div className="lg:hidden">
                 <button
-                  onClick={() => setIsFilterOpen(true)}
+                  onClick={() => {
+                    setIsFilterOpen(true);
+                    document.body.style.overflow = "hidden";
+                  }}
                   className="relative flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-900 text-white shadow-sm hover:bg-black transition-colors text-sm"
                 >
                   <i className="fi fi-rr-settings-sliders text-[13px]"></i>
@@ -322,7 +316,8 @@ export default function ClientWrapper({
                         onClick={() =>
                           handleFilterChange({
                             ...filters,
-                            category: category.slug,
+                            category:
+                              filters.category === category.slug ? "" : category.slug,
                           })
                         }
                         className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
@@ -369,7 +364,8 @@ export default function ClientWrapper({
                       onClick={() =>
                         handleFilterChange({
                           ...filters,
-                          category: category.slug,
+                          category:
+                            filters.category === category.slug ? "" : category.slug,
                         })
                       }
                       className={`flex flex-col items-center gap-2 group ${
@@ -434,7 +430,7 @@ export default function ClientWrapper({
                 </div>
               </div>
             ) : activities.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {activities.map((activity) => (
                   <ActivityCard key={activity.id} activity={activity} />
                 ))}
@@ -455,7 +451,10 @@ export default function ClientWrapper({
         {/* Mobile Filter Popup */}
         <Popup
           isOpen={isFilterOpen}
-          onClose={toggleFilter}
+          onClose={() => {
+            setIsFilterOpen(false);
+            document.body.style.overflow = "unset";
+          }}
           title="Filters"
           pos="right"
           className="lg:hidden"
@@ -468,7 +467,10 @@ export default function ClientWrapper({
               initialFilters={filters}
               onFilterChange={handleFilterChange}
               layout="mobile"
-              onClose={toggleFilter}
+              onClose={() => {
+                setIsFilterOpen(false);
+                document.body.style.overflow = "unset";
+              }}
             />
           </div>
         </Popup>

@@ -237,6 +237,14 @@ const ClientWrapper = ({
             interest_count: attraction.interest_count || 0,
             openingHours: attraction.opening_hours || "9:00 AM - 6:00 PM",
             address: attraction.address || "",
+            kidsFriendly:
+              attraction.kids_friendly === true ||
+              attraction.kids_friendly === 1 ||
+              attraction.kids_friendly === "1",
+            petsFriendly:
+              attraction.pets_friendly === true ||
+              attraction.pets_friendly === 1 ||
+              attraction.pets_friendly === "1",
             coordinates: {
               latitude: attraction.latitude || 0,
               longitude: attraction.longitude || 0,
@@ -288,7 +296,7 @@ const ClientWrapper = ({
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Sidebar Filters - Desktop Only */}
-          <div className="hidden lg:block lg:w-1/4 xl:w-1/5 shrink-0">
+          <div className="hidden lg:block w-full lg:w-[300px] xl:w-[320px] shrink-0">
             <div className="sticky top-24">
               <AttractionFilters
                 categories={categories}
@@ -308,7 +316,7 @@ const ClientWrapper = ({
                 <h2 className="text-sm sm:text-base font-medium text-gray-900">
                   Attractions in{" "}
                   <span className="text-primary-600">
-                    {selectedLocation || initialFilters.location || "Mumbai"}
+                    {initialFilters.location || "your area"}
                   </span>
                 </h2>
                 <span className="text-xs sm:text-sm text-gray-500">
@@ -365,7 +373,10 @@ const ClientWrapper = ({
                         onClick={() =>
                           handleFilterChange({
                             ...initialFilters,
-                            category: category.slug,
+                            category:
+                              initialFilters.category === category.slug
+                                ? ""
+                                : category.slug,
                           })
                         }
                         className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
@@ -412,7 +423,10 @@ const ClientWrapper = ({
                       onClick={() =>
                         handleFilterChange({
                           ...initialFilters,
-                          category: category.slug,
+                          category:
+                            initialFilters.category === category.slug
+                              ? ""
+                              : category.slug,
                         })
                       }
                       className={`flex flex-col items-center gap-2 group ${
@@ -477,7 +491,7 @@ const ClientWrapper = ({
                 </div>
               </div>
             ) : attractions.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {attractions.map((attraction) => (
                   <AttractionCard key={attraction.id} attraction={attraction} />
                 ))}
@@ -498,7 +512,10 @@ const ClientWrapper = ({
         {/* Mobile Filter Popup */}
         <Popup
           isOpen={isFilterOpen}
-          onClose={toggleFilter}
+          onClose={() => {
+            setIsFilterOpen(false);
+            document.body.style.overflow = "unset";
+          }}
           title="Filters"
           pos="right"
           className="lg:hidden"
@@ -511,7 +528,10 @@ const ClientWrapper = ({
               initialFilters={initialFilters}
               onFilterChange={handleFilterChange}
               layout="mobile"
-              onClose={toggleFilter}
+              onClose={() => {
+                setIsFilterOpen(false);
+                document.body.style.overflow = "unset";
+              }}
             />
           </div>
         </Popup>

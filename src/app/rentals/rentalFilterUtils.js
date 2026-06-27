@@ -1,3 +1,5 @@
+import { isVehicleFormType } from "./rentalCategoryTypeUtils";
+
 export const VEHICLE_CATEGORY_SLUG = "vehicles";
 
 const BIKE_CATEGORY_SLUGS = new Set(["bike", "bikes", "bicycle", "bicycles"]);
@@ -59,7 +61,7 @@ export function normalizeRentalFilters(filters = {}) {
     date: "",
   };
 
-  if (isVehicleCategorySlug(base.category)) {
+  if (isVehicleFormType(base.form_type) || isVehicleCategorySlug(base.category)) {
     return base;
   }
   return {

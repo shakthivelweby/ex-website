@@ -30,7 +30,7 @@ import {
   isRentalBookingCheckoutRestore,
   forceRentalBookingRestore,
 } from "../../rentalBookingDraft";
-import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing } from "../../rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing, rentalWindowPeriodSubtotalForDisplay } from "../../rentalPricingCalc";
 
 const money = (v) => {
   const n = Number(v || 0);
@@ -240,7 +240,7 @@ export default function RentalBookingClient({
   const minBookingHours = effectiveMinBookingHours;
 
   const minHoursViolated = (hours) =>
-    pricingBasis !== "day" &&
+    pricingBasis === "hour" &&
     enforceExtendedMinHours &&
     hours > 0 &&
     hours < effectiveMinBookingHours;
@@ -248,7 +248,7 @@ export default function RentalBookingClient({
   const availabilityMinHoursBlocked = (payload) =>
     Boolean(
       payload?.minimum_hours_not_met &&
-        pricingBasis !== "day" &&
+        pricingBasis === "hour" &&
         enforceExtendedMinHours
     );
 
@@ -265,10 +265,11 @@ export default function RentalBookingClient({
   const gstPercent = monetary.gstPercent;
   const convenienceFeeAmount = monetary.convenienceFeeAmount;
   const convenienceFeePercent = monetary.convenienceFeePercent;
+  const feesBeforeDeposit = monetary.feesBeforeDeposit;
   const totalCostIncludingDeposit = monetary.grandTotal;
 
   const displayRateWithAdmin = useMemo(() => {
-    if (windowPricing.basis === "day") {
+    if (windowPricing.basis === "day" || windowPricing.basis === "hybrid") {
       return rentalDailyRateWithAdmin({ ...pricing, price_per_day: windowPricing.rate });
     }
     if (windowPricing.basis === "hour") {
@@ -277,6 +278,16 @@ export default function RentalBookingClient({
     if (catalogBasis === "day") return rentalDailyRateWithAdmin({ ...pricing, price_per_day: effectivePerDay });
     return applyRentalAdminChargeOnly(effectivePerHour, pricing);
   }, [windowPricing, catalogBasis, effectivePerDay, effectivePerHour, pricing]);
+
+  const displayHourlyRateWithAdmin = useMemo(() => {
+    if (windowPricing.basis === "hybrid") {
+      return applyRentalAdminChargeOnly(windowPricing.hourlyRate, pricing);
+    }
+    if (windowPricing.basis === "hour") {
+      return applyRentalAdminChargeOnly(windowPricing.rate, pricing);
+    }
+    return applyRentalAdminChargeOnly(effectivePerHour, pricing);
+  }, [windowPricing, effectivePerHour, pricing]);
 
   const displayPerHourWithAdmin = displayRateWithAdmin;
 
@@ -288,11 +299,10 @@ export default function RentalBookingClient({
     [rentSubtotalGross, adminChargeAmount]
   );
 
-  const periodSubtotalWithAdminForDisplay = useMemo(() => {
-    const { basis, units } = windowPricing;
-    if (!basis || units <= 0) return 0;
-    return units * displayRateWithAdmin;
-  }, [windowPricing, displayRateWithAdmin]);
+  const periodSubtotalWithAdminForDisplay = useMemo(
+    () => rentalWindowPeriodSubtotalForDisplay(windowPricing, pricing),
+    [windowPricing, pricing]
+  );
 
   const hourlySubtotalWithAdminForDisplay = periodSubtotalWithAdminForDisplay;
 
@@ -986,11 +996,13 @@ export default function RentalBookingClient({
                   Choose your rental dates and times. We will check availability automatically.
                   {windowPricing.basis === "day"
                     ? " Billed per day."
-                    : windowPricing.basis === "hour" || catalogBasis === "hybrid" || catalogBasis === "hour"
-                      ? requiresExtendedMinBookingHours(rental)
-                        ? ` Minimum rental: ${minBookingHours} hours. Under 24 hours billed hourly; 24+ hours billed daily.`
-                        : " Any rental duration accepted. Shorter rentals are billed for at least 1 hour. Under 24 hours billed hourly; 24+ hours billed daily."
-                      : " Billed per day."}
+                    : windowPricing.basis === "hybrid"
+                      ? " Billed per day for full 24-hour blocks, plus extra hours at the hourly rate."
+                      : windowPricing.basis === "hour" || catalogBasis === "hybrid" || catalogBasis === "hour"
+                        ? requiresExtendedMinBookingHours(rental)
+                          ? ` Minimum rental: ${minBookingHours} hours. Under 24 hours billed hourly; longer rentals use daily rate plus extra hours at the hourly rate.`
+                          : " Any rental duration accepted. Under 24 hours billed hourly; longer rentals use daily rate plus extra hours at the hourly rate."
+                        : " Billed per day."}
                 </p>
               </div>
               <div className="p-4 sm:p-6 space-y-5">
@@ -1140,7 +1152,8 @@ export default function RentalBookingClient({
                     ? windowPricing.rate > 0
                     : windowPricing.basis === "hour"
                       ? windowPricing.rate > 0
-                      : basePerHour > 0 || basePerDay > 0) ? (
+                      : basePerHour > 0 || basePerDay > 0) &&
+                  !hasRentalBookingSchedule(booking) ? (
                     <div className="flex items-center gap-2">
                       <i className="fi fi-rr-indian-rupee-sign text-primary-500 text-sm shrink-0" />
                       <span className="text-gray-700">
@@ -1148,9 +1161,13 @@ export default function RentalBookingClient({
                           <>From ₹{money(displayRateWithAdmin)} / day</>
                         ) : windowPricing.basis === "hour" ? (
                           <>From ₹{money(displayRateWithAdmin)} / hour</>
+                        ) : windowPricing.basis === "hybrid" ? (
+                          <>
+                            From ₹{money(displayRateWithAdmin)} / day + ₹{money(displayHourlyRateWithAdmin)} / hr
+                          </>
                         ) : catalogBasis === "hybrid" ? (
                           <>
-                            From ₹{money(applyRentalAdminChargeOnly(basePerHour, pricing))} / hour or ₹
+                            From ₹{money(applyRentalAdminChargeOnly(basePerHour, pricing))} / hr or ₹
                             {money(rentalDailyRateWithAdmin(pricing))} / day
                           </>
                         ) : (
@@ -1165,19 +1182,49 @@ export default function RentalBookingClient({
                 </div>
               </div>
 
-              <div className="bg-white rounded-lg shadow border p-4">
-                <h3 className="text-base font-medium text-gray-800 mb-3">Booking summary</h3>
-                <div className="space-y-2.5 mb-4 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-600">
-                      {windowPricing.basis === "day"
-                        ? `${windowPricing.units || 0} day(s) × ₹${money(displayRateWithAdmin)}`
-                        : windowPricing.basis === "hour"
-                          ? `${windowPricing.units || 0} h × ₹${money(displayRateWithAdmin)}`
-                          : "—"}
-                    </span>
-                    <span className="font-medium text-gray-900">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
-                  </div>
+              <div className="bg-white rounded-lg shadow border overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <h3 className="text-base font-semibold text-gray-900">Price estimate</h3>
+                </div>
+                <div className="px-4 py-3 space-y-2 text-sm border-b border-gray-100">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                    Rental charges
+                  </p>
+                  {windowPricing.basis === "hybrid" ? (
+                    <>
+                      {windowPricing.units > 0 ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-600">
+                            {windowPricing.units} day{windowPricing.units === 1 ? "" : "s"} × ₹{money(displayRateWithAdmin)}
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            ₹{money(windowPricing.units * displayRateWithAdmin)}
+                          </span>
+                        </div>
+                      ) : null}
+                      {windowPricing.extraHours > 0 ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-gray-600">
+                            {windowPricing.extraHours} hr × ₹{money(displayHourlyRateWithAdmin)}
+                          </span>
+                          <span className="font-medium text-gray-900">
+                            ₹{money(windowPricing.extraHours * displayHourlyRateWithAdmin)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-gray-600">
+                        {windowPricing.basis === "day"
+                          ? `${windowPricing.units || 0} day(s) × ₹${money(displayRateWithAdmin)}`
+                          : windowPricing.basis === "hour"
+                            ? `${windowPricing.units || 0} hr × ₹${money(displayRateWithAdmin)}`
+                            : "Select dates to see price"}
+                      </span>
+                      <span className="font-medium text-gray-900">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
+                    </div>
+                  )}
                   {discountAmountForDisplay > 0 ? (
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-gray-600">
@@ -1193,32 +1240,44 @@ export default function RentalBookingClient({
                   ) : null}
                   {gstAmount > 0 ? (
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-600">GST{gstPercent > 0 ? ` (${money(gstPercent)}%)` : ""}</span>
+                      <span className="text-gray-600">GST ({money(gstPercent)}%)</span>
                       <span className="font-medium text-gray-900">₹{money(gstAmount)}</span>
                     </div>
                   ) : null}
                   {convenienceFeeAmount > 0 ? (
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-gray-600">
-                        Convenience fee{convenienceFeePercent > 0 ? ` (${money(convenienceFeePercent)}%)` : ""}
-                      </span>
+                      <span className="text-gray-600">Convenience fee ({money(convenienceFeePercent)}%)</span>
                       <span className="font-medium text-gray-900">₹{money(convenienceFeeAmount)}</span>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-gray-600">Refundable deposit</span>
-                    <span className="font-medium text-gray-900">₹{money(depositAmount)}</span>
+                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-100">
+                    <span className="font-semibold text-gray-900">Rental total</span>
+                    <span className="font-semibold text-gray-900">₹{money(feesBeforeDeposit)}</span>
                   </div>
-                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-3">
-                    <span className="text-gray-800 font-medium">Total</span>
-                    <span className="text-lg font-semibold text-primary-600">
+                </div>
+
+                {depositAmount > 0 ? (
+                  <div className="px-4 py-3 border-b border-gray-100 space-y-1">
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-gray-600">Refundable deposit</span>
+                      <span className="font-medium text-gray-900">₹{money(depositAmount)}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 leading-snug">
+                      Returned when the vehicle is returned in good condition.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="px-4 py-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-gray-900">Estimated total</span>
+                    <span className="text-xl font-bold text-primary-600">
                       ₹{money(totalCostIncludingDeposit)}
                     </span>
                   </div>
-                </div>
-                <p className="text-[11px] text-gray-500 mb-4 leading-snug">
-                  Total includes taxes and refundable deposit.
-                </p>
+                  <p className="text-[11px] text-gray-500 leading-snug">
+                    Includes rental, taxes{depositAmount > 0 ? ", and refundable deposit" : ""}.
+                  </p>
                 {error ? <p className="text-sm text-red-600 mb-3">{error}</p> : null}
                 {!error && checking ? (
                   <p className="text-sm text-gray-500 mb-3">Checking availability for your selected times…</p>
@@ -1229,6 +1288,7 @@ export default function RentalBookingClient({
                 <Button onClick={handleContinueClick} size="lg" className="w-full" disabled={continueDisabled}>
                   {checking ? "Checking…" : "Continue to payment"}
                 </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -1237,20 +1297,12 @@ export default function RentalBookingClient({
         <div className="lg:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <div>
-              <p className="text-xs text-gray-500">Total amount</p>
+              <p className="text-xs text-gray-500">Estimated total</p>
               <p className="text-lg font-bold text-primary-600">₹{money(totalCostIncludingDeposit)}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">
-                {windowPricing.basis === "day" ? "Total days" : "Total hours"}
-              </p>
-              <p className="text-base font-semibold text-gray-900">
-                {windowPricing.basis === "day"
-                  ? windowPricing.units || 0
-                  : windowPricing.basis === "hour"
-                    ? windowPricing.units || 0
-                    : 0}
-              </p>
+              <p className="text-xs text-gray-500">Rental</p>
+              <p className="text-base font-semibold text-gray-900">₹{money(feesBeforeDeposit)}</p>
             </div>
           </div>
           <div className="px-4 pb-4">

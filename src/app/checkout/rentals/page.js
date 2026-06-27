@@ -18,13 +18,37 @@ import {
   hasRentalBookingSchedule,
   writeRentalBookingDraft,
 } from "../../rentals/rentalBookingDraft";
-import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing } from "../../rentals/rentalPricingCalc";
+import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing, rentalWindowPeriodSubtotalForDisplay } from "../../rentals/rentalPricingCalc";
+import { hasValidAuthSession } from "@/utils/authSession";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
 };
+
+const formatTripDateTime = (date, time) => {
+  if (!date) return "—";
+  const value = time ? `${date}T${time}:00` : `${date}T12:00:00`;
+  const d = new Date(value);
+  if (!Number.isFinite(d.getTime())) return time ? `${date} ${time}` : date;
+  return d.toLocaleString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    ...(time ? { hour: "numeric", minute: "2-digit", hour12: true } : {}),
+  });
+};
+
+function SummaryLine({ label, value, valueClassName = "text-gray-900 font-medium" }) {
+  return (
+    <div className="flex justify-between gap-3 text-sm">
+      <span className="text-gray-600">{label}</span>
+      <span className={`text-right shrink-0 ${valueClassName}`}>{value}</span>
+    </div>
+  );
+}
 
 const diffHoursCeil = (startISO, endISO) => {
   const start = new Date(startISO);
@@ -286,7 +310,7 @@ export default function RentalCheckoutPage() {
   const convenienceFeePercent = monetary.convenienceFeePercent;
 
   const displayRateWithAdmin = useMemo(() => {
-    if (windowPricing.basis === "day") {
+    if (windowPricing.basis === "day" || windowPricing.basis === "hybrid") {
       return rentalDailyRateWithAdmin({ ...pricing, price_per_day: windowPricing.rate });
     }
     if (windowPricing.basis === "hour") {
@@ -296,6 +320,16 @@ export default function RentalCheckoutPage() {
     return applyRentalAdminChargeOnly(effectivePerHour, pricing);
   }, [windowPricing, catalogBasis, effectivePerDay, effectivePerHour, pricing]);
 
+  const displayHourlyRateWithAdmin = useMemo(() => {
+    if (windowPricing.basis === "hybrid") {
+      return applyRentalAdminChargeOnly(windowPricing.hourlyRate, pricing);
+    }
+    if (windowPricing.basis === "hour") {
+      return applyRentalAdminChargeOnly(windowPricing.rate, pricing);
+    }
+    return applyRentalAdminChargeOnly(effectivePerHour, pricing);
+  }, [windowPricing, effectivePerHour, pricing]);
+
   const displayPerHourWithAdmin = displayRateWithAdmin;
 
   const rentSubtotalWithAdminForDisplay = useMemo(
@@ -303,11 +337,10 @@ export default function RentalCheckoutPage() {
     [rentSubtotalGross, adminChargeAmount]
   );
 
-  const hourlySubtotalWithAdminForDisplay = useMemo(() => {
-    const { basis, units } = windowPricing;
-    if (!basis || units <= 0) return 0;
-    return units * displayRateWithAdmin;
-  }, [windowPricing, displayRateWithAdmin]);
+  const hourlySubtotalWithAdminForDisplay = useMemo(
+    () => rentalWindowPeriodSubtotalForDisplay(windowPricing, pricing),
+    [windowPricing, pricing]
+  );
 
   const discountAmountForDisplay = useMemo(() => {
     const gross = Number(hourlySubtotalWithAdminForDisplay || 0) || 0;
@@ -479,6 +512,14 @@ export default function RentalCheckoutPage() {
 
   const handleContinue = async () => {
     setError("");
+    if (!hasValidAuthSession()) {
+      setError("Your session expired. Please sign in again to continue.");
+      try {
+        localStorage.setItem("redirectAfterLogin", window.location.href);
+        window.dispatchEvent(new CustomEvent("showLogin"));
+      } catch (_) {}
+      return;
+    }
     if (!rentalItemId) {
       setError("Missing rental item. Please go back and try again.");
       return;
@@ -539,7 +580,13 @@ export default function RentalCheckoutPage() {
       }
 
       if (!orderRes?.status) {
-        throw new Error(orderRes?.message || "Failed to create payment order.");
+        const apiMessage = String(orderRes?.message || "");
+        if (/authentication failed/i.test(apiMessage)) {
+          throw new Error(
+            "Payment could not be started. The payment gateway is not configured correctly — please contact support."
+          );
+        }
+        throw new Error(apiMessage || "Failed to create payment order.");
       }
 
       const payRes = await initializeRazorpayPayment({
@@ -596,7 +643,20 @@ export default function RentalCheckoutPage() {
       });
       setShowSuccess(true);
     } catch (e) {
-      setError(e?.response?.data?.message || e?.message || "Payment failed.");
+      const raw = e?.response?.data?.message || e?.message || "";
+      if (e?.response?.status === 401 || /session expired|sign in again/i.test(raw)) {
+        setError("Your session expired. Please sign in again to continue.");
+        try {
+          localStorage.setItem("redirectAfterLogin", window.location.href);
+          window.dispatchEvent(new CustomEvent("showLogin"));
+        } catch (_) {}
+      } else if (/authentication failed/i.test(raw)) {
+        setError(
+          "Payment could not be started. The payment gateway is not configured correctly — please contact support."
+        );
+      } else {
+        setError(raw || "Payment failed.");
+      }
     } finally {
       setIsPaying(false);
       isPayingRef.current = false;
@@ -793,120 +853,148 @@ export default function RentalCheckoutPage() {
           {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
         </div>
 
-        <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl p-5">
-          <div className="flex gap-4">
-            <div className="relative w-28 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-              {rental.thumbnail_image_url ? (
-                <Image
-                  src={rental.thumbnail_image_url}
-                  alt={rental.title || "Rental"}
-                  fill
-                  className="object-cover"
-                />
-              ) : null}
-            </div>
-            <div>
-              <div className="text-sm font-bold text-gray-900">{rental.title}</div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {[rental.brand, rental.subtitle].filter(Boolean).join(" • ")}
+        <div className="lg:col-span-5 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="p-5 border-b border-gray-100">
+            <div className="flex gap-3">
+              <div className="relative w-20 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                {rental.thumbnail_image_url ? (
+                  <Image
+                    src={rental.thumbnail_image_url}
+                    alt={rental.title || "Rental"}
+                    fill
+                    className="object-cover"
+                  />
+                ) : null}
               </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {windowPricing.basis === "day" ? "₹/day" : "₹/hour"} (effective):{" "}
-                <span className="font-semibold text-gray-900">₹{money(displayRateWithAdmin)}</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Advance: <span className="font-semibold text-gray-900">₹{money(payAdvanceAmount)}</span>
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                Deposit: <span className="font-semibold text-gray-900">₹{money(depositAmount)}</span>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-gray-900 truncate">{rental.title}</h2>
+                {[rental.brand, rental.subtitle].filter(Boolean).length > 0 ? (
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {[rental.brand, rental.subtitle].filter(Boolean).join(" · ")}
+                  </p>
+                ) : null}
               </div>
             </div>
           </div>
 
-          <div className="mt-4 border-t border-gray-100 pt-4 space-y-2 text-sm">
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Location</span>
-              <span className="text-gray-900 font-semibold text-right max-w-[65%]">
-                {String(pickup_location || "").trim() === String(dropoff_location || "").trim()
-                  ? pickup_location || dropoff_location || "-"
-                  : `${pickup_location || "-"} → ${dropoff_location || "-"}`}
-              </span>
+          <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/60 space-y-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Your trip</p>
+            <SummaryLine
+              label="Pickup"
+              value={formatTripDateTime(start_date, pickup_time)}
+            />
+            <SummaryLine
+              label="Return"
+              value={formatTripDateTime(end_date, dropoff_time)}
+            />
+            <SummaryLine
+              label="Location"
+              value={
+                String(pickup_location || "").trim() === String(dropoff_location || "").trim()
+                  ? pickup_location || dropoff_location || "—"
+                  : `${pickup_location || "—"} → ${dropoff_location || "—"}`
+              }
+            />
+          </div>
+
+          <div className="px-5 py-4 border-b border-gray-100 space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+              Rental charges
+            </p>
+            {windowPricing.basis === "hybrid" ? (
+              <>
+                {windowPricing.units > 0 ? (
+                  <SummaryLine
+                    label={`${windowPricing.units} day${windowPricing.units === 1 ? "" : "s"} × ₹${money(displayRateWithAdmin)}`}
+                    value={`₹${money(windowPricing.units * displayRateWithAdmin)}`}
+                  />
+                ) : null}
+                {windowPricing.extraHours > 0 ? (
+                  <SummaryLine
+                    label={`${windowPricing.extraHours} hr × ₹${money(displayHourlyRateWithAdmin)}`}
+                    value={`₹${money(windowPricing.extraHours * displayHourlyRateWithAdmin)}`}
+                  />
+                ) : null}
+              </>
+            ) : (
+              <SummaryLine
+                label={
+                  windowPricing.basis === "day"
+                    ? `${windowPricing.units || 0} day(s) × ₹${money(displayRateWithAdmin)}`
+                    : windowPricing.basis === "hour"
+                      ? `${windowPricing.units || 0} hr × ₹${money(displayRateWithAdmin)}`
+                      : "Rental"
+                }
+                value={`₹${money(hourlySubtotalWithAdminForDisplay)}`}
+              />
+            )}
+            {discountAmountForDisplay > 0 ? (
+              <SummaryLine
+                label="Discount"
+                value={`−₹${money(discountAmountForDisplay)}`}
+                valueClassName="text-green-700 font-medium"
+              />
+            ) : null}
+            {gstAmount > 0 ? (
+              <SummaryLine
+                label={`GST (${money(gstPercent)}%)`}
+                value={`₹${money(gstAmount)}`}
+              />
+            ) : null}
+            {convenienceFeeAmount > 0 ? (
+              <SummaryLine
+                label={`Convenience fee (${money(convenienceFeePercent)}%)`}
+                value={`₹${money(convenienceFeeAmount)}`}
+              />
+            ) : null}
+            <div className="flex justify-between gap-3 pt-2 mt-1 border-t border-gray-100 text-sm">
+              <span className="font-semibold text-gray-900">Rental total</span>
+              <span className="font-semibold text-gray-900">₹{money(feesBeforeDeposit)}</span>
             </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">Start</span>
-              <span className="text-gray-900 font-semibold text-right">
-                {start_date ? `${start_date} ${pickup_time}` : "-"}
-              </span>
+          </div>
+
+          {depositAmount > 0 ? (
+            <div className="px-5 py-4 border-b border-gray-100 space-y-1">
+              <div className="flex justify-between gap-3 text-sm">
+                <span className="text-gray-600">Refundable deposit</span>
+                <span className="font-medium text-gray-900">₹{money(depositAmount)}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 leading-snug">
+                Held during your trip and returned when the vehicle is returned in good condition.
+              </p>
             </div>
-            <div className="flex justify-between gap-3">
-              <span className="text-gray-500">End</span>
-              <span className="text-gray-900 font-semibold text-right">
-                {end_date ? `${end_date} ${dropoff_time}` : "-"}
-              </span>
+          ) : null}
+
+          <div className="p-5 space-y-3">
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="text-gray-600">Grand total</span>
+              <span className="font-semibold text-gray-900">₹{money(totalFullAmount)}</span>
             </div>
 
-            <div className="pt-3 mt-3 border-t border-gray-100 space-y-2">
-              <div className="flex justify-between gap-3">
-                <span className="text-gray-500">
-                  {windowPricing.basis === "day"
-                    ? `${windowPricing.units || "-"} day(s) × ₹${money(displayRateWithAdmin)}`
-                    : windowPricing.basis === "hour"
-                      ? `${windowPricing.units || "-"} h × ₹${money(displayRateWithAdmin)}`
-                      : "—"}
-                </span>
-                <span className="text-gray-900 font-semibold text-right">₹{money(hourlySubtotalWithAdminForDisplay)}</span>
-              </div>
-              {discountAmountForDisplay > 0 ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Discount</span>
-                  <span className="text-gray-900 font-semibold text-right text-green-700">
-                    −₹{money(discountAmountForDisplay)}
-                  </span>
+            <div className="rounded-xl bg-primary-50 border border-primary-100 p-4 space-y-2">
+              <div className="flex justify-between items-center gap-3">
+                <div>
+                  <p className="text-xs font-medium text-primary-800 uppercase tracking-wide">
+                    Pay now
+                  </p>
+                  <p className="text-[11px] text-primary-700/80 mt-0.5">
+                    {payChoice === "full" ? "Full amount" : "Advance payment"}
+                  </p>
                 </div>
+                <span className="text-2xl font-bold text-primary-700">₹{money(selectedPayAmount)}</span>
+              </div>
+              {payChoice === "advance" && canPayAdvance && balanceAmount > 0 ? (
+                <p className="text-xs text-gray-600 pt-2 border-t border-primary-100">
+                  <span className="font-medium text-gray-800">₹{money(balanceAmount)}</span> due before pickup
+                </p>
               ) : null}
-              {gstAmount > 0 ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">GST{gstPercent > 0 ? ` (${money(gstPercent)}%)` : ""}</span>
-                  <span className="text-gray-900 font-semibold text-right">₹{money(gstAmount)}</span>
-                </div>
-              ) : null}
-              {convenienceFeeAmount > 0 ? (
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">
-                    Convenience{convenienceFeePercent > 0 ? ` (${money(convenienceFeePercent)}%)` : ""}
-                  </span>
-                  <span className="text-gray-900 font-semibold text-right">₹{money(convenienceFeeAmount)}</span>
-                </div>
-              ) : null}
-              <div className="flex justify-between gap-3">
-                <span className="text-gray-500">Refundable deposit</span>
-                <span className="text-gray-900 font-semibold text-right">₹{money(depositAmount)}</span>
-              </div>
-              <div className="flex justify-between gap-3 pt-2 border-t border-gray-100">
-                <span className="text-gray-900 font-bold">Total</span>
-                <span className="text-gray-900 font-bold text-right">₹{money(totalFullAmount)}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-gray-500">
-                  Pay now ({payChoice === "full" ? "full" : "advance"})
-                </span>
-                <span className="text-gray-900 font-semibold text-right">₹{money(selectedPayAmount)}</span>
-              </div>
-              {payChoice === "advance" && canPayAdvance && (
-                <div className="flex justify-between gap-3 text-xs">
-                  <span className="text-gray-500">Remaining</span>
-                  <span className="text-gray-900 font-semibold text-right">₹{money(balanceAmount)}</span>
-                </div>
-              )}
-              <p className="text-[11px] text-gray-500 pt-1 leading-snug">
-                Pay now + remaining equals your total (taxes included).
-              </p>
-              {windowPricing.units === 0 && (
-                <div className="text-xs text-red-600">
-                  Invalid start/end date &amp; time (still showing deposit as booking amount).
-                </div>
-              )}
             </div>
+
+            {windowPricing.units === 0 ? (
+              <p className="text-xs text-red-600">
+                Invalid dates or times — please go back and update your booking.
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,13 +1,31 @@
 import apiMiddleware from "../../api/apiMiddleware";
 
-export const createOrder = async (data) => {
-  const response = await apiMiddleware.post("/rental-payment", data, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
-};
+async function postRentalPayment(path, data) {
+  try {
+    const response = await apiMiddleware.post(path, data, {
+      transformRequest: [
+        (payload, headers) => {
+          if (payload instanceof FormData) {
+            delete headers["Content-Type"];
+          }
+          return payload;
+        },
+      ],
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 401) {
+      throw new Error("Your session expired. Please sign in again.");
+    }
+    const message = error.response?.data?.message;
+    if (message) {
+      throw new Error(message);
+    }
+    throw error;
+  }
+}
+
+export const createOrder = async (data) => postRentalPayment("/rental-payment", data);
 
 export const reserveRentalSlot = async (payload) => {
   const response = await apiMiddleware.post("/rental-reserve", payload);

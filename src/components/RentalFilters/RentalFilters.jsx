@@ -5,7 +5,6 @@ import LocationSearchPopup from "../LocationSearchPopup";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "../Search/DateRangeSearchField";
 import { getRentalSubCategories } from "@/app/rentals/service";
-import { isVehicleCategorySlug } from "@/app/rentals/rentalFilterUtils";
 import { isVehicleFormType } from "@/app/rentals/rentalCategoryTypeUtils";
 import {
   FilterField,
@@ -125,13 +124,7 @@ const RentalFilters = ({
 
   const activeCount = getActiveFilterCount();
 
-  const activeFormType = String(tempFilters?.form_type || "").trim().toLowerCase();
-  const filterableCategories = (categories || []).filter((category) => {
-    if (!activeFormType) return true;
-    return String(category?.form_type || "").trim().toLowerCase() === activeFormType;
-  });
-  const showVehicleFilters =
-    isVehicleFormType(tempFilters?.form_type) || isVehicleCategorySlug(tempFilters?.category);
+  const showVehicleFilters = isVehicleFormType(tempFilters?.form_type);
 
   const hasPriceFilter =
     (tempFilters.price_from && Number(tempFilters.price_from) > 0) ||
@@ -187,11 +180,33 @@ const RentalFilters = ({
         <FilterField icon="fi fi-rr-apps" label="Category">
           <select
             value={tempFilters.category || ""}
-            onChange={(e) => patchFilters({ category: e.target.value, sub_category: "" })}
+            onChange={(e) => {
+              const category = e.target.value;
+              if (!category) {
+                patchFilters({
+                  category: "",
+                  sub_category: "",
+                  form_type: "",
+                  transmission: "",
+                  fuel_type: "",
+                  seats: "",
+                });
+                return;
+              }
+              const cat = (categories || []).find((c) => String(c.slug) === category);
+              const categoryFormType = String(cat?.form_type || "").trim().toLowerCase();
+              const isVehicle = isVehicleFormType(categoryFormType);
+              patchFilters({
+                category,
+                sub_category: "",
+                form_type: categoryFormType,
+                ...(isVehicle ? {} : { transmission: "", fuel_type: "", seats: "" }),
+              });
+            }}
             className={getSelectClass(Boolean(tempFilters.category))}
           >
             <option value="">All categories</option>
-            {filterableCategories.map((category) => (
+            {(categories || []).map((category) => (
               <option key={category.id} value={category.slug}>
                 {category.name}
               </option>

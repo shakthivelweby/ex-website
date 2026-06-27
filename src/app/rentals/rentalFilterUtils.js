@@ -6,7 +6,8 @@ const BIKE_CATEGORY_SLUGS = new Set(["bike", "bikes", "bicycle", "bicycles"]);
 
 export function isVehicleCategorySlug(slug) {
   const s = String(slug || "").trim().toLowerCase();
-  return !s || s === VEHICLE_CATEGORY_SLUG || s === "vehicle";
+  if (!s) return false;
+  return s === VEHICLE_CATEGORY_SLUG || s === "vehicle";
 }
 
 export function isBikeCategorySlug(slug) {
@@ -61,7 +62,7 @@ export function normalizeRentalFilters(filters = {}) {
     date: "",
   };
 
-  if (isVehicleFormType(base.form_type) || isVehicleCategorySlug(base.category)) {
+  if (isVehicleFormType(base.form_type)) {
     return base;
   }
   return {

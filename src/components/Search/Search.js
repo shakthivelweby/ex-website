@@ -1,39 +1,28 @@
 import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Popup from "../Popup";
-import { useAllDestinations, useEventCategories, useEventLanguages, useAttractionCategories, useActivityCategories } from "@/app/search/query";
+import {
+  useAllDestinations,
+  useEventCategories,
+  useEventLanguages,
+  useAttractionCategories,
+  useActivityCategories,
+} from "@/app/search/query";
 import { hasStoredImage } from "@/utils/imageUrl";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import EventsSearchFilters from "./EventsSearchFilters";
 import AttractionsSearchFilters from "./AttractionsSearchFilters";
 import ActivitiesSearchFilters from "./ActivitiesSearchFilters";
 
 const SEARCH_MODULES = [
-  { id: "package", label: "Packages", icon: "fi-rr-umbrella-beach", enabled: true },
-  { id: "schedule", label: "Scheduled Trips", icon: "fi-rr-pending", enabled: true },
-  { id: "events", label: "Events", icon: "fi-rr-glass-cheers", enabled: true },
-  { id: "attractions", label: "Attractions", icon: "fi-rr-ferris-wheel", enabled: true },
-  { id: "activities", label: "Activities", icon: "fi-rr-hiking", enabled: true },
-  { id: "rentals", label: "Rentals", icon: "fi-rr-car", enabled: false },
+  { id: "package", label: "Packages", shortLabel: "Packages", icon: "fi-rr-umbrella-beach", enabled: true },
+  { id: "schedule", label: "Scheduled Trips", shortLabel: "Scheduled", icon: "fi-rr-pending", enabled: true },
+  { id: "events", label: "Events", shortLabel: "Events", icon: "fi-rr-glass-cheers", enabled: true },
+  { id: "attractions", label: "Attractions", shortLabel: "Attractions", icon: "fi-rr-ferris-wheel", enabled: true },
+  { id: "activities", label: "Activities", shortLabel: "Activities", icon: "fi-rr-hiking", enabled: true },
+  { id: "rentals", label: "Rentals", shortLabel: "Rentals", icon: "fi-rr-car", enabled: false },
 ];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.04 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
-  },
-};
 
 const formatEventDate = (date) => {
   const y = date.getFullYear();
@@ -89,6 +78,26 @@ const createDefaultActivityFilters = () => {
   };
 };
 
+function SearchFooter({ enabled, label, onClick }) {
+  return (
+    <section className="flex-shrink-0 border-t border-[#EBEBEB] bg-white px-4 py-3">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={!enabled}
+        className={`w-full h-10 rounded-full text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+          enabled
+            ? "bg-[#222222] text-white hover:bg-black"
+            : "bg-[#F7F7F7] text-[#B0B0B0] cursor-not-allowed"
+        }`}
+      >
+        <i className="fi fi-rr-search text-[13px]" />
+        {label}
+      </button>
+    </section>
+  );
+}
+
 export default function Search({ isOpen, onClose, type }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedModule, setSelectedModule] = useState(type || "package");
@@ -110,6 +119,7 @@ export default function Search({ isOpen, onClose, type }) {
     !isEventsModule &&
     !isAttractionsModule &&
     !isActivitiesModule;
+
   const { data: destinationsData, isLoading: isDestinationsLoading } =
     useAllDestinations(isOpen && showDestinationPicker);
   const { data: eventCategoriesData } = useEventCategories(isOpen && isEventsModule);
@@ -125,13 +135,10 @@ export default function Search({ isOpen, onClose, type }) {
   const eventLanguages = eventLanguagesData?.data || [];
   const attractionCategories = attractionCategoriesData?.data || [];
   const activityCategories = activityCategoriesData?.data || [];
-
   const allDestinations = destinationsData?.data || [];
 
   useEffect(() => {
-    if (type) {
-      setSelectedModule(type);
-    }
+    if (type) setSelectedModule(type);
   }, [type]);
 
   useEffect(() => {
@@ -141,9 +148,7 @@ export default function Search({ isOpen, onClose, type }) {
       setEventFilters(createDefaultEventFilters());
       setAttractionFilters(createDefaultAttractionFilters());
       setActivityFilters(createDefaultActivityFilters());
-      if (!type) {
-        setSelectedModule("package");
-      }
+      if (!type) setSelectedModule("package");
     }
   }, [isOpen, type]);
 
@@ -167,9 +172,7 @@ export default function Search({ isOpen, onClose, type }) {
 
     setSelectedDestinations((prev) => {
       const exists = prev.some((d) => d.id === destination.id);
-      if (exists) {
-        return prev.filter((d) => d.id !== destination.id);
-      }
+      if (exists) return prev.filter((d) => d.id !== destination.id);
       return [...prev, destination];
     });
   };
@@ -252,13 +255,9 @@ export default function Search({ isOpen, onClose, type }) {
     if (eventFilters.latitude) params.set("latitude", eventFilters.latitude);
     if (eventFilters.location) params.set("location", eventFilters.location);
 
-    const query = params.toString();
-    router.push(`/events?${query}`);
+    router.push(`/events?${params.toString()}`);
     onClose();
   };
-
-  const isEventSearchReady =
-    Boolean(eventFilters.dateFrom) && Boolean(eventFilters.dateTo);
 
   const handleRunAttractionSearch = () => {
     if (!attractionFilters.dateFrom || !attractionFilters.dateTo) return;
@@ -277,9 +276,6 @@ export default function Search({ isOpen, onClose, type }) {
     onClose();
   };
 
-  const isAttractionSearchReady =
-    Boolean(attractionFilters.dateFrom) && Boolean(attractionFilters.dateTo);
-
   const handleRunActivitySearch = () => {
     if (!activityFilters.dateFrom || !activityFilters.dateTo) return;
 
@@ -297,6 +293,10 @@ export default function Search({ isOpen, onClose, type }) {
     onClose();
   };
 
+  const isEventSearchReady =
+    Boolean(eventFilters.dateFrom) && Boolean(eventFilters.dateTo);
+  const isAttractionSearchReady =
+    Boolean(attractionFilters.dateFrom) && Boolean(attractionFilters.dateTo);
   const isActivitySearchReady =
     Boolean(activityFilters.dateFrom) && Boolean(activityFilters.dateTo);
 
@@ -310,12 +310,18 @@ export default function Search({ isOpen, onClose, type }) {
     setActivityFilters(createDefaultActivityFilters());
   };
 
+  const searchButtonLabel =
+    selectedDestinations.length === 0
+      ? "Select a destination"
+      : isScheduleModule
+        ? "View scheduled trips"
+        : selectedDestinations.length === 1
+          ? "Search packages"
+          : `Search ${selectedDestinations.length} destinations`;
+
   const moduleTabs = (
-    <section className="px-6 pt-1 pb-4 flex-shrink-0 border-b border-gray-100">
-      <p className="text-xs font-medium uppercase tracking-wider text-gray-400 text-center mb-3">
-        What are you looking for?
-      </p>
-      <div className="grid grid-cols-6 gap-2">
+    <section className="px-4 pt-2 pb-3 flex-shrink-0 border-b border-[#EBEBEB]">
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 md:mx-0 md:px-0 md:grid md:grid-cols-6 md:gap-2 md:overflow-visible">
         {SEARCH_MODULES.map((module) => {
           const isSelected = selectedModule === module.id;
           const isDisabled = !module.enabled;
@@ -323,38 +329,21 @@ export default function Search({ isOpen, onClose, type }) {
           return (
             <button
               key={module.id}
+              type="button"
               onClick={() => handleModuleSelect(module)}
               disabled={isDisabled}
-              className={`flex flex-col items-center justify-center gap-1.5 px-2 py-3 rounded-xl transition-all duration-200 min-w-0 ${
+              className={`shrink-0 md:w-full inline-flex md:flex-col items-center md:justify-center gap-1.5 md:gap-1 px-3 py-1.5 md:px-2 md:py-2.5 rounded-full md:rounded-xl text-[13px] md:text-[12px] font-medium border transition-colors ${
                 isSelected
-                  ? "bg-primary-500 text-white shadow-sm"
+                  ? "bg-[#222222] text-white border-[#222222]"
                   : isDisabled
-                    ? "bg-gray-50 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                    ? "bg-[#F7F7F7] text-[#B0B0B0] border-[#EBEBEB] cursor-not-allowed"
+                    : "bg-white text-[#222222] border-[#DDDDDD] hover:border-[#222222]"
               }`}
             >
-              <div
-                className={`flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 ${
-                  isSelected ? "bg-white" : "bg-white border border-gray-200"
-                }`}
-              >
-                <i
-                  className={`fi ${module.icon} text-base ${
-                    isSelected
-                      ? "text-primary-500"
-                      : isDisabled
-                        ? "text-gray-300"
-                        : "text-gray-500"
-                  }`}
-                />
-              </div>
-              <span className="text-xs font-medium text-center leading-tight px-0.5">
-                {module.label}
-              </span>
+              <i className={`fi ${module.icon} text-[13px] md:text-base`} />
+              <span className="md:text-center md:leading-tight">{module.shortLabel}</span>
               {isDisabled && (
-                <span className="text-[9px] font-medium uppercase tracking-wide opacity-70">
-                  Soon
-                </span>
+                <span className="text-[10px] opacity-70 md:mt-0.5">Soon</span>
               )}
             </button>
           );
@@ -363,48 +352,47 @@ export default function Search({ isOpen, onClose, type }) {
     </section>
   );
 
+  const modalSizeClass =
+    "!max-w-lg w-[min(96vw,32rem)] md:!max-w-2xl md:w-[min(96vw,42rem)]";
+
   return (
     <Popup
       isOpen={isOpen}
       onClose={onClose}
-      title="Search"
+      title={
+        <span className="text-[15px] font-semibold text-[#222222]">Search</span>
+      }
       pos="center"
-      className="!max-w-6xl w-[min(96vw,72rem)] h-auto max-h-[90vh] rounded-3xl overflow-hidden"
+      className={`${modalSizeClass} h-auto max-h-[88vh] rounded-2xl overflow-hidden shadow-[0_8px_28px_rgba(0,0,0,0.12)]`}
       draggable={false}
-      overlayClassName="bg-black/40 backdrop-blur-sm"
+      overlayClassName="bg-black/30 backdrop-blur-[2px]"
     >
-      <div className="flex flex-col">
+      <div className="flex flex-col min-h-0">
         {moduleTabs}
 
         {showDestinationPicker ? (
           <>
-            {/* Search & filters */}
-            <section className="px-6 py-4 flex-shrink-0">
+            <section className="px-4 py-3 flex-shrink-0">
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4">
-                  <i className="fi fi-rr-search text-gray-400 text-base" />
-                </div>
+                <i className="fi fi-rr-search absolute left-3.5 top-1/2 -translate-y-1/2 text-[#717171] text-sm" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter destinations..."
-                  className="block w-full h-11 bg-gray-50 rounded-xl pl-11 pr-4 text-sm text-gray-900
-                    placeholder:text-gray-400 focus:outline-none border border-gray-200 focus:bg-white
-                    focus:border-primary-300 transition-all duration-200"
+                  placeholder="Search destinations"
+                  className="block w-full h-10 bg-[#F7F7F7] rounded-full pl-10 pr-4 text-sm text-[#222222] placeholder:text-[#717171] focus:outline-none focus:bg-white border border-transparent focus:border-[#DDDDDD] transition-colors"
                 />
               </div>
             </section>
 
-            {/* Destinations list */}
-            <section className="px-6 pb-2 max-h-[42vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-3 sticky top-0 bg-white py-1 z-10">
-                <h3 className="text-base font-semibold text-gray-900">
-                  Choose Destinations
+            <section className="px-4 pb-2 flex-1 min-h-0 max-h-[40vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-2 sticky top-0 bg-white py-1 z-10">
+                <h3 className="text-sm font-semibold text-[#222222]">
+                  Destinations
                 </h3>
                 {!isDestinationsLoading && (
-                  <span className="text-sm text-gray-400">
-                    {filteredDestinations.length} available
+                  <span className="text-xs text-[#717171]">
+                    {filteredDestinations.length}
                   </span>
                 )}
               </div>
@@ -416,12 +404,10 @@ export default function Search({ isOpen, onClose, type }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center py-12"
+                    className="flex flex-col items-center justify-center py-10"
                   >
-                    <div className="w-12 h-12 rounded-full border-4 border-primary-100 border-t-primary-500 animate-spin" />
-                    <p className="mt-4 text-gray-500 text-sm">
-                      Loading destinations...
-                    </p>
+                    <div className="w-7 h-7 rounded-full border-2 border-[#EBEBEB] border-t-[#222222] animate-spin" />
+                    <p className="mt-3 text-[#717171] text-xs">Loading...</p>
                   </motion.div>
                 ) : filteredDestinations.length === 0 ? (
                   <motion.div
@@ -429,51 +415,33 @@ export default function Search({ isOpen, onClose, type }) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-10 bg-gray-50 rounded-xl border border-gray-100"
+                    className="text-center py-8 rounded-xl bg-[#F7F7F7]"
                   >
-                    <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                      <i className="fi fi-rr-map-marker-cross text-gray-400 text-xl" />
-                    </div>
-                    <p className="text-gray-500">No destinations found</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Try a different filter term
-                    </p>
+                    <i className="fi fi-rr-map-marker-cross text-[#B0B0B0] text-xl mb-2" />
+                    <p className="text-sm text-[#717171]">No destinations found</p>
                   </motion.div>
                 ) : (
                   <motion.div
                     key="destinations"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="show"
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-1"
                   >
                     {filteredDestinations.map((destination) => {
                       const selected = isDestinationSelected(destination.id);
 
                       return (
-                        <motion.button
+                        <button
                           key={destination.id}
-                          variants={itemVariants}
+                          type="button"
                           onClick={() => toggleDestination(destination)}
-                          className={`w-full flex items-center gap-3 p-3 rounded-xl group transition-all text-left ${
+                          className={`w-full flex items-center gap-2.5 p-2 rounded-xl text-left transition-colors ${
                             selected
-                              ? "bg-primary-50 ring-1 ring-primary-500"
-                              : "bg-gray-50 hover:bg-gray-100 border border-transparent hover:border-gray-200"
+                              ? "bg-[#F7F7F7] ring-1 ring-[#222222]"
+                              : "hover:bg-[#F7F7F7]"
                           }`}
                         >
-                          <div
-                            className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                              selected
-                                ? "bg-primary-500 border-primary-500"
-                                : "border-gray-300 group-hover:border-primary-300"
-                            }`}
-                          >
-                            {selected && (
-                              <i className="fi fi-rr-check text-white text-[10px]" />
-                            )}
-                          </div>
-
-                          <div className="w-11 h-11 rounded-lg overflow-hidden relative bg-gray-200 flex-shrink-0">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden relative bg-[#EBEBEB] flex-shrink-0">
                             {hasStoredImage(destination.thumb_image) &&
                             destination.thumb_image_url ? (
                               <Image
@@ -481,37 +449,40 @@ export default function Search({ isOpen, onClose, type }) {
                                 alt={destination.name}
                                 fill
                                 className="object-cover"
-                                sizes="56px"
+                                sizes="40px"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-                                <i className="fi fi-rr-map-marker text-gray-500 text-lg" />
+                              <div className="w-full h-full flex items-center justify-center">
+                                <i className="fi fi-rr-map-marker text-[#717171] text-sm" />
                               </div>
                             )}
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <h3
-                              className={`font-medium truncate transition-colors ${
-                                selected
-                                  ? "text-primary-700"
-                                  : "text-gray-900 group-hover:text-primary-600"
+                            <p
+                              className={`text-sm font-medium truncate ${
+                                selected ? "text-[#222222]" : "text-[#222222]"
                               }`}
                             >
                               {destination.name}
-                            </h3>
-                            <p className="text-sm text-gray-500 truncate">
+                            </p>
+                            <p className="text-xs text-[#717171] truncate">
                               {destination.state?.name || "Destination"}
-                              {destination.package_count > 0 && (
-                                <span className="text-gray-400">
-                                  {" "}
-                                  · {destination.package_count} package
-                                  {destination.package_count !== 1 ? "s" : ""}
-                                </span>
-                              )}
                             </p>
                           </div>
-                        </motion.button>
+
+                          <div
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 transition-colors ${
+                              selected
+                                ? "bg-[#222222] border-[#222222]"
+                                : "border-[#DDDDDD]"
+                            }`}
+                          >
+                            {selected && (
+                              <i className="fi fi-rr-check text-white text-[9px]" />
+                            )}
+                          </div>
+                        </button>
                       );
                     })}
                   </motion.div>
@@ -519,55 +490,41 @@ export default function Search({ isOpen, onClose, type }) {
               </AnimatePresence>
             </section>
 
-            {/* Footer */}
-            <section className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
-              {selectedDestinations.length > 0 && (
-                <div className="flex flex-wrap justify-center gap-2 mb-3">
+            {selectedDestinations.length > 0 && (
+              <section className="px-4 py-2 flex-shrink-0 border-t border-[#EBEBEB]">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
                   {selectedDestinations.map((dest) => (
                     <span
                       key={dest.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs"
+                      className="inline-flex items-center gap-1 shrink-0 px-2.5 py-1 bg-[#F7F7F7] text-[#222222] rounded-full text-xs font-medium"
                     >
                       {dest.name}
                       <button
                         type="button"
                         onClick={() => toggleDestination(dest)}
-                        className="hover:bg-primary-100 rounded-full p-0.5 transition-colors"
+                        className="hover:text-[#717171] transition-colors"
+                        aria-label={`Remove ${dest.name}`}
                       >
-                        <i className="fi fi-rr-cross-small text-xs" />
+                        <i className="fi fi-rr-cross-small text-[11px]" />
                       </button>
                     </span>
                   ))}
                   <button
                     type="button"
                     onClick={() => setSelectedDestinations([])}
-                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                    className="shrink-0 text-xs text-[#717171] hover:text-[#222222] px-1"
                   >
-                    Clear all
+                    Clear
                   </button>
                 </div>
-              )}
+              </section>
+            )}
 
-              <button
-                type="button"
-                onClick={handleRunSearch}
-                disabled={selectedDestinations.length === 0}
-                className={`w-full h-11 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                  selectedDestinations.length > 0
-                    ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <i className="fi fi-rr-search text-sm" />
-                {selectedDestinations.length === 0
-                  ? "Select destinations to search"
-                  : isScheduleModule
-                    ? "View Scheduled Trips"
-                    : selectedDestinations.length === 1
-                      ? "Search Packages"
-                      : `Search ${selectedDestinations.length} Destinations`}
-              </button>
-            </section>
+            <SearchFooter
+              enabled={selectedDestinations.length > 0}
+              label={searchButtonLabel}
+              onClick={handleRunSearch}
+            />
           </>
         ) : isEventsModule ? (
           <>
@@ -576,23 +533,13 @@ export default function Search({ isOpen, onClose, type }) {
               onFilterChange={setEventFilters}
               categories={eventCategories}
               languages={eventLanguages}
+              compact
             />
-
-            <section className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
-              <button
-                type="button"
-                onClick={handleRunEventSearch}
-                disabled={!isEventSearchReady}
-                className={`w-full h-11 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                  isEventSearchReady
-                    ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <i className="fi fi-rr-search text-sm" />
-                {isEventSearchReady ? "Search Events" : "Select a date to search"}
-              </button>
-            </section>
+            <SearchFooter
+              enabled={isEventSearchReady}
+              label={isEventSearchReady ? "Search events" : "Select dates"}
+              onClick={handleRunEventSearch}
+            />
           </>
         ) : isAttractionsModule ? (
           <>
@@ -600,25 +547,15 @@ export default function Search({ isOpen, onClose, type }) {
               filters={attractionFilters}
               onFilterChange={setAttractionFilters}
               categories={attractionCategories}
+              compact
             />
-
-            <section className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
-              <button
-                type="button"
-                onClick={handleRunAttractionSearch}
-                disabled={!isAttractionSearchReady}
-                className={`w-full h-11 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                  isAttractionSearchReady
-                    ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <i className="fi fi-rr-search text-sm" />
-                {isAttractionSearchReady
-                  ? "Search Attractions"
-                  : "Select a date range to search"}
-              </button>
-            </section>
+            <SearchFooter
+              enabled={isAttractionSearchReady}
+              label={
+                isAttractionSearchReady ? "Search attractions" : "Select dates"
+              }
+              onClick={handleRunAttractionSearch}
+            />
           </>
         ) : isActivitiesModule ? (
           <>
@@ -626,43 +563,27 @@ export default function Search({ isOpen, onClose, type }) {
               filters={activityFilters}
               onFilterChange={setActivityFilters}
               categories={activityCategories}
+              compact
             />
-
-            <section className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
-              <button
-                type="button"
-                onClick={handleRunActivitySearch}
-                disabled={!isActivitySearchReady}
-                className={`w-full h-11 rounded-xl font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                  isActivitySearchReady
-                    ? "bg-primary-500 text-white hover:bg-primary-600 shadow-sm"
-                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <i className="fi fi-rr-search text-sm" />
-                {isActivitySearchReady
-                  ? "Search Activities"
-                  : "Select a date range to search"}
-              </button>
-            </section>
+            <SearchFooter
+              enabled={isActivitySearchReady}
+              label={
+                isActivitySearchReady ? "Search activities" : "Select dates"
+              }
+              onClick={handleRunActivitySearch}
+            />
           </>
         ) : showComingSoon ? (
-          <div className="flex items-center justify-center px-8 py-12">
-            <div className="text-center max-w-sm">
-              <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <i className="fi fi-rr-hourglass-end text-gray-400 text-2xl" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Coming Soon
-              </h3>
-              <p className="text-sm text-gray-500">
-                Search for this module is not available yet. Select Packages to
-                search by destination.
+          <div className="flex items-center justify-center px-6 py-10">
+            <div className="text-center">
+              <i className="fi fi-rr-hourglass-end text-[#B0B0B0] text-2xl mb-3" />
+              <p className="text-sm font-medium text-[#222222] mb-1">Coming soon</p>
+              <p className="text-xs text-[#717171] max-w-[220px]">
+                This category isn&apos;t available yet. Try Packages or Events.
               </p>
             </div>
           </div>
         ) : null}
-
       </div>
     </Popup>
   );

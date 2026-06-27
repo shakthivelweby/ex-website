@@ -11,6 +11,7 @@ export default function AttractionsSearchFilters({
   filters,
   onFilterChange,
   categories = [],
+  compact = false,
 }) {
   const handlePlaceSelected = (place) => {
     if (!place?.geometry?.location) return;
@@ -52,7 +53,11 @@ export default function AttractionsSearchFilters({
   const hasPriceFilter = Boolean(filters.price_from || filters.price_to);
 
   return (
-    <div className="px-6 py-4 space-y-5 max-h-[50vh] overflow-y-auto">
+    <div
+      className={`overflow-y-auto ${
+        compact ? "px-4 py-3 space-y-4 max-h-[38vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+      }`}
+    >
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">

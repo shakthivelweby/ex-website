@@ -2,9 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import Button from "./common/Button";
-import { usePathname } from 'next/navigation';
-import Search from './Search/Search';
-import { useRouter } from 'next/navigation';
+import { usePathname } from "next/navigation";
+import Search from "./Search/Search";
+import { useRouter } from "next/navigation";
 import Login from "./Login/Login";
 import Signup from "./Login/Signup";
 import Popup from "./Popup";
@@ -16,7 +16,7 @@ export default function Header() {
   // ... other existing states ...
 
   // Check if current page is a package detail page
-  const isPackageDetailPage = pathname.startsWith('/package/');
+  const isPackageDetailPage = pathname.startsWith("/package/");
 
   return (
     <>
@@ -69,7 +69,12 @@ export default function Header() {
             {/* Share Button - Only show on package detail pages */}
             {isPackageDetailPage && (
               <div className="hidden lg:block">
-                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+                <ShareOptions
+                  url={
+                    typeof window !== "undefined" ? window.location.href : ""
+                  }
+                  title="Check out this amazing package!"
+                />
               </div>
             )}
 
@@ -81,15 +86,24 @@ export default function Header() {
               <i className="fi fi-rr-search text-gray-700 group-hover:text-gray-900 transition-colors"></i>
               <span>Search</span>
               <div className="hidden sm:flex items-center gap-1 ml-1 pl-2 border-l border-gray-200">
-                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">⌘</kbd>
-                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">K</kbd>
+                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">
+                  ⌘
+                </kbd>
+                <kbd className="text-[10px] font-medium bg-white/80 px-1.5 py-0.5 rounded shadow-sm">
+                  K
+                </kbd>
               </div>
             </button>
 
             {/* Share Button - Mobile (Only show on package detail pages) */}
             {isPackageDetailPage && (
               <div className="lg:hidden">
-                <ShareOptions url={typeof window !== 'undefined' ? window.location.href : ''} title="Check out this amazing package!" />
+                <ShareOptions
+                  url={
+                    typeof window !== "undefined" ? window.location.href : ""
+                  }
+                  title="Check out this amazing package!"
+                />
               </div>
             )}
 
@@ -107,4 +121,4 @@ export default function Header() {
       </header>
     </>
   );
-} 
+}

@@ -16,8 +16,16 @@ export default function Footer() {
 
   const categories = [
     { name: "Packages", href: "/explore", description: "Travel packages" },
-    { name: "Scheduled Trips", href: "/scheduled", description: "Fixed departure trips" },
-    { name: "Attractions", href: "/attractions", description: "Tourist attractions" },
+    {
+      name: "Scheduled Trips",
+      href: "/scheduled",
+      description: "Fixed departure trips",
+    },
+    {
+      name: "Attractions",
+      href: "/attractions",
+      description: "Tourist attractions",
+    },
     { name: "Events", href: "/events", description: "Upcoming events" },
   ];
 
@@ -60,19 +68,27 @@ export default function Footer() {
               />
             </Link>
             <p className="text-gray-400 mb-6 max-w-md">
-              Your single discovery platform to easily find, compare, and book trips, activities, and rentals. 
-              Focusing on destination-based browsing and trust-driven design to offer you better pricing and transparency.
+              Your single discovery platform to easily find, compare, and book
+              trips, activities, and rentals. Focusing on destination-based
+              browsing and trust-driven design to offer you better pricing and
+              transparency.
             </p>
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-envelope text-primary-400"></i>
-                <a href="mailto:Info@exploreworld.com" className="hover:text-white transition-colors">
+                <a
+                  href="mailto:Info@exploreworld.com"
+                  className="hover:text-white transition-colors"
+                >
                   Info@exploreworld.com
                 </a>
               </div>
               <div className="flex items-center gap-2">
                 <i className="fi fi-rr-phone-call text-primary-400"></i>
-                <a href="tel:8891363636" className="hover:text-white transition-colors">
+                <a
+                  href="tel:8891363636"
+                  className="hover:text-white transition-colors"
+                >
                   8891 36 36 36
                 </a>
               </div>
@@ -81,7 +97,9 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Quick Links</h3>
+            <h3 className="text-white font-semibold mb-4 text-lg">
+              Quick Links
+            </h3>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
                 <li key={link.name}>
@@ -98,7 +116,9 @@ export default function Footer() {
 
           {/* Categories */}
           <div>
-            <h3 className="text-white font-semibold mb-4 text-lg">Categories</h3>
+            <h3 className="text-white font-semibold mb-4 text-lg">
+              Categories
+            </h3>
             <ul className="space-y-3">
               {categories.map((category) => (
                 <li key={category.name}>
@@ -160,7 +180,9 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  <i className={`${social.icon} text-gray-400 group-hover:text-white transition-colors`}></i>
+                  <i
+                    className={`${social.icon} text-gray-400 group-hover:text-white transition-colors`}
+                  ></i>
                 </a>
               ))}
             </div>

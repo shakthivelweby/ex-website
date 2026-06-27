@@ -314,9 +314,9 @@ body {
   color: #1f2937 !important;
 }
 
-.rdrDay:not(.rdrDayPassive) .rdrInRange~.rdrDayNumber span,
-.rdrDay:not(.rdrDayPassive) .rdrStartEdge~.rdrDayNumber span,
-.rdrDay:not(.rdrDayPassive) .rdrEndEdge~.rdrDayNumber span {
+.rdrDay:not(.rdrDayPassive) .rdrInRange ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrStartEdge ~ .rdrDayNumber span,
+.rdrDay:not(.rdrDayPassive) .rdrEndEdge ~ .rdrDayNumber span {
   color: white !important;
 }
 

@@ -34,6 +34,7 @@ export default function EventsSearchFilters({
   onFilterChange,
   categories = [],
   languages = [],
+  compact = false,
 }) {
   const [dateRange, setDateRange] = useState([
     parseDate(filters.dateFrom),
@@ -261,7 +262,11 @@ export default function EventsSearchFilters({
       : "Range selected";
 
   return (
-    <div className="px-6 py-4 space-y-5 max-h-[50vh] overflow-y-auto">
+    <div
+      className={`overflow-y-auto ${
+        compact ? "px-4 py-3 space-y-4 max-h-[38vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+      }`}
+    >
       {/* Location */}
       <div>
         <div className="flex items-center justify-between mb-2">

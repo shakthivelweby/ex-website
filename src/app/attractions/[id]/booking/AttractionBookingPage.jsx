@@ -3,14 +3,20 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import Link from "next/link";
 import {
   attractionInfo,
   getDetailsForBooking,
 } from "../service";
 import Button from "@/components/common/Button";
-import RichTextContent from "@/components/common/RichTextContent";
+import AttractionTicketSelectionStep from "./AttractionTicketSelectionStep";
+import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
+import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
+import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
+import { initializeRazorpayPayment } from "@/sdk/razorpay";
+import { book, createOrder, verifyPayment, paymentFailure } from "@/app/checkout/attractions/service";
+import { getLoggedInUserEmail } from "@/utils/authSession";
+import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
@@ -45,6 +51,174 @@ function resolvePaxAdultChildRaw(ticket) {
   return { adultPrice, childPrice };
 }
 
+function getAvailabilityMeta(slots) {
+  if (slots == null || slots === "") {
+    return { label: "Available", tone: "ok" };
+  }
+  const count = Number(slots);
+  if (count <= 0) {
+    return { label: "Sold out", tone: "soldout" };
+  }
+  if (count <= 5) {
+    return { label: `${count} left`, tone: "low" };
+  }
+  return { label: `${count} available`, tone: "ok" };
+}
+
+function AccordionChevron({ expanded, className = "" }) {
+  return (
+    <span
+      className={`fi-box h-8 w-8 shrink-0 rounded-full bg-gray-100 text-gray-600 ${className}`}
+      aria-hidden="true"
+    >
+      <i
+        className={`fi fi-br-angle-down text-[14px] transition-transform duration-200 ${
+          expanded ? "rotate-180" : ""
+        }`}
+      />
+    </span>
+  );
+}
+
+function IconBox({ icon, size = "md", className = "" }) {
+  const dim = size === "sm" ? "h-8 w-8" : "h-9 w-9";
+  const glyph = size === "sm" ? "text-[14px]" : "text-[15px]";
+  return (
+    <span
+      className={`fi-box ${dim} shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 ${className}`}
+    >
+      <i className={`${icon} ${glyph}`} aria-hidden="true" />
+    </span>
+  );
+}
+
+function MetaRow({ icon, children }) {
+  return (
+    <div className="flex items-start gap-3">
+      <IconBox icon={icon} size="sm" />
+      <span className="min-w-0 flex-1 pt-1.5 text-sm leading-snug text-gray-700">
+        {children}
+      </span>
+    </div>
+  );
+}
+
+function SummaryLine({ label, value, valueClassName = "text-gray-900 font-medium tabular-nums" }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-1.5">
+      <span className="text-sm text-gray-500">{label}</span>
+      <span className={`text-sm text-right ${valueClassName}`}>{value}</span>
+    </div>
+  );
+}
+
+function AttractionReviewRow({
+  ticketName,
+  visitDate,
+  guestLabel,
+  quantity,
+  unitPrice,
+  lineTotal,
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
+      <span className="fi-box h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
+        <i className="fi fi-rr-ticket text-[14px]" aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-gray-900">{ticketName}</p>
+        <p className="mt-0.5 text-xs text-gray-500">{visitDate}</p>
+        <p className="text-[11px] text-gray-400">
+          {guestLabel} · Qty {quantity}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="text-sm font-bold tabular-nums text-gray-900">₹{lineTotal.toFixed(2)}</p>
+        <p className="text-[11px] tabular-nums text-gray-400">₹{unitPrice.toFixed(2)} ea.</p>
+      </div>
+    </div>
+  );
+}
+
+function getTicketUnitPrices(ticket) {
+  const adm = attractionAdminPct(ticket);
+  const pct = Number(ticket.discount || 0);
+  if (ticket.rate_type === "full") {
+    const afterAdmin = applyAdminCharge(Number(ticket.full_rate || 0), adm);
+    const final = applyDiscountOnAmount(afterAdmin, pct);
+    return {
+      adult: { afterAdmin, final },
+      child: { afterAdmin, final },
+      hasDiscount: pct > 0,
+    };
+  }
+  const { adultPrice, childPrice } = resolvePaxAdultChildRaw(ticket);
+  const adultAfterAdmin = applyAdminCharge(adultPrice, adm);
+  const childAfterAdmin = applyAdminCharge(childPrice, adm);
+  return {
+    adult: {
+      afterAdmin: adultAfterAdmin,
+      final: applyDiscountOnAmount(adultAfterAdmin, pct),
+    },
+    child: {
+      afterAdmin: childAfterAdmin,
+      final: applyDiscountOnAmount(childAfterAdmin, pct),
+    },
+    hasDiscount: pct > 0,
+  };
+}
+
+function getTicketFromPrice(ticket) {
+  const prices = getTicketUnitPrices(ticket);
+  const lowest = Math.min(prices.adult.final, prices.child.final);
+  return prices.hasDiscount ? lowest.toFixed(2) : String(lowest);
+}
+
+function getLineMaxQty(ticket, lineType, tickets) {
+  const maxPerUser = Number(ticket.maximum_allowed_bookings_per_user || 10);
+  const slots =
+    ticket.available_slots != null ? Number(ticket.available_slots) : null;
+  const other = lineType === "adult" ? tickets?.child || 0 : tickets?.adult || 0;
+  let cap = maxPerUser;
+  if (slots != null && slots >= 0) {
+    cap = Math.min(cap, Math.max(0, slots - other));
+  }
+  return cap;
+}
+
+function TermsAgreement({ checked, onChange, id = "attractionTermsAgreement" }) {
+  return (
+    <label
+      htmlFor={id}
+      className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5"
+    >
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-gray-300 text-gray-900 focus:ring-gray-400"
+      />
+      <span className="text-[11px] leading-snug text-gray-600">
+        I agree to the{" "}
+        <Link
+          href="/termsandcondition"
+          className="font-medium text-gray-900 underline underline-offset-2"
+        >
+          Terms & Conditions
+        </Link>{" "}
+        and{" "}
+        <Link
+          href="/termsandcondition#cancellation"
+          className="font-medium text-gray-900 underline underline-offset-2"
+        >
+          Cancellation Policy
+        </Link>
+      </span>
+    </label>
+  );
+}
+
 const AttractionBookingPage = ({
   attractionId,
   closeoutDates = [],
@@ -62,6 +236,25 @@ const AttractionBookingPage = ({
   const [expandedTicketType, setExpandedTicketType] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [needGuide, setNeedGuide] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(null);
+  const [paymentPhase, setPaymentPhase] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [completedBookingId, setCompletedBookingId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState({
+    title: "",
+    message: "",
+    emailSent: false,
+    userEmail: "",
+    visitDate: "",
+    guestSummary: "",
+    amountPaid: "",
+  });
+  const [showPaymentError, setShowPaymentError] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
+  const [userContact, setUserContact] = useState({ email: "", phone: "" });
 
   // Check for mobile view
   useEffect(() => {
@@ -120,6 +313,53 @@ const AttractionBookingPage = ({
 
     loadBookingDetails();
   }, [attractionId]);
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      if (!user) return;
+      setUserContact({
+        email: String(user.email || "").trim(),
+        phone: String(user.phone || "").trim(),
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    setPendingCheckout(null);
+  }, [adultChildTickets, needGuide, selectedDate]);
+
+  useEffect(() => {
+    const prices = ticketData?.attraction_ticket_type_prices;
+    if (prices?.length && expandedTicketType == null) {
+      setExpandedTicketType(prices[0].attraction_ticket_type_id);
+    }
+  }, [ticketData?.attraction_ticket_type_prices, expandedTicketType]);
+
+  const handleVisitDateChange = async (date) => {
+    const dateString = date ? date.toISOString().split("T")[0] : "";
+    setSelectedDate(dateString);
+    setAdultChildTickets({});
+    setExpandedTicketType(null);
+
+    if (dateString && attractionId) {
+      localStorage.setItem(`attraction_${attractionId}_selectedDate`, dateString);
+      try {
+        setLoading(true);
+        const response = await getDetailsForBooking(attractionId, dateString);
+        if (response?.data) {
+          setAttractionData(response.data);
+          setTicketData(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching booking details for date:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -196,6 +436,12 @@ const AttractionBookingPage = ({
     );
   };
 
+  const getSelectedCountForTicketType = (ticketTypeId) => {
+    const tickets = adultChildTickets[ticketTypeId];
+    if (!tickets) return 0;
+    return tickets.adult + tickets.child;
+  };
+
   const getTotalPrice = () => {
     let total = 0;
 
@@ -236,81 +482,54 @@ const AttractionBookingPage = ({
     return total;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (getTotalSelectedTickets() === 0) {
       return;
     }
     if (!selectedDate) {
       return;
     }
+    await refreshBookingData();
     setCurrentStep(2);
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     setCurrentStep(1);
+    setCheckoutError(null);
+    setPendingCheckout(null);
+    await refreshBookingData();
   };
 
-  const gstPercent = 18;
-  const conveniencePercent = 2;
+  const refreshBookingData = async () => {
+    if (!attractionId || !selectedDate) return;
+    try {
+      const response = await getDetailsForBooking(attractionId, selectedDate);
+      if (response?.data) {
+        setAttractionData(response.data);
+        setTicketData(response.data);
+      }
+    } catch (error) {
+      console.error("Error refreshing booking details:", error);
+    }
+  };
 
-  // Compute discount-aware subtotal for summary
-  let subtotalOriginal = 0;
-  let discountForSummary = 0;
-  Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
-    const ticket = ticketData?.attraction_ticket_type_prices?.find(
-      (t) => t.attraction_ticket_type_id == ticketTypeId
+  const getGuestSummary = () => {
+    const adultCount = Object.values(adultChildTickets).reduce(
+      (sum, tickets) => sum + tickets.adult,
+      0
     );
-    if (!ticket || (tickets.adult === 0 && tickets.child === 0)) return;
+    const childCount = Object.values(adultChildTickets).reduce(
+      (sum, tickets) => sum + tickets.child,
+      0
+    );
+    return `${adultCount} adult(s), ${childCount} child(ren)`;
+  };
 
-    const qty = tickets.adult + tickets.child;
-    const pct = Number(ticket.discount || 0);
-
-    const adm = attractionAdminPct(ticket);
-    if (ticket.rate_type === "full") {
-      const originalUnit = applyAdminCharge(Number(ticket.full_rate || 0), adm);
-      const discountedUnit = applyDiscountOnAmount(originalUnit, pct);
-      subtotalOriginal += originalUnit * qty;
-      discountForSummary += (originalUnit - discountedUnit) * qty;
-      return;
-    }
-
-    // pax
-    const { adultPrice: adultRaw, childPrice: childRaw } =
-      resolvePaxAdultChildRaw(ticket);
-    const adultUnit = applyAdminCharge(adultRaw, adm);
-    const childUnit = applyAdminCharge(childRaw, adm);
-    const discountedAdult = applyDiscountOnAmount(adultUnit, pct);
-    const discountedChild = applyDiscountOnAmount(childUnit, pct);
-    subtotalOriginal +=
-      adultUnit * tickets.adult + childUnit * tickets.child;
-    discountForSummary +=
-      (adultUnit - discountedAdult) * tickets.adult +
-      (childUnit - discountedChild) * tickets.child;
-  });
-
-  if (needGuide && guideRate > 0) {
-    subtotalOriginal += Number(guideRate || 0);
-  }
-
-  const subtotalForSummary = Math.max(0, subtotalOriginal - discountForSummary);
-  const gstAmount = (Number(subtotalForSummary || 0) * gstPercent) / 100;
-  const afterGst = Number(subtotalForSummary || 0) + gstAmount;
-  const convenienceAmount = (afterGst * conveniencePercent) / 100;
-  const grandTotalForSummary = afterGst + convenienceAmount;
-
-  const handleProceedToPayment = () => {
-    if (!isLogin()) {
-      const event = new CustomEvent("showLogin");
-      window.dispatchEvent(event);
-      return;
-    }
-
-    // Format the selected tickets data according to API requirements
+  const buildApiBookingData = () => {
     const formattedTickets = [];
     let totalAmount = 0;
     let discountAmount = 0;
 
-    // Process adult/child tickets
     Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
       if (tickets.adult === 0 && tickets.child === 0) return;
 
@@ -335,8 +554,8 @@ const AttractionBookingPage = ({
           totalAmount += ticketTotal;
 
           formattedTickets.push({
-            id: parseInt(ticketTypeId),
-            attraction_ticket_type_id: parseInt(ticketTypeId),
+            id: parseInt(ticketTypeId, 10),
+            attraction_ticket_type_id: parseInt(ticketTypeId, 10),
             quantity: totalQuantity,
             adult_quantity: tickets.adult,
             child_quantity: tickets.child,
@@ -371,8 +590,8 @@ const AttractionBookingPage = ({
           totalAmount += ticketTotal;
 
           formattedTickets.push({
-            id: parseInt(ticketTypeId),
-            attraction_ticket_type_id: parseInt(ticketTypeId),
+            id: parseInt(ticketTypeId, 10),
+            attraction_ticket_type_id: parseInt(ticketTypeId, 10),
             quantity: totalQuantity,
             adult_quantity: tickets.adult,
             child_quantity: tickets.child,
@@ -386,37 +605,313 @@ const AttractionBookingPage = ({
       }
     });
 
-    // Add guide rate if needed
+    if (!formattedTickets.length) return null;
+
     if (needGuide && guideRate > 0) {
       totalAmount += parseFloat(guideRate);
     }
 
-    // Prepare the booking data for checkout
-    const apiBookingData = {
-      attraction_id: attractionId,
+    const adultCount = Object.values(adultChildTickets).reduce(
+      (sum, tickets) => sum + tickets.adult,
+      0
+    );
+    const childCount = Object.values(adultChildTickets).reduce(
+      (sum, tickets) => sum + tickets.child,
+      0
+    );
+
+    return {
+      attraction_id: parseInt(attractionId, 10),
       visit_date: selectedDate,
-      // Send original subtotal (pre-discount) so backend can persist discount_amount correctly
       total_amount: parseFloat((totalAmount + discountAmount).toFixed(2)),
       discount_amount: parseFloat(discountAmount.toFixed(2)),
+      adult_count: adultCount,
+      child_count: childCount,
       bookingTickets: formattedTickets,
       include_guide: needGuide,
       guide_rate: needGuide ? guideRate : 0,
     };
-
-    // Clean up stored date from localStorage
-    localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
-
-    // Encode the data and redirect to checkout
-    const encodedData = encodeURIComponent(JSON.stringify(apiBookingData));
-    router.push(
-      `/checkout/attractions?attraction_id=${attractionId}&tickets=${encodedData}`
-    );
   };
+
+  const closePaymentError = () => {
+    setShowPaymentError(false);
+    setPaymentError(null);
+  };
+
+  const showPaymentErrorModal = (payload) => {
+    setPaymentError(payload);
+    setShowPaymentError(true);
+  };
+
+  const getOrderErrorPayload = (message) => ({
+    variant: "warning",
+    title: "Couldn't start payment",
+    message: String(message || "We couldn't prepare your payment. Please try again."),
+    hint: "Your booking is saved. You can continue to payment when you're ready.",
+    canRetry: true,
+    primaryLabel: "Continue to payment",
+    primaryIcon: "fi-rr-refresh",
+    secondaryLabel: "Close",
+  });
+
+  const resolveBookingIdFromVerify = (verificationResponse, fallbackBookingId) =>
+    verificationResponse?.data?.payment?.attraction_booking_id ??
+    verificationResponse?.data?.payment?.attractionBooking?.id ??
+    verificationResponse?.data?.attraction_booking_id ??
+    verificationResponse?.data?.attractionBooking?.id ??
+    fallbackBookingId;
+
+  const openRazorpayAndVerify = async (orderRes, paymentAmount, bookingId) => {
+    setPaymentPhase(null);
+    const paymentResponse = await initializeRazorpayPayment({
+      amount: paymentAmount,
+      currency: "INR",
+      name: "Explore World",
+      description: `Payment for ${attractionData?.name || "attraction"} tickets`,
+      orderId: orderRes.data.order_id,
+      key: orderRes.data.key,
+      email: userContact.email,
+      contact: userContact.phone,
+    });
+
+    if (!paymentResponse.status) {
+      setPaymentPhase(null);
+      try {
+        await paymentFailure(orderRes.data.attraction_payment_id);
+      } catch (_) {}
+      showPaymentErrorModal(getPaymentErrorPayload(paymentResponse));
+      return false;
+    }
+
+    setPaymentPhase("verifying");
+    const verificationResponse = await verifyPayment({
+      order_id: orderRes.data.order_id,
+      payment_id: paymentResponse.data.razorpay_payment_id,
+      signature: paymentResponse.data.razorpay_signature,
+      customer_email: getLoggedInUserEmail() || userContact.email || undefined,
+    });
+
+    if (!verificationResponse.status) {
+      setPaymentPhase(null);
+      try {
+        await paymentFailure(orderRes.data.attraction_payment_id);
+      } catch (_) {}
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Payment verification failed",
+        message:
+          verificationResponse?.message || "We couldn't confirm your payment on our end.",
+        hint: "If an amount was deducted from your account, please contact support with your payment reference.",
+        canRetry: false,
+        primaryLabel: "Close",
+      });
+      return false;
+    }
+
+    setPaymentPhase("confirming");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setPaymentPhase(null);
+
+    const resolvedBookingId = resolveBookingIdFromVerify(verificationResponse, bookingId);
+    if (!resolvedBookingId) {
+      showPaymentErrorModal({
+        variant: "warning",
+        title: "Payment received",
+        message:
+          "Your payment went through, but we couldn't load your ticket id. Check My Bookings for your confirmation.",
+        hint: "If you don't see your booking within a few minutes, contact support.",
+        canRetry: false,
+        primaryLabel: "Close",
+      });
+      return false;
+    }
+
+    const userEmail = getLoggedInUserEmail() || userContact.email || "";
+    setPendingCheckout(null);
+    setCompletedBookingId(resolvedBookingId);
+    setSuccessMessage({
+      title: "You're all set!",
+      message: "Your attraction tickets have been booked successfully.",
+      emailSent: Boolean(verificationResponse?.data?.confirmation_email_sent),
+      userEmail,
+      visitDate: selectedDate ? formatDate(selectedDate) : "—",
+      guestSummary: getGuestSummary(),
+      amountPaid: money(paymentAmount),
+    });
+    setShowSuccess(true);
+    localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
+    return true;
+  };
+
+  const goToCompletedTicket = () => {
+    setShowSuccess(false);
+    if (completedBookingId) {
+      router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
+    } else {
+      router.push("/my-bookings?tab=attractions");
+    }
+  };
+
+  const executeCheckout = async () => {
+    setIsPaying(true);
+    setCheckoutError(null);
+
+    try {
+      if (!termsAccepted) {
+        setCheckoutError("Please accept the terms to continue");
+        return;
+      }
+
+      const apiBookingData = buildApiBookingData();
+      if (!apiBookingData) {
+        setCheckoutError("Please select at least one ticket to continue");
+        return;
+      }
+
+      let bookingId = pendingCheckout?.bookingId;
+      let paymentAmount = pendingCheckout?.paymentAmount;
+
+      if (!bookingId) {
+        const response = await book(apiBookingData);
+        if (!response.status) {
+          setCheckoutError(response.message || "Failed to complete booking. Please try again.");
+          return;
+        }
+
+        bookingId = response.data.id;
+        paymentAmount =
+          response?.data?.grand_total != null && response.data.grand_total !== ""
+            ? Number(response.data.grand_total)
+            : Number(grandTotalForSummary || 0);
+
+        setPendingCheckout({ bookingId, paymentAmount });
+      }
+
+      setPaymentPhase("preparing");
+      const orderRes = await createOrder({
+        attraction_id: apiBookingData.attraction_id,
+        attraction_booking_id: bookingId,
+        amount: paymentAmount,
+      });
+
+      if (!orderRes.status) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderRes.message));
+        return;
+      }
+
+      await openRazorpayAndVerify(orderRes, paymentAmount, bookingId);
+    } catch (error) {
+      setPaymentPhase(null);
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        showPaymentErrorModal({
+          variant: "warning",
+          title: "Verification taking longer",
+          message: "Payment verification is taking longer than expected.",
+          hint: "Please check My Bookings to confirm whether your payment was successful before trying again.",
+          canRetry: false,
+          primaryLabel: "Close",
+        });
+      } else {
+        showPaymentErrorModal({
+          variant: "error",
+          title: "Something went wrong",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to complete booking. Please try again.",
+          hint: "Your ticket selection is still saved. You can try again in a moment.",
+          canRetry: true,
+          primaryLabel: "Try again",
+          primaryIcon: "fi-rr-refresh",
+          secondaryLabel: "Close",
+        });
+      }
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handlePaymentRetry = async () => {
+    closePaymentError();
+    setCheckoutError(null);
+    await executeCheckout();
+  };
+
+  const handleProceedToPayment = () => {
+    if (!isLogin()) {
+      const event = new CustomEvent("showLogin");
+      window.dispatchEvent(event);
+      return;
+    }
+
+    executeCheckout();
+  };
+
+  const gstPercent = 18;
+  const conveniencePercent = 2;
+
+  // Compute discount-aware subtotal for summary
+  let subtotalOriginal = 0;
+  let discountForSummary = 0;
+  Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
+    const ticket = ticketData?.attraction_ticket_type_prices?.find(
+      (t) => t.attraction_ticket_type_id == ticketTypeId
+    );
+    if (!ticket || (tickets.adult === 0 && tickets.child === 0)) return;
+
+    const qty = tickets.adult + tickets.child;
+    const pct = Number(ticket.discount || 0);
+
+    const adm = attractionAdminPct(ticket);
+    if (ticket.rate_type === "full") {
+      const originalUnit = applyAdminCharge(Number(ticket.full_rate || 0), adm);
+      const discountedUnit = applyDiscountOnAmount(originalUnit, pct);
+      subtotalOriginal += originalUnit * qty;
+      discountForSummary += (originalUnit - discountedUnit) * qty;
+      return;
+    }
+
+    const { adultPrice: adultRaw, childPrice: childRaw } =
+      resolvePaxAdultChildRaw(ticket);
+    const adultUnit = applyAdminCharge(adultRaw, adm);
+    const childUnit = applyAdminCharge(childRaw, adm);
+    const discountedAdult = applyDiscountOnAmount(adultUnit, pct);
+    const discountedChild = applyDiscountOnAmount(childUnit, pct);
+    subtotalOriginal +=
+      adultUnit * tickets.adult + childUnit * tickets.child;
+    discountForSummary +=
+      (adultUnit - discountedAdult) * tickets.adult +
+      (childUnit - discountedChild) * tickets.child;
+  });
+
+  if (needGuide && guideRate > 0) {
+    subtotalOriginal += Number(guideRate || 0);
+  }
+
+  const subtotalForSummary = Math.max(0, subtotalOriginal - discountForSummary);
+  const gstAmount = (Number(subtotalForSummary || 0) * gstPercent) / 100;
+  const afterGst = Number(subtotalForSummary || 0) + gstAmount;
+  const convenienceAmount = (afterGst * conveniencePercent) / 100;
+  const grandTotalForSummary = afterGst + convenienceAmount;
+
+  const getPriceBreakdown = () => ({
+    totalTickets: getTotalSelectedTickets(),
+    subtotalOriginal,
+    discountAmount: discountForSummary,
+    subtotalAfterDiscount: subtotalForSummary,
+    gstPercent,
+    gstAmount,
+    conveniencePercent,
+    convenienceFeeAmount: convenienceAmount,
+    grandTotal: grandTotalForSummary,
+    guideAmount: needGuide && guideRate > 0 ? Number(guideRate) : 0,
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
@@ -451,9 +946,9 @@ const AttractionBookingPage = ({
       <div className="max-w-7xl mx-auto px-4 py-4">
         {/* Mobile Attraction Details Header - Only visible on mobile */}
         <div className="lg:hidden mb-6">
-          <div className="bg-white rounded-lg shadow border p-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="flex items-center gap-3 p-4">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                 {attractionData.cover_image || attractionData.thumb_image ? (
                   <Image
                     src={
@@ -464,40 +959,25 @@ const AttractionBookingPage = ({
                     className="object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <div className="flex h-full w-full items-center justify-center">
                     <i className="fi fi-rr-image text-gray-400 text-xl"></i>
                   </div>
                 )}
               </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-800">
-                  Book Tickets
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
+                  Book tickets
+                </p>
+                <h1 className="truncate text-base font-semibold text-gray-900">
+                  {attractionData.name}
                 </h1>
-                <p className="text-sm text-gray-600">{attractionData.name}</p>
               </div>
             </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <i className="fi fi-rr-clock text-primary-500 text-sm"></i>
-                <span className="text-gray-700 text-sm">
-                  {attractionData.start_time || "TBD"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="fi fi-rr-map-marker text-primary-500 text-sm"></i>
-                <span className="text-gray-700 text-sm">
-                  {attractionData.location}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <i className="fi fi-rr-tag text-primary-500 text-sm"></i>
-                {attractionData.attraction_category_master?.name && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700">
-                    {attractionData.attraction_category_master.name}
-                  </span>
-                )}
-              </div>
+            <div className="space-y-3 border-t border-gray-100 px-4 py-3">
+              <MetaRow icon="fi fi-rr-clock">
+                {formatTimeTo12Hour(attractionData.start_time) || "TBD"}
+              </MetaRow>
+              <MetaRow icon="fi fi-rr-map-marker">{attractionData.location}</MetaRow>
             </div>
           </div>
         </div>
@@ -506,550 +986,112 @@ const AttractionBookingPage = ({
           {/* Left Column - Ticket Selection */}
           <div className="min-w-0 max-w-full">
             {currentStep === 1 ? (
-              <div className="bg-white rounded-lg shadow border">
-                <div className="p-4 space-y-6">
-                  {/* Ticket Types */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-medium text-gray-800">
-                        Available Tickets
-                      </h3>
-                    </div>
-                    <div className="space-y-3">
-                      {ticketData?.attraction_ticket_type_prices?.map(
-                        (ticket, index) => {
-                          const isSelected =
-                            adultChildTickets[ticket.attraction_ticket_type_id]
-                              ?.adult > 0 ||
-                            adultChildTickets[ticket.attraction_ticket_type_id]
-                              ?.child > 0;
-                          const isExpanded =
-                            expandedTicketType ===
-                            ticket.attraction_ticket_type_id;
-                          return (
-                            <div
-                              key={ticket.id}
-                              className={`${
-                                isSelected
-                                  ? "bg-primary-50 border-primary-200"
-                                  : "bg-white hover:bg-gray-50"
-                              } border border-gray-200 rounded-lg p-4 transition-all duration-200 ${
-                                index !==
-                                ticketData.attraction_ticket_type_prices
-                                  .length -
-                                  1
-                                  ? "border-b"
-                                  : ""
-                              }`}
-                            >
-                              <div
-                                className="flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer"
-                                onClick={() =>
-                                  handleTicketTypeClick(
-                                    ticket.attraction_ticket_type_id
-                                  )
-                                }
-                              >
-                                {/* Left Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <h5
-                                      className={`text-sm font-semibold ${
-                                        isSelected
-                                          ? "text-primary-800"
-                                          : "text-gray-800"
-                                      }`}
-                                    >
-                                      {
-                                        ticket.attraction_ticket_type
-                                          ?.attraction_ticket_type_master?.name
-                                      }
-                                    </h5>
-                                    {ticket.discount > 0 && (
-                                      <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-700 rounded-full">
-                                        {ticket.discount}% OFF
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* Price and Description */}
-                                  <div className="flex items-center gap-4 mb-2">
-                                    <div className="flex items-baseline gap-2">
-                                      {(() => {
-                                        const adm = attractionAdminPct(ticket);
-                                        const pct = Number(ticket.discount || 0);
-                                        let rawRepresentative = 0;
-                                        if (ticket.rate_type === "full") {
-                                          rawRepresentative = Number(
-                                            ticket.full_rate || 0
-                                          );
-                                        } else if (ticket.rate_type === "pax") {
-                                          rawRepresentative =
-                                            resolvePaxAdultChildRaw(
-                                              ticket
-                                            ).adultPrice;
-                                        }
-                                        const priceAfterAdmin =
-                                          applyAdminCharge(
-                                            rawRepresentative,
-                                            adm
-                                          );
-                                        const priceFinal =
-                                          applyDiscountOnAmount(
-                                            priceAfterAdmin,
-                                            pct
-                                          );
-
-                                        if (pct > 0) {
-                                          return (
-                                            <>
-                                              <div className="flex items-baseline gap-1">
-                                                <span className="text-xs text-gray-500">
-                                                  Price:
-                                                </span>
-                                                <span
-                                                  className={`text-lg font-bold line-through ${
-                                                    isSelected
-                                                      ? "text-gray-500"
-                                                      : "text-gray-500"
-                                                  }`}
-                                                >
-                                                  ₹{priceAfterAdmin}
-                                                </span>
-                                              </div>
-                                              <div className="flex items-baseline gap-1">
-                                                <span className="text-lg font-bold text-green-600">
-                                                  ₹{priceFinal.toFixed(2)}
-                                                </span>
-                                              </div>
-                                            </>
-                                          );
-                                        }
-
-                                        return (
-                                          <>
-                                            <span className="text-xs text-gray-500">
-                                              Price:
-                                            </span>
-                                            <span
-                                              className={`text-lg font-bold ${
-                                                isSelected
-                                                  ? "text-primary-700"
-                                                  : "text-gray-900"
-                                              }`}
-                                            >
-                                              ₹{priceAfterAdmin}
-                                            </span>
-                                          </>
-                                        );
-                                      })()}
-                                    </div>
-                                    {ticket.available_slots && (
-                                      <div className="flex items-center gap-1">
-                                        <i className="fi fi-rr-ticket text-xs text-gray-400"></i>
-                                        <span className="text-xs text-gray-500">
-                                          {ticket.available_slots} slots
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Description */}
-                                  {ticket.description && (
-                                    <RichTextContent
-                                      html={ticket.description}
-                                      className="text-xs leading-relaxed text-gray-600"
-                                    />
-                                  )}
-                                </div>
-
-                                {/* Expand/Collapse Arrow */}
-                                <div className="flex items-center justify-center">
-                                  <i
-                                    className={`fi fi-rr-angle-down text-gray-400 transition-transform duration-200 ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
-                                  ></i>
-                                </div>
-                              </div>
-
-                              {/* Adult and Child Quantity Selectors - Only show when expanded */}
-                              {isExpanded && (
-                                <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                                  <h5 className="text-sm font-medium text-gray-700 mb-3">
-                                    Select Adult & Child
-                                  </h5>
-
-                                  {/* Adults Section */}
-                                  <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-800">
-                                        Adults
-                                      </h3>
-                                      <p className="text-xs text-gray-500">
-                                        Over 18+ —{" "}
-                                        {(() => {
-                                          const adm = attractionAdminPct(ticket);
-                                          const pct = Number(
-                                            ticket.discount || 0
-                                          );
-                                          const raw =
-                                            ticket.rate_type === "full"
-                                              ? Number(ticket.full_rate || 0)
-                                              : resolvePaxAdultChildRaw(
-                                                  ticket
-                                                ).adultPrice;
-                                          const afterAd = applyAdminCharge(
-                                            raw,
-                                            adm
-                                          );
-                                          const final = applyDiscountOnAmount(
-                                            afterAd,
-                                            pct
-                                          );
-                                          return pct > 0 ? (
-                                            <>
-                                              <span className="line-through text-gray-400">
-                                                ₹{afterAd}
-                                              </span>{" "}
-                                              <span className="font-medium text-green-700">
-                                                ₹{final}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <>₹{afterAd}</>
-                                          );
-                                        })()}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() =>
-                                          handleAdultChildQuantityChange(
-                                            ticket.attraction_ticket_type_id,
-                                            "adult",
-                                            -1
-                                          )
-                                        }
-                                        disabled={
-                                          (adultChildTickets[
-                                            ticket.attraction_ticket_type_id
-                                          ]?.adult || 0) <= 0
-                                        }
-                                        className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <i className="fi fi-rr-minus text-xs"></i>
-                                      </button>
-                                      <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                                        {adultChildTickets[
-                                          ticket.attraction_ticket_type_id
-                                        ]?.adult || 0}
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          handleAdultChildQuantityChange(
-                                            ticket.attraction_ticket_type_id,
-                                            "adult",
-                                            1
-                                          )
-                                        }
-                                        disabled={
-                                          (adultChildTickets[
-                                            ticket.attraction_ticket_type_id
-                                          ]?.adult || 0) >=
-                                          (ticket.maximum_allowed_bookings_per_user ||
-                                            10)
-                                        }
-                                        className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <i className="fi fi-rr-plus text-xs"></i>
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Children Section */}
-                                  <div className="flex items-center justify-between py-3">
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-800">
-                                        Child
-                                      </h3>
-                                      <p className="text-xs text-gray-500">
-                                        Under 18 —{" "}
-                                        {(() => {
-                                          const adm = attractionAdminPct(ticket);
-                                          const pct = Number(
-                                            ticket.discount || 0
-                                          );
-                                          const raw =
-                                            ticket.rate_type === "full"
-                                              ? Number(ticket.full_rate || 0)
-                                              : resolvePaxAdultChildRaw(
-                                                  ticket
-                                                ).childPrice;
-                                          const afterAd = applyAdminCharge(
-                                            raw,
-                                            adm
-                                          );
-                                          const final = applyDiscountOnAmount(
-                                            afterAd,
-                                            pct
-                                          );
-                                          return pct > 0 ? (
-                                            <>
-                                              <span className="line-through text-gray-400">
-                                                ₹{afterAd}
-                                              </span>{" "}
-                                              <span className="font-medium text-green-700">
-                                                ₹{final}
-                                              </span>
-                                            </>
-                                          ) : (
-                                            <>₹{afterAd}</>
-                                          );
-                                        })()}
-                                      </p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() =>
-                                          handleAdultChildQuantityChange(
-                                            ticket.attraction_ticket_type_id,
-                                            "child",
-                                            -1
-                                          )
-                                        }
-                                        disabled={
-                                          (adultChildTickets[
-                                            ticket.attraction_ticket_type_id
-                                          ]?.child || 0) <= 0
-                                        }
-                                        className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <i className="fi fi-rr-minus text-xs"></i>
-                                      </button>
-                                      <div className="w-12 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-sm font-medium text-gray-800">
-                                        {adultChildTickets[
-                                          ticket.attraction_ticket_type_id
-                                        ]?.child || 0}
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          handleAdultChildQuantityChange(
-                                            ticket.attraction_ticket_type_id,
-                                            "child",
-                                            1
-                                          )
-                                        }
-                                        disabled={
-                                          (adultChildTickets[
-                                            ticket.attraction_ticket_type_id
-                                          ]?.child || 0) >=
-                                          (ticket.maximum_allowed_bookings_per_user ||
-                                            10)
-                                        }
-                                        className="w-8 h-8 rounded-lg border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        <i className="fi fi-rr-plus text-xs"></i>
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Guide Section */}
-                  {guideRate > 0 && (
-                    <div className="border-t border-gray-200 pt-6">
-                      <h3 className="text-sm font-medium text-gray-800 mb-3">
-                        Guide
-                      </h3>
-                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          <i className="fi fi-rr-user-guide text-primary-500 text-lg"></i>
-                          <div>
-                            <span className="text-sm font-medium text-gray-700 block">
-                              Need a guide
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              ₹{guideRate} per booking
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setNeedGuide(!needGuide)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                            needGuide ? "bg-primary-600" : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                              needGuide ? "translate-x-6" : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <AttractionTicketSelectionStep
+                selectedDate={selectedDate}
+                onDateChange={handleVisitDateChange}
+                isDateDisabled={isDateDisabled}
+                ticketPrices={ticketData?.attraction_ticket_type_prices}
+                adultChildTickets={adultChildTickets}
+                expandedTicketType={expandedTicketType}
+                onTicketTypeClick={handleTicketTypeClick}
+                onAdultChildQuantityChange={handleAdultChildQuantityChange}
+                getSelectedCountForTicketType={getSelectedCountForTicketType}
+                getTotalSelectedTickets={getTotalSelectedTickets}
+                getTicketFromPrice={getTicketFromPrice}
+                getTicketUnitPrices={getTicketUnitPrices}
+                getAvailabilityMeta={getAvailabilityMeta}
+                getLineMaxQty={getLineMaxQty}
+                needGuide={needGuide}
+                onNeedGuideChange={setNeedGuide}
+                guideRate={guideRate}
+                formatDate={formatDate}
+              />
             ) : (
-              <div className="bg-white rounded-lg shadow border">
-                <div className="px-4 py-3 border-b border-gray-200">
-                  <h2 className="text-base font-medium text-gray-800">
-                    Booking Summary
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Review your ticket selection before proceeding
-                  </p>
+              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
+                <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-4 py-3.5">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
+                      Step 2 of 2
+                    </p>
+                    <h2 className="mt-0.5 text-base font-semibold tracking-tight text-gray-900">
+                      Review your tickets
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Confirm details before you pay
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="shrink-0 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900"
+                  >
+                    Edit
+                  </button>
                 </div>
 
-                <div className="p-4 space-y-4">
-                  {/* Visit Date */}
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <i className="fi fi-rr-calendar text-blue-600"></i>
-                      <span className="text-sm font-medium text-blue-800">
-                        Visit Date: {formatDate(selectedDate)}
-                      </span>
-                    </div>
-                  </div>
+                <div className="space-y-2 bg-gray-50/50 p-4">
+                  {Object.entries(adultChildTickets).flatMap(([ticketTypeId, tickets]) => {
+                    if (tickets.adult === 0 && tickets.child === 0) return [];
+                    const ticket = ticketData?.attraction_ticket_type_prices?.find(
+                      (t) => t.attraction_ticket_type_id == ticketTypeId
+                    );
+                    const ticketName =
+                      ticket?.attraction_ticket_type?.attraction_ticket_type_master?.name ||
+                      "Ticket";
+                    const unitPrices = getTicketUnitPrices(ticket);
+                    const visitLabel = formatDate(selectedDate);
+                    const rows = [];
 
-                  {/* Adult/Child Tickets */}
-                  {Object.entries(adultChildTickets).map(
-                    ([ticketTypeId, tickets]) => {
-                      if (tickets.adult === 0 && tickets.child === 0)
-                        return null;
-                      const ticket =
-                        ticketData?.attraction_ticket_type_prices?.find(
-                          (t) => t.attraction_ticket_type_id == ticketTypeId
-                        );
-                      const totalQuantity = tickets.adult + tickets.child;
-
-                      return (
-                        <div
-                          key={ticketTypeId}
-                          className="bg-gray-50 rounded-lg p-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="text-sm font-medium text-gray-800">
-                                {
-                                  ticket?.attraction_ticket_type
-                                    ?.attraction_ticket_type_master?.name
-                                }
-                              </h4>
-                              <div className="text-xs text-gray-600 space-y-1">
-                                {tickets.adult > 0 && (
-                                  <p>Adults: {tickets.adult}</p>
-                                )}
-                                {tickets.child > 0 && (
-                                  <p>Children: {tickets.child}</p>
-                                )}
-                                <p>Total: {totalQuantity}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              {(() => {
-                                const adm = attractionAdminPct(ticket);
-                                const pct = Number(ticket?.discount || 0);
-                                if (ticket?.rate_type === "full") {
-                                  const afterAdmin = applyAdminCharge(
-                                    Number(ticket.full_rate || 0),
-                                    adm
-                                  );
-                                  const ticketPrice =
-                                    applyDiscountOnAmount(afterAdmin, pct);
-
-                                  return (
-                                    <>
-                                      <p className="text-sm text-gray-800">
-                                        ₹
-                                        {parseFloat(ticketPrice).toFixed(2)} ×{" "}
-                                        {totalQuantity}
-                                      </p>
-                                      <p className="text-base font-semibold text-primary-600">
-                                        ₹
-                                        {(
-                                          parseFloat(ticketPrice) *
-                                          totalQuantity
-                                        ).toFixed(2)}
-                                      </p>
-                                    </>
-                                  );
-                                }
-                                if (ticket?.rate_type === "pax") {
-                                  let adultRaw = parseFloat(
-                                    ticket?.adult_price || 0
-                                  );
-                                  let childRaw = parseFloat(
-                                    ticket?.child_price || 0
-                                  );
-                                  if (
-                                    adultRaw === 0 &&
-                                    childRaw === 0 &&
-                                    ticket?.full_rate
-                                  ) {
-                                    adultRaw = parseFloat(ticket.full_rate);
-                                    childRaw = parseFloat(ticket.full_rate);
-                                  }
-
-                                  const adultAfterAdmin =
-                                    applyAdminCharge(adultRaw, adm);
-                                  const childAfterAdmin =
-                                    applyAdminCharge(childRaw, adm);
-                                  const adultPrice = applyDiscountOnAmount(
-                                    adultAfterAdmin,
-                                    pct
-                                  );
-                                  const childPrice = applyDiscountOnAmount(
-                                    childAfterAdmin,
-                                    pct
-                                  );
-
-                                  const adultTotal =
-                                    adultPrice * tickets.adult;
-                                  const childTotal =
-                                    childPrice * tickets.child;
-                                  const grandTotal = adultTotal + childTotal;
-
-                                  return (
-                                    <>
-                                      <div className="text-sm text-gray-800 space-y-1">
-                                        {tickets.adult > 0 && (
-                                          <p>
-                                            Adult: ₹
-                                            {adultPrice.toFixed(2)} ×{" "}
-                                            {tickets.adult}
-                                          </p>
-                                        )}
-                                        {tickets.child > 0 && (
-                                          <p>
-                                            Child: ₹
-                                            {childPrice.toFixed(2)} ×{" "}
-                                            {tickets.child}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <p className="text-base font-semibold text-primary-600">
-                                        ₹{grandTotal.toFixed(2)}
-                                      </p>
-                                    </>
-                                  );
-                                }
-
-                                return null;
-                              })()}
-                            </div>
-                          </div>
-                        </div>
+                    if (tickets.adult > 0) {
+                      rows.push(
+                        <AttractionReviewRow
+                          key={`${ticketTypeId}-adult`}
+                          ticketName={ticketName}
+                          visitDate={visitLabel}
+                          guestLabel="Adult"
+                          quantity={tickets.adult}
+                          unitPrice={unitPrices.adult.final}
+                          lineTotal={unitPrices.adult.final * tickets.adult}
+                        />
                       );
                     }
-                  )}
+                    if (tickets.child > 0) {
+                      rows.push(
+                        <AttractionReviewRow
+                          key={`${ticketTypeId}-child`}
+                          ticketName={ticketName}
+                          visitDate={visitLabel}
+                          guestLabel="Child"
+                          quantity={tickets.child}
+                          unitPrice={unitPrices.child.final}
+                          lineTotal={unitPrices.child.final * tickets.child}
+                        />
+                      );
+                    }
+                    return rows;
+                  })}
+
+                  {needGuide && guideRate > 0 ? (
+                    <AttractionReviewRow
+                      ticketName="Guide service"
+                      visitDate={formatDate(selectedDate)}
+                      guestLabel="Add-on"
+                      quantity={1}
+                      unitPrice={Number(guideRate)}
+                      lineTotal={Number(guideRate)}
+                    />
+                  ) : null}
+                </div>
+
+                <div className="border-t border-gray-100 p-4 lg:hidden">
+                  <TermsAgreement
+                    checked={termsAccepted}
+                    onChange={setTermsAccepted}
+                    id="attractionTermsMobile"
+                  />
+                  {checkoutError ? (
+                    <p className="mt-2 text-xs text-red-600">{checkoutError}</p>
+                  ) : null}
                 </div>
               </div>
             )}
@@ -1057,193 +1099,274 @@ const AttractionBookingPage = ({
 
           {/* Right Column - Attraction Details & Summary - Hidden on mobile */}
           <div className="hidden min-w-0 lg:block lg:shrink-0">
-            <div className="sticky top-6 space-y-4">
-              {/* Attraction Details Card */}
-              <div className="bg-white rounded-lg shadow border p-4">
-                <div className="relative aspect-video w-full rounded-lg overflow-hidden mb-3">
-                  {attractionData.cover_image || attractionData.thumb_image ? (
-                    <Image
-                      src={
-                        attractionData.cover_image || attractionData.thumb_image
-                      }
-                      alt={attractionData.name}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 1024px) 100vw, 33vw"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                      <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+            <div className="sticky top-6 space-y-3">
+              {currentStep === 1 ? (
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100">
+                    {attractionData.cover_image || attractionData.thumb_image ? (
+                      <Image
+                        src={
+                          attractionData.cover_image || attractionData.thumb_image
+                        }
+                        alt={attractionData.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 1024px) 100vw, 33vw"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    {attractionData.attraction_category_master?.name ? (
+                      <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
+                        {attractionData.attraction_category_master.name}
+                      </p>
+                    ) : null}
+                    <h3 className="mt-0.5 text-lg font-semibold tracking-tight text-gray-900">
+                      {attractionData.name}
+                    </h3>
+                    <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                      {selectedDate ? (
+                        <MetaRow icon="fi fi-rr-calendar">{formatDate(selectedDate)}</MetaRow>
+                      ) : null}
+                      <MetaRow icon="fi fi-rr-clock">
+                        {formatTimeTo12Hour(attractionData.start_time) || "TBD"}
+                      </MetaRow>
+                      <MetaRow icon="fi fi-rr-map-marker">{attractionData.location}</MetaRow>
                     </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                  {currentStep === 2 ? (
+                    <>
+                      <p className="truncate text-[11px] font-medium uppercase tracking-widest text-gray-400">
+                        {attractionData.name}
+                      </p>
+                      <h3 className="mt-0.5 text-sm font-semibold text-gray-900">Checkout</h3>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-sm font-semibold text-gray-900">Order summary</h3>
+                      <p className="mt-0.5 text-xs text-gray-500">
+                        {getTotalSelectedTickets() > 0
+                          ? `${getTotalSelectedTickets()} ticket${getTotalSelectedTickets() !== 1 ? "s" : ""} selected`
+                          : "No tickets selected yet"}
+                      </p>
+                    </>
                   )}
                 </div>
-                <h3 className="text-base font-medium text-gray-800 mb-2">
-                  {attractionData.name}
-                </h3>
-                {attractionData.attraction_category_master?.name && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-50 text-primary-700 mb-3">
-                    {attractionData.attraction_category_master.name}
-                  </span>
-                )}
 
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex items-center gap-2">
-                    <i className="fi fi-rr-clock text-primary-500 text-sm"></i>
-                    <span className="text-gray-700 text-sm">
-                      Start Time:{" "}
-                      {formatTimeTo12Hour(attractionData.start_time) || "TBD"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <i className="fi fi-rr-map-marker text-primary-500 text-sm"></i>
-                    <span className="text-gray-700 text-sm">
-                      {attractionData.location}
-                    </span>
-                  </div>
+                <div className="p-4">
+                  {(() => {
+                    const b = getPriceBreakdown();
+                    return (
+                      <>
+                        <div className="divide-y divide-gray-100">
+                          <SummaryLine label="Tickets" value={b.totalTickets} />
+                          {b.guideAmount > 0 ? (
+                            <SummaryLine label="Guide" value={`₹${b.guideAmount.toFixed(2)}`} />
+                          ) : null}
+                          <SummaryLine
+                            label="Subtotal"
+                            value={`₹${b.subtotalAfterDiscount.toFixed(2)}`}
+                          />
+                          {b.discountAmount > 0 ? (
+                            <SummaryLine
+                              label="Discount"
+                              value={`−₹${b.discountAmount.toFixed(2)}`}
+                            />
+                          ) : null}
+                          {b.gstPercent > 0 ? (
+                            <SummaryLine
+                              label={`GST (${b.gstPercent}%)`}
+                              value={`₹${b.gstAmount.toFixed(2)}`}
+                            />
+                          ) : null}
+                          <SummaryLine
+                            label={`Convenience (${b.conveniencePercent}%)`}
+                            value={`₹${b.convenienceFeeAmount.toFixed(2)}`}
+                          />
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between rounded-lg bg-gray-900 px-3.5 py-3 text-white">
+                          <span className="text-sm font-medium text-gray-300">
+                            {currentStep === 2 ? "Total to pay" : "Grand total"}
+                          </span>
+                          <span className="text-xl font-bold tabular-nums">
+                            ₹{b.grandTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                  {currentStep === 1 ? (
+                    <Button
+                      onClick={handleContinue}
+                      size="lg"
+                      className="w-full"
+                      disabled={getTotalSelectedTickets() === 0 || !selectedDate}
+                    >
+                      Continue to review
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="hidden lg:block">
+                        <TermsAgreement
+                          checked={termsAccepted}
+                          onChange={setTermsAccepted}
+                          id="attractionTermsDesktop"
+                        />
+                      </div>
+                      {checkoutError ? (
+                        <p className="hidden text-xs text-red-600 lg:block">{checkoutError}</p>
+                      ) : null}
+                      <Button
+                        onClick={handleProceedToPayment}
+                        size="lg"
+                        className="w-full h-12 text-base font-semibold"
+                        disabled={isPaying || !termsAccepted}
+                      >
+                        {isPaying
+                          ? "Processing…"
+                          : `Pay ₹${getPriceBreakdown().grandTotal.toFixed(2)}`}
+                      </Button>
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleBack}
+                          className="fi-inline text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+                        >
+                          <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
+                          <span>Edit ticket selection</span>
+                        </button>
+                        <p className="fi-inline m-0 text-[11px] text-gray-400">
+                          <i className="fi fi-rr-shield-check text-[11px]" aria-hidden="true" />
+                          <span>Secure checkout · Razorpay</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Booking Summary Card */}
-              <div className="bg-white rounded-lg shadow border p-4">
-                <h3 className="text-base font-medium text-gray-800 mb-3">
-                  Booking Summary
-                </h3>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      Total Tickets:
-                    </span>
-                    <span className="text-sm font-medium text-gray-800">
-                      {getTotalSelectedTickets()}
-                    </span>
-                  </div>
-
-                  {/* Guide Price - Only show when guide is selected */}
-                  {needGuide && guideRate > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Guide Price:
-                      </span>
-                      <span className="text-sm font-medium text-gray-800">
-                        ₹{guideRate}
-                      </span>
+        {/* Mobile sticky bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur-sm shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
+          {(() => {
+            const b = getPriceBreakdown();
+            if (currentStep === 1) {
+              return (
+                <div className="p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500">
+                        {getTotalSelectedTickets()} ticket
+                        {getTotalSelectedTickets() !== 1 ? "s" : ""}
+                      </p>
+                      <p className="text-lg font-bold tabular-nums text-gray-900">
+                        ₹{b.grandTotal.toFixed(2)}
+                      </p>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Subtotal (excl. taxes)</span>
-                    <span className="text-sm font-medium text-gray-800">
-                      ₹{subtotalForSummary.toFixed(2)}
-                    </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">GST (18%)</span>
-                    <span className="text-sm font-medium text-gray-800">₹{gstAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Convenience (2%)</span>
-                    <span className="text-sm font-medium text-gray-800">₹{convenienceAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                    <span className="text-sm font-semibold text-gray-800">Total Amount:</span>
-                    <span className="text-lg font-semibold text-primary-600">
-                      ₹{grandTotalForSummary.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-
-                {currentStep === 1 ? (
                   <Button
                     onClick={handleContinue}
                     size="lg"
                     className="w-full"
                     disabled={getTotalSelectedTickets() === 0 || !selectedDate}
                   >
-                    Continue to Review
+                    Continue to review
                   </Button>
-                ) : (
-                  <div className="space-y-2">
-                    <Button
-                      onClick={handleBack}
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                    >
-                      Back to Selection
-                    </Button>
-                    <Button
-                      onClick={handleProceedToPayment}
-                      size="lg"
-                      className="w-full"
-                    >
-                      Proceed to Payment
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+                </div>
+              );
+            }
 
-        {/* Mobile Booking Summary - Fixed above navigation on mobile */}
-        <div className="lg:hidden fixed bottom-14 left-0 right-0 bg-white shadow-lg z-10">
-          {/* Gray line separator */}
-          <div className="h-px bg-gray-100"></div>
-          {/* Summary Section */}
-          <div className="flex items-center justify-between p-4">
-            {/* Left side - Total Tickets */}
-            <div>
-              <p className="text-sm text-gray-600">Total Tickets</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {getTotalSelectedTickets()}
-              </p>
-            </div>
-
-            {/* Right side - Total Amount */}
-            <div>
-              <p className="text-sm text-gray-600">Total Amount</p>
-              <p className="text-lg font-semibold text-gray-800">
-                ₹{grandTotalForSummary.toFixed(2)}
-              </p>
-            </div>
-          </div>
-
-          {/* Gray line separator */}
-          <div className="h-px bg-gray-100"></div>
-
-          {/* Action Buttons */}
-          <div className="p-4">
-            {currentStep === 1 ? (
-              <button
-                onClick={handleContinue}
-                disabled={getTotalSelectedTickets() === 0 || !selectedDate}
-                className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors"
-              >
-                Continue to Review
-              </button>
-            ) : (
-              <div className="flex gap-2">
+            return (
+              <div className="flex items-center gap-3 p-4">
                 <button
+                  type="button"
                   onClick={handleBack}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium transition-colors"
+                  className="shrink-0 px-1 text-sm font-medium text-gray-500 hover:text-gray-800"
                 >
-                  Back to selection
+                  Edit
                 </button>
-                <button
+                <Button
                   onClick={handleProceedToPayment}
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                  size="lg"
+                  className="flex-1 h-12"
+                  disabled={isPaying || !termsAccepted}
                 >
-                  Proceed to Payment
-                </button>
+                  {isPaying ? "Processing…" : `Pay ₹${b.grandTotal.toFixed(2)}`}
+                </Button>
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
 
         {/* Bottom padding for mobile to prevent content from being hidden by fixed summary and navigation */}
-        <div className="lg:hidden h-48"></div>
+        <div className={`lg:hidden ${currentStep === 2 ? "h-28" : "h-36"}`}></div>
       </div>
+
+      <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <PaymentSuccessPopup
+        show={showSuccess}
+        onClose={goToCompletedTicket}
+        title={successMessage.title}
+        message={successMessage.message}
+        itemLabel="Your visit"
+        itemTitle={attractionData?.name || "Attraction"}
+        amountPaid={successMessage.amountPaid}
+        detailLeftLabel="Visit date"
+        detailLeft={successMessage.visitDate}
+        detailRightLabel="Guests"
+        detailRight={successMessage.guestSummary}
+        emailSent={successMessage.emailSent}
+        userEmail={successMessage.userEmail}
+        primaryAction={{
+          label: "View ticket",
+          icon: "fi-rr-ticket",
+          onClick: goToCompletedTicket,
+        }}
+        secondaryAction={{
+          label: "Done",
+          onClick: goToCompletedTicket,
+        }}
+      />
+      <ErrorPopup
+        show={showPaymentError}
+        onClose={closePaymentError}
+        variant={paymentError?.variant || "error"}
+        title={paymentError?.title}
+        message={paymentError?.message}
+        hint={paymentError?.hint}
+        closeOnBackdrop={paymentError?.variant === "cancelled"}
+        primaryAction={
+          paymentError?.canRetry
+            ? {
+                label: paymentError?.primaryLabel || "Try again",
+                icon: paymentError?.primaryIcon,
+                isLoading: isPaying && !paymentPhase,
+                loadingLabel: "Opening payment…",
+                onClick: handlePaymentRetry,
+              }
+            : { label: paymentError?.primaryLabel || "Close", onClick: closePaymentError }
+        }
+        secondaryAction={
+          paymentError?.canRetry
+            ? { label: paymentError?.secondaryLabel || "Close", onClick: closePaymentError }
+            : null
+        }
+      />
     </div>
   );
 };

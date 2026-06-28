@@ -937,8 +937,15 @@ export default function AttractionCheckoutPage() {
           },
         }}
         secondaryAction={{
-          label: "Stay on checkout",
-          onClick: () => setShowSuccess(false),
+          label: "Done",
+          onClick: () => {
+            setShowSuccess(false);
+            if (completedBookingId) {
+              router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
+            } else {
+              router.push("/my-bookings?tab=attractions");
+            }
+          },
         }}
       />
       <ErrorPopup

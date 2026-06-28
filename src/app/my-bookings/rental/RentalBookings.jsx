@@ -12,6 +12,7 @@ import {
   rentalPaymentFailure,
   verifyRentalPayment,
 } from "./service";
+import { getLoggedInUserEmail } from "@/utils/authSession";
 
 const formatDateTime = (dateString) => {
   const d = new Date(dateString);
@@ -121,6 +122,7 @@ export default function RentalBookings() {
         order_id: orderRes?.data?.order_id,
         payment_id: payRes?.data?.razorpay_payment_id,
         signature: payRes?.data?.razorpay_signature,
+        customer_email: getLoggedInUserEmail() || userData?.email || undefined,
       });
 
       if (!verifyRes?.status) {
@@ -130,9 +132,15 @@ export default function RentalBookings() {
         throw new Error("Payment verification failed.");
       }
 
+      const userEmail = getLoggedInUserEmail() || userData?.email || "";
+      const emailSent = Boolean(verifyRes?.data?.confirmation_email_sent);
       setPopupConfig({
         title: "Payment Successful!",
-        message: "Your balance payment has been processed successfully.",
+        message: emailSent
+          ? `Your balance payment has been processed. A confirmation email has been sent to ${userEmail}.`
+          : userEmail
+            ? "Your balance payment has been processed. We'll email your confirmation shortly."
+            : "Your balance payment has been processed successfully.",
         icon: (
           <div className="relative">
             <div className="absolute inset-0 rounded-full bg-green-100 animate-success-ring" />

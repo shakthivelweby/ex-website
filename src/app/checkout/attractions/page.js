@@ -5,9 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { attractionInfo } from "../../attractions/[id]/service";
-import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
+import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
+import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "./service";
+import { getLoggedInUserEmail } from "@/utils/authSession";
+import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 
 export default function AttractionCheckoutPage() {
   const router = useRouter();
@@ -17,6 +21,12 @@ export default function AttractionCheckoutPage() {
   const [successMessage, setSuccessMessage] = useState({
     title: "",
     message: "",
+    emailSent: false,
+    userEmail: "",
+    itemTitle: "",
+    amountPaid: "",
+    visitDate: "",
+    guestSummary: "",
   });
   const [formData, setFormData] = useState({
     firstName: "",
@@ -32,7 +42,12 @@ export default function AttractionCheckoutPage() {
   const [attractionData, setAttractionData] = useState(null);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [isLoadingData, setIsLoadingData] = useState(true);
-  const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const [formError, setFormError] = useState(null);
+  const [paymentPhase, setPaymentPhase] = useState(null);
+  const [showPaymentError, setShowPaymentError] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
 
   // Fetch attraction and booking details from API
   useEffect(() => {
@@ -43,7 +58,7 @@ export default function AttractionCheckoutPage() {
         const ticketsData = searchParams.get("tickets");
         
         if (!attractionId || !ticketsData) {
-          setError("Missing attraction or ticket information");
+          setLoadError("Missing attraction or ticket information");
           return;
         }
 
@@ -57,10 +72,10 @@ export default function AttractionCheckoutPage() {
         if (attractionResponse.status) {
           setAttractionData(attractionResponse.data);
         } else {
-          setError("Failed to load attraction details");
+          setLoadError("Failed to load attraction details");
         }
       } catch (error) {      
-        setError("Failed to load attraction details. Please try again.");
+        setLoadError("Failed to load attraction details. Please try again.");
       } finally {
         setIsLoadingData(false);
       }
@@ -157,148 +172,232 @@ export default function AttractionCheckoutPage() {
     return ticketDetails;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const closePaymentError = () => {
+    setShowPaymentError(false);
+    setPaymentError(null);
+  };
+
+  const showPaymentErrorModal = (payload) => {
+    setPaymentError(payload);
+    setShowPaymentError(true);
+  };
+
+  const getOrderErrorPayload = (message) => ({
+    variant: "warning",
+    title: "Couldn't start payment",
+    message: String(message || "We couldn't prepare your payment. Please try again."),
+    hint: "Your booking is saved. You can continue to payment when you're ready.",
+    canRetry: true,
+    primaryLabel: "Continue to payment",
+    primaryIcon: "fi-rr-refresh",
+    secondaryLabel: "Stay on checkout",
+  });
+
+  const resolveBookingIdFromVerify = (verificationResponse, fallbackBookingId) =>
+    verificationResponse?.data?.payment?.attraction_booking_id ??
+    verificationResponse?.data?.payment?.attractionBooking?.id ??
+    verificationResponse?.data?.attraction_booking_id ??
+    verificationResponse?.data?.attractionBooking?.id ??
+    fallbackBookingId;
+
+  const openRazorpayAndVerify = async (orderRes, paymentAmount, bookingId) => {
+    setPaymentPhase(null);
+    const paymentResponse = await initializeRazorpayPayment({
+      amount: paymentAmount,
+      currency: "INR",
+      name: "Explore World",
+      description: `Payment for ${attractionData?.attraction?.name || "attraction"} tickets`,
+      orderId: orderRes.data.order_id,
+      key: orderRes.data.key,
+      email: formData.email,
+      contact: formData.phone,
+    });
+
+    if (!paymentResponse.status) {
+      setPaymentPhase(null);
+      try {
+        await paymentFailure(orderRes.data.attraction_payment_id);
+      } catch (_) {}
+      showPaymentErrorModal(getPaymentErrorPayload(paymentResponse));
+      return false;
+    }
+
+    setPaymentPhase("verifying");
+    const verificationResponse = await verifyPayment({
+      order_id: orderRes.data.order_id,
+      payment_id: paymentResponse.data.razorpay_payment_id,
+      signature: paymentResponse.data.razorpay_signature,
+      customer_email: getLoggedInUserEmail() || formData.email || undefined,
+    });
+
+    if (!verificationResponse.status) {
+      setPaymentPhase(null);
+      try {
+        await paymentFailure(orderRes.data.attraction_payment_id);
+      } catch (_) {}
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Payment verification failed",
+        message: verificationResponse?.message || "We couldn't confirm your payment on our end.",
+        hint: "If an amount was deducted from your account, please contact support with your payment reference.",
+        canRetry: false,
+        primaryLabel: "Close",
+      });
+      return false;
+    }
+
+    setPaymentPhase("confirming");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setPaymentPhase(null);
+
+    const resolvedBookingId = resolveBookingIdFromVerify(verificationResponse, bookingId);
+    if (!resolvedBookingId) {
+      showPaymentErrorModal({
+        variant: "warning",
+        title: "Payment received",
+        message: "Your payment went through, but we couldn't load your ticket id. Check My Bookings for your confirmation.",
+        hint: "If you don't see your booking within a few minutes, contact support.",
+        canRetry: false,
+        primaryLabel: "Close",
+      });
+      return false;
+    }
+
+    const userEmail = getLoggedInUserEmail() || formData.email || "";
+    const emailSent = Boolean(verificationResponse?.data?.confirmation_email_sent);
+    const totalAdultCount = selectedTickets.bookingTickets?.reduce(
+      (sum, ticket) => sum + (ticket.adult_quantity || 0),
+      0
+    ) || 0;
+    const totalChildCount = selectedTickets.bookingTickets?.reduce(
+      (sum, ticket) => sum + (ticket.child_quantity || 0),
+      0
+    ) || 0;
+
+    setPendingCheckout(null);
+    setCompletedBookingId(resolvedBookingId);
+    setSuccessMessage({
+      title: "You're all set!",
+      message: "Your attraction tickets have been booked successfully.",
+      emailSent,
+      userEmail,
+      itemTitle: attractionData?.attraction?.name || "Attraction",
+      amountPaid: money(paymentAmount),
+      visitDate: selectedTickets.visit_date ? formatDate(selectedTickets.visit_date) : "—",
+      guestSummary: `${totalAdultCount} adult(s), ${totalChildCount} child(ren)`,
+    });
+    setShowSuccess(true);
+    return true;
+  };
+
+  const executeCheckout = async () => {
     setIsLoading(true);
-    setError(null);
+    setFormError(null);
 
     try {
-      // Validate form data
       if (!formData.firstName || !formData.email || !formData.phone) {
-        setError("Please fill in all required fields");
+        setFormError("Please fill in all required fields");
         return;
       }
 
-      // total_amount already includes guide rate from booking page (pre-tax). Backend will compute GST+convenience safely.
       const finalTotalAmount = selectedTickets.total_amount || 0;
-
-      // Calculate total adult and child counts from booking tickets
       const totalAdultCount = selectedTickets.bookingTickets?.reduce((sum, ticket) => {
         return sum + (ticket.adult_quantity || 0);
       }, 0) || 0;
-
       const totalChildCount = selectedTickets.bookingTickets?.reduce((sum, ticket) => {
         return sum + (ticket.child_quantity || 0);
       }, 0) || 0;
 
-      // Add missing fields to booking tickets for API compatibility
       const enhancedBookingTickets = selectedTickets.bookingTickets?.map(ticket => ({
         ...ticket,
-        attraction_ticket_type_id: ticket.attraction_ticket_type_id || ticket.id, // Ensure attraction_ticket_type_id is present
+        attraction_ticket_type_id: ticket.attraction_ticket_type_id || ticket.id,
         unit_price: ticket.unit_price || ticket.adult_price || ticket.price || 0,
         total_price: ticket.total_price || ticket.total || 0,
       })) || [];
 
-     
+      const attractionId = parseInt(searchParams.get("attraction_id"), 10);
+      let bookingId = pendingCheckout?.bookingId;
+      let paymentAmount = pendingCheckout?.paymentAmount;
 
-      // Prepare booking data according to API requirements
-      const apiBookingData = {
-        attraction_id: parseInt(searchParams.get("attraction_id")),
-        visit_date: selectedTickets.visit_date,
-        total_amount: finalTotalAmount,
-        discount_amount: Number(selectedTickets.discount_amount || 0),
-        adult_count: totalAdultCount, // Add required adult_count field
-        child_count: totalChildCount, // Add required child_count field
-        bookingTickets: enhancedBookingTickets,
-        include_guide: selectedTickets.include_guide || false,
-        guide_rate: selectedTickets.guide_rate || 0,
-      };
+      if (!bookingId) {
+        const apiBookingData = {
+          attraction_id: attractionId,
+          visit_date: selectedTickets.visit_date,
+          total_amount: finalTotalAmount,
+          discount_amount: Number(selectedTickets.discount_amount || 0),
+          adult_count: totalAdultCount,
+          child_count: totalChildCount,
+          bookingTickets: enhancedBookingTickets,
+          include_guide: selectedTickets.include_guide || false,
+          guide_rate: selectedTickets.guide_rate || 0,
+        };
 
-    
+        const response = await book(apiBookingData);
+        if (!response.status) {
+          setFormError(response.message || "Failed to complete booking. Please try again.");
+          return;
+        }
 
-      // First create booking to get order ID
-      const response = await book(apiBookingData);
-     
-      if (response.status) {
-        const paymentAmount =
+        bookingId = response.data.id;
+        paymentAmount =
           response?.data?.grand_total != null && response.data.grand_total !== ""
             ? Number(response.data.grand_total)
             : finalTotalAmount;
-        
-        // Create order for payment
-        const orderRes = await createOrder({
-          attraction_id: apiBookingData.attraction_id,
-          attraction_booking_id: response.data.id,
-          amount: paymentAmount
-        });
 
-        if (orderRes.status) {
-          // Initialize Razorpay payment
-          const paymentResponse = await initializeRazorpayPayment({
-            amount: paymentAmount,
-            currency: "INR",
-            name: "Explore World",
-            description: `Payment for ${attractionData?.attraction?.name || 'attraction'} tickets`,
-            orderId: orderRes.data.order_id,
-            key: orderRes.data.key,
-            email: formData.email,
-            contact: formData.phone,
-          });
-
-          if (paymentResponse.status) {
-            // Verify payment
-            const verificationResponse = await verifyPayment({
-              order_id: orderRes.data.order_id,
-              payment_id: paymentResponse.data.razorpay_payment_id,
-              signature: paymentResponse.data.razorpay_signature,
-            });
-
-
-            if (verificationResponse.status) {
-              const bookingId =
-                verificationResponse?.data?.attraction_booking_id ??
-                verificationResponse?.data?.attractionBooking?.id ??
-                response?.data?.id;
-
-              if (!bookingId) {
-                setError("Booking completed but ticket id is missing. Check My Bookings.");
-                return;
-              }
-
-              setCompletedBookingId(bookingId);
-              setSuccessMessage({
-                title: "Booking Successful!",
-                message: "Your attraction tickets have been booked successfully. Opening your ticket…",
-              });
-              setShowSuccess(true);
-              setTimeout(() => {
-                setShowSuccess(false);
-                router.push(`/my-bookings/attraction/ticket/${bookingId}`);
-              }, 1800);
-            } else {
-              // Payment verification failed - mark payment as failed
-              const failRes = await paymentFailure(orderRes.data.attraction_payment_id);   
-              
-              setError("Payment verification failed. Please contact support.");
-            }
-          } else {
-            // Payment initialization failed - mark payment as failed
-            const failRes = await paymentFailure(orderRes.data.attraction_payment_id);       
-            console.error("Razorpay init failed:", paymentResponse?.error);
-            setError(
-              paymentResponse?.error?.description ||
-                "Payment initialization failed. Please try again."
-            );
-          }
-        } else {
-          setError(orderRes.message || "Failed to create payment order. Please try again.");
-        }
-      } else {
-        setError(response.message || "Failed to complete booking. Please try again.");
+        setPendingCheckout({ bookingId, attractionId, paymentAmount });
       }
 
-    } catch (error) {
+      setPaymentPhase("preparing");
+      const orderRes = await createOrder({
+        attraction_id: attractionId,
+        attraction_booking_id: bookingId,
+        amount: paymentAmount,
+      });
 
-      
-      // Handle specific timeout errors
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        setError("Payment verification is taking longer than expected. Please check your bookings page to confirm if the payment was successful.");
+      if (!orderRes.status) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderRes.message));
+        return;
+      }
+
+      await openRazorpayAndVerify(orderRes, paymentAmount, bookingId);
+    } catch (error) {
+      setPaymentPhase(null);
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        showPaymentErrorModal({
+          variant: "warning",
+          title: "Verification taking longer",
+          message: "Payment verification is taking longer than expected.",
+          hint: "Please check My Bookings to confirm whether your payment was successful before trying again.",
+          canRetry: false,
+          primaryLabel: "Close",
+        });
       } else {
-        setError(error.response?.data?.message || "Failed to complete booking. Please try again.");
+        showPaymentErrorModal({
+          variant: "error",
+          title: "Something went wrong",
+          message: error.response?.data?.message || error.message || "Failed to complete booking. Please try again.",
+          hint: "Your details are still on this page. You can try again in a moment.",
+          canRetry: true,
+          primaryLabel: "Try again",
+          primaryIcon: "fi-rr-refresh",
+          secondaryLabel: "Close",
+        });
       }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePaymentRetry = async () => {
+    closePaymentError();
+    setFormError(null);
+    await executeCheckout();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await executeCheckout();
   };
 
   if (isLoadingData) {
@@ -309,14 +408,14 @@ export default function AttractionCheckoutPage() {
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="flex items-center justify-center min-h-screen text-red-600">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
             Error Loading Attraction
           </h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{loadError}</p>
           <Link href="/attractions" className="text-primary-600 hover:text-primary-700">
             Back to Attractions
           </Link>
@@ -549,10 +648,10 @@ export default function AttractionCheckoutPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || Boolean(paymentPhase)}
               className="w-full h-10 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-sm font-semibold rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              {isLoading ? (
+              {isLoading && !paymentPhase ? (
                 <span className="flex items-center">
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -568,15 +667,15 @@ export default function AttractionCheckoutPage() {
               )}
             </button>
             
-            {isLoading && (
+            {(isLoading || paymentPhase) && (
               <div className="mt-3 text-center">
                 <p className="text-xs text-gray-500">Please don&apos;t close this window while processing...</p>
               </div>
             )}
 
-            {error && (
+            {formError && (
               <div className="mt-3 p-2.5 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-xs text-red-600 font-medium">{error}</p>
+                <p className="text-xs text-red-600 font-medium">{formError}</p>
               </div>
             )}
           </form>
@@ -662,10 +761,10 @@ export default function AttractionCheckoutPage() {
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || Boolean(paymentPhase)}
                   className="w-full h-12 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-base font-semibold rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
-                  {isLoading ? (
+                  {isLoading && !paymentPhase ? (
                     <span className="flex items-center">
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -680,16 +779,16 @@ export default function AttractionCheckoutPage() {
                     </span>
                   )}
                 </button>
-                
-                {isLoading && (
+
+                {(isLoading || paymentPhase) && (
                   <div className="text-center">
                     <p className="text-sm text-gray-500">Please don&apos;t close this window while processing...</p>
                   </div>
                 )}
 
-                {error && (
+                {formError && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-600 font-medium">{error}</p>
+                    <p className="text-sm text-red-600 font-medium">{formError}</p>
                   </div>
                 )}
               </form>
@@ -803,33 +902,70 @@ export default function AttractionCheckoutPage() {
         </div>
       </div>
 
-      {/* Success Popup */}
-      {showSuccess && (
-        <SuccessPopup
-          show={showSuccess}
-          title={successMessage.title}
-          message={successMessage.message}
-          onClose={() => {
+      <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <PaymentSuccessPopup
+        show={showSuccess}
+        onClose={() => {
+          setShowSuccess(false);
+          if (completedBookingId) {
+            router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
+          } else {
+            router.push("/my-bookings?tab=attractions");
+          }
+        }}
+        title={successMessage.title}
+        message={successMessage.message}
+        itemLabel="Your visit"
+        itemTitle={successMessage.itemTitle}
+        amountPaid={successMessage.amountPaid}
+        detailLeftLabel="Visit date"
+        detailLeft={successMessage.visitDate}
+        detailRightLabel="Guests"
+        detailRight={successMessage.guestSummary}
+        emailSent={successMessage.emailSent}
+        userEmail={successMessage.userEmail}
+        primaryAction={{
+          label: "View ticket",
+          icon: "fi-rr-ticket",
+          onClick: () => {
             setShowSuccess(false);
             if (completedBookingId) {
               router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
             } else {
               router.push("/my-bookings?tab=attractions");
             }
-          }}
-          actionButton={{
-            label: "View Ticket",
-            onClick: () => {
-              setShowSuccess(false);
-              if (completedBookingId) {
-                router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
-              } else {
-                router.push("/my-bookings?tab=attractions");
+          },
+        }}
+        secondaryAction={{
+          label: "Stay on checkout",
+          onClick: () => setShowSuccess(false),
+        }}
+      />
+      <ErrorPopup
+        show={showPaymentError}
+        onClose={closePaymentError}
+        variant={paymentError?.variant || "error"}
+        title={paymentError?.title}
+        message={paymentError?.message}
+        hint={paymentError?.hint}
+        closeOnBackdrop={paymentError?.variant === "cancelled"}
+        primaryAction={
+          paymentError?.canRetry
+            ? {
+                label: paymentError?.primaryLabel || "Try again",
+                icon: paymentError?.primaryIcon,
+                isLoading: isLoading && !paymentPhase,
+                loadingLabel: "Opening payment…",
+                onClick: handlePaymentRetry,
               }
-            },
-          }}
-        />
-      )}
+            : { label: paymentError?.primaryLabel || "Close", onClick: closePaymentError }
+        }
+        secondaryAction={
+          paymentError?.canRetry
+            ? { label: paymentError?.secondaryLabel || "Close", onClick: closePaymentError }
+            : null
+        }
+      />
     </div>
   );
 }

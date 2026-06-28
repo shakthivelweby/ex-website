@@ -6,7 +6,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { getRentalDetails } from "../../rentals/service";
 import { checkRentalAvailability } from "../../rentals/clientService";
-import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
+import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
+import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import Button from "@/components/common/Button";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot, cancelRentalReservation } from "./service";
@@ -20,13 +22,76 @@ import {
   writeRentalBookingDraft,
 } from "../../rentals/rentalBookingDraft";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing, rentalWindowPeriodSubtotalForDisplay } from "../../rentals/rentalPricingCalc";
-import { hasValidAuthSession } from "@/utils/authSession";
+import { hasValidAuthSession, getLoggedInUserEmail } from "@/utils/authSession";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
 };
+
+const getPaymentErrorPayload = (payRes) => {
+  const code = payRes?.error?.code;
+
+  if (code === "PAYMENT_CANCELLED") {
+    return {
+      variant: "cancelled",
+      title: "Payment not completed",
+      message: "You closed the Razorpay window before finishing. Your booking details are saved on this page.",
+      hint: "No amount was charged to your account. You can continue to payment whenever you're ready.",
+      canRetry: true,
+      primaryLabel: "Continue to payment",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Stay on checkout",
+    };
+  }
+
+  if (code === "SCRIPT_LOAD_ERROR" || code === "RAZORPAY_OPEN_ERROR" || code === "RAZORPAY_NOT_AVAILABLE") {
+    return {
+      variant: "warning",
+      title: "Couldn't open payment",
+      message: payRes?.error?.description || "We couldn't load the payment gateway. Check your connection and try again.",
+      hint: "If the problem continues, try a different browser or disable ad blockers for this site.",
+      canRetry: true,
+      primaryLabel: "Try again",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Close",
+    };
+  }
+
+  return {
+    variant: "error",
+    title: "Payment failed",
+    message: payRes?.error?.description || "Your payment could not be processed. Please try again.",
+    hint: "If money was deducted, it is usually refunded within 5–7 business days.",
+    canRetry: true,
+    primaryLabel: "Try again",
+    primaryIcon: "fi-rr-refresh",
+    secondaryLabel: "Close",
+  };
+};
+
+const shouldRetryOrderMessage = (msg) => {
+  const m = String(msg || "").toLowerCase();
+  return (
+    m.includes("expired") ||
+    m.includes("not in a reservable state") ||
+    m.includes("booking not found") ||
+    m.includes("fully booked") ||
+    m.includes("not available")
+  );
+};
+
+const getOrderErrorPayload = (message) => ({
+  variant: "warning",
+  title: "Couldn't start payment",
+  message: String(message || "We couldn't prepare your payment. Please try again."),
+  hint: "Your slot may have been released when the previous payment was cancelled. We'll reserve it again when you continue.",
+  canRetry: true,
+  primaryLabel: "Continue to payment",
+  primaryIcon: "fi-rr-refresh",
+  secondaryLabel: "Stay on checkout",
+});
 
 const formatTripDateTime = (date, time) => {
   if (!date) return "—";
@@ -80,7 +145,19 @@ export default function RentalCheckoutPage() {
   const [error, setError] = useState("");
   const [documentFile, setDocumentFile] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState({ title: "", message: "" });
+  const [successMessage, setSuccessMessage] = useState({
+    title: "",
+    message: "",
+    emailSent: false,
+    userEmail: "",
+    rentalTitle: "",
+    amountPaid: "",
+    tripPickup: "",
+    tripReturn: "",
+  });
+  const [paymentPhase, setPaymentPhase] = useState(null);
+  const [showPaymentError, setShowPaymentError] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
   const [pricingQuote, setPricingQuote] = useState(null);
   const [reservationBookingId, setReservationBookingId] = useState(null);
   const [reserving, setReserving] = useState(false);
@@ -511,6 +588,78 @@ export default function RentalCheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rentalItemId, start_datetime, end_datetime, reservationKey, minBookingHours, startISO, endISO, pricingBasis]);
 
+  const closePaymentError = () => {
+    setShowPaymentError(false);
+    setPaymentError(null);
+  };
+
+  const showPaymentErrorModal = (payload) => {
+    setPaymentError(payload);
+    setShowPaymentError(true);
+  };
+
+  const clearLocalReservation = () => {
+    try {
+      if (reservationKey) sessionStorage.removeItem(reservationKey);
+    } catch (_) {}
+    setReservationBookingId(null);
+    setReserveReady(false);
+  };
+
+  const refreshReservation = async () => {
+    clearLocalReservation();
+    const bookingId = await reserveSlot();
+    if (bookingId) {
+      setReserveReady(true);
+    }
+    return bookingId;
+  };
+
+  const createOrderWithReservationRetry = async (buildFormData, bookingId) => {
+    let orderRes = await createOrder(buildFormData(bookingId));
+
+    if (!orderRes?.status && shouldRetryOrderMessage(orderRes?.message)) {
+      const newBookingId = await refreshReservation();
+      if (!newBookingId) {
+        return {
+          status: false,
+          message: "Unable to reserve this slot. Please go back and choose another time.",
+        };
+      }
+      orderRes = await createOrder(buildFormData(newBookingId));
+    }
+
+    return orderRes;
+  };
+
+  const handlePaymentRetry = async () => {
+    closePaymentError();
+    setError("");
+    if (!reservationBookingId || !reserveReady) {
+      setReserving(true);
+      try {
+        const bookingId = await refreshReservation();
+        if (!bookingId) {
+          showPaymentErrorModal({
+            variant: "error",
+            title: "Slot no longer available",
+            message: "We couldn't reserve this time slot again. Please go back and choose another time.",
+            hint: "The slot may have been taken while you were on the payment screen.",
+            canRetry: false,
+            primaryLabel: "Close",
+          });
+          return;
+        }
+      } catch (e) {
+        showPaymentErrorModal(getOrderErrorPayload(e?.message));
+        return;
+      } finally {
+        setReserving(false);
+      }
+    }
+    void handleContinue();
+  };
+
   const handleContinue = async () => {
     setError("");
     if (!hasValidAuthSession()) {
@@ -529,9 +678,21 @@ export default function RentalCheckoutPage() {
       setError("Invalid start/end date & time.");
       return;
     }
-    if (!reserveReady || !reservationBookingId) {
-      setError("This slot is not reserved yet. Please wait or go back and choose another time.");
-      return;
+    let activeBookingId = reservationBookingId;
+    if (!reserveReady || !activeBookingId) {
+      setReserving(true);
+      try {
+        activeBookingId = await refreshReservation();
+        if (!activeBookingId) {
+          setError("This slot is not reserved yet. Please wait or go back and choose another time.");
+          return;
+        }
+      } catch (e) {
+        showPaymentErrorModal(getOrderErrorPayload(e?.message));
+        return;
+      } finally {
+        setReserving(false);
+      }
     }
     const slotHours = diffHoursCeil(startISO, endISO);
     if (pricingBasis !== "day" && enforceExtendedMinHours && slotHours < minBookingHours) {
@@ -543,6 +704,7 @@ export default function RentalCheckoutPage() {
 
     setIsPaying(true);
     isPayingRef.current = true;
+    setPaymentPhase("preparing");
     try {
       const buildFormData = (bookingId) => {
         const fd = new FormData();
@@ -559,26 +721,7 @@ export default function RentalCheckoutPage() {
         return fd;
       };
 
-      let orderRes = await createOrder(buildFormData(reservationBookingId));
-
-      // If reservation expired / became invalid, clear and retry reserve+order once.
-      if (!orderRes?.status) {
-        const msg = String(orderRes?.message || "");
-        const shouldRetry =
-          msg.toLowerCase().includes("expired") ||
-          msg.toLowerCase().includes("not in a reservable state") ||
-          msg.toLowerCase().includes("booking not found") ||
-          msg.toLowerCase().includes("fully booked") ||
-          msg.toLowerCase().includes("not available");
-        if (shouldRetry) {
-          try {
-            if (reservationKey) sessionStorage.removeItem(reservationKey);
-          } catch (_) {}
-          setReservationBookingId(null);
-          const newBookingId = await reserveSlot();
-          orderRes = await createOrder(buildFormData(newBookingId));
-        }
-      }
+      let orderRes = await createOrderWithReservationRetry(buildFormData, activeBookingId);
 
       if (!orderRes?.status) {
         const apiMessage = String(orderRes?.message || "");
@@ -587,9 +730,14 @@ export default function RentalCheckoutPage() {
             "Payment could not be started. The payment gateway is not configured correctly — please contact support."
           );
         }
+        if (shouldRetryOrderMessage(apiMessage)) {
+          showPaymentErrorModal(getOrderErrorPayload(apiMessage));
+          return;
+        }
         throw new Error(apiMessage || "Failed to create payment order.");
       }
 
+      setPaymentPhase(null);
       const payRes = await initializeRazorpayPayment({
         amount: selectedPayAmount,
         currency: "INR",
@@ -616,34 +764,61 @@ export default function RentalCheckoutPage() {
       });
 
       if (!payRes?.status) {
-        // user cancelled or razorpay failed
+        setPaymentPhase(null);
         try {
           await paymentFailure(orderRes?.data?.rental_payment_id);
         } catch (_) {}
-        setError(payRes?.error?.description || "Payment was not completed.");
+        clearLocalReservation();
+        try {
+          await refreshReservation();
+        } catch (_) {}
+        showPaymentErrorModal(getPaymentErrorPayload(payRes));
         return;
       }
 
+      setPaymentPhase("verifying");
       const verifyRes = await verifyPayment({
         order_id: orderRes?.data?.order_id,
         payment_id: payRes?.data?.razorpay_payment_id,
         signature: payRes?.data?.razorpay_signature,
+        customer_email: getLoggedInUserEmail() || undefined,
       });
 
       if (!verifyRes?.status) {
+        setPaymentPhase(null);
         try {
           await paymentFailure(orderRes?.data?.rental_payment_id);
         } catch (_) {}
-        setError("Payment verification failed. Please contact support.");
+        showPaymentErrorModal({
+          variant: "error",
+          title: "Payment verification failed",
+          message: "We couldn't confirm your payment on our end.",
+          hint: "If an amount was deducted from your account, please contact support with your payment reference.",
+          canRetry: false,
+          primaryLabel: "Close",
+        });
         return;
       }
 
+      setPaymentPhase("confirming");
+      await new Promise((resolve) => setTimeout(resolve, 450));
+
+      const userEmail = getLoggedInUserEmail();
+      const emailSent = Boolean(verifyRes?.data?.confirmation_email_sent);
+      setPaymentPhase(null);
       setSuccessMessage({
-        title: "Payment Successful!",
-        message: "Your rental booking is confirmed.",
+        title: "You're all set!",
+        message: "Your rental has been booked successfully.",
+        emailSent,
+        userEmail,
+        rentalTitle: rental?.title || "Rental",
+        amountPaid: money(selectedPayAmount),
+        tripPickup: formatTripDateTime(start_date, pickup_time),
+        tripReturn: formatTripDateTime(end_date, dropoff_time),
       });
       setShowSuccess(true);
     } catch (e) {
+      setPaymentPhase(null);
       const raw = e?.response?.data?.message || e?.message || "";
       if (e?.response?.status === 401 || /session expired|sign in again/i.test(raw)) {
         setError("Your session expired. Please sign in again to continue.");
@@ -655,12 +830,15 @@ export default function RentalCheckoutPage() {
         setError(
           "Payment could not be started. The payment gateway is not configured correctly — please contact support."
         );
+      } else if (shouldRetryOrderMessage(raw)) {
+        showPaymentErrorModal(getOrderErrorPayload(raw));
       } else {
         setError(raw || "Payment failed.");
       }
     } finally {
       setIsPaying(false);
       isPayingRef.current = false;
+      setPaymentPhase(null);
     }
   };
 
@@ -696,7 +874,8 @@ export default function RentalCheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 pt-28 pb-10">
-      <SuccessPopup
+      <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <PaymentSuccessPopup
         show={showSuccess}
         onClose={() => {
           setShowSuccess(false);
@@ -704,13 +883,52 @@ export default function RentalCheckoutPage() {
         }}
         title={successMessage.title}
         message={successMessage.message}
-        actionButton={{
-          label: "My bookings",
+        rentalTitle={successMessage.rentalTitle}
+        amountPaid={successMessage.amountPaid}
+        tripPickup={successMessage.tripPickup}
+        tripReturn={successMessage.tripReturn}
+        emailSent={successMessage.emailSent}
+        userEmail={successMessage.userEmail}
+        primaryAction={{
+          label: "View my booking",
+          icon: "fi-rr-arrow-right",
           onClick: () => {
             setShowSuccess(false);
             router.push("/my-bookings?tab=rentals");
           },
         }}
+        secondaryAction={{
+          label: "Browse rentals",
+          onClick: () => {
+            setShowSuccess(false);
+            router.push("/rentals");
+          },
+        }}
+      />
+      <ErrorPopup
+        show={showPaymentError}
+        onClose={closePaymentError}
+        variant={paymentError?.variant || "error"}
+        title={paymentError?.title}
+        message={paymentError?.message}
+        hint={paymentError?.hint}
+        closeOnBackdrop={paymentError?.variant === "cancelled"}
+        primaryAction={
+          paymentError?.canRetry
+            ? {
+                label: paymentError?.primaryLabel || "Try again",
+                icon: paymentError?.primaryIcon,
+                isLoading: isPaying,
+                loadingLabel: "Opening payment…",
+                onClick: handlePaymentRetry,
+              }
+            : { label: paymentError?.primaryLabel || "Close", onClick: closePaymentError }
+        }
+        secondaryAction={
+          paymentError?.canRetry
+            ? { label: paymentError?.secondaryLabel || "Close", onClick: closePaymentError }
+            : null
+        }
       />
       <div className="mb-5 flex flex-col gap-3">
         <nav aria-label="Breadcrumb" className="text-sm text-gray-500 flex flex-wrap items-center gap-x-1.5 gap-y-1">

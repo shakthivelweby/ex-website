@@ -19,7 +19,7 @@ async function postRentalPayment(path, data) {
     }
     const message = error.response?.data?.message;
     if (message) {
-      throw new Error(message);
+      return { status: false, message };
     }
     throw error;
   }

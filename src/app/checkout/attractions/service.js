@@ -8,6 +8,10 @@ const book = async (data) => {
         if (error.response?.status === 401) {
             throw new Error("Authentication failed. Please log in again.");
         }
+        const message = error.response?.data?.message;
+        if (message) {
+            return { status: false, message };
+        }
         throw error;
     }
 };
@@ -17,6 +21,13 @@ const createOrder = async (data) => {
         const response = await apiMiddleware.post("/attraction-payment", data);
         return response.data;
     } catch (error) {
+        if (error.response?.status === 401) {
+            throw new Error("Authentication failed. Please log in again.");
+        }
+        const message = error.response?.data?.message;
+        if (message) {
+            return { status: false, message };
+        }
         throw error;
     }
 };
@@ -24,10 +35,17 @@ const createOrder = async (data) => {
 const verifyPayment = async (data) => {
     try {
         const response = await apiMiddleware.post("/attraction-payment-verify", data, {
-            timeout: 60000, // 60 seconds timeout specifically for payment verification
+            timeout: 60000,
         });
         return response.data;
     } catch (error) {
+        if (error.response?.status === 401) {
+            throw new Error("Authentication failed. Please log in again.");
+        }
+        const message = error.response?.data?.message;
+        if (message) {
+            return { status: false, message };
+        }
         throw error;
     }
 };

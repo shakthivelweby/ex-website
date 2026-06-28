@@ -9,6 +9,7 @@ import { getDetailsForBooking } from "../../events/[id]/service";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "./service";
+import { getLoggedInUserEmail } from "@/utils/authSession";
 
 export default function EventCheckoutPage() {
   const router = useRouter();
@@ -352,6 +353,7 @@ export default function EventCheckoutPage() {
               order_id: orderRes.data.order_id,
               payment_id: paymentResponse.data.razorpay_payment_id,
               signature: paymentResponse.data.razorpay_signature,
+              customer_email: getLoggedInUserEmail() || formData.email || undefined,
             });
 
             if (verificationResponse.status) {

@@ -662,3 +662,52 @@ select {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Flaticon uicons — glyph is on ::before; center inside fixed boxes */
+.fi-box {
+  display: grid;
+  place-items: center;
+}
+
+.fi-box > .fi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  font-style: normal;
+  line-height: 1;
+}
+
+.fi-box > .fi::before {
+  display: block;
+  line-height: 1;
+}
+
+.fi-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  line-height: 1.25;
+}
+
+.fi-inline > .fi,
+.fi-inline > i.fi {
+  width: 0.75rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-style: normal;
+}
+
+.fi-inline > .fi::before,
+.fi-inline > i.fi::before {
+  display: block;
+  line-height: 1;
+}
+
+.fi-inline > .fi-box {
+  flex-shrink: 0;
+}

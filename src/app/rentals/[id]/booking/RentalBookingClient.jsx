@@ -728,8 +728,9 @@ export default function RentalBookingClient({
   const isStartDateSelectable = (dateObj) => {
     if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return true;
     const ymd = formatDateYmd(dateObj);
-    const pu = String(booking.pickup_time || "").trim();
     const endYmd = String(booking.end_date || "").trim();
+    if (endYmd && ymd > endYmd) return false;
+    const pu = String(booking.pickup_time || "").trim();
     const du = String(booking.dropoff_time || "").trim();
     if (timeRe.test(pu) && endYmd && timeRe.test(du)) {
       const startISO = `${ymd}T${pu}:00`;
@@ -745,8 +746,9 @@ export default function RentalBookingClient({
   const isEndDateSelectable = (dateObj) => {
     if (!(dateObj instanceof Date) || !Number.isFinite(dateObj.getTime())) return true;
     const ymd = formatDateYmd(dateObj);
-    const du = String(booking.dropoff_time || "").trim();
     const startYmd = String(booking.start_date || "").trim();
+    if (startYmd && ymd < startYmd) return false;
+    const du = String(booking.dropoff_time || "").trim();
     const pu = String(booking.pickup_time || "").trim();
     if (timeRe.test(du) && startYmd && timeRe.test(pu)) {
       const startISO = `${startYmd}T${pu}:00`;
@@ -754,6 +756,7 @@ export default function RentalBookingClient({
       if (new Date(endISO) > new Date(startISO)) {
         return !isWindowUnavailable(startISO, endISO);
       }
+      return false;
     }
     return !isDateUnavailable(dateObj);
   };
@@ -772,7 +775,29 @@ export default function RentalBookingClient({
   };
 
   const updateBooking = (k, v) => {
-    setBooking((p) => ({ ...p, [k]: v }));
+    setBooking((p) => {
+      const next = { ...p, [k]: v };
+      const startYmd = String(next.start_date || "").trim();
+      const endYmd = String(next.end_date || "").trim();
+
+      if (k === "start_date" && startYmd && endYmd && endYmd < startYmd) {
+        next.end_date = startYmd;
+      }
+
+      if (k === "end_date" && startYmd && endYmd && endYmd < startYmd) {
+        return p;
+      }
+
+      return next;
+    });
+    if (k === "end_date") {
+      const startYmd = String(booking.start_date || "").trim();
+      const endYmd = String(v || "").trim();
+      if (startYmd && endYmd && endYmd < startYmd) {
+        setError("End date cannot be before start date.");
+        return;
+      }
+    }
     setError("");
     setAvail(null);
   };
@@ -794,6 +819,18 @@ export default function RentalBookingClient({
     }
     if (!timeRe.test(String(b.dropoff_time || "").trim())) {
       return "Dropoff time must be in HH:MM format (24h).";
+    }
+    const startYmd = String(b.start_date || "").trim();
+    const endYmd = String(b.end_date || "").trim();
+    if (endYmd < startYmd) {
+      return "End date cannot be before start date.";
+    }
+    const startDt = new Date(`${startYmd}T${String(b.pickup_time).trim()}:00`);
+    const endDt = new Date(`${endYmd}T${String(b.dropoff_time).trim()}:00`);
+    if (!Number.isFinite(startDt.getTime()) || !Number.isFinite(endDt.getTime()) || endDt <= startDt) {
+      return endYmd === startYmd
+        ? "Dropoff time must be after pickup time on the same day."
+        : "End date and time must be after start date and time.";
     }
     const pu = String(b.pickup_location || "").trim();
     const du = String(b.dropoff_location || "").trim();
@@ -1112,6 +1149,7 @@ export default function RentalBookingClient({
                         onChange={(d) => updateBooking("start_date", formatDateYmd(d))}
                         filterDate={isStartDateSelectable}
                         minDate={new Date()}
+                        maxDate={parseYmdToDate(booking.end_date) || undefined}
                         placeholderText="Select start date"
                         className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
                       />

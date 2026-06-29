@@ -4,15 +4,18 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/common/Button";
 import ActivityTimeSlotPicker from "@/components/activities/ActivityTimeSlotPicker";
+import ActivityVisitDatePicker from "@/components/activities/ActivityVisitDatePicker";
 import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { resolveActivityTicketUnitPricing, toActivityVisitYmd } from "@/utils/activityTicketPricing";
+import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
+import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 import {
   createActivityBooking,
   createActivityOrder,
   verifyActivityPayment,
-  activityPaymentFailed
+  activityPaymentFailed,
 } from "../../service";
 import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
@@ -21,9 +24,6 @@ import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 import { getLoggedInUserEmail } from "@/utils/authSession";
-import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
-import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
-import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";
@@ -71,120 +71,7 @@ function formatTime(timeString) {
 }
 
 function toYmd(date) {
-  try {
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return "";
-    // Force Indian timezone (Asia/Kolkata) so close-out/season dates match backend.
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(d);
-    const y = parts.find((p) => p.type === "year")?.value;
-    const m = parts.find((p) => p.type === "month")?.value;
-    const day = parts.find((p) => p.type === "day")?.value;
-    return y && m && day ? `${y}-${m}-${day}` : "";
-  } catch {
-    return "";
-  }
-}
-
-function isDateInRange(ymd, start, end) {
-  if (!ymd || !start || !end) return false;
-  return ymd >= start && ymd <= end;
-}
-
-function getSeasonalPriceForTicket(seasonalDates, ticketTypeId, ymd) {
-  if (!Array.isArray(seasonalDates) || !ticketTypeId || !ymd) return null;
-  const row = seasonalDates.find((r) => {
-    const rid =
-      r.activity_ticket_type_id ??
-      r.activityTicketTypeId ??
-      r.ticket_type_id ??
-      r.ticketTypeId ??
-      r.activity_ticket_type?.id;
-    const start = r.start_date ?? r.startDate;
-    const end = r.end_date ?? r.endDate;
-    return String(rid) === String(ticketTypeId) && isDateInRange(ymd, start, end);
-  });
-  return row || null;
-}
-
-/** Normalize HH:MM(:ss) for matching catalogue slot to seasonal slot rows. */
-function normalizeSlotTimeKey(timeString) {
-  if (timeString == null || timeString === "") return "";
-  const s = String(timeString).trim();
-  const parts = s.split(":");
-  if (parts.length < 2) return s.slice(0, 8);
-  const h = String(parseInt(parts[0], 10)).padStart(2, "0");
-  const m = String(parseInt(parts[1], 10)).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-/**
- * When seasonal pricing includes per–activity-time-slot rows, merge those amounts
- * for the slot the user selected (matches activity_time_slot_id, else same start_time).
- */
-function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
-  if (!seasonalRow || !activitySlotObj) return seasonalRow;
-  const merged = { ...seasonalRow };
-  const slots = seasonalRow.time_slots || seasonalRow.timeSlots || [];
-  if (!Array.isArray(slots) || slots.length === 0) return merged;
-
-  const slotId = activitySlotObj.id != null ? String(activitySlotObj.id) : "";
-  const slotStart = activitySlotObj.start_time ?? activitySlotObj.startTime;
-
-  let match = null;
-  if (slotId) {
-    match = slots.find((ts) => {
-      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
-      return tsSid != null && String(tsSid) === slotId;
-    });
-  }
-  if (!match && slotStart) {
-    const key = normalizeSlotTimeKey(slotStart);
-    match = slots.find((ts) => {
-      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
-      if (tsSid != null) return false;
-      return normalizeSlotTimeKey(ts.start_time ?? ts.startTime) === key;
-    });
-  }
-
-  if (!match) return merged;
-
-  const oFull = match.full_rate ?? match.fullRate;
-  const oAdult = match.adult_price ?? match.adultPrice;
-  const oChild = match.child_price ?? match.childPrice;
-
-  const hasOverride =
-    (oFull !== undefined && oFull !== null && oFull !== "") ||
-    (oAdult !== undefined && oAdult !== null && oAdult !== "") ||
-    (oChild !== undefined && oChild !== null && oChild !== "");
-
-  if (!hasOverride) return merged;
-
-  if (oFull !== undefined && oFull !== null && oFull !== "") merged.full_rate = oFull;
-  if (oAdult !== undefined && oAdult !== null && oAdult !== "") merged.adult_price = oAdult;
-  if (oChild !== undefined && oChild !== null && oChild !== "") merged.child_price = oChild;
-
-  return merged;
-}
-
-function normalizeRateType(rateTypeRaw, { adultPrice, childPrice, fullRate } = {}) {
-  const rt = String(rateTypeRaw || "pax").toLowerCase();
-  const adult = Number(adultPrice || 0);
-  const child = Number(childPrice || 0);
-  const full = Number(fullRate || 0);
-
-  if (rt === "full") {
-    if (full > 0) return "full";
-    if (adult > 0 || child > 0) return "pax";
-    return "full";
-  }
-
-  if (adult > 0 || child > 0) return "pax";
-  return "pax";
+  return toActivityVisitYmd(date);
 }
 
 function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
@@ -402,6 +289,7 @@ const BookingClient = ({ activityId }) => {
             : [];
           const closeoutDates = normalizeCloseoutDates(inner?.closeout_dates);
           const apiSlots = Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [];
+          const seasonalDates = Array.isArray(inner?.seasonal_dates) ? inner.seasonal_dates : [];
           if (!cancelled && details) {
             details = {
               ...details,
@@ -410,6 +298,9 @@ const BookingClient = ({ activityId }) => {
               ),
               time_slot_pricing:
                 apiSlots.length > 0 ? apiSlots : details.time_slot_pricing || [],
+              seasonal_dates:
+                seasonalDates.length > 0 ? seasonalDates : details.seasonal_dates || [],
+              current_pricing: inner?.current_pricing ?? details.current_pricing ?? null,
               cancellation_policies: policies,
               closeout_dates: closeoutDates,
             };
@@ -422,6 +313,8 @@ const BookingClient = ({ activityId }) => {
               duration: "—",
               time_slot_based: Boolean(inner?.activity?.time_slot_based),
               time_slot_pricing: apiSlots,
+              seasonal_dates: seasonalDates,
+              current_pricing: inner?.current_pricing ?? null,
               cancellation_policies: policies,
               closeout_dates: closeoutDates,
             };
@@ -458,211 +351,14 @@ const BookingClient = ({ activityId }) => {
     };
   }, [activityId]);
 
-  const getSlotTicketUnitPrices = () => {
-    if (!isSlotBased || !selectedTicket || !formData.selectedTimeSlot) return null;
-    const slot = getSlotRawById(formData.selectedTimeSlot);
-    if (!slot) return null;
-    const ticketPriceRow = Array.isArray(slot.ticket_prices || slot.ticketPrices)
-      ? (slot.ticket_prices || slot.ticketPrices).find(
-          (p) => String(p.activity_ticket_type_id) === String(selectedTicket.id)
-        )
-      : null;
-    if (!ticketPriceRow) return null;
-
-    const rateType = normalizeRateType(ticketPriceRow.rate_type || selectedTicket.rateType, {
-      adultPrice: ticketPriceRow.adult_price,
-      childPrice: ticketPriceRow.child_price,
-      fullRate: ticketPriceRow.full_rate,
-    });
-    // Admin/discount are typically stored on ticket base pricing. Some APIs may also provide them on slot rows.
-    // IMPORTANT: Prefer `selectedTicket` first, because slot rows often include `admin_charge: 0` which would
-    // otherwise override the real ticket admin percentage.
-    const pricingFallback = activityDetails?.current_pricing || {};
-    const discountFromTicket = pickNumber(
-      selectedTicket,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountFromActivity = pickNumber(
-      pricingFallback,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountFromSlot = pickNumber(
-      ticketPriceRow,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountPct =
-      discountFromTicket > 0
-        ? discountFromTicket
-        : discountFromActivity > 0
-          ? discountFromActivity
-          : discountFromSlot;
-
-    const adminFromTicket = pickNumber(
-      selectedTicket,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminFromActivity = pickNumber(
-      pricingFallback,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminFromSlot = pickNumber(
-      ticketPriceRow,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminChargePct =
-      adminFromTicket > 0
-        ? adminFromTicket
-        : adminFromActivity > 0
-          ? adminFromActivity
-          : adminFromSlot;
-
-    // Prefer backend-computed admin-inclusive slot prices when available.
-    const hasBackendAdmin =
-      ticketPriceRow?.adult_price_with_admin !== undefined ||
-      ticketPriceRow?.full_rate_with_admin !== undefined;
-
-    const adultUnitBase =
-      rateType === "full"
-        ? Number((hasBackendAdmin ? ticketPriceRow.full_rate_with_admin : ticketPriceRow.full_rate) || 0)
-        : Number((hasBackendAdmin ? ticketPriceRow.adult_price_with_admin : ticketPriceRow.adult_price) || 0);
-    const childUnitBase = Number((hasBackendAdmin ? ticketPriceRow.child_price_with_admin : ticketPriceRow.child_price) || 0);
-
-    const adminPctToApply = hasBackendAdmin ? 0 : adminChargePct;
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminPctToApply);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminPctToApply);
-
-    const adminPctRaw = pickNumber(
-      ticketPriceRow,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      adminChargePct
-    );
-
-    return {
-      rateType,
-      adultUnit,
-      childUnit,
-      adultUnitBase,
-      childUnitBase,
-      discountPct,
-      // If backend already included admin in *_with_admin, never apply admin again in UI math.
-      adminChargePct: hasBackendAdmin ? 0 : adminChargePct,
-      // Catalogue admin % for seasonal / display when slot row is admin-inclusive.
-      catalogAdminChargePct: adminChargePct,
-      // Keep raw admin % only for reference/debugging if needed.
-      adminChargePctRaw: adminPctRaw,
-    };
-  };
-
   const getEffectiveTicketUnitPrices = () => {
     if (!selectedTicket) return null;
-
-    const seasonalRowRaw = getSeasonalPriceForTicket(
-      activityDetails?.seasonal_dates,
-      selectedTicket.id,
-      selectedYmd
-    );
-    const selectedSlotRaw =
-      isSlotBased && formData.selectedTimeSlot
-        ? getSlotRawById(formData.selectedTimeSlot)
-        : null;
-    const seasonalRow =
-      seasonalRowRaw && selectedSlotRaw
-        ? mergeSeasonalWithSelectedSlot(seasonalRowRaw, selectedSlotRaw)
-        : seasonalRowRaw;
-
-    const slotUnit = getSlotTicketUnitPrices();
-
-    // Slot + season: when the date is in season, use seasonal row prices only (ignore slot catalogue base).
-    if (slotUnit && seasonalRow) {
-      const rateType = normalizeRateType(
-        seasonalRow.rate_type || slotUnit.rateType || selectedTicket.rateType,
-        {
-          adultPrice: seasonalRow.adult_price,
-          childPrice: seasonalRow.child_price,
-          fullRate: seasonalRow.full_rate,
-        }
-      );
-      const discountPct =
-        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
-        slotUnit.discountPct;
-      const adminChargePct =
-        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-        slotUnit.catalogAdminChargePct ??
-        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
-
-      const adultUnitBase =
-        rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
-      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-      return {
-        source: "slot-seasonal",
-        rateType,
-        adultUnit,
-        childUnit,
-        adultUnitBase,
-        childUnitBase,
-        discountPct,
-        adminChargePct,
-        adminChargePctRaw: slotUnit.adminChargePctRaw,
-      };
-    }
-
-    if (slotUnit) return { source: "slot", ...slotUnit };
-
-    // Non-slot + season: seasonal row replaces catalogue base for that date.
-    if (seasonalRow) {
-      const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
-        adultPrice: seasonalRow.adult_price,
-        childPrice: seasonalRow.child_price,
-        fullRate: seasonalRow.full_rate,
-      });
-      const discountPct =
-        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
-        pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
-      const adminChargePct =
-        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
-
-      const adultUnitBase =
-        rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
-
-      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-      return { source: "seasonal", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
-    }
-
-    const rateType = normalizeRateType(selectedTicket.rateType, {
-      adultPrice: selectedTicket.adult_price,
-      childPrice: selectedTicket.child_price,
-      fullRate: selectedTicket.full_rate ?? selectedTicket.price,
+    return resolveActivityTicketUnitPricing({
+      ticket: selectedTicket,
+      activityDetails,
+      visitYmd: selectedYmd,
+      timeSlotId: formData.selectedTimeSlot || "",
     });
-    const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
-    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
-
-    const adultUnitBase =
-      rateType === "full"
-        ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
-        : Number(selectedTicket.price || selectedTicket.adult_price || 0);
-    const childUnitBase = Number(selectedTicket.child_price || 0);
-
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-    return { source: "base", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
   };
 
   const getTotalParts = () => {
@@ -1355,20 +1051,15 @@ const BookingClient = ({ activityId }) => {
                       <label className="mb-2 block text-xs font-semibold text-gray-900">
                         Visit date
                       </label>
+                      <p className="mb-2 text-xs text-gray-500">
+                        Green dates are available to book. Amber dates use seasonal rates. Red dates are unavailable.
+                      </p>
                       <div className="relative">
-                        <DatePicker
+                        <ActivityVisitDatePicker
+                          activityDetails={activityDetails}
+                          selectedTicketId={selectedTicket?.id}
                           selected={formData.selectedDate}
                           onChange={(date) => handleInputChange("selectedDate", date)}
-                          minDate={new Date()}
-                          filterDate={(date) => {
-                            const ymd = toYmd(date);
-                            return !isActivityCloseoutDate(
-                              normalizeCloseoutDates(activityDetails?.closeout_dates),
-                              ymd,
-                              date
-                            );
-                          }}
-                          dateFormat="dd/MM/yyyy"
                           placeholderText="Choose a date"
                           className={`w-full rounded-xl border bg-white px-4 py-3 pl-11 text-sm text-gray-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 ${
                             errors.selectedDate ? "border-red-400" : "border-gray-200"

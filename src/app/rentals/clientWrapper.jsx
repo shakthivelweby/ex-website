@@ -3,7 +3,14 @@
 import RentalCard from "@/components/rentalCard";
 import RentalFilters from "@/components/RentalFilters/RentalFilters";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
+import {
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+} from "@/utils/listingsEmptyStateHelpers";
+import { formTypeLabel } from "./rentalCategoryTypeUtils";
 import { useEffect, useRef, useState } from "react";
+import ListingGridLoader from "@/components/loading/ListingGridLoader";
 import { getRentals } from "./service";
 import { normalizeRentalFilters } from "./rentalFilterUtils";
 import { buildCategoryTypesFromCategories } from "./rentalCategoryTypeUtils";
@@ -43,6 +50,58 @@ const ClientWrapper = ({
   );
 
   const hasActiveFilters = () => Object.values(initialFilters).some((value) => value);
+
+  const clearAllFilters = () => {
+    handleFilterChange(
+      normalizeRentalFilters({
+        date_from: "",
+        date_to: "",
+        location: "",
+        category: "",
+        form_type: "",
+        sub_category: "",
+        transmission: "",
+        fuel_type: "",
+        seats: "",
+        rating: "",
+        price_from: "",
+        price_to: "",
+        longitude: "",
+        latitude: "",
+        search: "",
+      })
+    );
+  };
+
+  const activeFormTypeLabel = initialFilters.form_type
+    ? formTypeLabel(initialFilters.form_type)
+    : null;
+  const emptyCopy = buildListingEmptyCopy({
+    itemLabel: "rentals",
+    categoryName: activeFormTypeLabel,
+  });
+
+  const getRentalSuggestions = () =>
+    categoryTypes
+      .filter((type) => type.form_type !== initialFilters.form_type)
+      .slice(0, 5)
+      .map((type) => ({
+        id: type.form_type,
+        label: type.label,
+        icon: type.icon,
+        onClick: () =>
+          handleFilterChange(
+            normalizeRentalFilters({
+              ...initialFilters,
+              form_type: type.form_type,
+              category: "",
+              sub_category: "",
+              transmission: "",
+              fuel_type: "",
+              seats: "",
+            })
+          ),
+      }));
 
   const updateURL = (newFilters) => {
     if (typeof window === "undefined") return;
@@ -304,31 +363,7 @@ const ClientWrapper = ({
                 </div>
               </div>
             ) : loading ? (
-              <div className="text-center py-12">
-                <div className="flex items-center justify-center gap-3">
-                  <svg
-                    className="animate-spin h-8 w-8 text-primary"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span className="text-primary font-medium">Loading rentals...</span>
-                </div>
-              </div>
+              <ListingGridLoader message="Loading rentals..." />
             ) : rentals.length > 0 ? (
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {rentals.map((r) => (
@@ -343,10 +378,17 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">No rentals found</div>
-                <div className="text-gray-400 text-sm">Try adjusting your filters</div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-car"
+                title="No rentals found"
+                subtitle={emptyCopy.subtitle}
+                description={emptyCopy.description}
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(initialFilters, { categories })}
+                suggestions={getRentalSuggestions()}
+                suggestionsTitle="Browse other rental types"
+              />
             )}
           </div>
         </div>

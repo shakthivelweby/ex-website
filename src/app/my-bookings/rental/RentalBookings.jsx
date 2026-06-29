@@ -13,6 +13,7 @@ import {
   verifyRentalPayment,
 } from "./service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 const formatDateTime = (dateString) => {
   const d = new Date(dateString);
@@ -173,8 +174,8 @@ export default function RentalBookings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-[400px] bg-white">
+        <SectionLoader message="Loading rental bookings..." />
       </div>
     );
   }
@@ -351,9 +352,11 @@ export default function RentalBookings() {
                     size="sm"
                     onClick={() => handlePayBalance(b)}
                     disabled={isProcessingPayment}
+                    isLoading={isProcessingPayment}
+                    loadingLabel="Processing..."
                     className="!rounded-full !text-xs !px-4 !py-2"
                   >
-                    {isProcessingPayment ? "Processing..." : `Pay Balance ${formatCurrency(balance)}`}
+                    {`Pay Balance ${formatCurrency(balance)}`}
                   </Button>
                 ) : null}
               </div>

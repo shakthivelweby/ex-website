@@ -10,6 +10,8 @@ import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "./service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
+import Button from "@/components/common/Button";
+import PageLoader from "@/components/loading/PageLoader";
 
 export default function EventCheckoutPage() {
   const router = useRouter();
@@ -404,11 +406,7 @@ export default function EventCheckoutPage() {
   };
 
   if (isLoadingData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <PageLoader message="Loading checkout..." />;
   }
 
   if (error) {
@@ -683,26 +681,15 @@ export default function EventCheckoutPage() {
               </label>
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-10 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-sm font-semibold rounded-lg flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              isLoading={isLoading}
+              loadingLabel="Processing..."
+              className="w-full h-10 !rounded-lg bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-sm font-semibold shadow-lg hover:shadow-xl"
             >
-              {isLoading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                <span className="flex items-center">
-                  <i className="fi fi-rr-shield-check mr-2 text-sm"></i>
-                  Complete Booking
-                </span>
-              )}
-            </button>
+              Complete Booking
+            </Button>
             
             {isLoading && (
               <button
@@ -794,26 +781,16 @@ export default function EventCheckoutPage() {
                 </label>
               </div>
 
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white text-base font-bold rounded-xl flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-1 active:translate-y-0"
+                isLoading={isLoading}
+                loadingLabel="Processing..."
+                size="lg"
+                className="w-full h-12 !rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-base font-bold shadow-lg hover:shadow-xl"
               >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Processing...
-                  </span>
-                ) : (
-                  <span className="flex items-center">
-                    <i className="fi fi-rr-shield-check mr-2.5 text-base"></i>
-                    Complete Booking
-                  </span>
-                )}
-              </button>
+                Complete Booking
+              </Button>
               
               {isLoading && (
                 <button

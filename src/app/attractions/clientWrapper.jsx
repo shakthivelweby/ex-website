@@ -5,7 +5,15 @@ import AttractionCard from "@/components/attractionCard";
 import AttractionFilters from "@/components/AttractionFilters/AttractionFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
+import {
+  buildCategorySuggestions,
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+  getCategoryNameBySlug,
+} from "@/utils/listingsEmptyStateHelpers";
 import { useState, useEffect, useRef } from "react";
+import ListingGridLoader from "@/components/loading/ListingGridLoader";
 // Router hooks removed to avoid SSR issues
 import {
   getAttractionCategories,
@@ -78,6 +86,23 @@ const ClientWrapper = ({
   const hasActiveFilters = () => {
     return Object.values(initialFilters).some((value) => value);
   };
+
+  const clearAllFilters = () => {
+    setSelectedLocation(null);
+    handleFilterChange({
+      date_from: "",
+      date_to: "",
+      location: "",
+      category: "",
+      rating: "",
+      price_from: "",
+      price_to: "",
+      longitude: "",
+      latitude: "",
+    });
+  };
+
+  const getActiveCategoryName = () => getCategoryNameBySlug(categories, initialFilters.category);
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
@@ -463,33 +488,7 @@ const ClientWrapper = ({
 
             {/* Attractions Grid */}
             {loading ? (
-              <div className="text-center py-12">
-                <div className="flex items-center justify-center gap-3">
-                  <svg
-                    className="animate-spin h-8 w-8 text-primary"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span className="text-primary font-medium">
-                    Loading attractions...
-                  </span>
-                </div>
-              </div>
+              <ListingGridLoader message="Loading attractions..." />
             ) : attractions.length > 0 ? (
               <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {attractions.map((attraction) => (
@@ -497,14 +496,34 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  No attractions found
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Try adjusting your filters
-                </div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-ferris-wheel"
+                title="No attractions found"
+                subtitle={
+                  buildListingEmptyCopy({
+                    itemLabel: "attractions",
+                    categoryName: getActiveCategoryName(),
+                  }).subtitle
+                }
+                description={
+                  buildListingEmptyCopy({
+                    itemLabel: "attractions",
+                    categoryName: getActiveCategoryName(),
+                  }).description
+                }
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(initialFilters, {
+                  categories,
+                  selectedLocation,
+                })}
+                suggestions={buildCategorySuggestions(
+                  categories,
+                  initialFilters.category,
+                  (slug) => handleFilterChange({ ...initialFilters, category: slug })
+                )}
+                suggestionsTitle="Explore other categories"
+              />
             )}
           </div>
         </div>

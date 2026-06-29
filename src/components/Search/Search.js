@@ -7,6 +7,7 @@ import {
   useEventLanguages,
   useAttractionCategories,
   useActivityCategories,
+  useRentalCategories,
 } from "@/app/search/query";
 import { hasStoredImage } from "@/utils/imageUrl";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import EventsSearchFilters from "./EventsSearchFilters";
 import AttractionsSearchFilters from "./AttractionsSearchFilters";
 import ActivitiesSearchFilters from "./ActivitiesSearchFilters";
+import RentalsSearchFilters from "./RentalsSearchFilters";
 
 const SEARCH_MODULES = [
   {
@@ -56,7 +58,7 @@ const SEARCH_MODULES = [
     label: "Rentals",
     shortLabel: "Rentals",
     icon: "fi-rr-car",
-    enabled: false,
+    enabled: true,
   },
 ];
 
@@ -114,6 +116,27 @@ const createDefaultActivityFilters = () => {
   };
 };
 
+const createDefaultRentalFilters = () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = formatEventDate(today);
+  return {
+    location: "",
+    longitude: "",
+    latitude: "",
+    dateFrom: todayStr,
+    dateTo: todayStr,
+    category: "",
+    form_type: "",
+    sub_category: "",
+    transmission: "",
+    fuel_type: "",
+    seats: "",
+    price_from: "",
+    price_to: "",
+  };
+};
+
 function SearchFooter({ enabled, label, onClick }) {
   return (
     <section className="flex-shrink-0 border-t border-[#EBEBEB] bg-white px-4 py-3">
@@ -145,6 +168,7 @@ export default function Search({ isOpen, onClose, type }) {
   const [activityFilters, setActivityFilters] = useState(
     createDefaultActivityFilters,
   );
+  const [rentalFilters, setRentalFilters] = useState(createDefaultRentalFilters);
   const router = useRouter();
 
   const isPackageModule = selectedModule === "package";
@@ -152,13 +176,15 @@ export default function Search({ isOpen, onClose, type }) {
   const isEventsModule = selectedModule === "events";
   const isAttractionsModule = selectedModule === "attractions";
   const isActivitiesModule = selectedModule === "activities";
+  const isRentalsModule = selectedModule === "rentals";
   const showDestinationPicker = isPackageModule || isScheduleModule;
   const showComingSoon =
     !isPackageModule &&
     !isScheduleModule &&
     !isEventsModule &&
     !isAttractionsModule &&
-    !isActivitiesModule;
+    !isActivitiesModule &&
+    !isRentalsModule;
 
   const { data: destinationsData, isLoading: isDestinationsLoading } =
     useAllDestinations(isOpen && showDestinationPicker);
@@ -174,11 +200,15 @@ export default function Search({ isOpen, onClose, type }) {
   const { data: activityCategoriesData } = useActivityCategories(
     isOpen && isActivitiesModule,
   );
+  const { data: rentalCategoriesData } = useRentalCategories(
+    isOpen && isRentalsModule,
+  );
 
   const eventCategories = eventCategoriesData?.data || [];
   const eventLanguages = eventLanguagesData?.data || [];
   const attractionCategories = attractionCategoriesData?.data || [];
   const activityCategories = activityCategoriesData?.data || [];
+  const rentalCategories = rentalCategoriesData?.data || [];
   const allDestinations = destinationsData?.data || [];
 
   useEffect(() => {
@@ -192,6 +222,7 @@ export default function Search({ isOpen, onClose, type }) {
       setEventFilters(createDefaultEventFilters());
       setAttractionFilters(createDefaultAttractionFilters());
       setActivityFilters(createDefaultActivityFilters());
+      setRentalFilters(createDefaultRentalFilters());
       if (!type) setSelectedModule("package");
     }
   }, [isOpen, type]);
@@ -352,12 +383,40 @@ export default function Search({ isOpen, onClose, type }) {
     onClose();
   };
 
+  const handleRunRentalSearch = () => {
+    if (!rentalFilters.dateFrom || !rentalFilters.dateTo) return;
+
+    const params = new URLSearchParams();
+    params.set("date_from", rentalFilters.dateFrom);
+    params.set("date_to", rentalFilters.dateTo);
+    if (rentalFilters.form_type) params.set("form_type", rentalFilters.form_type);
+    if (rentalFilters.category) params.set("category", rentalFilters.category);
+    if (rentalFilters.sub_category)
+      params.set("sub_category", rentalFilters.sub_category);
+    if (rentalFilters.transmission)
+      params.set("transmission", rentalFilters.transmission);
+    if (rentalFilters.fuel_type) params.set("fuel_type", rentalFilters.fuel_type);
+    if (rentalFilters.seats) params.set("seats", rentalFilters.seats);
+    if (rentalFilters.price_from)
+      params.set("price_from", rentalFilters.price_from);
+    if (rentalFilters.price_to) params.set("price_to", rentalFilters.price_to);
+    if (rentalFilters.longitude)
+      params.set("longitude", rentalFilters.longitude);
+    if (rentalFilters.latitude) params.set("latitude", rentalFilters.latitude);
+    if (rentalFilters.location) params.set("location", rentalFilters.location);
+
+    router.push(`/rentals?${params.toString()}`);
+    onClose();
+  };
+
   const isEventSearchReady =
     Boolean(eventFilters.dateFrom) && Boolean(eventFilters.dateTo);
   const isAttractionSearchReady =
     Boolean(attractionFilters.dateFrom) && Boolean(attractionFilters.dateTo);
   const isActivitySearchReady =
     Boolean(activityFilters.dateFrom) && Boolean(activityFilters.dateTo);
+  const isRentalSearchReady =
+    Boolean(rentalFilters.dateFrom) && Boolean(rentalFilters.dateTo);
 
   const handleModuleSelect = (module) => {
     if (!module.enabled) return;
@@ -367,6 +426,7 @@ export default function Search({ isOpen, onClose, type }) {
     setEventFilters(createDefaultEventFilters());
     setAttractionFilters(createDefaultAttractionFilters());
     setActivityFilters(createDefaultActivityFilters());
+    setRentalFilters(createDefaultRentalFilters());
   };
 
   const searchButtonLabel =
@@ -636,6 +696,20 @@ export default function Search({ isOpen, onClose, type }) {
               onClick={handleRunActivitySearch}
             />
           </>
+        ) : isRentalsModule ? (
+          <>
+            <RentalsSearchFilters
+              filters={rentalFilters}
+              onFilterChange={setRentalFilters}
+              categories={rentalCategories}
+              compact
+            />
+            <SearchFooter
+              enabled={isRentalSearchReady}
+              label={isRentalSearchReady ? "Search rentals" : "Select dates"}
+              onClick={handleRunRentalSearch}
+            />
+          </>
         ) : showComingSoon ? (
           <div className="flex items-center justify-center px-6 py-10">
             <div className="text-center">
@@ -644,7 +718,7 @@ export default function Search({ isOpen, onClose, type }) {
                 Coming soon
               </p>
               <p className="text-xs text-[#717171] max-w-[220px]">
-                This category isn&apos;t available yet. Try Packages or Events.
+                This category isn&apos;t available yet. Try another module above.
               </p>
             </div>
           </div>

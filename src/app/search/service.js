@@ -35,4 +35,8 @@ export const searchService = {
     const response = await apiMiddleware.get("/activity-categories");
     return response.data;
   },
+  getRentalCategories: async () => {
+    const response = await apiMiddleware.get("/rental-categories");
+    return response.data;
+  },
 };

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { getAttractionBookings } from "./service";
 import { useQuery } from "@tanstack/react-query";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 const AttractionBookings = () => {
   const router = useRouter();
@@ -165,11 +166,7 @@ const AttractionBookings = () => {
   };
 
   if (attractionBookingsLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <SectionLoader message="Loading attraction bookings..." />;
   }
 
   if (attractionBookingsError) {

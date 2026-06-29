@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Popup from "@/components/Popup";
+import Button from "@/components/common/Button";
 import RichTextContent from "@/components/common/RichTextContent";
 import { getDetailsForBooking } from "./service";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 const TicketSelectionPopup = ({
   isOpen,
@@ -13,6 +15,7 @@ const TicketSelectionPopup = ({
 }) => {
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
   const [expandedTicketType, setExpandedTicketType] = useState(null);
@@ -99,11 +102,17 @@ const TicketSelectionPopup = ({
     return total;
   };
 
-  const handleContinue = () => {
-    if (onContinue) {
-      onContinue(selectedTickets, getTotalPrice());
+  const handleContinue = async () => {
+    if (getTotalSelectedTickets() === 0 || !selectedDate) return;
+    setIsContinuing(true);
+    try {
+      if (onContinue) {
+        await onContinue(selectedTickets, getTotalPrice());
+      }
+      onClose();
+    } finally {
+      setIsContinuing(false);
     }
-    onClose();
   };
 
   const getMinDate = () => {
@@ -119,9 +128,7 @@ const TicketSelectionPopup = ({
         title="Select Tickets"
         pos="bottom"
       >
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-        </div>
+        <SectionLoader message="Loading tickets..." />
       </Popup>
     );
   }
@@ -315,14 +322,17 @@ const TicketSelectionPopup = ({
             </div>
           )}
         </div>
-        <button
+        <Button
           onClick={handleContinue}
+          size="lg"
+          className="w-full"
           disabled={getTotalSelectedTickets() === 0 || !selectedDate}
-          className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors"
+          isLoading={isContinuing}
+          loadingLabel="Continuing…"
         >
           Continue with {getTotalSelectedTickets()} ticket
           {getTotalSelectedTickets() !== 1 ? "s" : ""}
-        </button>
+        </Button>
       </div>
     </Popup>
   );

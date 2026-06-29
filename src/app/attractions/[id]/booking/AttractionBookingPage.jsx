@@ -17,12 +17,23 @@ import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "@/app/checkout/attractions/service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
+import { getSplitPaymentPlan } from "@/utils/razorpayLimits";
+import {
+  isPartialPayment,
+  resolveRemainingBalance,
+  roundMoney,
+} from "@/utils/paymentCompletion";
+import SplitPaymentNotice from "@/components/booking/SplitPaymentNotice";
+import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
+import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
 } from "@/utils/closeoutUtils";
+import { normalizeAttractionBookingData } from "@/utils/attractionTicketPrices";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 function attractionAdminPct(ticket) {
   return Math.max(0, Number(ticket?.admin_charge ?? 0));
@@ -170,8 +181,8 @@ function getTicketUnitPrices(ticket) {
 
 function getTicketFromPrice(ticket) {
   const prices = getTicketUnitPrices(ticket);
-  const lowest = Math.min(prices.adult.final, prices.child.final);
-  return prices.hasDiscount ? lowest.toFixed(2) : String(lowest);
+  const adult = prices.hasDiscount ? prices.adult.final : prices.adult.afterAdmin;
+  return prices.hasDiscount ? adult.toFixed(2) : String(adult);
 }
 
 function getLineMaxQty(ticket, lineType, tickets) {
@@ -228,7 +239,8 @@ const AttractionBookingPage = ({
   const router = useRouter();
   const [attractionData, setAttractionData] = useState(initialAttractionData);
   const [ticketData, setTicketData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!initialAttractionData);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
@@ -237,6 +249,7 @@ const AttractionBookingPage = ({
   const [isMobile, setIsMobile] = useState(false);
   const [needGuide, setNeedGuide] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   const [paymentPhase, setPaymentPhase] = useState(null);
@@ -254,6 +267,8 @@ const AttractionBookingPage = ({
   const [showPaymentError, setShowPaymentError] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [pendingCheckout, setPendingCheckout] = useState(null);
+  const [razorpayMax, setRazorpayMax] = useState(null);
+  const [balancePaymentPopup, setBalancePaymentPopup] = useState(null);
   const [userContact, setUserContact] = useState({ email: "", phone: "" });
 
   // Check for mobile view
@@ -301,8 +316,9 @@ const AttractionBookingPage = ({
         setLoading(true);
         const response = await getDetailsForBooking(attractionId, visitDate);
         if (response?.data) {
-          setAttractionData(response.data);
-          setTicketData(response.data);
+          const normalized = normalizeAttractionBookingData(response.data);
+          setAttractionData(normalized);
+          setTicketData(normalized);
         }
       } catch (error) {
         console.error("Error fetching booking details:", error);
@@ -333,10 +349,10 @@ const AttractionBookingPage = ({
 
   useEffect(() => {
     const prices = ticketData?.attraction_ticket_type_prices;
-    if (prices?.length && expandedTicketType == null) {
+    if (prices?.length) {
       setExpandedTicketType(prices[0].attraction_ticket_type_id);
     }
-  }, [ticketData?.attraction_ticket_type_prices, expandedTicketType]);
+  }, [ticketData?.attraction_ticket_type_prices]);
 
   const handleVisitDateChange = async (date) => {
     const dateString = date ? date.toISOString().split("T")[0] : "";
@@ -347,16 +363,17 @@ const AttractionBookingPage = ({
     if (dateString && attractionId) {
       localStorage.setItem(`attraction_${attractionId}_selectedDate`, dateString);
       try {
-        setLoading(true);
+        setTicketsLoading(true);
         const response = await getDetailsForBooking(attractionId, dateString);
         if (response?.data) {
-          setAttractionData(response.data);
-          setTicketData(response.data);
+          const normalized = normalizeAttractionBookingData(response.data);
+          setAttractionData(normalized);
+          setTicketData(normalized);
         }
       } catch (error) {
         console.error("Error fetching booking details for date:", error);
       } finally {
-        setLoading(false);
+        setTicketsLoading(false);
       }
     }
   };
@@ -422,10 +439,11 @@ const AttractionBookingPage = ({
   };
 
   const handleTicketTypeClick = (ticketTypeId) => {
-    if (expandedTicketType === ticketTypeId) {
+    const id = Number(ticketTypeId);
+    if (Number(expandedTicketType) === id) {
       setExpandedTicketType(null);
     } else {
-      setExpandedTicketType(ticketTypeId);
+      setExpandedTicketType(id);
     }
   };
 
@@ -489,8 +507,13 @@ const AttractionBookingPage = ({
     if (!selectedDate) {
       return;
     }
-    await refreshBookingData();
-    setCurrentStep(2);
+    setIsContinuing(true);
+    try {
+      await refreshBookingData();
+      setCurrentStep(2);
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   const handleBack = async () => {
@@ -505,8 +528,9 @@ const AttractionBookingPage = ({
     try {
       const response = await getDetailsForBooking(attractionId, selectedDate);
       if (response?.data) {
-        setAttractionData(response.data);
-        setTicketData(response.data);
+        const normalized = normalizeAttractionBookingData(response.data);
+        setAttractionData(normalized);
+        setTicketData(normalized);
       }
     } catch (error) {
       console.error("Error refreshing booking details:", error);
@@ -643,16 +667,32 @@ const AttractionBookingPage = ({
     setShowPaymentError(true);
   };
 
-  const getOrderErrorPayload = (message) => ({
-    variant: "warning",
-    title: "Couldn't start payment",
-    message: String(message || "We couldn't prepare your payment. Please try again."),
-    hint: "Your booking is saved. You can continue to payment when you're ready.",
-    canRetry: true,
-    primaryLabel: "Continue to payment",
-    primaryIcon: "fi-rr-refresh",
-    secondaryLabel: "Close",
-  });
+  const getOrderErrorPayload = (message) => {
+    const text = String(message || "");
+    if (/maximum amount/i.test(text)) {
+      return {
+        variant: "warning",
+        title: "Payment amount too high",
+        message:
+          "This order exceeds Razorpay's per-transaction limit. Large payments are split automatically — please try again.",
+        hint: "If it still fails, raise the limit in your Razorpay Dashboard (Account → Transaction limits).",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      };
+    }
+    return {
+      variant: "warning",
+      title: "Couldn't start payment",
+      message: text || "We couldn't prepare your payment. Please try again.",
+      hint: "Your booking is saved. You can continue to payment when you're ready.",
+      canRetry: true,
+      primaryLabel: "Continue to payment",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Close",
+    };
+  };
 
   const resolveBookingIdFromVerify = (verificationResponse, fallbackBookingId) =>
     verificationResponse?.data?.payment?.attraction_booking_id ??
@@ -661,10 +701,16 @@ const AttractionBookingPage = ({
     verificationResponse?.data?.attractionBooking?.id ??
     fallbackBookingId;
 
-  const openRazorpayAndVerify = async (orderRes, paymentAmount, bookingId) => {
+  const openRazorpayAndVerify = async (
+    orderRes,
+    paymentAmount,
+    bookingId,
+    priorPaidAmount = 0
+  ) => {
     setPaymentPhase(null);
+    const chargeAmount = Number(orderRes?.data?.amount ?? paymentAmount);
     const paymentResponse = await initializeRazorpayPayment({
-      amount: paymentAmount,
+      amount: chargeAmount,
       currency: "INR",
       name: "Explore World",
       description: `Payment for ${attractionData?.name || "attraction"} tickets`,
@@ -727,8 +773,34 @@ const AttractionBookingPage = ({
     }
 
     const userEmail = getLoggedInUserEmail() || userContact.email || "";
-    setPendingCheckout(null);
+    const remainingBalance = resolveRemainingBalance(verificationResponse, orderRes, {
+      bookingRelation: "attractionBooking",
+      bookingRelationSnake: "attraction_booking",
+    });
+    const isPartial = isPartialPayment(verificationResponse, orderRes, {
+      bookingRelation: "attractionBooking",
+      bookingRelationSnake: "attraction_booking",
+    });
+    const totalPaid = roundMoney(priorPaidAmount + chargeAmount);
+
+    setPendingCheckout(
+      isPartial ? { bookingId: resolvedBookingId, paymentAmount: remainingBalance } : null
+    );
     setCompletedBookingId(resolvedBookingId);
+
+    if (isPartial) {
+      setBalancePaymentPopup({
+        bookingId: resolvedBookingId,
+        attractionId: parseInt(attractionId, 10),
+        paidAmount: totalPaid,
+        remainingBalance,
+        emailSent: Boolean(verificationResponse?.data?.confirmation_email_sent),
+        userEmail,
+      });
+      return true;
+    }
+
+    setBalancePaymentPopup(null);
     setSuccessMessage({
       title: "You're all set!",
       message: "Your attraction tickets have been booked successfully.",
@@ -736,7 +808,7 @@ const AttractionBookingPage = ({
       userEmail,
       visitDate: selectedDate ? formatDate(selectedDate) : "—",
       guestSummary: getGuestSummary(),
-      amountPaid: money(paymentAmount),
+      amountPaid: money(totalPaid),
     });
     setShowSuccess(true);
     localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
@@ -745,10 +817,68 @@ const AttractionBookingPage = ({
 
   const goToCompletedTicket = () => {
     setShowSuccess(false);
+    setBalancePaymentPopup(null);
     if (completedBookingId) {
       router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
     } else {
       router.push("/my-bookings?tab=attractions");
+    }
+  };
+
+  const handleBalancePayLater = () => {
+    setBalancePaymentPopup(null);
+    router.push("/my-bookings?tab=attractions");
+  };
+
+  const executeBalancePayment = async () => {
+    if (!balancePaymentPopup || isPaying) return;
+
+    const { bookingId, attractionId: popupAttractionId, remainingBalance, paidAmount } =
+      balancePaymentPopup;
+    setIsPaying(true);
+    setCheckoutError(null);
+
+    try {
+      setPaymentPhase("preparing");
+      const orderRes = await createOrder({
+        attraction_id: popupAttractionId,
+        attraction_booking_id: bookingId,
+        amount: remainingBalance,
+      });
+
+      if (!orderRes.status) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderRes.message));
+        return;
+      }
+
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? remainingBalance),
+        bookingId,
+        paidAmount
+      );
+    } catch (error) {
+      setPaymentPhase(null);
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Something went wrong",
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to process balance payment. Please try again.",
+        hint: "You can also pay the remaining balance from My Bookings.",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      });
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -800,7 +930,15 @@ const AttractionBookingPage = ({
         return;
       }
 
-      await openRazorpayAndVerify(orderRes, paymentAmount, bookingId);
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? paymentAmount),
+        bookingId
+      );
     } catch (error) {
       setPaymentPhase(null);
       if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
@@ -908,12 +1046,15 @@ const AttractionBookingPage = ({
     guideAmount: needGuide && guideRate > 0 ? Number(guideRate) : 0,
   });
 
+  const getCheckoutPayLabel = (grandTotal) => {
+    const plan = getSplitPaymentPlan(grandTotal, razorpayMax);
+    return plan.requiresSplit
+      ? `Pay ₹${plan.firstPayment.toFixed(2)} now`
+      : `Pay ₹${grandTotal.toFixed(2)}`;
+  };
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <BookingPageSkeleton />;
   }
 
   if (!attractionData) {
@@ -921,21 +1062,17 @@ const AttractionBookingPage = ({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            {loading ? "Loading..." : "Attraction not found"}
+            Attraction not found
           </h2>
           <p className="text-gray-600">
-            {loading
-              ? "Please wait while we fetch the attraction details..."
-              : "The attraction you're looking for doesn't exist or there was an error loading the data."}
+            The attraction you&apos;re looking for doesn&apos;t exist or there was an error loading the data.
           </p>
-          {!loading && (
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-            >
-              Try Again
-            </button>
-          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -990,6 +1127,7 @@ const AttractionBookingPage = ({
                 selectedDate={selectedDate}
                 onDateChange={handleVisitDateChange}
                 isDateDisabled={isDateDisabled}
+                ticketsLoading={ticketsLoading}
                 ticketPrices={ticketData?.attraction_ticket_type_prices}
                 adultChildTickets={adultChildTickets}
                 expandedTicketType={expandedTicketType}
@@ -1082,6 +1220,21 @@ const AttractionBookingPage = ({
                     />
                   ) : null}
                 </div>
+
+                <div className="space-y-3 border-t border-gray-100 p-4">
+                  <PaymentTrustPanel />
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3.5">
+                    <p className="text-xs leading-relaxed text-blue-900">
+                      <i className="fi fi-rr-envelope relative top-0 mr-1.5" aria-hidden="true" />
+                      You&apos;ll receive an instant confirmation email with your e-ticket after payment.
+                    </p>
+                  </div>
+                </div>
+
+                <SplitPaymentNotice
+                  grandTotal={getPriceBreakdown().grandTotal}
+                  className="mx-4 mt-3"
+                />
 
                 <div className="border-t border-gray-100 p-4 lg:hidden">
                   <TermsAgreement
@@ -1202,6 +1355,10 @@ const AttractionBookingPage = ({
                             ₹{b.grandTotal.toFixed(2)}
                           </span>
                         </div>
+
+                        {currentStep === 2 ? (
+                          <SplitPaymentNotice grandTotal={b.grandTotal} className="mt-3" />
+                        ) : null}
                       </>
                     );
                   })()}
@@ -1214,6 +1371,8 @@ const AttractionBookingPage = ({
                       size="lg"
                       className="w-full"
                       disabled={getTotalSelectedTickets() === 0 || !selectedDate}
+                      isLoading={isContinuing}
+                      loadingLabel="Loading review…"
                     >
                       Continue to review
                     </Button>
@@ -1234,24 +1393,14 @@ const AttractionBookingPage = ({
                         size="lg"
                         className="w-full h-12 text-base font-semibold"
                         disabled={isPaying || !termsAccepted}
+                        isLoading={isPaying}
+                        loadingLabel="Processing…"
+                        icon={<i className="fi fi-rr-lock" aria-hidden="true" />}
                       >
-                        {isPaying
-                          ? "Processing…"
-                          : `Pay ₹${getPriceBreakdown().grandTotal.toFixed(2)}`}
+                        {getCheckoutPayLabel(getPriceBreakdown().grandTotal)}
                       </Button>
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleBack}
-                          className="fi-inline text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
-                        >
-                          <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
-                          <span>Edit ticket selection</span>
-                        </button>
-                        <p className="fi-inline m-0 text-[11px] text-gray-400">
-                          <i className="fi fi-rr-shield-check text-[11px]" aria-hidden="true" />
-                          <span>Secure checkout · Razorpay</span>
-                        </p>
+                      <div className="mt-3">
+                        <PaymentTrustPanel compact />
                       </div>
                     </div>
                   )}
@@ -1284,6 +1433,8 @@ const AttractionBookingPage = ({
                     size="lg"
                     className="w-full"
                     disabled={getTotalSelectedTickets() === 0 || !selectedDate}
+                    isLoading={isContinuing}
+                    loadingLabel="Loading review…"
                   >
                     Continue to review
                   </Button>
@@ -1305,8 +1456,10 @@ const AttractionBookingPage = ({
                   size="lg"
                   className="flex-1 h-12"
                   disabled={isPaying || !termsAccepted}
+                  isLoading={isPaying}
+                  loadingLabel="Processing…"
                 >
-                  {isPaying ? "Processing…" : `Pay ₹${b.grandTotal.toFixed(2)}`}
+                  {getCheckoutPayLabel(b.grandTotal)}
                 </Button>
               </div>
             );
@@ -1318,6 +1471,15 @@ const AttractionBookingPage = ({
       </div>
 
       <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <BalancePaymentPopup
+        show={Boolean(balancePaymentPopup) && !showSuccess}
+        itemTitle={attractionData?.name || "Attraction"}
+        paidAmount={balancePaymentPopup?.paidAmount}
+        remainingBalance={balancePaymentPopup?.remainingBalance}
+        isPaying={isPaying}
+        onPayNow={executeBalancePayment}
+        onPayLater={handleBalancePayLater}
+      />
       <PaymentSuccessPopup
         show={showSuccess}
         onClose={goToCompletedTicket}

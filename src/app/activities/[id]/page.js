@@ -1,6 +1,7 @@
 import ActivityDetailClient from "./clientWrapper";
 import { getActivityDetails, getActivityGallery } from "../service";
 import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
+import { formatActivityDuration } from "@/utils/formatActivityDuration";
 
 // Force dynamic rendering to prevent build-time API calls
 export const dynamic = "force-dynamic";
@@ -95,7 +96,7 @@ const ActivityDetailPage = async ({ params }) => {
       price: Number(base || 0),
       // Convenience field for UI when we want base+admin (detail page "starting from").
       price_with_admin: priceWithAdmin || 0,
-      originalPrice: 0, // Backend doesn't seem to have original price separate yet
+      originalPrice: null,
       rateType: rateType,
       child_price: priceObj?.child_price || 0,
       discount: priceObj?.discount ?? priceObj?.discount_percentage ?? priceObj?.discountPercent ?? 0,
@@ -118,10 +119,14 @@ const ActivityDetailPage = async ({ params }) => {
   })
     : [];
 
+  const categoryName =
+    activity.activity_category?.name || activity.activityCategory?.name || "Activity";
+
   const activityDetails = {
     id: activity.id,
     title: activity.name,
-    categories: [activity.activity_category?.name || activity.activityCategory?.name || "Activity"],
+    categoryName,
+    categories: [categoryName],
     location: activity.location || activity.city,
     address: activity.address || "",
     price:
@@ -131,10 +136,13 @@ const ActivityDetailPage = async ({ params }) => {
     image: activity.cover_image || activity.thumb_image || activity.image,
     description: activity.description || "",
     activityGuide: {
-      duration: activity.duration ? `${activity.duration} hours` : 'TBD',
-      startTime: formatTime(activity.start_time), // Assuming start_time exists
-      bestTimeToVisit: activity.best_time_to_visit || 'TBD',
-      openingHours: activity.opening_hours || 'TBD',
+      duration: formatActivityDuration(activity.duration),
+      startTime: formatTime(activity.start_time),
+      bestTimeToVisit: activity.best_time_to_visit || "TBD",
+      openingHours: activity.opening_hours || "TBD",
+      kidsFriendly: activity.kids_friendly ? "Yes" : "No",
+      petsFriendly: activity.pets_friendly ? "Yes" : "No",
+      layout: activity.layout ? String(activity.layout).replace(/^./, (c) => c.toUpperCase()) : null,
     },
     features: activity.features || [], // API might not return features array directly ?
     highlights: activity.activity_highlights?.map((highlight) => highlight.highlights) || [],

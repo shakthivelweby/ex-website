@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getRentalDetails, getRentalPickupLocations } from "../../service";
 import RentalBookingClient from "./RentalBookingClient";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 export const dynamic = "force-dynamic";
 
@@ -45,13 +46,7 @@ export default async function RentalBookingPage({ params, searchParams }) {
   }
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">
-          Loading booking…
-        </div>
-      }
-    >
+    <Suspense fallback={<BookingPageSkeleton />}>
       <RentalBookingClient
         rentalId={id}
         initialRental={initialRental}

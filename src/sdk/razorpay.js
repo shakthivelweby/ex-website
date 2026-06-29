@@ -83,14 +83,12 @@ export const initializeRazorpayPayment = async ({
   }
 
   return new Promise((resolve) => {
-  const options = {
-    key: resolvedKey,
-    // Expect amount in major currency units (e.g., rupees) and convert to subunits (paise)
-    amount: Math.round(Number(amount || 0) * 100),
-    currency,
+    const options = {
+      key: resolvedKey,
+      currency,
       name,
       description,
-    order_id: orderId,
+      order_id: orderId,
     prefill: {
       name,
       email,

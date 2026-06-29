@@ -3,8 +3,16 @@
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
 import ChipThumbImage from "@/components/common/ChipThumbImage";
+import {
+  buildCategorySuggestions,
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+  getCategoryNameBySlug,
+} from "@/utils/listingsEmptyStateHelpers";
 import { useState, useEffect, useRef } from "react";
+import ListingGridLoader from "@/components/loading/ListingGridLoader";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
 
@@ -90,6 +98,27 @@ const ClientWrapper = ({
   const hasActiveFilters = () => {
     return Object.values(filters).some((value) => value);
   };
+
+  const clearAllFilters = () => {
+    handleFilterChange({
+      date: "",
+      date_from: "",
+      date_to: "",
+      language: "",
+      category: "",
+      price_from: "",
+      price_to: "",
+      longitude: "",
+      latitude: "",
+      location: "",
+    });
+  };
+
+  const activeCategoryName = getCategoryNameBySlug(categories, filters.category);
+  const emptyCopy = buildListingEmptyCopy({
+    itemLabel: "events",
+    categoryName: activeCategoryName,
+  });
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
@@ -431,33 +460,7 @@ const ClientWrapper = ({
 
             {/* Events Grid */}
             {loading ? (
-              <div className="text-center py-12">
-                <div className="flex items-center justify-center gap-3">
-                  <svg
-                    className="animate-spin h-8 w-8 text-primary"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span className="text-primary font-medium">
-                    Loading events...
-                  </span>
-                </div>
-              </div>
+              <ListingGridLoader message="Loading events..." />
             ) : events.length > 0 ? (
               <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-3">
                 {events.map((event) => (
@@ -465,14 +468,19 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  No events found
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Try adjusting your filters
-                </div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-glass-cheers"
+                title="No events found"
+                subtitle={emptyCopy.subtitle}
+                description={emptyCopy.description}
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(filters, { categories })}
+                suggestions={buildCategorySuggestions(categories, filters.category, (slug) =>
+                  handleFilterChange({ ...filters, category: slug })
+                )}
+                suggestionsTitle="Explore other categories"
+              />
             )}
           </div>
         </div>

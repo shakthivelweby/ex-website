@@ -15,6 +15,8 @@ import {
   normalizeRentalPickupOptions,
   getDefaultPickupOption,
 } from "@/app/rentals/rentalPickupUtils";
+import DetailSubHeader from "@/components/layout/DetailSubHeader";
+import InlineSpinner from "@/components/loading/InlineSpinner";
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -277,31 +279,13 @@ export default function RentalDetailsClient({ rental }) {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 lg:pb-8">
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3 h-14">
-            <button
-              type="button"
-              onClick={handleBackClick}
-              className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors shrink-0"
-            >
-              <i className="fi fi-rr-arrow-left text-base" />
-              <span>Back to rentals</span>
-            </button>
-            <p className="hidden md:block text-sm font-medium text-gray-900 truncate text-center flex-1 px-4">
-              {rental.title}
-            </p>
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share rental"
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-            >
-              <i className="fi fi-rr-share text-lg text-gray-600" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DetailSubHeader
+        backLabel="Back to rentals"
+        title={rental.title}
+        onBack={handleBackClick}
+        onShare={handleShare}
+        shareAriaLabel="Share rental"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 lg:gap-8">
@@ -780,22 +764,7 @@ export default function RentalDetailsClient({ rental }) {
             className="w-full bg-primary-500 text-white py-3.5 px-5 rounded-2xl font-medium flex items-center justify-between shadow-xl shadow-primary-500/25 border border-primary-400/30 disabled:opacity-80"
           >
             <span className="text-sm font-semibold inline-flex items-center gap-2">
-              {isBooking ? (
-                <svg
-                  className="animate-spin h-4 w-4"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  aria-hidden
-                >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-              ) : null}
+              {isBooking ? <InlineSpinner className="h-4 w-4" /> : null}
               {isBooking ? "Loading…" : "Book now"}
             </span>
             <div className="flex items-center gap-2">

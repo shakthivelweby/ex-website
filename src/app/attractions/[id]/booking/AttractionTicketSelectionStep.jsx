@@ -4,8 +4,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import EventTicketOptionCard from "@/app/events/[id]/booking/EventTicketOptionCard";
 import RichTextContent from "@/components/common/RichTextContent";
-
-const WALLET_BG = "#e9e9ec";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 function AccordionChevron({ expanded }) {
   return (
@@ -33,6 +32,7 @@ export default function AttractionTicketSelectionStep({
   selectedDate,
   onDateChange,
   isDateDisabled,
+  ticketsLoading = false,
   ticketPrices,
   adultChildTickets,
   expandedTicketType,
@@ -76,7 +76,7 @@ export default function AttractionTicketSelectionStep({
         </div>
       </div>
 
-      <div className="space-y-2 bg-gray-50/50 p-3 sm:p-4">
+      <div className="space-y-2 p-3 sm:p-4">
         {/* Visit date */}
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
@@ -123,13 +123,16 @@ export default function AttractionTicketSelectionStep({
         </div>
 
         {/* Ticket types */}
-        {ticketPrices?.map((ticket) => {
+        {ticketsLoading ? (
+          <SectionLoader message="Loading tickets for selected date..." />
+        ) : ticketPrices?.length ? (
+        ticketPrices.map((ticket) => {
           const ticketTypeId = ticket.attraction_ticket_type_id;
           const ticketName =
             ticket.attraction_ticket_type?.attraction_ticket_type_master?.name ||
             "Ticket";
           const typeSelected = getSelectedCountForTicketType(ticketTypeId);
-          const isExpanded = expandedTicketType === ticketTypeId;
+          const isExpanded = Number(expandedTicketType) === Number(ticketTypeId);
           const tickets = adultChildTickets[ticketTypeId] || { adult: 0, child: 0 };
           const unitPrices = getTicketUnitPrices(ticket);
           const availability = getAvailabilityMeta(ticket.available_slots);
@@ -139,8 +142,8 @@ export default function AttractionTicketSelectionStep({
 
           return (
             <div
-              key={ticket.id}
-              className={`overflow-hidden rounded-xl border transition-all duration-200 ${
+              key={ticketTypeId}
+              className={`overflow-hidden rounded-xl border bg-white transition-all duration-200 ${
                 isExpanded ? "border-gray-300 shadow-sm" : "border-gray-200 hover:border-gray-300"
               }`}
             >
@@ -190,14 +193,11 @@ export default function AttractionTicketSelectionStep({
               </button>
 
               {isExpanded ? (
-                <div
-                  className="mx-2 mb-2.5 mt-0.5 space-y-1.5 rounded-lg p-2 sm:mx-3"
-                  style={{ backgroundColor: WALLET_BG }}
-                >
+                <div className="space-y-2 border-t border-gray-100 px-3 py-3 sm:px-4">
                   {ticket.description ? (
                     <RichTextContent
                       html={ticket.description}
-                      className="mb-1 px-1 text-[11px] leading-relaxed text-gray-600"
+                      className="rounded-lg border border-gray-100 px-3 py-2 text-[11px] leading-relaxed text-gray-600"
                     />
                   ) : null}
 
@@ -250,7 +250,10 @@ export default function AttractionTicketSelectionStep({
               ) : null}
             </div>
           );
-        })}
+        })
+        ) : (
+          <SectionLoader message="No tickets available for this date." className="py-8" />
+        )}
 
         {getTotalSelectedTickets() === 0 ? (
           <p className="py-1 text-center text-[11px] text-gray-400">

@@ -31,69 +31,14 @@ import {
   forceRentalBookingRestore,
 } from "../../rentalBookingDraft";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing, rentalWindowPeriodSubtotalForDisplay } from "../../rentalPricingCalc";
+import InlineSpinner from "@/components/loading/InlineSpinner";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
 };
-
-const InlineSpinner = ({ className = "h-4 w-4" }) => (
-  <svg
-    className={`animate-spin shrink-0 ${className}`}
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    aria-hidden
-  >
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path
-      className="opacity-75"
-      fill="currentColor"
-      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-    />
-  </svg>
-);
-
-const BookingPageSkeleton = () => (
-  <div className="min-h-screen bg-gray-50">
-    <div className="max-w-7xl mx-auto px-4 py-4 animate-pulse">
-      <div className="hidden lg:block h-4 w-64 bg-gray-200 rounded mb-6" />
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-4 lg:mt-8">
-        <div className="bg-white rounded-lg shadow border overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-200 space-y-2">
-            <div className="h-5 w-48 bg-gray-200 rounded" />
-            <div className="h-4 w-full max-w-md bg-gray-100 rounded" />
-          </div>
-          <div className="p-4 sm:p-6 space-y-5">
-            <div className="h-11 bg-gray-100 rounded-xl" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="h-11 bg-gray-100 rounded-xl" />
-              <div className="h-11 bg-gray-100 rounded-xl" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="h-11 bg-gray-100 rounded-xl" />
-              <div className="h-11 bg-gray-100 rounded-xl" />
-            </div>
-          </div>
-        </div>
-        <div className="hidden lg:block space-y-4">
-          <div className="bg-white rounded-lg shadow border p-4 space-y-3">
-            <div className="aspect-video bg-gray-100 rounded-lg" />
-            <div className="h-5 w-40 bg-gray-200 rounded" />
-            <div className="h-4 w-28 bg-gray-100 rounded" />
-          </div>
-          <div className="bg-white rounded-lg shadow border p-4 space-y-3">
-            <div className="h-5 w-32 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-100 rounded" />
-            <div className="h-4 w-full bg-gray-100 rounded" />
-            <div className="h-10 w-full bg-gray-200 rounded-full mt-4" />
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 const parseAvailabilityPayload = (res) => {
   if (!res || typeof res !== "object") return null;

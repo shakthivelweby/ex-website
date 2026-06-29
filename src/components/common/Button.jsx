@@ -4,7 +4,8 @@ const Button = ({
   children, 
   type = "button", 
   className = "", 
-  isLoading = false, 
+  isLoading = false,
+  loadingLabel,
   disabled = false,
   variant = "primary", // primary, secondary, outline, text
   size = "md", // sm, md, lg
@@ -13,7 +14,8 @@ const Button = ({
   ...props 
 }) => {
   // Base classes that will always be applied
-  const baseClasses = "inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&_i.fi]:inline-flex [&_i.fi]:shrink-0 [&_i.fi]:items-center [&_i.fi]:leading-none";
   
   // Size variations
   const sizeClasses = {
@@ -69,13 +71,15 @@ const Button = ({
       {isLoading ? (
         <>
           <LoadingSpinner />
-          <span>{children}</span>
+          <span>{loadingLabel ?? children}</span>
         </>
+      ) : icon ? (
+        <span className="fi-inline items-center justify-center">
+          {icon}
+          <span>{children}</span>
+        </span>
       ) : (
-        <>
-          <span>{children}</span>
-          {icon && <span className={`${size === "sm" ? "text-sm" : "text-base"}`}>{icon}</span>}
-        </>
+        children
       )}
     </button>
   );

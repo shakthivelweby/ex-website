@@ -1078,35 +1078,28 @@ export default function Scheduled() {
                 </div>
               </div>
             )}
-            {packages?.map((trip) => {
-              const {
-                id,
-                name,
-                images,
-                total_days,
-                total_nights,
-                starting_location,
-                final_adult_price,
-                available_slot,
-              } = trip;
-
-              return (
-                <PackageCard
-                  key={id}
-                  packageId={id}
-                  imageSrc={images[0]?.image_url}
-                  imageAlt={name}
-                  title={name}
-                  startingFrom={starting_location}
-                  duration={`${total_days}D ${total_nights}N`}
-                  price={final_adult_price}
-                  slotsAvailable={available_slot}
-                  isCertified={true}
-                  date={selectedDate?.toISOString().split("T")[0] || ""}
-                  mobileLayout={mobileLayout}
-                />
-              );
-            })}
+            {packages?.map((trip) => (
+              <PackageCard
+                key={trip.id}
+                package={{
+                  id: trip.id,
+                  title: trip.name,
+                  image: trip.images?.[0]?.image_url,
+                  totalDays: trip.total_days,
+                  totalNights: trip.total_nights,
+                  price: trip.final_adult_price,
+                  childPrice: trip.final_child_price,
+                  startingFrom: trip.starting_location,
+                  pickupPoint: trip.pickup_point,
+                  tourType: trip.tour_type,
+                  minMembers: trip.minimum_members,
+                  maxMembers: trip.maximum_members,
+                  slotsAvailable: trip.available_slot,
+                  isCertified: true,
+                  date: selectedDate?.toISOString().split("T")[0] || "",
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>

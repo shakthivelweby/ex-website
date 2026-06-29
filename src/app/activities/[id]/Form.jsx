@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
+import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
@@ -168,7 +168,7 @@ const Form = ({
   enquireOnly = false,
   selectedTicket = null,
 }) => {
-  const router = useRouter();
+  const { isNavigating, navigate } = useNavigateWithLoading();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
@@ -573,8 +573,7 @@ const Form = ({
     };
     sessionStorage.setItem("bookingData", JSON.stringify(bookingData));
 
-    // Redirect to booking page
-    router.push(`/activities/${activityDetails.id}/booking`);
+    navigate(`/activities/${activityDetails.id}/booking`);
   };
 
   const submitHandler = async () => {
@@ -595,7 +594,7 @@ const Form = ({
       }
 
       // Redirect to booking page
-      router.push(`/activities/${activityDetails.id}/booking`);
+      navigate(`/activities/${activityDetails.id}/booking`);
     } catch (error) {
       console.error("Error:", error);
       alert(
@@ -982,7 +981,8 @@ const Form = ({
                 onClick={handleBooking}
                 size="lg"
                 className="w-full rounded-full"
-                isLoading={isLoading}
+                isLoading={isNavigating || isLoading}
+                loadingLabel={enquireOnly ? "Sending enquiry…" : "Opening booking…"}
                 icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
               >
                 {enquireOnly ? "Send Enquiry" : "Book Now"}
@@ -993,7 +993,8 @@ const Form = ({
               onClick={handleBooking}
               size="lg"
               className="w-full rounded-full"
-              isLoading={isLoading}
+              isLoading={isNavigating || isLoading}
+              loadingLabel={enquireOnly ? "Sending enquiry…" : "Opening booking…"}
               icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
             >
               {enquireOnly ? "Send Enquiry" : "Book Now"}

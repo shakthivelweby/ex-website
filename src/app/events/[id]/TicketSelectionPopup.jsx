@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Popup from "@/components/Popup";
+import Button from "@/components/common/Button";
 import RichTextContent from "@/components/common/RichTextContent";
 import { getDetailsForBooking } from "./service";
 
 const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [expandedDate, setExpandedDate] = useState(null);
   const [expandedShow, setExpandedShow] = useState(null);
@@ -117,11 +119,17 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
     return total;
   };
 
-  const handleContinue = () => {
-    if (onContinue) {
-      onContinue(selectedTickets, getTotalPrice());
+  const handleContinue = async () => {
+    if (getTotalSelectedTickets() === 0) return;
+    setIsContinuing(true);
+    try {
+      if (onContinue) {
+        await onContinue(selectedTickets, getTotalPrice());
+      }
+      onClose();
+    } finally {
+      setIsContinuing(false);
     }
-    onClose();
   };
 
   if (loading) {
@@ -438,14 +446,17 @@ const TicketSelectionPopup = ({ isOpen, onClose, eventId, onContinue }) => {
             </div>
           )}
         </div>
-        <button
+        <Button
           onClick={handleContinue}
+          size="lg"
+          className="w-full"
           disabled={getTotalSelectedTickets() === 0}
-          className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors"
+          isLoading={isContinuing}
+          loadingLabel="Continuing…"
         >
           Continue with {getTotalSelectedTickets()} ticket
           {getTotalSelectedTickets() !== 1 ? "s" : ""}
-        </button>
+        </Button>
       </div>
     </Popup>
   );

@@ -11,9 +11,11 @@ import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import ShareOptions from "@/components/ShareOptions/ShareOptions";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
 import RichTextContent from "@/components/common/RichTextContent";
+import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 
 const AttractionDetailClient = ({ attractionDetails }) => {
   const router = useRouter();
+  const { isNavigating, navigate } = useNavigateWithLoading();
   const [selectedTickets, setSelectedTickets] = useState({});
   const [totalPrice, setTotalPrice] = useState(0);
   const [isTicketPopupOpen, setIsTicketPopupOpen] = useState(false);
@@ -66,7 +68,7 @@ const AttractionDetailClient = ({ attractionDetails }) => {
   };
 
   const handleMobileBooking = () => {
-    router.push(`/attractions/${attractionDetails.id}/booking`);
+    navigate(`/attractions/${attractionDetails.id}/booking`);
   };
 
   return (
@@ -353,18 +355,19 @@ const AttractionDetailClient = ({ attractionDetails }) => {
 
       {/* Fixed Mobile Booking Button */}
       <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
-        <button
+        <Button
           onClick={handleMobileBooking}
-          className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg"
+          size="lg"
+          className="w-full !rounded-full !justify-between shadow-lg px-6"
+          isLoading={isNavigating}
+          loadingLabel="Opening booking…"
         >
-          <div className="flex items-center">
-            <span className="text-sm">Book Now</span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm font-bold">{attractionDetails.price}</span>
-            <i className="fi fi-rr-ticket ml-2 text-sm"></i>
-          </div>
-        </button>
+          <span className="text-sm">Book Now</span>
+          <span className="flex items-center text-sm font-bold">
+            {attractionDetails.price}
+            <i className="fi fi-rr-ticket ml-2 text-sm" />
+          </span>
+        </Button>
       </div>
     </div>
   );

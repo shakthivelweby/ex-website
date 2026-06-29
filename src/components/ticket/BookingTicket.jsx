@@ -50,6 +50,47 @@ function TicketPerforation({ className = "" }) {
   );
 }
 
+function TicketQuantityBreakdown({ ticket }) {
+  const lines = Array.isArray(ticket?.ticket_lines)
+    ? ticket.ticket_lines.filter((line) => Number(line?.quantity) > 0)
+    : [];
+  const total =
+    Number(ticket?.ticket_quantity) ||
+    lines.reduce((sum, line) => sum + Number(line?.quantity || 0), 0) ||
+    1;
+
+  if (lines.length === 0) {
+    return (
+      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+        {total} Ticket{total !== 1 ? "s" : ""}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+        {total} Ticket{total !== 1 ? "s" : ""} total
+      </p>
+      <ul className="mx-auto max-w-sm space-y-1.5 text-left text-sm">
+        {lines.map((line, index) => (
+          <li
+            key={`${line.name || "ticket"}-${index}`}
+            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60"
+          >
+            <span className="min-w-0 truncate font-medium text-gray-800 dark:text-gray-100">
+              {line.name || "Ticket"}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums text-gray-900 dark:text-white">
+              × {line.quantity}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ActionButton({ icon, label, onClick, disabled }) {
   return (
     <button
@@ -288,9 +329,7 @@ export default function BookingTicket({
 
           {!detailsHidden && (
             <div className="space-y-1 px-4 pb-4 text-center sm:px-5">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {ticket?.ticket_quantity || 1} Ticket(s)
-              </p>
+              <TicketQuantityBreakdown ticket={ticket} />
               {experience.location && (
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                   {experience.location.split(",")[0]}

@@ -17,6 +17,14 @@ import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "@/app/checkout/attractions/service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
+import { getSplitPaymentPlan } from "@/utils/razorpayLimits";
+import {
+  isPartialPayment,
+  resolveRemainingBalance,
+  roundMoney,
+} from "@/utils/paymentCompletion";
+import SplitPaymentNotice from "@/components/booking/SplitPaymentNotice";
+import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
@@ -237,6 +245,7 @@ const AttractionBookingPage = ({
   const [isMobile, setIsMobile] = useState(false);
   const [needGuide, setNeedGuide] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   const [paymentPhase, setPaymentPhase] = useState(null);
@@ -254,6 +263,8 @@ const AttractionBookingPage = ({
   const [showPaymentError, setShowPaymentError] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [pendingCheckout, setPendingCheckout] = useState(null);
+  const [razorpayMax, setRazorpayMax] = useState(null);
+  const [balancePaymentPopup, setBalancePaymentPopup] = useState(null);
   const [userContact, setUserContact] = useState({ email: "", phone: "" });
 
   // Check for mobile view
@@ -489,8 +500,13 @@ const AttractionBookingPage = ({
     if (!selectedDate) {
       return;
     }
-    await refreshBookingData();
-    setCurrentStep(2);
+    setIsContinuing(true);
+    try {
+      await refreshBookingData();
+      setCurrentStep(2);
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   const handleBack = async () => {
@@ -643,16 +659,32 @@ const AttractionBookingPage = ({
     setShowPaymentError(true);
   };
 
-  const getOrderErrorPayload = (message) => ({
-    variant: "warning",
-    title: "Couldn't start payment",
-    message: String(message || "We couldn't prepare your payment. Please try again."),
-    hint: "Your booking is saved. You can continue to payment when you're ready.",
-    canRetry: true,
-    primaryLabel: "Continue to payment",
-    primaryIcon: "fi-rr-refresh",
-    secondaryLabel: "Close",
-  });
+  const getOrderErrorPayload = (message) => {
+    const text = String(message || "");
+    if (/maximum amount/i.test(text)) {
+      return {
+        variant: "warning",
+        title: "Payment amount too high",
+        message:
+          "This order exceeds Razorpay's per-transaction limit. Large payments are split automatically — please try again.",
+        hint: "If it still fails, raise the limit in your Razorpay Dashboard (Account → Transaction limits).",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      };
+    }
+    return {
+      variant: "warning",
+      title: "Couldn't start payment",
+      message: text || "We couldn't prepare your payment. Please try again.",
+      hint: "Your booking is saved. You can continue to payment when you're ready.",
+      canRetry: true,
+      primaryLabel: "Continue to payment",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Close",
+    };
+  };
 
   const resolveBookingIdFromVerify = (verificationResponse, fallbackBookingId) =>
     verificationResponse?.data?.payment?.attraction_booking_id ??
@@ -661,10 +693,16 @@ const AttractionBookingPage = ({
     verificationResponse?.data?.attractionBooking?.id ??
     fallbackBookingId;
 
-  const openRazorpayAndVerify = async (orderRes, paymentAmount, bookingId) => {
+  const openRazorpayAndVerify = async (
+    orderRes,
+    paymentAmount,
+    bookingId,
+    priorPaidAmount = 0
+  ) => {
     setPaymentPhase(null);
+    const chargeAmount = Number(orderRes?.data?.amount ?? paymentAmount);
     const paymentResponse = await initializeRazorpayPayment({
-      amount: paymentAmount,
+      amount: chargeAmount,
       currency: "INR",
       name: "Explore World",
       description: `Payment for ${attractionData?.name || "attraction"} tickets`,
@@ -727,8 +765,34 @@ const AttractionBookingPage = ({
     }
 
     const userEmail = getLoggedInUserEmail() || userContact.email || "";
-    setPendingCheckout(null);
+    const remainingBalance = resolveRemainingBalance(verificationResponse, orderRes, {
+      bookingRelation: "attractionBooking",
+      bookingRelationSnake: "attraction_booking",
+    });
+    const isPartial = isPartialPayment(verificationResponse, orderRes, {
+      bookingRelation: "attractionBooking",
+      bookingRelationSnake: "attraction_booking",
+    });
+    const totalPaid = roundMoney(priorPaidAmount + chargeAmount);
+
+    setPendingCheckout(
+      isPartial ? { bookingId: resolvedBookingId, paymentAmount: remainingBalance } : null
+    );
     setCompletedBookingId(resolvedBookingId);
+
+    if (isPartial) {
+      setBalancePaymentPopup({
+        bookingId: resolvedBookingId,
+        attractionId: parseInt(attractionId, 10),
+        paidAmount: totalPaid,
+        remainingBalance,
+        emailSent: Boolean(verificationResponse?.data?.confirmation_email_sent),
+        userEmail,
+      });
+      return true;
+    }
+
+    setBalancePaymentPopup(null);
     setSuccessMessage({
       title: "You're all set!",
       message: "Your attraction tickets have been booked successfully.",
@@ -736,7 +800,7 @@ const AttractionBookingPage = ({
       userEmail,
       visitDate: selectedDate ? formatDate(selectedDate) : "—",
       guestSummary: getGuestSummary(),
-      amountPaid: money(paymentAmount),
+      amountPaid: money(totalPaid),
     });
     setShowSuccess(true);
     localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
@@ -745,10 +809,68 @@ const AttractionBookingPage = ({
 
   const goToCompletedTicket = () => {
     setShowSuccess(false);
+    setBalancePaymentPopup(null);
     if (completedBookingId) {
       router.push(`/my-bookings/attraction/ticket/${completedBookingId}`);
     } else {
       router.push("/my-bookings?tab=attractions");
+    }
+  };
+
+  const handleBalancePayLater = () => {
+    setBalancePaymentPopup(null);
+    router.push("/my-bookings?tab=attractions");
+  };
+
+  const executeBalancePayment = async () => {
+    if (!balancePaymentPopup || isPaying) return;
+
+    const { bookingId, attractionId: popupAttractionId, remainingBalance, paidAmount } =
+      balancePaymentPopup;
+    setIsPaying(true);
+    setCheckoutError(null);
+
+    try {
+      setPaymentPhase("preparing");
+      const orderRes = await createOrder({
+        attraction_id: popupAttractionId,
+        attraction_booking_id: bookingId,
+        amount: remainingBalance,
+      });
+
+      if (!orderRes.status) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderRes.message));
+        return;
+      }
+
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? remainingBalance),
+        bookingId,
+        paidAmount
+      );
+    } catch (error) {
+      setPaymentPhase(null);
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Something went wrong",
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to process balance payment. Please try again.",
+        hint: "You can also pay the remaining balance from My Bookings.",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      });
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -800,7 +922,15 @@ const AttractionBookingPage = ({
         return;
       }
 
-      await openRazorpayAndVerify(orderRes, paymentAmount, bookingId);
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? paymentAmount),
+        bookingId
+      );
     } catch (error) {
       setPaymentPhase(null);
       if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
@@ -907,6 +1037,13 @@ const AttractionBookingPage = ({
     grandTotal: grandTotalForSummary,
     guideAmount: needGuide && guideRate > 0 ? Number(guideRate) : 0,
   });
+
+  const getCheckoutPayLabel = (grandTotal) => {
+    const plan = getSplitPaymentPlan(grandTotal, razorpayMax);
+    return plan.requiresSplit
+      ? `Pay ₹${plan.firstPayment.toFixed(2)} now`
+      : `Pay ₹${grandTotal.toFixed(2)}`;
+  };
 
   if (loading) {
     return (
@@ -1083,6 +1220,11 @@ const AttractionBookingPage = ({
                   ) : null}
                 </div>
 
+                <SplitPaymentNotice
+                  grandTotal={getPriceBreakdown().grandTotal}
+                  className="mx-4 mt-3"
+                />
+
                 <div className="border-t border-gray-100 p-4 lg:hidden">
                   <TermsAgreement
                     checked={termsAccepted}
@@ -1202,6 +1344,10 @@ const AttractionBookingPage = ({
                             ₹{b.grandTotal.toFixed(2)}
                           </span>
                         </div>
+
+                        {currentStep === 2 ? (
+                          <SplitPaymentNotice grandTotal={b.grandTotal} className="mt-3" />
+                        ) : null}
                       </>
                     );
                   })()}
@@ -1214,6 +1360,8 @@ const AttractionBookingPage = ({
                       size="lg"
                       className="w-full"
                       disabled={getTotalSelectedTickets() === 0 || !selectedDate}
+                      isLoading={isContinuing}
+                      loadingLabel="Loading review…"
                     >
                       Continue to review
                     </Button>
@@ -1234,10 +1382,10 @@ const AttractionBookingPage = ({
                         size="lg"
                         className="w-full h-12 text-base font-semibold"
                         disabled={isPaying || !termsAccepted}
+                        isLoading={isPaying}
+                        loadingLabel="Processing…"
                       >
-                        {isPaying
-                          ? "Processing…"
-                          : `Pay ₹${getPriceBreakdown().grandTotal.toFixed(2)}`}
+                        {getCheckoutPayLabel(getPriceBreakdown().grandTotal)}
                       </Button>
                       <div className="flex flex-col items-center gap-2">
                         <button
@@ -1284,6 +1432,8 @@ const AttractionBookingPage = ({
                     size="lg"
                     className="w-full"
                     disabled={getTotalSelectedTickets() === 0 || !selectedDate}
+                    isLoading={isContinuing}
+                    loadingLabel="Loading review…"
                   >
                     Continue to review
                   </Button>
@@ -1305,8 +1455,10 @@ const AttractionBookingPage = ({
                   size="lg"
                   className="flex-1 h-12"
                   disabled={isPaying || !termsAccepted}
+                  isLoading={isPaying}
+                  loadingLabel="Processing…"
                 >
-                  {isPaying ? "Processing…" : `Pay ₹${b.grandTotal.toFixed(2)}`}
+                  {getCheckoutPayLabel(b.grandTotal)}
                 </Button>
               </div>
             );
@@ -1318,6 +1470,15 @@ const AttractionBookingPage = ({
       </div>
 
       <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <BalancePaymentPopup
+        show={Boolean(balancePaymentPopup) && !showSuccess}
+        itemTitle={attractionData?.name || "Attraction"}
+        paidAmount={balancePaymentPopup?.paidAmount}
+        remainingBalance={balancePaymentPopup?.remainingBalance}
+        isPaying={isPaying}
+        onPayNow={executeBalancePayment}
+        onPayLater={handleBalancePayLater}
+      />
       <PaymentSuccessPopup
         show={showSuccess}
         onClose={goToCompletedTicket}

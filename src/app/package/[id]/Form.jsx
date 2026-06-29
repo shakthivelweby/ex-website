@@ -834,6 +834,7 @@ const Form = ({
               size="lg"
               className="w-full rounded-full"
               isLoading={isLoading}
+              loadingLabel={isEnquiryOnly ? "Sending enquiry…" : "Opening checkout…"}
               icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
             >
               {isEnquiryOnly ? "Enquire Now" : "Book Now"}
@@ -846,6 +847,7 @@ const Form = ({
               size="lg"
               className="w-full mb-3 rounded-full"
               isLoading={isLoading}
+              loadingLabel={isEnquiryOnly ? "Sending enquiry…" : "Opening checkout…"}
               icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
             >
               {isEnquiryOnly ? "Enquire Now" : "Book Now"}

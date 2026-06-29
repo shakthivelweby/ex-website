@@ -351,9 +351,11 @@ export default function RentalBookings() {
                     size="sm"
                     onClick={() => handlePayBalance(b)}
                     disabled={isProcessingPayment}
+                    isLoading={isProcessingPayment}
+                    loadingLabel="Processing..."
                     className="!rounded-full !text-xs !px-4 !py-2"
                   >
-                    {isProcessingPayment ? "Processing..." : `Pay Balance ${formatCurrency(balance)}`}
+                    {`Pay Balance ${formatCurrency(balance)}`}
                   </Button>
                 ) : null}
               </div>

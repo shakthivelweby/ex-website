@@ -1601,6 +1601,7 @@ const BookingClient = ({ activityId }) => {
                   size="lg"
                   className="w-full rounded-full"
                   isLoading={isLoading}
+                  loadingLabel="Processing…"
                   icon={<i className="fi fi-rr-check ml-2"></i>}
                 >
                   Confirm Booking

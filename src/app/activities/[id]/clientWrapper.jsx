@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
@@ -10,9 +9,10 @@ import Form from "./Form";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import RichTextContent from "@/components/common/RichTextContent";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
+import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 
 const ActivityDetailPage = ({ activityDetails }) => {
-  const router = useRouter();
+  const { isNavigating, navigate } = useNavigateWithLoading();
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   // selectedTicketId = ticket chosen for booking/price
@@ -361,7 +361,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
   const handleMobileBooking = () => {
     if (!enquireOnly) {
-      router.push(`/activities/${activityDetails.id}/booking`);
+      navigate(`/activities/${activityDetails.id}/booking`);
     } else {
       setShowMobileForm(true);
     }
@@ -1238,30 +1238,27 @@ const ActivityDetailPage = ({ activityDetails }) => {
 
       {/* Fixed Mobile Booking Button */}
       <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
-        <button
+        <Button
           onClick={handleMobileBooking}
-          className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg"
+          size="lg"
+          className="w-full !rounded-full !justify-between shadow-lg px-6"
+          isLoading={isNavigating}
+          loadingLabel={enquireOnly ? "Opening…" : "Opening booking…"}
         >
-          <div className="flex items-center">
-            <span className="text-sm">
-              {enquireOnly ? "Send Enquiry" : "Book Now"}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm font-bold">
-              {(() => {
-                const selectedTicket = activityDetails.ticketOptions?.find(
-                  ticket => ticket.id === selectedTicketId
-                );
-                if (selectedTicket) {
-                  return `₹${selectedTicket.price || selectedTicket.adult_price || 0}`;
-                }
-                return activityDetails.price;
-              })()}
-            </span>
-            <i className="fi fi-rr-ticket ml-2 text-sm"></i>
-          </div>
-        </button>
+          <span className="text-sm">{enquireOnly ? "Send Enquiry" : "Book Now"}</span>
+          <span className="flex items-center text-sm font-bold">
+            {(() => {
+              const selectedTicket = activityDetails.ticketOptions?.find(
+                (ticket) => ticket.id === selectedTicketId
+              );
+              if (selectedTicket) {
+                return `₹${selectedTicket.price || selectedTicket.adult_price || 0}`;
+              }
+              return activityDetails.price;
+            })()}
+            <i className="fi fi-rr-ticket ml-2 text-sm" />
+          </span>
+        </Button>
       </div>
     </main>
   );

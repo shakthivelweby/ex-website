@@ -4,18 +4,25 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import { getEventBookings } from "./service";
+import { createOrder, verifyPayment, paymentFailure } from "@/app/checkout/events/service";
+import { initializeRazorpayPayment } from "@/sdk/razorpay";
+import { getLoggedInUserEmail } from "@/utils/authSession";
+import { getPaymentErrorPayload } from "@/utils/paymentCheckoutUi";
 import { useQuery } from "@tanstack/react-query";
 
 const EventBookings = () => {
   const router = useRouter();
   const [expandedBooking, setExpandedBooking] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
 
   // event booking query with pagination
   const {
     data: eventBookingsData,
     isLoading: eventBookingsLoading,
     error: eventBookingsError,
+    refetch,
   } = useQuery({
     queryKey: ["eventBookings", currentPage],
     queryFn: () => getEventBookings(currentPage),
@@ -60,6 +67,74 @@ const EventBookings = () => {
 
   const togglePaymentHistory = (bookingId) => {
     setExpandedBooking(expandedBooking === bookingId ? null : bookingId);
+  };
+
+  const handlePayBalance = async (booking) => {
+    const balance = parseFloat(booking.balance || 0);
+    if (balance <= 0.01) return;
+
+    try {
+      setIsProcessingPayment(true);
+      setPaymentError(null);
+
+      const orderRes = await createOrder({
+        event_id: booking.event_id,
+        event_booking_id: booking.id,
+        amount: balance,
+      });
+
+      if (!orderRes?.status) {
+        throw new Error(orderRes?.message || "Failed to create payment order.");
+      }
+
+      const userData = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("user") || "null");
+        } catch {
+          return null;
+        }
+      })();
+
+      const chargeAmount = Number(orderRes?.data?.amount ?? balance);
+      const payRes = await initializeRazorpayPayment({
+        amount: chargeAmount,
+        currency: "INR",
+        name: "Explore World",
+        description: `Balance for ${booking.event?.name || "event"}`,
+        orderId: orderRes?.data?.order_id,
+        key: orderRes?.data?.key,
+        email: userData?.email || "",
+        contact: userData?.phone || "",
+      });
+
+      if (!payRes?.status) {
+        try {
+          await paymentFailure(orderRes?.data?.event_payment_id);
+        } catch (_) {}
+        const payload = getPaymentErrorPayload(payRes);
+        throw new Error(payload.message);
+      }
+
+      const verifyRes = await verifyPayment({
+        order_id: orderRes?.data?.order_id,
+        payment_id: payRes?.data?.razorpay_payment_id,
+        signature: payRes?.data?.razorpay_signature,
+        customer_email: getLoggedInUserEmail() || userData?.email || undefined,
+      });
+
+      if (!verifyRes?.status) {
+        try {
+          await paymentFailure(orderRes?.data?.event_payment_id);
+        } catch (_) {}
+        throw new Error(verifyRes?.message || "Payment verification failed.");
+      }
+
+      await refetch();
+    } catch (e) {
+      setPaymentError(e?.message || "Payment failed. Please try again.");
+    } finally {
+      setIsProcessingPayment(false);
+    }
   };
 
   const handlePageChange = (page) => {
@@ -223,6 +298,20 @@ const EventBookings = () => {
                     <i className="fi fi-rr-ticket mr-1.5"></i>
                     View Ticket
                   </Button>
+
+                  {parseFloat(booking.balance || 0) > 0.01 ? (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handlePayBalance(booking)}
+                      disabled={isProcessingPayment}
+                      isLoading={isProcessingPayment}
+                      loadingLabel="Processing..."
+                      className="!rounded-full !text-xs !px-4 !py-2"
+                    >
+                      Pay Balance {formatCurrency(booking.balance)}
+                    </Button>
+                  ) : null}
 
                   <Button
                     variant="outline"

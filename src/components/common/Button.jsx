@@ -4,7 +4,8 @@ const Button = ({
   children, 
   type = "button", 
   className = "", 
-  isLoading = false, 
+  isLoading = false,
+  loadingLabel,
   disabled = false,
   variant = "primary", // primary, secondary, outline, text
   size = "md", // sm, md, lg
@@ -69,7 +70,7 @@ const Button = ({
       {isLoading ? (
         <>
           <LoadingSpinner />
-          <span>{children}</span>
+          <span>{loadingLabel ?? children}</span>
         </>
       ) : (
         <>

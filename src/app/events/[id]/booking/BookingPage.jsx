@@ -15,6 +15,14 @@ import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "@/app/checkout/events/service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
+import { getSplitPaymentPlan } from "@/utils/razorpayLimits";
+import {
+  isPartialPayment,
+  resolveRemainingBalance,
+  roundMoney,
+} from "@/utils/paymentCompletion";
+import SplitPaymentNotice from "@/components/booking/SplitPaymentNotice";
+import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import isLogin from "@/utils/isLogin";
 
 /** One row per ticket type — API can return duplicate price rows for the same day. */
@@ -186,6 +194,7 @@ const BookingPage = ({ eventId }) => {
   const [expandedShow, setExpandedShow] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
   const [paymentPhase, setPaymentPhase] = useState(null);
@@ -204,6 +213,8 @@ const BookingPage = ({ eventId }) => {
   const [paymentError, setPaymentError] = useState(null);
   const [pendingCheckout, setPendingCheckout] = useState(null);
   const [userContact, setUserContact] = useState({ email: "", phone: "" });
+  const [razorpayMax, setRazorpayMax] = useState(null);
+  const [balancePaymentPopup, setBalancePaymentPopup] = useState(null);
 
   // Fetch both event and booking details
   useEffect(() => {
@@ -434,6 +445,13 @@ const BookingPage = ({ eventId }) => {
     };
   };
 
+  const getCheckoutPayLabel = (grandTotal) => {
+    const plan = getSplitPaymentPlan(grandTotal, razorpayMax);
+    return plan.requiresSplit
+      ? `Pay ₹${plan.firstPayment.toFixed(2)} now`
+      : `Pay ₹${grandTotal.toFixed(2)}`;
+  };
+
   const refreshBookingSlots = async () => {
     try {
       const bookingResponse = await getDetailsForBooking(eventId);
@@ -448,8 +466,13 @@ const BookingPage = ({ eventId }) => {
       alert("Please select at least one ticket to continue");
       return;
     }
-    await refreshBookingSlots();
-    setCurrentStep(2);
+    setIsContinuing(true);
+    try {
+      await refreshBookingSlots();
+      setCurrentStep(2);
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   const handleBack = async () => {
@@ -534,16 +557,32 @@ const BookingPage = ({ eventId }) => {
     setShowPaymentError(true);
   };
 
-  const getOrderErrorPayload = (message) => ({
-    variant: "warning",
-    title: "Couldn't start payment",
-    message: String(message || "We couldn't prepare your payment. Please try again."),
-    hint: "Your booking is saved. You can continue to payment when you're ready.",
-    canRetry: true,
-    primaryLabel: "Continue to payment",
-    primaryIcon: "fi-rr-refresh",
-    secondaryLabel: "Close",
-  });
+  const getOrderErrorPayload = (message) => {
+    const text = String(message || "");
+    if (/maximum amount/i.test(text)) {
+      return {
+        variant: "warning",
+        title: "Payment amount too high",
+        message:
+          "This order exceeds Razorpay's per-transaction limit for your account. We've updated checkout to split large payments automatically — please try again.",
+        hint: "If it still fails, ask your admin to raise the limit in the Razorpay Dashboard (Account → Transaction limits).",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      };
+    }
+    return {
+      variant: "warning",
+      title: "Couldn't start payment",
+      message: text || "We couldn't prepare your payment. Please try again.",
+      hint: "Your booking is saved. You can continue to payment when you're ready.",
+      canRetry: true,
+      primaryLabel: "Continue to payment",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Close",
+    };
+  };
 
   const resolveBookingIdFromVerify = (verificationResponse, fallbackBookingId) =>
     verificationResponse?.data?.payment?.event_booking_id ??
@@ -552,10 +591,16 @@ const BookingPage = ({ eventId }) => {
     verificationResponse?.data?.eventBooking?.id ??
     fallbackBookingId;
 
-  const openRazorpayAndVerify = async (orderRes, paymentAmount, bookingId) => {
+  const openRazorpayAndVerify = async (
+    orderRes,
+    paymentAmount,
+    bookingId,
+    priorPaidAmount = 0
+  ) => {
     setPaymentPhase(null);
+    const chargeAmount = Number(orderRes?.data?.amount ?? paymentAmount);
     const paymentResponse = await initializeRazorpayPayment({
-      amount: paymentAmount,
+      amount: chargeAmount,
       currency: "INR",
       name: "Explore World",
       description: `Payment for ${eventData?.name || "event"} tickets`,
@@ -619,9 +664,34 @@ const BookingPage = ({ eventId }) => {
 
     const userEmail = getLoggedInUserEmail() || userContact.email || "";
     const ticketCount = getTotalSelectedTickets();
+    const remainingBalance = resolveRemainingBalance(verificationResponse, orderRes, {
+      bookingRelation: "eventBooking",
+      bookingRelationSnake: "event_booking",
+    });
+    const isPartial = isPartialPayment(verificationResponse, orderRes, {
+      bookingRelation: "eventBooking",
+      bookingRelationSnake: "event_booking",
+    });
+    const totalPaid = roundMoney(priorPaidAmount + chargeAmount);
 
-    setPendingCheckout(null);
+    setPendingCheckout(
+      isPartial ? { bookingId: resolvedBookingId, paymentAmount: remainingBalance } : null
+    );
     setCompletedBookingId(resolvedBookingId);
+
+    if (isPartial) {
+      setBalancePaymentPopup({
+        bookingId: resolvedBookingId,
+        eventId: parseInt(eventId, 10),
+        paidAmount: totalPaid,
+        remainingBalance,
+        emailSent: Boolean(verificationResponse?.data?.confirmation_email_sent),
+        userEmail,
+      });
+      return true;
+    }
+
+    setBalancePaymentPopup(null);
     setSuccessMessage({
       title: "You're all set!",
       message: "Your event tickets have been booked successfully.",
@@ -629,7 +699,7 @@ const BookingPage = ({ eventId }) => {
       userEmail,
       eventDate: getFirstSelectedEventDateLabel(),
       ticketSummary: `${ticketCount} ticket${ticketCount !== 1 ? "s" : ""}`,
-      amountPaid: money(paymentAmount),
+      amountPaid: money(totalPaid),
     });
     setShowSuccess(true);
     return true;
@@ -637,10 +707,67 @@ const BookingPage = ({ eventId }) => {
 
   const goToCompletedTicket = () => {
     setShowSuccess(false);
+    setBalancePaymentPopup(null);
     if (completedBookingId) {
       router.push(`/my-bookings/event/ticket/${completedBookingId}`);
     } else {
       router.push("/my-bookings?tab=events");
+    }
+  };
+
+  const handleBalancePayLater = () => {
+    setBalancePaymentPopup(null);
+    router.push("/my-bookings?tab=events");
+  };
+
+  const executeBalancePayment = async () => {
+    if (!balancePaymentPopup || isPaying) return;
+
+    const { bookingId, eventId, remainingBalance, paidAmount } = balancePaymentPopup;
+    setIsPaying(true);
+    setCheckoutError(null);
+
+    try {
+      setPaymentPhase("preparing");
+      const orderRes = await createOrder({
+        event_id: eventId,
+        event_booking_id: bookingId,
+        amount: remainingBalance,
+      });
+
+      if (!orderRes.status) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderRes.message));
+        return;
+      }
+
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? remainingBalance),
+        bookingId,
+        paidAmount
+      );
+    } catch (error) {
+      setPaymentPhase(null);
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Something went wrong",
+        message:
+          error.response?.data?.message ||
+          error.message ||
+          "Failed to process balance payment. Please try again.",
+        hint: "You can also pay the remaining balance from My Bookings.",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      });
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -693,7 +820,15 @@ const BookingPage = ({ eventId }) => {
         return;
       }
 
-      await openRazorpayAndVerify(orderRes, paymentAmount, bookingId);
+      if (orderRes.data?.max_transaction_amount != null) {
+        setRazorpayMax(Number(orderRes.data.max_transaction_amount));
+      }
+
+      await openRazorpayAndVerify(
+        orderRes,
+        Number(orderRes.data?.amount ?? paymentAmount),
+        bookingId
+      );
     } catch (error) {
       setPaymentPhase(null);
       if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
@@ -1069,6 +1204,11 @@ const BookingPage = ({ eventId }) => {
                   </button>
                 </div>
 
+                <SplitPaymentNotice
+                  grandTotal={getPriceBreakdown().grandTotal}
+                  className="mx-4 mt-3"
+                />
+
                 <div className="space-y-2 bg-gray-50/50 p-4">
                   {Object.entries(selectedTickets).map(([key, quantity]) => {
                     if (quantity === 0) return null;
@@ -1212,6 +1352,10 @@ const BookingPage = ({ eventId }) => {
                             ₹{b.grandTotal.toFixed(2)}
                           </span>
                         </div>
+
+                        {currentStep === 2 ? (
+                          <SplitPaymentNotice grandTotal={b.grandTotal} className="mt-3" />
+                        ) : null}
                       </>
                     );
                   })()}
@@ -1224,6 +1368,8 @@ const BookingPage = ({ eventId }) => {
                       size="lg"
                       className="w-full"
                       disabled={getTotalSelectedTickets() === 0}
+                      isLoading={isContinuing}
+                      loadingLabel="Loading review…"
                     >
                       Continue to review
                     </Button>
@@ -1244,8 +1390,10 @@ const BookingPage = ({ eventId }) => {
                         size="lg"
                         className="w-full h-12 text-base font-semibold"
                         disabled={isPaying || !termsAccepted}
+                        isLoading={isPaying}
+                        loadingLabel="Processing…"
                       >
-                        {isPaying ? "Processing…" : `Pay ₹${getPriceBreakdown().grandTotal.toFixed(2)}`}
+                        {getCheckoutPayLabel(getPriceBreakdown().grandTotal)}
                       </Button>
                       <div className="flex flex-col items-center gap-2">
                         <button
@@ -1291,6 +1439,8 @@ const BookingPage = ({ eventId }) => {
                     size="lg"
                     className="w-full"
                     disabled={getTotalSelectedTickets() === 0}
+                    isLoading={isContinuing}
+                    loadingLabel="Loading review…"
                   >
                     Continue to review
                   </Button>
@@ -1312,8 +1462,10 @@ const BookingPage = ({ eventId }) => {
                   size="lg"
                   className="flex-1 h-12"
                   disabled={isPaying || !termsAccepted}
+                  isLoading={isPaying}
+                  loadingLabel="Processing…"
                 >
-                  {isPaying ? "Processing…" : `Pay ₹${b.grandTotal.toFixed(2)}`}
+                  {getCheckoutPayLabel(b.grandTotal)}
                 </Button>
               </div>
             );
@@ -1325,6 +1477,15 @@ const BookingPage = ({ eventId }) => {
       </div>
 
       <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+      <BalancePaymentPopup
+        show={Boolean(balancePaymentPopup) && !showSuccess}
+        itemTitle={eventData?.name || "Event"}
+        paidAmount={balancePaymentPopup?.paidAmount}
+        remainingBalance={balancePaymentPopup?.remainingBalance}
+        isPaying={isPaying}
+        onPayNow={executeBalancePayment}
+        onPayLater={handleBalancePayLater}
+      />
       <PaymentSuccessPopup
         show={showSuccess}
         onClose={goToCompletedTicket}

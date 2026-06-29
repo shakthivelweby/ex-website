@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
@@ -12,14 +12,14 @@ import RichTextContent from "@/components/common/RichTextContent";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
 
 const EventDetailPage = ({ eventDetails }) => {
-  const router = useRouter();
+  const { isNavigating, navigate } = useNavigateWithLoading();
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const enquireOnly = false;
 
   const handleMobileBooking = () => {
     if (!enquireOnly) {
-      router.push(`/events/${eventDetails.id}/booking`);
+      navigate(`/events/${eventDetails.id}/booking`);
     } else {
       setShowMobileForm(true);
     }
@@ -293,20 +293,19 @@ const EventDetailPage = ({ eventDetails }) => {
 
       {/* Fixed Mobile Booking Button */}
       <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
-        <button
+        <Button
           onClick={handleMobileBooking}
-          className="w-full bg-primary-500 text-white py-3 px-6 rounded-full font-medium flex items-center justify-between shadow-lg"
+          size="lg"
+          className="w-full !rounded-full !justify-between shadow-lg px-6"
+          isLoading={isNavigating}
+          loadingLabel={enquireOnly ? "Opening…" : "Opening booking…"}
         >
-          <div className="flex items-center">
-            <span className="text-sm">
-              {enquireOnly ? "Send Enquiry" : "Book Now"}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm font-bold">{eventDetails.price}</span>
-            <i className="fi fi-rr-ticket ml-2 text-sm"></i>
-          </div>
-        </button>
+          <span className="text-sm">{enquireOnly ? "Send Enquiry" : "Book Now"}</span>
+          <span className="flex items-center text-sm font-bold">
+            {eventDetails.price}
+            <i className="fi fi-rr-ticket ml-2 text-sm" />
+          </span>
+        </Button>
       </div>
     </main>
   );

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import isLogin from "@/utils/isLogin";
+import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 
 const Form = ({
   eventDetails,
@@ -12,7 +12,7 @@ const Form = ({
   selectedTickets: propSelectedTickets,
   totalPrice: propTotalPrice,
 }) => {
-  const router = useRouter();
+  const { isNavigating, navigate } = useNavigateWithLoading();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState(
     propSelectedTickets || {}
@@ -36,7 +36,7 @@ const Form = ({
       return;
     }
     // Redirect to booking page instead of opening popup
-    router.push(`/events/${eventDetails.id}/booking`);
+    navigate(`/events/${eventDetails.id}/booking`);
   };
 
   const submitHandler = async () => {
@@ -188,6 +188,8 @@ const Form = ({
                   onClick={handleTicketSelection}
                   size="lg"
                   className="w-full rounded-full"
+                  isLoading={isNavigating}
+                  loadingLabel="Opening tickets…"
                   icon={<i className="fi fi-rr-ticket ml-2"></i>}
                 >
                   Select Tickets
@@ -198,6 +200,7 @@ const Form = ({
                   size="lg"
                   className="w-full rounded-full"
                   isLoading={isLoading}
+                  loadingLabel={enquireOnly ? "Sending enquiry…" : "Booking…"}
                   icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
                 >
                   {enquireOnly ? "Send Enquiry" : "Book Now"}
@@ -211,6 +214,8 @@ const Form = ({
                   onClick={handleTicketSelection}
                   size="lg"
                   className="w-full rounded-full"
+                  isLoading={isNavigating}
+                  loadingLabel="Opening tickets…"
                   icon={<i className="fi fi-rr-ticket ml-2"></i>}
                 >
                   Select Tickets
@@ -221,6 +226,7 @@ const Form = ({
                   size="lg"
                   className="w-full rounded-full"
                   isLoading={isLoading}
+                  loadingLabel={enquireOnly ? "Sending enquiry…" : "Booking…"}
                   icon={<i className="fi fi-rr-arrow-right ml-2"></i>}
                 >
                   {enquireOnly ? "Send Enquiry" : "Book Now"}

@@ -6,6 +6,17 @@ const BLOCKED_STYLE_PROPS = new Set([
   "word-break",
   "overflow-wrap",
   "position",
+  "margin",
+  "margin-top",
+  "margin-bottom",
+  "margin-left",
+  "margin-right",
+  "padding",
+  "padding-top",
+  "padding-bottom",
+  "padding-left",
+  "padding-right",
+  "line-height",
 ]);
 
 const PARAGRAPH_BREAK = "\u0000PARABREAK\u0000";
@@ -92,6 +103,32 @@ function restoreParagraphBreaks(html) {
   return html.replace(new RegExp(PARAGRAPH_BREAK, "g"), "</p><p>");
 }
 
+function isParagraphEmpty(inner) {
+  const text = stripTags(inner).replace(/\u00a0/g, " ").trim();
+  return text.length === 0;
+}
+
+/** Remove Quill/Word spacer paragraphs and collapse runaway vertical gaps. */
+function removeEmptyBlocks(html) {
+  let result = html
+    .replace(/<p(?:\s[^>]*)?>\s*(?:<br\s*\/?>\s*)+<\/p>/gi, "")
+    .replace(/<div(?:\s[^>]*)?>\s*(?:<br\s*\/?>\s*)*<\/div>/gi, "");
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    result = result.replace(/<p(?:\s[^>]*)?>([\s\S]*?)<\/p>/gi, (full, inner) => {
+      if (isParagraphEmpty(inner)) {
+        changed = true;
+        return "";
+      }
+      return full;
+    });
+  }
+
+  return result.replace(/(<\/p>)\s*(<p)/gi, "$1$2");
+}
+
 /** Normalize any CMS value to a safe HTML string for display. */
 export function prepareRichHtml(html) {
   if (html == null || html === false) return "";
@@ -116,6 +153,7 @@ export function sanitizeRichText(html) {
   cleaned = normalizeLineBreaks(cleaned);
   cleaned = mergeSplitParagraphs(cleaned);
   cleaned = restoreParagraphBreaks(cleaned);
+  cleaned = removeEmptyBlocks(cleaned);
 
   return cleaned.trim();
 }

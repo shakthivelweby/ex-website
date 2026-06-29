@@ -3,7 +3,14 @@
 import EventCard from "@/components/eventCard";
 import EventFilters from "@/components/EventFilters/EventFilters";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
 import ChipThumbImage from "@/components/common/ChipThumbImage";
+import {
+  buildCategorySuggestions,
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+  getCategoryNameBySlug,
+} from "@/utils/listingsEmptyStateHelpers";
 import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import { getEventCategories, getLanguages, list } from "./service";
@@ -90,6 +97,27 @@ const ClientWrapper = ({
   const hasActiveFilters = () => {
     return Object.values(filters).some((value) => value);
   };
+
+  const clearAllFilters = () => {
+    handleFilterChange({
+      date: "",
+      date_from: "",
+      date_to: "",
+      language: "",
+      category: "",
+      price_from: "",
+      price_to: "",
+      longitude: "",
+      latitude: "",
+      location: "",
+    });
+  };
+
+  const activeCategoryName = getCategoryNameBySlug(categories, filters.category);
+  const emptyCopy = buildListingEmptyCopy({
+    itemLabel: "events",
+    categoryName: activeCategoryName,
+  });
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
@@ -465,14 +493,19 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  No events found
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Try adjusting your filters
-                </div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-glass-cheers"
+                title="No events found"
+                subtitle={emptyCopy.subtitle}
+                description={emptyCopy.description}
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(filters, { categories })}
+                suggestions={buildCategorySuggestions(categories, filters.category, (slug) =>
+                  handleFilterChange({ ...filters, category: slug })
+                )}
+                suggestionsTitle="Explore other categories"
+              />
             )}
           </div>
         </div>

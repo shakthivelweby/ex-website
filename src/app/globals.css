@@ -506,7 +506,7 @@ select {
 /* Rich text content (Quill / legacy TinyMCE) */
 .render-html {
   color: #333;
-  line-height: 1.75;
+  line-height: 1.6;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -538,8 +538,17 @@ select {
 }
 
 .render-html p {
-  margin-bottom: 1rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
   text-align: left;
+}
+
+.render-html p:last-child {
+  margin-bottom: 0;
+}
+
+.render-html li p {
+  margin-bottom: 0;
 }
 
 .render-html .ql-align-left {
@@ -576,8 +585,19 @@ select {
 
 .render-html ul,
 .render-html ol {
-  margin-bottom: 1rem;
-  padding-left: 2rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.render-html ul li,
+.render-html ol li {
+  margin-bottom: 0.2rem;
+}
+
+.render-html ul li:last-child,
+.render-html ol li:last-child {
+  margin-bottom: 0;
 }
 
 .render-html ul li {

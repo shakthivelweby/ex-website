@@ -3,6 +3,13 @@
 import ActivityCard from "@/components/activityCard";
 import ActivityFilters from "@/components/ActivityFilters/ActivityFilters";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
+import {
+  buildCategorySuggestions,
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+  getCategoryNameBySlug,
+} from "@/utils/listingsEmptyStateHelpers";
 import { useEffect, useRef, useState } from "react";
 // Router hooks removed to avoid SSR issues
 import { getActivities } from "./service";
@@ -57,6 +64,26 @@ export default function ClientWrapper({
   const hasActiveFilters = () => {
     return Object.values(filters).some((value) => value);
   };
+
+  const clearAllFilters = () => {
+    handleFilterChange({
+      date_from: "",
+      date_to: "",
+      location: "",
+      category: "",
+      rating: "",
+      price_from: "",
+      price_to: "",
+      longitude: "",
+      latitude: "",
+    });
+  };
+
+  const activeCategoryName = getCategoryNameBySlug(categories, filters.category);
+  const emptyCopy = buildListingEmptyCopy({
+    itemLabel: "activities",
+    categoryName: activeCategoryName,
+  });
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
@@ -436,14 +463,19 @@ export default function ClientWrapper({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  No activities found
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Try adjusting your filters
-                </div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-hiking"
+                title="No activities found"
+                subtitle={emptyCopy.subtitle}
+                description={emptyCopy.description}
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(filters, { categories })}
+                suggestions={buildCategorySuggestions(categories, filters.category, (slug) =>
+                  handleFilterChange({ ...filters, category: slug })
+                )}
+                suggestionsTitle="Explore other categories"
+              />
             )}
           </div>
         </div>

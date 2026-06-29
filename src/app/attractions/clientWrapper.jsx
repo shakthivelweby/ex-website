@@ -5,6 +5,13 @@ import AttractionCard from "@/components/attractionCard";
 import AttractionFilters from "@/components/AttractionFilters/AttractionFilters";
 import LocationSearchPopup from "@/components/LocationSearchPopup";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
+import {
+  buildCategorySuggestions,
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+  getCategoryNameBySlug,
+} from "@/utils/listingsEmptyStateHelpers";
 import { useState, useEffect, useRef } from "react";
 // Router hooks removed to avoid SSR issues
 import {
@@ -78,6 +85,23 @@ const ClientWrapper = ({
   const hasActiveFilters = () => {
     return Object.values(initialFilters).some((value) => value);
   };
+
+  const clearAllFilters = () => {
+    setSelectedLocation(null);
+    handleFilterChange({
+      date_from: "",
+      date_to: "",
+      location: "",
+      category: "",
+      rating: "",
+      price_from: "",
+      price_to: "",
+      longitude: "",
+      latitude: "",
+    });
+  };
+
+  const getActiveCategoryName = () => getCategoryNameBySlug(categories, initialFilters.category);
 
   // Function to update URL with filters
   const updateURL = (newFilters) => {
@@ -497,14 +521,34 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  No attractions found
-                </div>
-                <div className="text-gray-400 text-sm">
-                  Try adjusting your filters
-                </div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-ferris-wheel"
+                title="No attractions found"
+                subtitle={
+                  buildListingEmptyCopy({
+                    itemLabel: "attractions",
+                    categoryName: getActiveCategoryName(),
+                  }).subtitle
+                }
+                description={
+                  buildListingEmptyCopy({
+                    itemLabel: "attractions",
+                    categoryName: getActiveCategoryName(),
+                  }).description
+                }
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(initialFilters, {
+                  categories,
+                  selectedLocation,
+                })}
+                suggestions={buildCategorySuggestions(
+                  categories,
+                  initialFilters.category,
+                  (slug) => handleFilterChange({ ...initialFilters, category: slug })
+                )}
+                suggestionsTitle="Explore other categories"
+              />
             )}
           </div>
         </div>

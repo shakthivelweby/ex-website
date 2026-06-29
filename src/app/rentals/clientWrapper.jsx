@@ -3,6 +3,12 @@
 import RentalCard from "@/components/rentalCard";
 import RentalFilters from "@/components/RentalFilters/RentalFilters";
 import Popup from "@/components/Popup";
+import ListingsEmptyState from "@/components/common/ListingsEmptyState";
+import {
+  buildListingEmptyCopy,
+  buildListingFilterLabels,
+} from "@/utils/listingsEmptyStateHelpers";
+import { formTypeLabel } from "./rentalCategoryTypeUtils";
 import { useEffect, useRef, useState } from "react";
 import { getRentals } from "./service";
 import { normalizeRentalFilters } from "./rentalFilterUtils";
@@ -43,6 +49,58 @@ const ClientWrapper = ({
   );
 
   const hasActiveFilters = () => Object.values(initialFilters).some((value) => value);
+
+  const clearAllFilters = () => {
+    handleFilterChange(
+      normalizeRentalFilters({
+        date_from: "",
+        date_to: "",
+        location: "",
+        category: "",
+        form_type: "",
+        sub_category: "",
+        transmission: "",
+        fuel_type: "",
+        seats: "",
+        rating: "",
+        price_from: "",
+        price_to: "",
+        longitude: "",
+        latitude: "",
+        search: "",
+      })
+    );
+  };
+
+  const activeFormTypeLabel = initialFilters.form_type
+    ? formTypeLabel(initialFilters.form_type)
+    : null;
+  const emptyCopy = buildListingEmptyCopy({
+    itemLabel: "rentals",
+    categoryName: activeFormTypeLabel,
+  });
+
+  const getRentalSuggestions = () =>
+    categoryTypes
+      .filter((type) => type.form_type !== initialFilters.form_type)
+      .slice(0, 5)
+      .map((type) => ({
+        id: type.form_type,
+        label: type.label,
+        icon: type.icon,
+        onClick: () =>
+          handleFilterChange(
+            normalizeRentalFilters({
+              ...initialFilters,
+              form_type: type.form_type,
+              category: "",
+              sub_category: "",
+              transmission: "",
+              fuel_type: "",
+              seats: "",
+            })
+          ),
+      }));
 
   const updateURL = (newFilters) => {
     if (typeof window === "undefined") return;
@@ -343,10 +401,17 @@ const ClientWrapper = ({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">No rentals found</div>
-                <div className="text-gray-400 text-sm">Try adjusting your filters</div>
-              </div>
+              <ListingsEmptyState
+                icon="fi fi-rr-car"
+                title="No rentals found"
+                subtitle={emptyCopy.subtitle}
+                description={emptyCopy.description}
+                hasActiveFilters={hasActiveFilters()}
+                onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
+                activeFilterLabels={buildListingFilterLabels(initialFilters, { categories })}
+                suggestions={getRentalSuggestions()}
+                suggestionsTitle="Browse other rental types"
+              />
             )}
           </div>
         </div>

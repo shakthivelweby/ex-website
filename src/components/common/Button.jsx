@@ -14,7 +14,8 @@ const Button = ({
   ...props 
 }) => {
   // Base classes that will always be applied
-  const baseClasses = "inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseClasses =
+    "inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed [&_i.fi]:inline-flex [&_i.fi]:shrink-0 [&_i.fi]:items-center [&_i.fi]:leading-none";
   
   // Size variations
   const sizeClasses = {
@@ -74,8 +75,12 @@ const Button = ({
         </>
       ) : (
         <>
-          <span>{children}</span>
-          {icon && <span className={`${size === "sm" ? "text-sm" : "text-base"}`}>{icon}</span>}
+          {icon ? (
+            <span className="inline-flex shrink-0 items-center justify-center leading-none">
+              {icon}
+            </span>
+          ) : null}
+          {children}
         </>
       )}
     </button>

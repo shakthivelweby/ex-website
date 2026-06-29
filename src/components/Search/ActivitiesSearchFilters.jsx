@@ -1,6 +1,6 @@
 "use client";
 
-import LocationSearchInput from "../LocationSearchInput";
+import SearchLocationField from "./SearchLocationField";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "./DateRangeSearchField";
 
@@ -11,27 +11,9 @@ export default function ActivitiesSearchFilters({
   filters,
   onFilterChange,
   categories = [],
+  destinations = [],
   compact = false,
 }) {
-  const handlePlaceSelected = (place) => {
-    if (!place?.geometry?.location) return;
-    onFilterChange({
-      ...filters,
-      longitude: place.geometry.location.lng(),
-      latitude: place.geometry.location.lat(),
-      location: place.name || place.formatted_address || "",
-    });
-  };
-
-  const clearLocation = () => {
-    onFilterChange({
-      ...filters,
-      location: "",
-      longitude: "",
-      latitude: "",
-    });
-  };
-
   const toggleCategory = (slug) => {
     onFilterChange({
       ...filters,
@@ -64,22 +46,31 @@ export default function ActivitiesSearchFilters({
             <i className="fi fi-rr-marker text-gray-400" />
             Location
           </label>
-          {filters.location && (
+          {filters.location ? (
             <button
               type="button"
-              onClick={clearLocation}
+              onClick={() =>
+                onFilterChange({
+                  ...filters,
+                  location: "",
+                  longitude: "",
+                  latitude: "",
+                })
+              }
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Clear
             </button>
-          )}
+          ) : null}
         </div>
-        <LocationSearchInput
-          value={filters.location}
-          onPlaceSelected={handlePlaceSelected}
-          onClear={clearLocation}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          placeholder="Enter city or destination name..."
+        <SearchLocationField
+          location={filters.location}
+          latitude={filters.latitude}
+          longitude={filters.longitude}
+          destinations={destinations}
+          onChange={(locationPatch) =>
+            onFilterChange({ ...filters, ...locationPatch })
+          }
         />
       </div>
 

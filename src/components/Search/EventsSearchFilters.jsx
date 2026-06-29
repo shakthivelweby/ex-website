@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import LocationSearchInput from "../LocationSearchInput";
+import SearchLocationField from "./SearchLocationField";
 
 const QUICK_DATE_OPTIONS = ["Today", "Tomorrow", "This Weekend"];
 
@@ -34,6 +34,7 @@ export default function EventsSearchFilters({
   onFilterChange,
   categories = [],
   languages = [],
+  destinations = [],
   compact = false,
 }) {
   const [dateRange, setDateRange] = useState([
@@ -60,16 +61,6 @@ export default function EventsSearchFilters({
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isCalendarOpen]);
-
-  const handlePlaceSelected = (place) => {
-    if (!place?.geometry?.location) return;
-    onFilterChange({
-      ...filters,
-      longitude: place.geometry.location.lng(),
-      latitude: place.geometry.location.lat(),
-      location: place.name || place.formatted_address || "",
-    });
-  };
 
   const updateDateRange = (start, end, closeCalendar = false) => {
     setDateRange([start, end]);
@@ -284,12 +275,14 @@ export default function EventsSearchFilters({
             </button>
           )}
         </div>
-        <LocationSearchInput
-          value={filters.location}
-          onPlaceSelected={handlePlaceSelected}
-          onClear={clearLocation}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-          placeholder="Enter city or destination name..."
+        <SearchLocationField
+          location={filters.location}
+          latitude={filters.latitude}
+          longitude={filters.longitude}
+          destinations={destinations}
+          onChange={(locationPatch) =>
+            onFilterChange({ ...filters, ...locationPatch })
+          }
         />
       </div>
 

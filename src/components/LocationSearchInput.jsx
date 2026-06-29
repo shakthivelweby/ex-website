@@ -43,6 +43,7 @@ export default function LocationSearchInput({
   googleApiKey,
   placeholder = "Enter city or destination name...",
   className = "",
+  repositionDropdown = false,
 }) {
   const [inputValue, setInputValue] = useState(value);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -58,6 +59,37 @@ export default function LocationSearchInput({
   useEffect(() => {
     setInputValue(value);
   }, [value]);
+
+  const repositionPacDropdown = () => {
+    if (!repositionDropdown || !inputRef.current) return;
+    const pac = document.querySelector(".pac-container");
+    if (!pac) return;
+    const rect = inputRef.current.getBoundingClientRect();
+    pac.style.position = "fixed";
+    pac.style.top = `${rect.bottom + 4}px`;
+    pac.style.left = `${rect.left}px`;
+    pac.style.width = `${rect.width}px`;
+    pac.style.zIndex = "100000";
+  };
+
+  useEffect(() => {
+    if (!repositionDropdown) return undefined;
+
+    const handleReposition = () => repositionPacDropdown();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+
+    const observer = new MutationObserver(() => {
+      repositionPacDropdown();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+      observer.disconnect();
+    };
+  }, [repositionDropdown]);
 
   const getStateFromCoords = async (latitude, longitude) => {
     const response = await fetch(
@@ -145,9 +177,9 @@ export default function LocationSearchInput({
 
       try {
         const ac = new window.google.maps.places.Autocomplete(el, {
-          types: ["(regions)"],
+          types: ["geocode"],
           componentRestrictions: { country: "in" },
-          fields: ["name", "formatted_address", "geometry"],
+          fields: ["name", "formatted_address", "geometry", "vicinity"],
         });
         autocompleteRef.current = ac;
         ac.addListener("place_changed", () => {
@@ -157,6 +189,7 @@ export default function LocationSearchInput({
           setInputValue(label);
           onPlaceSelectedRef.current?.(place);
         });
+        el.addEventListener("focus", repositionPacDropdown);
       } catch {
         // Autocomplete init failed; manual entry still works
       }
@@ -165,9 +198,13 @@ export default function LocationSearchInput({
     run();
     return () => {
       cancelled = true;
+      const el = inputRef.current;
+      if (el) {
+        el.removeEventListener("focus", repositionPacDropdown);
+      }
       autocompleteRef.current = null;
     };
-  }, [googleApiKey]);
+  }, [googleApiKey, repositionDropdown]);
 
   useEffect(() => {
     if (document.querySelector("style[data-ew-pac-styles]")) return;

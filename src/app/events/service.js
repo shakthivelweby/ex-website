@@ -71,6 +71,7 @@ export const list = async (filters = {}) => {
     
     if (filters.longitude) params.append("longitude", filters.longitude);
     if (filters.latitude) params.append("latitude", filters.latitude);
+    if (filters.location) params.append("location", filters.location);
     if (filters.price_from) params.append("price_from", filters.price_from);
     if (filters.price_to) params.append("price_to", filters.price_to);
     

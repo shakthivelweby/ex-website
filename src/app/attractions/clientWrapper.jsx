@@ -171,16 +171,26 @@ const ClientWrapper = ({
 
   // Handle location selection
   const handlePlaceSelected = (place) => {
-    if (place) {
-      const locationName = place.name;
-      setSelectedLocation(locationName);
-      updateURL({
-        ...initialFilters,
-        longitude: place.geometry.location.lng(),
-        latitude: place.geometry.location.lat(),
-      });
-      setIsLocationOpen(false);
-    }
+    if (!place?.geometry?.location) return;
+
+    const locationName = place.name || place.formatted_address || "";
+    const longitude =
+      typeof place.geometry.location.lng === "function"
+        ? place.geometry.location.lng()
+        : place.geometry.location.lng;
+    const latitude =
+      typeof place.geometry.location.lat === "function"
+        ? place.geometry.location.lat()
+        : place.geometry.location.lat;
+
+    handleFilterChange({
+      ...initialFilters,
+      location: locationName,
+      longitude: longitude ?? "",
+      latitude: latitude ?? "",
+    });
+    setSelectedLocation(locationName);
+    setIsLocationOpen(false);
   };
 
   // Function to toggle filter popup

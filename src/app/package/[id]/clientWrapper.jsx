@@ -422,6 +422,7 @@ export default function ClientWrapper({
             downloadProgress={downloadProgress}
             downloadSize={downloadSize}
             formatBytes={formatBytes}
+            isMobilePopup={true}
           />
         </div>
       </Popup>

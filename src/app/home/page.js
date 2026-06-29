@@ -25,8 +25,11 @@ const MODULES = [
     accent: {
       iconBg: "bg-primary-50",
       iconColor: "text-primary-600",
+      glow: "bg-primary-400/20",
+      check: "text-primary-500",
+      btn: "bg-primary-600 hover:bg-primary-700",
       hoverBorder: "hover:border-primary-200",
-      cardHover: "hover:bg-primary-50/30",
+      cardHover: "hover:bg-primary-50/40",
     },
   },
   {
@@ -47,6 +50,9 @@ const MODULES = [
     accent: {
       iconBg: "bg-sky-50",
       iconColor: "text-sky-600",
+      glow: "bg-sky-400/20",
+      check: "text-sky-500",
+      btn: "bg-sky-600 hover:bg-sky-700",
       hoverBorder: "hover:border-sky-200",
       cardHover: "hover:bg-sky-50/40",
     },
@@ -64,6 +70,9 @@ const MODULES = [
     accent: {
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
+      glow: "bg-amber-400/20",
+      check: "text-amber-500",
+      btn: "bg-amber-600 hover:bg-amber-700",
       hoverBorder: "hover:border-amber-200",
       cardHover: "hover:bg-amber-50/40",
     },
@@ -85,6 +94,9 @@ const MODULES = [
     accent: {
       iconBg: "bg-rose-50",
       iconColor: "text-rose-600",
+      glow: "bg-rose-400/20",
+      check: "text-rose-500",
+      btn: "bg-rose-600 hover:bg-rose-700",
       hoverBorder: "hover:border-rose-200",
       cardHover: "hover:bg-rose-50/40",
     },
@@ -102,6 +114,9 @@ const MODULES = [
     accent: {
       iconBg: "bg-indigo-50",
       iconColor: "text-indigo-600",
+      glow: "bg-indigo-400/20",
+      check: "text-indigo-500",
+      btn: "bg-indigo-600 hover:bg-indigo-700",
       hoverBorder: "hover:border-indigo-200",
       cardHover: "hover:bg-indigo-50/40",
     },
@@ -119,6 +134,9 @@ const MODULES = [
     accent: {
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600",
+      glow: "bg-emerald-400/20",
+      check: "text-emerald-500",
+      btn: "bg-emerald-600 hover:bg-emerald-700",
       hoverBorder: "hover:border-emerald-200",
       cardHover: "hover:bg-emerald-50/40",
     },
@@ -131,40 +149,42 @@ const STEPS = [
     title: "Choose a module",
     description:
       "Pick packages, events, attractions, or any module that matches your plans.",
+    icon: "fi fi-rr-search-alt",
   },
   {
     step: "02",
     title: "Book direct",
     description:
       "Reserve with verified suppliers — transparent pricing, no hidden fees.",
+    icon: "fi fi-rr-shield-check",
   },
   {
     step: "03",
     title: "Enjoy",
     description:
       "Show up and experience it. Your booking details are always at hand.",
+    icon: "fi fi-rr-heart",
   },
 ];
 
 function ModuleCtaStrip() {
   return (
-    <section className="relative z-10 -mt-10 md:-mt-12 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+    <section className="relative z-10 -mt-10 px-4 sm:-mt-12 sm:px-6">
+      <div className="mx-auto max-w-5xl">
+        <div className="flex gap-2 overflow-x-auto rounded-2xl border border-white/80 bg-white/95 p-2 shadow-[0_8px_32px_rgba(6,148,148,0.1)] backdrop-blur-md [-ms-overflow-style:none] [scrollbar-width:none] sm:justify-between sm:p-2.5 [&::-webkit-scrollbar]:hidden">
           {MODULES.map((module) => (
             <Link
               key={module.id}
               href={module.href}
-              className={`group flex flex-col items-center text-center gap-2.5 sm:gap-3 px-3 py-4 sm:py-5 bg-white/95 backdrop-blur-sm rounded-2xl border border-white/60 shadow-[0_4px_24px_rgba(6,148,148,0.08)] ${module.accent.hoverBorder} ${module.accent.cardHover} hover:shadow-[0_12px_36px_rgba(6,148,148,0.14)] hover:-translate-y-0.5 transition-all duration-200`}
+              className={`group flex shrink-0 items-center gap-2.5 rounded-xl border border-transparent px-3.5 py-2.5 transition-all sm:flex-1 sm:justify-center ${module.accent.cardHover} ${module.accent.hoverBorder} hover:border-current hover:shadow-sm`}
             >
               <span
-                className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${module.accent.iconBg} ${module.accent.iconColor} transition-transform duration-200 group-hover:scale-105`}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg ${module.accent.iconBg} ${module.accent.iconColor} transition-transform group-hover:scale-105`}
               >
-                <i className={`${module.icon} text-base sm:text-lg`} />
+                <i className={`${module.icon} text-sm`} />
               </span>
-              <span className="text-[12px] sm:text-[13px] font-semibold text-[#222222] group-hover:text-[#111111] leading-tight tracking-tight transition-colors">
-                <span className="sm:hidden">{module.shortName}</span>
-                <span className="hidden sm:inline">{module.name}</span>
+              <span className="whitespace-nowrap text-[13px] font-semibold text-[#222222]">
+                {module.shortName}
               </span>
             </Link>
           ))}
@@ -180,55 +200,164 @@ function ModuleSection({ module, index, reversed }) {
   return (
     <section
       id={`module-${module.id}`}
-      className={`scroll-mt-24 ${index % 2 === 1 ? "bg-[#FAFAFA]" : "bg-white"}`}
+      className="scroll-mt-28 border-t border-[#EBEBEB] bg-white"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+          className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20"
+        >
           <div className={`relative ${reversed ? "lg:order-2" : ""}`}>
-            <div className="relative aspect-[5/4] rounded-2xl overflow-hidden bg-[#F0F0F0] shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
+            <div
+              className={`absolute -inset-3 rounded-[2rem] ${module.accent.glow} blur-2xl md:-inset-5`}
+              aria-hidden
+            />
+            <div className="group relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#F0F0F0] shadow-[0_20px_50px_rgba(0,0,0,0.12)] ring-1 ring-black/[0.06]">
               <Image
                 src={module.image}
                 alt={module.name}
                 fill
-                className="object-cover"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+              <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/20 bg-white/90 px-3 py-1.5 shadow-lg backdrop-blur-sm">
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg ${module.accent.iconBg}`}
+                >
+                  <i
+                    className={`${module.icon} ${module.accent.iconColor} text-sm`}
+                  />
+                </span>
+                <span className="text-xs font-semibold text-[#222222]">
+                  {module.shortName}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className={reversed ? "lg:order-1" : ""}>
-            <p className="text-xs font-semibold tracking-widest text-[#B0B0B0] mb-4">
-              {sectionNum}
-            </p>
+            <div className="mb-5 flex items-center gap-3">
+              <span
+                className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${module.accent.iconBg}`}
+              >
+                <i className={`${module.icon} ${module.accent.iconColor} text-lg`} />
+              </span>
+              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#C4C4C4]">
+                {sectionNum} / 06
+              </span>
+            </div>
 
-            <h2 className="text-[28px] md:text-[36px] font-semibold text-[#222222] tracking-tight leading-[1.15] mb-4">
+            <h2 className="text-[30px] font-semibold leading-[1.12] tracking-tight text-[#222222] md:text-[40px]">
               {module.name}
             </h2>
-            <p className="text-[#717171] text-[15px] md:text-base leading-relaxed mb-6 max-w-md">
+
+            <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[#717171] md:text-base md:leading-7">
               {module.description}
             </p>
 
-            <div className="flex flex-wrap gap-2 mb-8">
+            <ul className="mt-7 space-y-3">
               {module.highlights.map((point) => (
-                <span
+                <li
                   key={point}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F7F7F7] text-xs font-medium text-[#222222] border border-[#EBEBEB]"
+                  className="flex items-start gap-3 text-sm text-[#444444] md:text-[15px]"
                 >
-                  <i className="fi fi-rr-check text-primary-500 text-[10px]" />
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${module.accent.iconBg}`}
+                  >
+                    <i className={`fi fi-rr-check text-[9px] ${module.accent.check}`} />
+                  </span>
                   {point}
-                </span>
+                </li>
               ))}
-            </div>
+            </ul>
 
             <Link
               href={module.href}
-              className="group inline-flex items-center gap-2 text-[15px] font-semibold text-[#222222] hover:text-primary-600 transition-colors"
+              className={`mt-9 inline-flex items-center gap-2.5 rounded-full px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg ${module.accent.btn}`}
             >
               Explore {module.name.toLowerCase()}
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-[#222222] text-white group-hover:bg-primary-600 transition-colors">
-                <i className="fi fi-rr-arrow-right text-xs" />
-              </span>
+              <i className="fi fi-rr-arrow-right text-xs" />
             </Link>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks() {
+  return (
+    <section className="relative overflow-hidden bg-[#0f0f0f]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(6,148,148,0.18),transparent)]"
+        aria-hidden
+      />
+      <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 md:py-24 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mb-14 flex flex-col gap-4 md:mb-16 md:flex-row md:items-end md:justify-between"
+        >
+          <div className="max-w-xl">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary-400">
+              Simple process
+            </p>
+            <h2 className="text-[32px] font-semibold leading-[1.08] tracking-tight text-white md:text-[40px]">
+              How Explore World works
+            </h2>
+          </div>
+          <p className="max-w-sm text-[15px] leading-relaxed text-white/55 md:text-right">
+            Three steps from discovery to your next adventure — no middlemen,
+            no surprises.
+          </p>
+        </motion.div>
+
+        <div className="relative">
+          <div
+            className="absolute left-[27px] top-8 hidden h-[calc(100%-4rem)] w-px bg-gradient-to-b from-primary-500/60 via-white/15 to-transparent md:left-0 md:top-[52px] md:block md:h-px md:w-full md:bg-gradient-to-r md:from-transparent md:via-white/20 md:to-transparent"
+            aria-hidden
+          />
+
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
+            {STEPS.map((item, index) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="relative md:pt-2"
+              >
+                <div className="flex gap-5 md:flex-col md:items-center md:text-center">
+                  <div className="relative shrink-0">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-primary-500/30 bg-primary-500/10 shadow-[0_0_24px_rgba(6,148,148,0.15)] backdrop-blur-sm md:mx-auto">
+                      <i className={`${item.icon} text-xl text-primary-400`} />
+                    </div>
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white md:-right-2 md:-top-2">
+                      {index + 1}
+                    </span>
+                  </div>
+
+                  <div className="min-w-0 flex-1 border-l border-white/10 pl-5 md:border-l-0 md:pl-0 md:pt-6">
+                    <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 md:mb-3">
+                      Step {item.step}
+                    </span>
+                    <h3 className="mb-2 text-lg font-semibold text-white md:text-xl">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm leading-relaxed text-white/55 md:text-[15px]">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
@@ -300,69 +429,43 @@ export default function HomePage() {
 
       <ModuleCtaStrip />
 
-      <div className="h-10 md:h-12 bg-gradient-to-b from-primary-50/40 to-white" />
+      <div className="h-8 bg-gradient-to-b from-primary-50/30 to-white md:h-10" />
 
-      {/* Module intro */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 md:pt-10 pb-6 md:pb-8">
-        <div className="text-center max-w-2xl mx-auto">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 mb-3">
-            Six ways to travel
-          </p>
-          <h2 className="text-[28px] md:text-[36px] font-semibold text-[#222222] tracking-tight leading-tight mb-4">
-            Everything you can book
-          </h2>
-          <p className="text-[#717171] text-[15px] md:text-base leading-relaxed">
-            One platform, six modules. Each connects you directly to suppliers —
-            pick what fits your trip and book with confidence.
-          </p>
-        </div>
-      </section>
-
-      {/* Module sections */}
-      {MODULES.map((module, index) => (
-        <ModuleSection
-          key={module.id}
-          module={module}
-          index={index}
-          reversed={index % 2 === 1}
-        />
-      ))}
-
-      {/* How it works */}
-      <section className="bg-[#111111]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="text-center max-w-xl mx-auto mb-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/50 mb-3">
-              Simple process
-            </p>
-            <h2 className="text-[28px] md:text-[36px] font-semibold text-white tracking-tight mb-3">
-              How Explore World works
-            </h2>
-            <p className="text-[#999999] text-[15px]">
-              Three steps from discovery to your next adventure.
+      <section id="modules" className="bg-white pb-4 pt-10 md:pt-14">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
+        >
+          <div className="flex flex-col gap-4 border-b border-[#EBEBEB] pb-10 md:flex-row md:items-end md:justify-between md:pb-12">
+            <div className="max-w-xl">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-primary-600">
+                Six ways to travel
+              </p>
+              <h2 className="text-[32px] font-semibold leading-[1.08] tracking-tight text-[#222222] md:text-[42px]">
+                Everything you can book
+              </h2>
+            </div>
+            <p className="max-w-sm text-[15px] leading-relaxed text-[#717171] md:text-right">
+              One platform, six modules — each connects you directly to verified
+              suppliers.
             </p>
           </div>
+        </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {STEPS.map((item) => (
-              <div
-                key={item.step}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] p-8 hover:bg-white/[0.06] transition-colors"
-              >
-                <span className="text-xs font-semibold tracking-widest text-white/40 mb-6 block">
-                  {item.step}
-                </span>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-[#999999] text-[15px] leading-relaxed">
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+        {MODULES.map((module, index) => (
+          <ModuleSection
+            key={module.id}
+            module={module}
+            index={index}
+            reversed={index % 2 === 1}
+          />
+        ))}
       </section>
+
+      <HowItWorks />
 
       {/* CTA banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">

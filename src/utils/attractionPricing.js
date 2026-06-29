@@ -63,18 +63,29 @@ export function minDisplayedEntryFeeFromRows(rows) {
   for (const row of rows) {
     const rate = row?.rate_type;
     const adminPct = row?.admin_charge ?? 0;
+    const discountPct = row?.discount ?? 0;
 
+    let base = 0;
     if (rate === "full") {
-      const base = Number(row?.full_rate || 0);
-      if (base > 0) candidates.push(applyAdminCharge(base, adminPct));
+      base = Number(row?.full_rate || 0);
     } else if (rate === "pax") {
-      const adult = Number(row?.adult_price || 0);
-      if (adult > 0) candidates.push(applyAdminCharge(adult, adminPct));
+      base = Number(row?.adult_price || 0);
     } else {
-      const base = Number(row?.full_rate || row?.adult_price || 0);
-      if (base > 0) candidates.push(applyAdminCharge(base, adminPct));
+      base = Number(row?.full_rate || row?.adult_price || 0);
+    }
+
+    if (base > 0) {
+      const afterAdmin = applyAdminCharge(base, adminPct);
+      candidates.push(applyDiscountOnAmount(afterAdmin, discountPct));
     }
   }
 
   return candidates.length ? Math.min(...candidates) : null;
+}
+
+export function formatAttractionDisplayPrice(rows, { freeBooking = false } = {}) {
+  if (freeBooking) return "Free booking";
+  const minFee = minDisplayedEntryFeeFromRows(rows);
+  if (minFee != null && minFee > 0) return `₹${minFee}`;
+  return "Free Entry";
 }

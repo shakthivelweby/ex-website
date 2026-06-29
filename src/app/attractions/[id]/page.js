@@ -1,7 +1,7 @@
 import AttractionDetailClient from "./clientWrapper";
-import { attractionInfo, getAttractionGallery } from "./service";
+import { attractionInfo, getAttractionGallery, getTicketPricesForDateServer } from "./service";
 import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
-import { minDisplayedEntryFeeFromRows } from "@/utils/attractionPricing";
+import { formatAttractionDisplayPrice, minDisplayedEntryFeeFromRows } from "@/utils/attractionPricing";
 
 const AttractionDetailPage = async ({ params, searchParams }) => {
   const { id } = await params;
@@ -12,8 +12,11 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
   const resolvedSearchParams = await searchParams;
   const selectedDate = resolvedSearchParams.date || todayString;
 
-  const attractionResponse = await attractionInfo(id);
-  const galleryResponse = await getAttractionGallery(id);
+  const [attractionResponse, galleryResponse, ticketPricesResponse] = await Promise.all([
+    attractionInfo(id, selectedDate),
+    getAttractionGallery(id),
+    getTicketPricesForDateServer(id, selectedDate),
+  ]);
 
   if (!attractionResponse?.data) {
     return (
@@ -26,79 +29,85 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
     );
   }
 
-  const attraction = attractionResponse.data;
+  const payload = attractionResponse.data;
+  const attraction = payload.attraction;
   const getGalleryData = galleryResponse?.data || [];
+  const freeBooking = Boolean(attraction?.free_booking);
 
-  const dateSpecificPricing = attraction.attraction?.attraction_ticket_type_prices || null;
+  const dateSpecificPricing =
+    ticketPricesResponse?.data?.ticket_prices ||
+    (payload.current_pricing ? [payload.current_pricing] : []);
 
-  const priceRows = Array.isArray(attraction.attraction?.attraction_ticket_type_prices)
-    ? attraction.attraction.attraction_ticket_type_prices
-    : [];
+  const displayEntryFee = freeBooking
+    ? 0
+    : minDisplayedEntryFeeFromRows(dateSpecificPricing) ?? 0;
 
-  const displayEntryFee = minDisplayedEntryFeeFromRows(priceRows) ?? 0;
-
-  const ticketPrice = priceRows?.[0] || null;
-  const currentFullRate = ticketPrice?.full_rate;
-  const currentRateType = ticketPrice?.rate_type;
-  const currentAdultPrice = ticketPrice?.adult_price;
-  const currentChildPrice = ticketPrice?.child_price;
-
-  const formatTime = (timeString) => {
-    if (!timeString) return "TBD";
-    return timeString;
-  };
+  const primaryPriceRow = dateSpecificPricing?.[0] || payload.current_pricing || null;
 
   const categoryName =
-    attraction.attraction?.attraction_category_master?.name ||
-    attraction.attraction?.attractionCategoryMaster?.name ||
-    attraction.attraction?.attraction_category ||
+    attraction?.attraction_category_master?.name ||
+    attraction?.attractionCategoryMaster?.name ||
+    attraction?.attraction_category ||
     null;
 
   const attractionDetails = {
-    id: attraction.attraction.id,
-    title: attraction.attraction.name,
+    id: attraction.id,
+    title: attraction.name,
     categoryName,
     categories: categoryName ? [categoryName] : [],
-    openingTime: new Date(`1970-01-01T${attraction.attraction.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-    closingTime: new Date(`1970-01-01T${attraction.attraction.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-    closeoutDates: normalizeCloseoutDates(attraction.closeout_dates || []),
-    location: attraction.attraction.location,
-    address: attraction.attraction.address,
-    price: displayEntryFee > 0 ? `₹${displayEntryFee}` : "Free Entry",
-    fullRate: currentFullRate,
-    rateType: currentRateType,
-    adultPrice: currentAdultPrice,
-    childPrice: currentChildPrice,
-    dateSpecificPricing: dateSpecificPricing,
-    selectedDate: selectedDate,
-    image: attraction.attraction.cover_image || attraction.attraction.thumb_image,
-    description: attraction.attraction.description,
+    openingTime: attraction.start_time
+      ? new Date(`1970-01-01T${attraction.start_time}`).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : null,
+    closingTime: attraction.end_time
+      ? new Date(`1970-01-01T${attraction.end_time}`).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : null,
+    closeoutDates: normalizeCloseoutDates(payload.closeout_dates || []),
+    seasonalDates: payload.seasonal_dates || [],
+    location: attraction.location,
+    address: attraction.address,
+    price: formatAttractionDisplayPrice(dateSpecificPricing, { freeBooking }),
+    freeBooking,
+    paxRequirement: Boolean(attraction.pax_requirement),
+    chargableFrom: attraction.chargable_from ?? null,
+    fullRate: primaryPriceRow?.full_rate,
+    rateType: primaryPriceRow?.rate_type,
+    adultPrice: primaryPriceRow?.adult_price,
+    childPrice: primaryPriceRow?.child_price,
+    dateSpecificPricing,
+    selectedDate,
+    image: attraction.cover_image || attraction.thumb_image,
+    description: attraction.description,
     attractionGuide: {
-      duration: attraction.duration || 'TBD',
-      bestTimeToVisit: attraction.best_time_to_visit || 'TBD',
-      kidsFriendly: attraction.attraction.kids_friendly ? 'Yes' : 'No',
-      petsFriendly: attraction.attraction.pets_friendly ? 'Yes' : 'No',
-      features: attraction.features || [],
-      rating: attraction.rating || 0,
-      reviewCount: attraction.review_count || 0
+      kidsFriendly: attraction.kids_friendly ? "Yes" : "No",
+      petsFriendly: attraction.pets_friendly ? "Yes" : "No",
+      wheelchairAccessible: attraction.wheelchair_accessible ? "Yes" : "No",
     },
-    faqs: attraction.attraction.faqs?.map((faq) => ({
-      question: faq.question,
-      answer: faq.answer
-    })) || [],
+    faqs:
+      attraction.faqs?.map((faq) => ({
+        question: faq.question,
+        answer: faq.answer,
+      })) || [],
     inclusions:
-      attraction.attraction?.attraction_inclusions?.map((row) => row.inclusion).filter(Boolean) ||
-      attraction.attraction?.attractionInclusions?.map((row) => row.inclusion).filter(Boolean) ||
+      attraction?.attraction_inclusions?.map((row) => row.inclusion).filter(Boolean) ||
+      attraction?.attractionInclusions?.map((row) => row.inclusion).filter(Boolean) ||
       [],
     exclusions:
-      attraction.attraction?.attraction_exclusions?.map((row) => row.exclusion).filter(Boolean) ||
-      attraction.attraction?.attractionExclusions?.map((row) => row.exclusion).filter(Boolean) ||
+      attraction?.attraction_exclusions?.map((row) => row.exclusion).filter(Boolean) ||
+      attraction?.attractionExclusions?.map((row) => row.exclusion).filter(Boolean) ||
       [],
-    terms: attraction.attraction.terms_and_conditions?.[0]?.description || '',
+    terms: attraction.terms_and_conditions?.[0]?.description || "",
     mapLink: attraction.map_link,
     latitude: attraction.latitude,
     longitude: attraction.longitude,
-    gallery: getGalleryData || []
+    gallery: getGalleryData || [],
   };
 
   return <AttractionDetailClient attractionDetails={attractionDetails} />;

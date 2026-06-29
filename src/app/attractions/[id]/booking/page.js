@@ -6,15 +6,17 @@ const BookingPage = async ({ params }) => {
   const { id } = await params;
 
   const attractionResponse = await attractionInfo(id);
-  const attraction = attractionResponse?.data;
-  const closeoutDates = normalizeCloseoutDates(attraction?.closeout_dates || []);
-  const initialAttractionData = attraction || null;
+  const payload = attractionResponse?.data;
+  const closeoutDates = normalizeCloseoutDates(payload?.closeout_dates || []);
+  const seasonalDates = payload?.seasonal_dates || [];
 
   return (
     <AttractionBookingPage
       attractionId={id}
       closeoutDates={closeoutDates}
-      initialAttractionData={initialAttractionData}
+      seasonalDates={seasonalDates}
+      initialAttractionData={payload?.attraction ?? null}
+      freeBooking={Boolean(payload?.attraction?.free_booking)}
     />
   );
 };

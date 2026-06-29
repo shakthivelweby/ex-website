@@ -1,11 +1,10 @@
 "use client";
 
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import { useMemo } from "react";
 import EventTicketOptionCard from "@/app/events/[id]/booking/EventTicketOptionCard";
 import RichTextContent from "@/components/common/RichTextContent";
 import SectionLoader from "@/components/loading/SectionLoader";
-import { detailDatePickerPopperProps, DetailDatePickerTrigger } from "@/components/booking/detailDatePickerProps";
+import AttractionVisitDatePicker from "@/components/attractions/AttractionVisitDatePicker";
 
 function AccordionChevron({ expanded }) {
   return (
@@ -32,7 +31,6 @@ function IconBox({ icon, className = "" }) {
 export default function AttractionTicketSelectionStep({
   selectedDate,
   onDateChange,
-  isDateDisabled,
   ticketsLoading = false,
   ticketPrices,
   adultChildTickets,
@@ -48,9 +46,18 @@ export default function AttractionTicketSelectionStep({
   needGuide,
   onNeedGuideChange,
   guideRate,
+  closeoutDates = [],
+  seasonalDates = [],
   formatDate,
 }) {
   const visitDateObj = selectedDate ? new Date(`${selectedDate}T12:00:00`) : null;
+  const ticketTypeIds = useMemo(
+    () =>
+      (ticketPrices || [])
+        .map((row) => row?.attraction_ticket_type_id)
+        .filter(Boolean),
+    [ticketPrices]
+  );
 
   return (
     <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm">
@@ -79,46 +86,25 @@ export default function AttractionTicketSelectionStep({
 
       <div className="space-y-2 p-3 sm:p-4">
         {/* Visit date */}
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
-            <div
-              className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border ${
-                selectedDate
-                  ? "border-gray-900 bg-gray-900 text-white"
-                  : "border-gray-200 bg-white text-gray-900"
-              }`}
-            >
-              {selectedDate ? (
-                <>
-                  <span className="text-[9px] font-semibold uppercase tracking-wide opacity-80">
-                    {visitDateObj.toLocaleDateString("en-US", { month: "short" })}
-                  </span>
-                  <span className="text-lg font-bold leading-none">
-                    {visitDateObj.getDate()}
-                  </span>
-                </>
-              ) : (
-                <i className="fi fi-rr-calendar text-sm" aria-hidden="true" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
-                Visit date
-              </p>
-              <p className="mt-0.5 truncate text-sm font-semibold text-gray-900">
-                {selectedDate ? formatDate(selectedDate) : "Choose a date"}
-              </p>
-            </div>
-            <div className="shrink-0 [&_.react-datepicker-wrapper]:!w-auto">
-              <DatePicker
-                selected={visitDateObj}
-                onChange={onDateChange}
-                minDate={new Date()}
-                filterDate={(date) => !isDateDisabled(date)}
-                customInput={<DetailDatePickerTrigger />}
-                popperPlacement="bottom-end"
-                {...detailDatePickerPopperProps}
-              />
+        <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+          <label className="mb-1 block text-xs font-semibold text-gray-900">Visit date</label>
+          <p className="mb-2.5 text-xs text-gray-500">
+            Green dates are available to book. Amber dates use seasonal rates. Red dates are
+            unavailable.
+          </p>
+          <div className="relative">
+            <AttractionVisitDatePicker
+              closeoutDates={closeoutDates}
+              seasonalDates={seasonalDates}
+              ticketTypeIds={ticketTypeIds}
+              selectedTicketTypeId={expandedTicketType}
+              selected={visitDateObj}
+              onChange={onDateChange}
+              placeholderText="Choose date"
+              className="h-11 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 font-medium text-gray-800 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            />
+            <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+              <i className="fi fi-rr-calendar text-lg" aria-hidden="true" />
             </div>
           </div>
         </div>

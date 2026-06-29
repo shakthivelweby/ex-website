@@ -67,38 +67,59 @@ function isWeekdayClosed(applicableDays, dayKey) {
 
 /**
  * Returns true when the date should be blocked (close-out).
+ * When ticketTypeIds is provided, the date is blocked only if every ticket type is closed.
  */
-export function isActivityCloseoutDate(closeouts, ymd, dateInput) {
+export function isActivityCloseoutDate(closeouts, ymd, dateInput, ticketTypeIds = null) {
   if (!Array.isArray(closeouts) || !ymd) return false;
+
+  if (Array.isArray(ticketTypeIds) && ticketTypeIds.length > 0) {
+    return ticketTypeIds.every((ticketTypeId) =>
+      isTicketCloseoutOnDate(closeouts, ymd, dateInput, ticketTypeId)
+    );
+  }
+
+  return closeouts.some((entry) => matchesCloseoutOnDate(entry, ymd, dateInput));
+}
+
+function closeoutAppliesToTicket(entry, ticketTypeId) {
+  const typeId = entry?.attraction_ticket_type_id ?? entry?.attractionTicketTypeId;
+  if (typeId == null || typeId === "" || typeId === "all") return true;
+  return String(typeId) === String(ticketTypeId);
+}
+
+function matchesCloseoutOnDate(entry, ymd, dateInput) {
+  const legacyDate = entry?.date ?? null;
+  const start = entry?.start_date ?? entry?.startDate ?? legacyDate ?? null;
+  const end = entry?.end_date ?? entry?.endDate ?? legacyDate ?? null;
+  const applicableDays = normalizeApplicableDays(
+    entry?.applicable_days ?? entry?.applicableDays ?? null
+  );
 
   const dateObj =
     dateInput instanceof Date ? dateInput : new Date(`${ymd}T12:00:00`);
   const dayKey = getDayKeyFromDate(dateObj);
 
-  return closeouts.some((entry) => {
-    const legacyDate = entry?.date ?? null;
-    const start = entry?.start_date ?? entry?.startDate ?? legacyDate ?? null;
-    const end = entry?.end_date ?? entry?.endDate ?? legacyDate ?? null;
-    const applicableDays = normalizeApplicableDays(
-      entry?.applicable_days ?? entry?.applicableDays ?? null
-    );
+  const hasRange = Boolean(start && end);
+  if (hasRange && !isDateInRange(ymd, start, end)) {
+    return false;
+  }
 
-    const hasRange = Boolean(start && end);
-    if (hasRange && !isDateInRange(ymd, start, end)) {
-      return false;
-    }
-
-    // Weekly recurring rule (no date range): close on selected weekdays.
-    if (!hasRange && applicableDays) {
-      return isWeekdayClosed(applicableDays, dayKey);
-    }
-
-    if (!hasRange && !applicableDays) {
-      return false;
-    }
-
+  if (!hasRange && applicableDays) {
     return isWeekdayClosed(applicableDays, dayKey);
-  });
+  }
+
+  if (!hasRange && !applicableDays) {
+    return false;
+  }
+
+  return isWeekdayClosed(applicableDays, dayKey);
+}
+
+export function isTicketCloseoutOnDate(closeouts, ymd, dateInput, ticketTypeId) {
+  if (!Array.isArray(closeouts) || !ymd) return false;
+  return closeouts
+    .filter((entry) => closeoutAppliesToTicket(entry, ticketTypeId))
+    .some((entry) => matchesCloseoutOnDate(entry, ymd, dateInput));
 }
 
 export function normalizeCloseoutDates(raw) {

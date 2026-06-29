@@ -3,9 +3,13 @@ import apiMiddleware from "../../api/apiMiddleware";
 
 
 // Get attraction details by ID
-export const attractionInfo = async (id) => {
+export const attractionInfo = async (id, date = null) => {
   try {
-    const response = await apiServerMiddleware.get(`/attraction-details/${id}`);     
+    const qs =
+      date && /^\d{4}-\d{2}-\d{2}$/.test(String(date))
+        ? `?date=${encodeURIComponent(String(date))}`
+        : "";
+    const response = await apiServerMiddleware.get(`/attraction-details/${id}${qs}`);     
     return response.data;
   } catch (error) {
     return {

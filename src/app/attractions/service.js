@@ -1,4 +1,5 @@
 import apiServerMiddleware from "../api/serverMiddleware";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 
 
 
@@ -155,23 +156,32 @@ export const list = async (filters = {}) => {
 // Client-side price filtering function
 const applyClientSidePriceFilter = (responseData, filters) => {
   if (!responseData?.data?.data) return responseData;
-  
+
   const priceFrom = parseFloat(filters.price_from) || 0;
   const priceTo = parseFloat(filters.price_to) || Infinity;
-  
-  const filteredAttractions = responseData.data.data.filter(attraction => {
-    // Get attraction price from various possible fields
-    let attractionPrice = 0;
-    
-    if (attraction.price?.rate_type === "full") {
-      attractionPrice = parseFloat(attraction.price?.full_rate) || 0;
-    } else if (attraction.price?.rate_type === "pax") {
-      attractionPrice = parseFloat(attraction.price?.adult_price) || 0;
-    } else {
-      attractionPrice = parseFloat(attraction.price?.full_rate || attraction.price || 0);
+
+  const filteredAttractions = responseData.data.data.filter((attraction) => {
+    if (
+      attraction.free_booking === true ||
+      attraction.free_booking === 1 ||
+      attraction.free_booking === "1"
+    ) {
+      return priceFrom <= 0;
     }
-    
-    return attractionPrice >= priceFrom && attractionPrice <= priceTo;
+
+    const rt = attraction.price?.rate_type;
+    const adminPct = Number(attraction.price?.admin_charge ?? 0);
+    const discountPct = Number(attraction.price?.discount ?? 0);
+    const base =
+      rt === "full"
+        ? Number(attraction.price?.full_rate || 0)
+        : rt === "pax"
+        ? Number(attraction.price?.adult_price || 0)
+        : Number(attraction.price?.full_rate || attraction.price || 0);
+    const afterAdmin = applyAdminCharge(base, adminPct);
+    const displayPrice = applyDiscountOnAmount(afterAdmin, discountPct);
+
+    return displayPrice >= priceFrom && displayPrice <= priceTo;
   });
   
 

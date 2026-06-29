@@ -10,12 +10,16 @@ export function dedupeAttractionTicketPrices(prices) {
   return Array.from(byType.values());
 }
 
-export function normalizeAttractionBookingData(data) {
+export function normalizeAttractionBookingData(data, previous = null) {
   if (!data || typeof data !== "object") return data;
   const rawPrices = data.attraction_ticket_type_prices ?? data.attractionTicketTypePrices;
   const prices = dedupeAttractionTicketPrices(rawPrices);
   return {
     ...data,
     attraction_ticket_type_prices: prices,
+    terms_and_conditions:
+      data.terms_and_conditions?.length > 0
+        ? data.terms_and_conditions
+        : previous?.terms_and_conditions,
   };
 }

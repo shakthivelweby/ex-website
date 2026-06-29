@@ -1,7 +1,7 @@
 import ClientWrapper from "./clientWrapper";
 import { getAttractionCategories, getAttractionLocations, getAttractions } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
-import { applyAdminCharge } from "@/utils/attractionPricing";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
@@ -49,16 +49,29 @@ export default async function Attractions({ searchParams }) {
       "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
     price: (() => {
+      if (
+        attraction.free_booking === true ||
+        attraction.free_booking === 1 ||
+        attraction.free_booking === "1"
+      ) {
+        return 0;
+      }
       const rt = attraction.price?.rate_type;
       const adminPct = Number(attraction.price?.admin_charge ?? 0);
+      const discountPct = Number(attraction.price?.discount ?? 0);
       const base =
         rt === "full"
           ? Number(attraction.price?.full_rate || 0)
           : rt === "pax"
           ? Number(attraction.price?.adult_price || 0)
           : Number(attraction.price?.full_rate || attraction.price || 0);
-      return applyAdminCharge(base, adminPct);
+      const afterAdmin = applyAdminCharge(base, adminPct);
+      return applyDiscountOnAmount(afterAdmin, discountPct);
     })(),
+    freeBooking:
+      attraction.free_booking === true ||
+      attraction.free_booking === 1 ||
+      attraction.free_booking === "1",
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,
     duration: formatTimeTo12Hour(attraction.start_time) || "updating",

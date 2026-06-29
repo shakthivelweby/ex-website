@@ -19,6 +19,7 @@ const AttractionCard = ({ attraction }) => {
     type,
     image,
     price,
+    freeBooking,
     rating,
     reviewCount,
     bestTimeToVisit,
@@ -170,7 +171,11 @@ const AttractionCard = ({ attraction }) => {
 
           <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-2.5">
             <div>
-              {!hasPrice ? (
+              {freeBooking ? (
+                <span className="inline-flex rounded-md bg-primary-50 px-2 py-1 text-xs font-semibold text-primary-700 ring-1 ring-primary-100">
+                  Free booking
+                </span>
+              ) : !hasPrice ? (
                 <span className="inline-flex rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                   Free entry
                 </span>

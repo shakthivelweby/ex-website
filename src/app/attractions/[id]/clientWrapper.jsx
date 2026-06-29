@@ -27,13 +27,13 @@ function SectionCard({ title, children, className = "" }) {
 
 function GuideItem({ icon, label, value }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+    <div className="flex h-full min-h-[4.5rem] items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-4">
       <span className="fi-box h-10 w-10 shrink-0 rounded-lg border border-gray-200 bg-white text-primary-600">
         <i className={`${icon} text-base`} aria-hidden="true" />
       </span>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-gray-500">{label}</p>
-        <p className="mt-0.5 text-sm font-semibold text-gray-900">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</p>
+        <p className="mt-0.5 text-sm font-semibold leading-snug text-gray-900">{value}</p>
       </div>
     </div>
   );
@@ -72,6 +72,41 @@ const AttractionDetailClient = ({ attractionDetails }) => {
     .filter(Boolean)
     .join(" – ");
 
+  const guideItems = [
+    hoursLabel
+      ? { icon: "fi fi-rr-clock", label: "Hours", value: hoursLabel }
+      : null,
+    {
+      icon: "fi fi-rr-child",
+      label: "Kids friendly",
+      value: attractionDetails.attractionGuide.kidsFriendly,
+    },
+    {
+      icon: "fi fi-rr-paw",
+      label: "Pets friendly",
+      value: attractionDetails.attractionGuide.petsFriendly,
+    },
+    {
+      icon: "fi fi-rr-wheelchair",
+      label: "Wheelchair accessible",
+      value: attractionDetails.attractionGuide.wheelchairAccessible,
+    },
+    attractionDetails.chargableFrom != null && attractionDetails.chargableFrom !== ""
+      ? {
+          icon: "fi fi-rr-user",
+          label: "Child age",
+          value: `Under ${attractionDetails.chargableFrom} yrs`,
+        }
+      : null,
+    attractionDetails.paxRequirement
+      ? {
+          icon: "fi fi-rr-users",
+          label: "Pricing",
+          value: "Per person (adult & child)",
+        }
+      : null,
+  ].filter(Boolean);
+
   const galleryImages = attractionDetails.gallery || [];
 
   return (
@@ -86,7 +121,11 @@ const AttractionDetailClient = ({ attractionDetails }) => {
         pannelStyle="h-[78vh]"
       >
         <div className="flex-1 overflow-y-auto p-4">
-          <Form attractionDetails={attractionDetails} isMobilePopup />
+          <Form
+            attractionDetails={attractionDetails}
+            isMobilePopup
+            enquireOnly={attractionDetails.freeBooking}
+          />
         </div>
       </Popup>
 
@@ -100,7 +139,12 @@ const AttractionDetailClient = ({ attractionDetails }) => {
       <DetailPageLayout
         containerClassName="mt-6"
         stickyTop={DETAIL_SIDEBAR_STICKY_TOP}
-        sidebar={<Form attractionDetails={attractionDetails} />}
+        sidebar={
+          <Form
+            attractionDetails={attractionDetails}
+            enquireOnly={attractionDetails.freeBooking}
+          />
+        }
       >
         <div className="space-y-6 lg:space-y-8">
           <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
@@ -134,28 +178,15 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 p-4 sm:grid-cols-3 sm:p-5">
-              {hoursLabel ? (
-                <div className="col-span-2 flex items-center gap-2.5 sm:col-span-1">
-                  <span className="fi-box h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-primary-600">
-                    <i className="fi fi-rr-clock text-sm" aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Hours</p>
-                    <p className="text-sm font-semibold text-gray-900">{hoursLabel}</p>
-                  </div>
-                </div>
-              ) : null}
-              <GuideItem
-                icon="fi fi-rr-child"
-                label="Kids friendly"
-                value={attractionDetails.attractionGuide.kidsFriendly}
-              />
-              <GuideItem
-                icon="fi fi-rr-paw"
-                label="Pets friendly"
-                value={attractionDetails.attractionGuide.petsFriendly}
-              />
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(10.75rem,1fr))] gap-3 border-t border-gray-100 p-4 sm:p-5">
+              {guideItems.map((item) => (
+                <GuideItem
+                  key={item.label}
+                  icon={item.icon}
+                  label={item.label}
+                  value={item.value}
+                />
+              ))}
             </div>
           </div>
 
@@ -246,18 +277,6 @@ const AttractionDetailClient = ({ attractionDetails }) => {
             </div>
           </SectionCard>
 
-          {attractionDetails.faqs?.length > 0 ? (
-            <SectionCard title="Frequently asked questions">
-              <div className="space-y-2">
-                {attractionDetails.faqs.map((faq, index) => (
-                  <Accordion key={index} title={faq.question} defaultOpen={index === 0}>
-                    <RichTextContent html={faq.answer} className="text-sm text-gray-600" />
-                  </Accordion>
-                ))}
-              </div>
-            </SectionCard>
-          ) : null}
-
           {attractionDetails.inclusions?.length > 0 ||
           attractionDetails.exclusions?.length > 0 ? (
             <SectionCard title="What's included">
@@ -292,6 +311,18 @@ const AttractionDetailClient = ({ attractionDetails }) => {
             </SectionCard>
           ) : null}
 
+          {attractionDetails.faqs?.length > 0 ? (
+            <SectionCard title="Frequently asked questions">
+              <div className="space-y-2">
+                {attractionDetails.faqs.map((faq, index) => (
+                  <Accordion key={index} title={faq.question} defaultOpen={index === 0}>
+                    <RichTextContent html={faq.answer} className="text-sm text-gray-600" />
+                  </Accordion>
+                ))}
+              </div>
+            </SectionCard>
+          ) : null}
+
           {attractionDetails.terms ? (
             <SectionCard title="Terms & conditions">
               <Accordion title="Important information" defaultOpen>
@@ -321,8 +352,12 @@ const AttractionDetailClient = ({ attractionDetails }) => {
             size="lg"
             className="w-full !justify-between !rounded-2xl px-5 shadow-lg"
           >
-            <span className="text-sm font-semibold">Select tickets</span>
-            <span className="text-sm font-bold tabular-nums">{attractionDetails.price}</span>
+            <span className="text-sm font-semibold">
+              {attractionDetails.freeBooking ? "Book visit" : "Select tickets"}
+            </span>
+            <span className="text-sm font-bold tabular-nums">
+              {attractionDetails.freeBooking ? "Free booking" : attractionDetails.price}
+            </span>
           </Button>
         </div>
       ) : null}

@@ -29,7 +29,6 @@ import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
-  isActivityCloseoutDate,
   normalizeCloseoutDates,
   findFirstBookableDate,
   dateToYmd,
@@ -180,12 +179,18 @@ function getLineMaxQty(ticket, lineType, tickets) {
   return cap;
 }
 
-function TermsAgreement({ checked, onChange, id = "attractionTermsAgreement" }) {
+function TermsAgreement({ checked, onChange, id = "attractionTermsAgreement", attractionTermsHtml }) {
   return (
-    <label
-      htmlFor={id}
-      className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5"
-    >
+    <div className="space-y-2">
+      {attractionTermsHtml ? (
+        <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-100 bg-white px-3 py-2 text-[11px] text-gray-600">
+          <div dangerouslySetInnerHTML={{ __html: attractionTermsHtml }} />
+        </div>
+      ) : null}
+      <label
+        htmlFor={id}
+        className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2.5"
+      >
       <input
         type="checkbox"
         id={id}
@@ -210,18 +215,21 @@ function TermsAgreement({ checked, onChange, id = "attractionTermsAgreement" }) 
         </Link>
       </span>
     </label>
+    </div>
   );
 }
 
 const AttractionBookingPage = ({
   attractionId,
   closeoutDates = [],
+  seasonalDates = [],
   initialAttractionData = null,
+  freeBooking = false,
 }) => {
   const router = useRouter();
   const [attractionData, setAttractionData] = useState(initialAttractionData);
   const [ticketData, setTicketData] = useState(null);
-  const [loading, setLoading] = useState(!initialAttractionData);
+  const [loading, setLoading] = useState(true);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
@@ -270,10 +278,6 @@ const AttractionBookingPage = ({
     [closeoutDates]
   );
 
-  // Function to check if a date should be disabled (same as Form.jsx)
-  const isDateDisabled = (date) =>
-    isActivityCloseoutDate(normalizedCloseoutDates, dateToYmd(date), date);
-
   // Initialise visit date from localStorage (detail page) or today, then load tickets for that date.
   useEffect(() => {
     if (!attractionId) return;
@@ -294,9 +298,8 @@ const AttractionBookingPage = ({
         setLoading(true);
         const response = await getDetailsForBooking(attractionId, visitDate);
         if (response?.data) {
-          const normalized = normalizeAttractionBookingData(response.data);
-          setAttractionData(normalized);
-          setTicketData(normalized);
+          setAttractionData((prev) => normalizeAttractionBookingData(response.data, prev));
+          setTicketData((prev) => normalizeAttractionBookingData(response.data, prev));
         }
       } catch (error) {
         console.error("Error fetching booking details:", error);
@@ -329,11 +332,15 @@ const AttractionBookingPage = ({
     const prices = ticketData?.attraction_ticket_type_prices;
     if (prices?.length) {
       setExpandedTicketType(prices[0].attraction_ticket_type_id);
+      if (freeBooking || ticketData?.free_booking) {
+        const firstTypeId = prices[0].attraction_ticket_type_id;
+        setAdultChildTickets({ [firstTypeId]: { adult: 1, child: 0 } });
+      }
     }
-  }, [ticketData?.attraction_ticket_type_prices]);
+  }, [ticketData?.attraction_ticket_type_prices, ticketData?.free_booking, freeBooking]);
 
   const handleVisitDateChange = async (date) => {
-    const dateString = date ? date.toISOString().split("T")[0] : "";
+    const dateString = date ? dateToYmd(date) : "";
     setSelectedDate(dateString);
     setAdultChildTickets({});
     setExpandedTicketType(null);
@@ -344,9 +351,8 @@ const AttractionBookingPage = ({
         setTicketsLoading(true);
         const response = await getDetailsForBooking(attractionId, dateString);
         if (response?.data) {
-          const normalized = normalizeAttractionBookingData(response.data);
-          setAttractionData(normalized);
-          setTicketData(normalized);
+          setAttractionData((prev) => normalizeAttractionBookingData(response.data, prev));
+          setTicketData((prev) => normalizeAttractionBookingData(response.data, prev));
         }
       } catch (error) {
         console.error("Error fetching booking details for date:", error);
@@ -439,6 +445,9 @@ const AttractionBookingPage = ({
   };
 
   const ticketPrices = ticketData?.attraction_ticket_type_prices;
+  const isFreeBookingFlow =
+    freeBooking || Boolean(attractionData?.free_booking || ticketData?.free_booking);
+  const paxRequirement = Boolean(attractionData?.pax_requirement);
   const hasGuideOption = attractionHasGuideOption(ticketPrices);
   const guideTotal = computeAttractionGuideTotal(
     ticketPrices,
@@ -447,6 +456,8 @@ const AttractionBookingPage = ({
   );
 
   const getTotalPrice = () => {
+    if (isFreeBookingFlow) return 0;
+
     let total = 0;
 
     // Calculate adult/child tickets
@@ -518,9 +529,12 @@ const AttractionBookingPage = ({
     try {
       const response = await getDetailsForBooking(attractionId, selectedDate);
       if (response?.data) {
-        const normalized = normalizeAttractionBookingData(response.data);
-        setAttractionData(normalized);
-        setTicketData(normalized);
+        setAttractionData((prev) =>
+          normalizeAttractionBookingData(response.data, prev)
+        );
+        setTicketData((prev) =>
+          normalizeAttractionBookingData(response.data, prev)
+        );
       }
     } catch (error) {
       console.error("Error refreshing booking details:", error);
@@ -551,9 +565,23 @@ const AttractionBookingPage = ({
         (t) => t.attraction_ticket_type_id == ticketTypeId
       );
 
-      if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
+        if (ticket && (tickets.adult > 0 || tickets.child > 0)) {
         const totalQuantity = tickets.adult + tickets.child;
         const adm = attractionAdminPct(ticket);
+
+        if (isFreeBookingFlow) {
+          formattedTickets.push({
+            id: parseInt(ticketTypeId, 10),
+            attraction_ticket_type_id: parseInt(ticketTypeId, 10),
+            quantity: totalQuantity,
+            adult_quantity: tickets.adult,
+            child_quantity: tickets.child,
+            unit_price: 0,
+            total_price: 0,
+            total: 0,
+          });
+          return;
+        }
 
         if (ticket.rate_type === "full") {
           const originalRaw = Number(ticket.full_rate || 0);
@@ -1004,6 +1032,7 @@ const AttractionBookingPage = ({
   // Compute discount-aware subtotal for summary
   let subtotalOriginal = 0;
   let discountForSummary = 0;
+  if (!isFreeBookingFlow) {
   Object.entries(adultChildTickets).forEach(([ticketTypeId, tickets]) => {
     const ticket = ticketData?.attraction_ticket_type_prices?.find(
       (t) => t.attraction_ticket_type_id == ticketTypeId
@@ -1034,8 +1063,9 @@ const AttractionBookingPage = ({
       (adultUnit - discountedAdult) * tickets.adult +
       (childUnit - discountedChild) * tickets.child;
   });
+  }
 
-  if (needGuide && guideTotal > 0) {
+  if (!isFreeBookingFlow && needGuide && guideTotal > 0) {
     subtotalOriginal += guideTotal;
   }
 
@@ -1139,9 +1169,15 @@ const AttractionBookingPage = ({
               <AttractionTicketSelectionStep
                 selectedDate={selectedDate}
                 onDateChange={handleVisitDateChange}
-                isDateDisabled={isDateDisabled}
                 ticketsLoading={ticketsLoading}
-                ticketPrices={ticketData?.attraction_ticket_type_prices}
+                ticketPrices={ticketPrices?.filter(
+                  (ticket) =>
+                    !paxRequirement || ticket.rate_type !== "full"
+                )}
+                closeoutDates={normalizedCloseoutDates}
+                seasonalDates={seasonalDates}
+                freeBooking={isFreeBookingFlow}
+                paxRequirement={paxRequirement}
                 adultChildTickets={adultChildTickets}
                 expandedTicketType={expandedTicketType}
                 onTicketTypeClick={handleTicketTypeClick}
@@ -1156,6 +1192,8 @@ const AttractionBookingPage = ({
                 onNeedGuideChange={setNeedGuide}
                 hasGuideOption={hasGuideOption}
                 guideAmount={guideTotal}
+                chargableFrom={attractionData?.chargable_from}
+                paxRequirement={Boolean(attractionData?.pax_requirement)}
                 formatDate={formatDate}
               />
             ) : (
@@ -1255,6 +1293,9 @@ const AttractionBookingPage = ({
                     checked={termsAccepted}
                     onChange={setTermsAccepted}
                     id="attractionTermsMobile"
+                    attractionTermsHtml={
+                      attractionData?.terms_and_conditions?.[0]?.description
+                    }
                   />
                   {checkoutError ? (
                     <p className="mt-2 text-xs text-red-600">{checkoutError}</p>
@@ -1397,6 +1438,9 @@ const AttractionBookingPage = ({
                           checked={termsAccepted}
                           onChange={setTermsAccepted}
                           id="attractionTermsDesktop"
+                          attractionTermsHtml={
+                            attractionData?.terms_and_conditions?.[0]?.description
+                          }
                         />
                       </div>
                       {checkoutError ? (

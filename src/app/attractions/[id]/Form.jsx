@@ -1,21 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Button from "@/components/common/Button";
 import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
 import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import AttractionVisitDatePicker from "@/components/attractions/AttractionVisitDatePicker";
 import { getTicketPricesForDate } from "./service";
 import {
-  isActivityCloseoutDate,
-  normalizeCloseoutDates,
   dateToYmd,
 } from "@/utils/closeoutUtils";
 import { minDisplayedEntryFeeFromRows } from "@/utils/attractionPricing";
 import InlineSpinner from "@/components/loading/InlineSpinner";
-import { detailDatePickerPopperProps, DetailDatePickerTrigger } from "@/components/booking/detailDatePickerProps";
 
 function formatVisitDateLabel(dateStr) {
   if (!dateStr) return null;
@@ -49,6 +45,7 @@ const Form = ({
   totalPrice: propTotalPrice,
 }) => {
   const { isNavigating, navigate } = useNavigateWithLoading();
+  const isFreeBooking = enquireOnly || Boolean(attractionDetails?.freeBooking);
   const [isLoading, setIsLoading] = useState(false);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState(propSelectedTickets || {});
@@ -56,12 +53,13 @@ const Form = ({
   const [selectedDate, setSelectedDate] = useState(attractionDetails?.selectedDate || "");
   const [ticketPrices, setTicketPrices] = useState(attractionDetails?.dateSpecificPricing || []);
 
-  const isDateDisabled = (date) =>
-    isActivityCloseoutDate(
-      normalizeCloseoutDates(attractionDetails?.closeoutDates || []),
-      dateToYmd(date),
-      date
-    );
+  const ticketTypeIds = useMemo(
+    () =>
+      (ticketPrices || [])
+        .map((row) => row?.attraction_ticket_type_id)
+        .filter(Boolean),
+    [ticketPrices]
+  );
 
   useEffect(() => {
     if (attractionDetails?.dateSpecificPricing && attractionDetails?.selectedDate) {
@@ -76,7 +74,7 @@ const Form = ({
   }, [propSelectedTickets, propTotalPrice]);
 
   const handleDateChange = async (date) => {
-    const dateString = date ? date.toISOString().split("T")[0] : "";
+    const dateString = date ? dateToYmd(date) : "";
     setSelectedDate(dateString);
     if (!dateString || !attractionDetails?.id) return;
 
@@ -122,6 +120,7 @@ const Form = ({
     Object.values(selectedTickets).reduce((sum, quantity) => sum + quantity, 0);
 
   const displayPrice = (() => {
+    if (isFreeBooking) return "Free booking";
     const minFee = minDisplayedEntryFeeFromRows(ticketPrices);
     if (minFee != null && minFee > 0) return `₹${minFee}`;
     return attractionDetails.price;
@@ -161,7 +160,7 @@ const Form = ({
 
         <div className="border-b border-gray-100 px-4 py-3.5">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-gray-900">Visit date</p>
+            <label className="text-xs font-semibold text-gray-900">Visit date</label>
             {pricesLoading ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
                 <InlineSpinner className="h-3.5 w-3.5 text-primary-500" />
@@ -169,51 +168,45 @@ const Form = ({
               </span>
             ) : null}
           </div>
-          {isMobilePopup ? (
-            <DatePicker
-              selected={visitDateObj}
-              onChange={handleDateChange}
-              minDate={new Date()}
-              filterDate={(date) => !isDateDisabled(date)}
-              inline
-              dateFormat="dd/MM/yyyy"
-            />
-          ) : (
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
-              <div
-                className={`flex h-11 w-11 flex-col items-center justify-center rounded-md border ${
-                  selectedDate
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 bg-gray-50 text-gray-500"
-                }`}
-              >
-                {selectedDate ? (
-                  <>
-                    <span className="text-[8px] font-semibold uppercase leading-none opacity-80">
-                      {visitDateObj.toLocaleDateString("en-US", { month: "short" })}
-                    </span>
-                    <span className="text-base font-bold leading-none">{visitDateObj.getDate()}</span>
-                  </>
-                ) : (
-                  <span className="text-lg font-bold leading-none">—</span>
-                )}
-              </div>
-              <p className="min-w-0 truncate text-sm font-semibold text-gray-900">
-                {selectedDate ? formatVisitDateLabel(selectedDate) : "Choose a date"}
-              </p>
-              <div className="shrink-0 [&_.react-datepicker-wrapper]:!w-auto">
-                <DatePicker
+          <p className="mb-2.5 text-xs text-gray-500">
+            Green dates are available to book. Amber dates use seasonal rates. Red dates are
+            unavailable.
+          </p>
+          <div className="relative">
+            {isMobilePopup ? (
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                <AttractionVisitDatePicker
+                  closeoutDates={attractionDetails.closeoutDates}
+                  seasonalDates={attractionDetails.seasonalDates}
+                  ticketTypeIds={ticketTypeIds}
                   selected={visitDateObj}
                   onChange={handleDateChange}
-                  minDate={new Date()}
-                  filterDate={(date) => !isDateDisabled(date)}
-                  customInput={<DetailDatePickerTrigger />}
-                  popperPlacement="bottom-end"
-                  {...detailDatePickerPopperProps}
+                  inline
                 />
               </div>
-            </div>
-          )}
+            ) : (
+              <>
+                <AttractionVisitDatePicker
+                  closeoutDates={attractionDetails.closeoutDates}
+                  seasonalDates={attractionDetails.seasonalDates}
+                  ticketTypeIds={ticketTypeIds}
+                  selected={visitDateObj}
+                  onChange={handleDateChange}
+                  placeholderText="Choose date"
+                  className="h-11 w-full cursor-pointer rounded-xl border border-gray-200 bg-white px-3 pr-10 font-medium text-gray-800 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <i className="fi fi-rr-calendar text-lg" aria-hidden="true" />
+                </div>
+              </>
+            )}
+          </div>
+          {isMobilePopup && selectedDate ? (
+            <p className="mt-3 text-sm text-gray-600">
+              <span className="font-medium text-gray-800">Selected:</span>{" "}
+              {formatVisitDateLabel(selectedDate)}
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-2.5 px-4 py-3.5">
@@ -226,9 +219,9 @@ const Form = ({
                   className="w-full h-12 text-base font-semibold"
                   disabled={!selectedDate}
                   isLoading={isNavigating}
-                  loadingLabel="Opening tickets…"
+                  loadingLabel={isFreeBooking ? "Opening booking…" : "Opening tickets…"}
                 >
-                  Select tickets
+                  {isFreeBooking ? "Book visit" : "Select tickets"}
                 </Button>
               ) : (
                 <Button
@@ -258,9 +251,9 @@ const Form = ({
               className="w-full"
               disabled={!selectedDate}
               isLoading={isNavigating}
-              loadingLabel="Opening tickets…"
+              loadingLabel={isFreeBooking ? "Opening booking…" : "Opening tickets…"}
             >
-              Select tickets
+              {isFreeBooking ? "Book visit" : "Select tickets"}
             </Button>
           </div>
           <div className="h-20" aria-hidden />

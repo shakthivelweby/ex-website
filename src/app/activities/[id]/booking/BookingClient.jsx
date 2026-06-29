@@ -24,10 +24,7 @@ import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 import { getLoggedInUserEmail } from "@/utils/authSession";
-import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
 import { detailDatePickerPopperProps } from "@/components/booking/detailDatePickerProps";
-import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
-import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";

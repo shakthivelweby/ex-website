@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import LocationSearchInput from "../LocationSearchInput";
+import SearchLocationField from "./SearchLocationField";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "./DateRangeSearchField";
 import {
@@ -20,6 +20,7 @@ export default function RentalsSearchFilters({
   filters,
   onFilterChange,
   categories = [],
+  destinations = [],
   compact = false,
 }) {
   const categoryTypes = useMemo(
@@ -28,25 +29,6 @@ export default function RentalsSearchFilters({
   );
 
   const showVehicleFilters = isVehicleFormType(filters.form_type);
-
-  const handlePlaceSelected = (place) => {
-    if (!place?.geometry?.location) return;
-    onFilterChange({
-      ...filters,
-      longitude: place.geometry.location.lng(),
-      latitude: place.geometry.location.lat(),
-      location: place.name || place.formatted_address || "",
-    });
-  };
-
-  const clearLocation = () => {
-    onFilterChange({
-      ...filters,
-      location: "",
-      longitude: "",
-      latitude: "",
-    });
-  };
 
   const toggleFormType = (formType) => {
     const next = filters.form_type === formType ? "" : formType;
@@ -87,19 +69,29 @@ export default function RentalsSearchFilters({
           {filters.location ? (
             <button
               type="button"
-              onClick={clearLocation}
+              onClick={() =>
+                onFilterChange({
+                  ...filters,
+                  location: "",
+                  longitude: "",
+                  latitude: "",
+                })
+              }
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               Clear
             </button>
           ) : null}
         </div>
-        <LocationSearchInput
-          value={filters.location}
-          onPlaceSelected={handlePlaceSelected}
-          onClear={clearLocation}
-          googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+        <SearchLocationField
+          location={filters.location}
+          latitude={filters.latitude}
+          longitude={filters.longitude}
+          destinations={destinations}
           placeholder="Enter city or pickup area..."
+          onChange={(locationPatch) =>
+            onFilterChange({ ...filters, ...locationPatch })
+          }
         />
       </div>
 

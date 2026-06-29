@@ -33,6 +33,27 @@ const navLinks = [
   },
 
   {
+    name: "Events",
+    href: "/events",
+    icon: "fi fi-rr-glass-cheers",
+    matchPath: (path) => path.startsWith("/events")
+  },
+
+  {
+    name: "Attractions",
+    href: "/attractions",
+    icon: "fi fi-rr-ferris-wheel",
+    matchPath: (path) => path.startsWith("/attractions") || path.startsWith("/attraction")
+  },
+
+  {
+    name: "Activities",
+    href: "/activities",
+    icon: "fi fi-rr-hiking",
+    matchPath: (path) => path.startsWith("/activities") || path.startsWith("/activity")
+  },
+
+  {
     name: "Rentals",
     href: "/rentals",
     icon: "fi fi-rr-car",
@@ -122,24 +143,25 @@ export default function MobileNav() {
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          className="w-full bg-white border-t border-gray-100 pointer-events-auto"
+          className="w-full bg-white border-t border-gray-100 pointer-events-auto pb-[env(safe-area-inset-bottom)]"
         >
-          <div className="flex items-center justify-around py-2">
+          <div className="flex items-center gap-0.5 overflow-x-auto px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {navLinks.map(({ name, href, icon, matchPath }) => {
               const isActive = matchPath(pathname);
+              const itemClassName = `
+                relative flex shrink-0 flex-col items-center justify-center
+                min-w-[52px] px-1.5
+                h-[44px] rounded-full transition-all duration-300
+                ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/20
+              `;
               
               if (name === "Profile" && user) {
                 return (
                   <button
                     key={name}
                     onClick={() => setShowUserMenu(true)}
-                    className={`
-                      relative flex flex-col items-center justify-center
-                      ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
-                      h-[44px] rounded-full transition-all duration-300
-                      ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/20
-                    `}
+                    className={itemClassName}
                   >
                     <div className="flex items-center justify-center">
                       <div className="relative">
@@ -162,14 +184,14 @@ export default function MobileNav() {
                         <motion.span
                           initial={{ opacity: 0, width: 0 }}
                           animate={{ opacity: 1, width: "auto" }}
-                          className="ml-2.5 text-xs font-medium whitespace-nowrap overflow-hidden"
+                          className="ml-1.5 text-[10px] font-medium whitespace-nowrap overflow-hidden"
                         >
                           {name}
                         </motion.span>
                       )}
                     </div>
                     {!isActive && (
-                      <span className="text-[9px] mt-0.5 text-gray-400 font-medium tracking-tight">
+                      <span className="text-[8px] mt-0.5 text-gray-400 font-medium tracking-tight leading-none text-center max-w-[52px] truncate">
                         {name}
                       </span>
                     )}
@@ -187,13 +209,7 @@ export default function MobileNav() {
                       handleClick(href, name);
                     }
                   }}
-                  className={`
-                    relative flex flex-col items-center justify-center
-                    ${isActive ? 'w-[120px] px-2' : 'w-[48px]'}
-                    h-[44px] rounded-full transition-all duration-300
-                    ${isActive ? 'bg-primary-50 text-primary-500' : 'hover:bg-gray-50 text-gray-500'}
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/20
-                  `}
+                  className={itemClassName}
                 >
                   <div className="flex items-center justify-center">
                     <i className={`${icon} text-lg`} />
@@ -201,14 +217,14 @@ export default function MobileNav() {
                       <motion.span
                         initial={{ opacity: 0, width: 0 }}
                         animate={{ opacity: 1, width: "auto" }}
-                        className="ml-2.5 text-xs font-medium whitespace-nowrap overflow-hidden"
+                        className="ml-1.5 text-[10px] font-medium whitespace-nowrap overflow-hidden"
                       >
                         {name}
                       </motion.span>
                     )}
                   </div>
                   {!isActive && (
-                    <span className="text-[9px] mt-0.5 text-gray-400 font-medium tracking-tight">
+                    <span className="text-[8px] mt-0.5 text-gray-400 font-medium tracking-tight leading-none text-center max-w-[52px] truncate">
                       {name}
                     </span>
                   )}

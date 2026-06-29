@@ -51,7 +51,7 @@ export default function PaymentSuccessPopup({
       aria-modal="true"
       aria-labelledby="payment-success-title"
     >
-      <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
+      <div className="flex min-h-full sm:min-h-screen items-end sm:items-center justify-center p-4 pb-6 sm:p-6">
         <div
           className="fixed inset-0 bg-gray-900/40 backdrop-blur-[2px]"
           onClick={onClose}
@@ -187,7 +187,7 @@ export default function PaymentSuccessPopup({
                 <button
                   type="button"
                   onClick={secondaryAction.onClick}
-                  className="flex-1 h-11 sm:h-12 px-4 border border-gray-200 bg-white text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                  className="w-full sm:flex-1 shrink-0 min-h-11 h-11 sm:min-h-12 sm:h-12 px-4 border border-gray-200 bg-white text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors"
                 >
                   {secondaryAction.label}
                 </button>
@@ -196,7 +196,7 @@ export default function PaymentSuccessPopup({
                 <button
                   type="button"
                   onClick={primaryAction.onClick}
-                  className="flex-1 h-11 sm:h-12 px-4 bg-primary-600 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-primary-700 transition-all shadow-md shadow-primary-600/15"
+                  className="w-full sm:flex-1 shrink-0 min-h-11 h-11 sm:min-h-12 sm:h-12 px-4 bg-primary-600 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-primary-700 transition-all shadow-md shadow-primary-600/15"
                 >
                   {primaryAction.label}
                   {primaryAction.icon ? <i className={`${primaryAction.icon} text-sm`} /> : null}

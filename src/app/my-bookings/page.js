@@ -48,18 +48,23 @@ const MyBookings = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="bg-white rounded-lg shadow-sm">
+        <div className="min-h-screen bg-gray-50 pb-4 sm:pb-8">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+                <div className="bg-white rounded-xl sm:rounded-lg shadow-sm overflow-hidden">
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
-                        <p className="text-gray-600 mt-2">Manage and view all your travel bookings</p>
+                    <div className="px-4 sm:px-6 py-4 border-b border-gray-200">
+                        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">My Bookings</h1>
+                        <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
+                            Manage and view all your travel bookings
+                        </p>
                     </div>
 
                     {/* Tabs */}
                     <div className="border-b border-gray-200">
-                        <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                        <nav
+                            className="flex gap-0.5 sm:gap-2 overflow-x-auto px-3 sm:px-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            aria-label="Tabs"
+                        >
                             {tabs.map((tab) => (
                                 <button
                                     key={tab.id}
@@ -68,7 +73,7 @@ const MyBookings = () => {
                                         setActiveTab(tab.id);
                                         router.replace(`/my-bookings?tab=${tab.id}`, { scroll: false });
                                     }}
-                                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                                    className={`shrink-0 py-3 sm:py-4 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm transition-colors duration-200 whitespace-nowrap ${
                                         activeTab === tab.id
                                             ? 'border-blue-500 text-blue-600'
                                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -81,7 +86,7 @@ const MyBookings = () => {
                     </div>
 
                     {/* Tab Content */}
-                    <div className="min-h-[400px]">
+                    <div className="min-h-[280px] sm:min-h-[400px]">
                         {renderTabContent()}
                     </div>
                 </div>

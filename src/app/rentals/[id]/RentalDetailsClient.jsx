@@ -278,7 +278,7 @@ export default function RentalDetailsClient({ rental }) {
     formatLocation(selectedPickup?.name || pickupLocations[0]?.name || rental?.location) || null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 lg:pb-8">
+    <div className="min-h-screen bg-gray-50 pb-32 lg:pb-8">
       <DetailSubHeader
         backLabel="Back to rentals"
         title={rental.title}
@@ -755,8 +755,8 @@ export default function RentalDetailsClient({ rental }) {
         />
       )}
 
-      <div className="fixed bottom-0 inset-x-0 lg:hidden z-40 pointer-events-none">
-        <div className="pointer-events-auto mx-4 mb-4 pb-[env(safe-area-inset-bottom)]">
+      <div className="fixed bottom-16 inset-x-0 lg:hidden z-40 pointer-events-none">
+        <div className="pointer-events-auto mx-4 mb-2">
           <button
             type="button"
             onClick={handleMobileBooking}

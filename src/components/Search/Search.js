@@ -187,7 +187,7 @@ export default function Search({ isOpen, onClose, type }) {
     !isRentalsModule;
 
   const { data: destinationsData, isLoading: isDestinationsLoading } =
-    useAllDestinations(isOpen && showDestinationPicker);
+    useAllDestinations(isOpen);
   const { data: eventCategoriesData } = useEventCategories(
     isOpen && isEventsModule,
   );
@@ -282,7 +282,13 @@ export default function Search({ isOpen, onClose, type }) {
 
     if (normalized.length === 1) {
       const item = normalized[0];
-      if (!item.country_id) return;
+      const countryId = item.country_id ?? item.state?.country_id;
+
+      if (!countryId) {
+        router.push(`/explore`);
+        onClose();
+        return;
+      }
 
       localStorage.setItem("choosedDestination", JSON.stringify(item));
       window.dispatchEvent(new CustomEvent("destinationChanged"));
@@ -290,7 +296,7 @@ export default function Search({ isOpen, onClose, type }) {
         state: item.state_id,
         destination: item.id,
       });
-      router.push(`/packages/${item.country_id}?${params.toString()}`);
+      router.push(`/packages/${countryId}?${params.toString()}`);
     } else {
       sessionStorage.setItem(
         "packageSearchDestinations",
@@ -656,6 +662,7 @@ export default function Search({ isOpen, onClose, type }) {
               onFilterChange={setEventFilters}
               categories={eventCategories}
               languages={eventLanguages}
+              destinations={allDestinations}
               compact
             />
             <SearchFooter
@@ -670,6 +677,7 @@ export default function Search({ isOpen, onClose, type }) {
               filters={attractionFilters}
               onFilterChange={setAttractionFilters}
               categories={attractionCategories}
+              destinations={allDestinations}
               compact
             />
             <SearchFooter
@@ -686,6 +694,7 @@ export default function Search({ isOpen, onClose, type }) {
               filters={activityFilters}
               onFilterChange={setActivityFilters}
               categories={activityCategories}
+              destinations={allDestinations}
               compact
             />
             <SearchFooter
@@ -702,6 +711,7 @@ export default function Search({ isOpen, onClose, type }) {
               filters={rentalFilters}
               onFilterChange={setRentalFilters}
               categories={rentalCategories}
+              destinations={allDestinations}
               compact
             />
             <SearchFooter

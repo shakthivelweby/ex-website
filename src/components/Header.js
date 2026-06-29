@@ -6,90 +6,15 @@ import { useState, useRef, useEffect } from "react";
 import Button from "./common/Button";
 import { usePathname } from 'next/navigation';
 import Search from './Search/Search';
-import { useRouter } from 'next/navigation';
 import Login from "./Login/Login";
 import Signup from "./Login/Signup";
-import Popup from "./Popup";
 import ShareOptions from "./ShareOptions/ShareOptions";
 import { motion, AnimatePresence } from "framer-motion";
 import UserMenu from './UserMenu/UserMenu';
 
-const menuVariants = {
-  initial: {
-    opacity: 0,
-    y: -5,
-  },
-  animate: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.2,
-      ease: "easeOut",
-      staggerChildren: 0.05,
-    }
-  },
-  exit: {
-    opacity: 0,
-    y: -5,
-    transition: {
-      duration: 0.2,
-      ease: "easeIn",
-    }
-  }
-};
-
-const itemVariants = {
-  initial: { opacity: 0, x: -5 },
-  animate: {
-    opacity: 1,
-    x: 0,
-  }
-};
-
-const navLinks = [
-  {
-    name: "Packages",
-    href: "/explore",
-    icon: "fi fi-rr-umbrella-beach",
-    matchPath: (path) => path === "/explore" || path.startsWith("/packages") || path.startsWith("/package")
-  },
-  {
-    name: "Scheduled Trips",
-    href: "/scheduled",
-    icon: "fi fi-rr-pending",
-    matchPath: (path) => path === "/scheduled"
-  },
-  {
-    name: "Events",
-    href: "/events",
-    icon: "fi fi-rr-glass-cheers",
-    matchPath: (path) => path === "/events" || path.startsWith("/events")
-  },
-  {
-    name: "Attractions",
-    href: "/attractions",
-    icon: "fi fi-rr-ferris-wheel",
-    matchPath: (path) => path === "/attractions" || path.startsWith("/attractions")
-  },
-  { 
-    name: "Activities", 
-    href: "/activities", 
-    icon: "fi fi-rr-hiking",
-    matchPath: (path) => path === "/activities"
-  },
-  {
-    name: "Rentals",
-    href: "/rentals",
-    icon: "fi fi-rr-car",
-    matchPath: (path) => path === "/rentals" || path.startsWith("/rentals/")
-  },
-];
-
 export default function Header() {
   const pathname = usePathname();
-  const [activeIndex, setActiveIndex] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showMobileNav, setShowMobileNav] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
@@ -99,23 +24,11 @@ export default function Header() {
   });
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef(null);
-  const userMenuRef = useRef(null);
-  const mobileNavRef = useRef(null);
-  const router = useRouter();
   const menuRef = useRef(null);
   const [currentUrl, setCurrentUrl] = useState('');
 
   // Check if current page is a package detail page
   const isPackageDetailPage = pathname.startsWith('/package/');
-
-  // Set active index based on current path
-  useEffect(() => {
-    const index = navLinks.findIndex(link => link.matchPath(pathname));
-    if (index !== -1) {
-      setActiveIndex(index);
-    }
-  }, [pathname]);
 
   useEffect(() => {
     const syncUser = () => {
@@ -137,23 +50,12 @@ export default function Header() {
     window.addEventListener("auth:login", syncUser);
     window.addEventListener("storage", syncUser);
 
-    // Close menu when clicking outside
-    const handleClickOutside = (event) => {
-      if (mobileNavRef.current && !mobileNavRef.current.contains(event.target)) {
-        setShowMobileNav(false);
-      }
-    };
-
-    if (showMobileNav) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener("auth:logout", syncUser);
       window.removeEventListener("auth:login", syncUser);
       window.removeEventListener("storage", syncUser);
     };
-  }, [showMobileNav]);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -175,17 +77,22 @@ export default function Header() {
     }
   }, [pathname]);
 
-  const handleLinkClick = (index) => {
-    setActiveIndex(index);
-    setShowMobileNav(false);
-  };
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogin = () => {
     setIsLoading(true);
     setTimeout(() => {
       setShowLogin(true);
       setIsLoading(false);
-      setShowMobileNav(false);
     }, 300);
   };
 
@@ -203,12 +110,7 @@ export default function Header() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    setShowMobileNav(false);
     window.location.reload();
-  };
-
-  const handleMobileMenuToggle = () => {
-    setShowMobileNav(!showMobileNav);
   };
 
   return (
@@ -217,7 +119,7 @@ export default function Header() {
         <div className="container mx-auto flex items-center justify-between py-2 px-3">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" onClick={() => setShowMobileNav(false)}>
+            <Link href="/">
               <Image
                 src="/exploreworld-logo.png"
                 alt="Logo"
@@ -228,35 +130,7 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-5">
-            {navLinks.map((link, index) => {
-              const isActive = link.matchPath(pathname);
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`flex items-center text-sm font-medium mr-4 ${isActive
-                    ? "text-primary-600"
-                    : "text-gray-700 hover:text-gray-900"
-                    }`}
-                  onClick={() => handleLinkClick(index)}
-                >
-                  <i
-                    className={`${link.icon} text-sm mr-2 ${isActive ? "text-primary-600" : "text-gray-500"
-                      }`}
-                  ></i>
-                  {link.name}
-                  {isActive && (
-                    <div className="ml-1.5 h-1 w-1 bg-primary-500 rounded-full"></div>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* Mobile Menu and User Menu */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ml-auto">
             {/* Share Button - Only show on package detail pages */}
             {isPackageDetailPage && (
               <div className="hidden lg:block">
@@ -292,15 +166,6 @@ export default function Header() {
               <i className="fi fi-rr-search text-gray-700"></i>
             </button>
 
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              className="lg:hidden flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200"
-              onClick={() => setShowMobileNav(prev => !prev)}
-            >
-              <i className={`fi ${showMobileNav ? 'fi-rr-cross' : 'fi-rr-menu-burger'} text-gray-700`}></i>
-            </button>
-
             {/* Sign In Button */}
             {!user && (
               <Button
@@ -309,7 +174,6 @@ export default function Header() {
                 onClick={handleLogin}
                 icon={<i className="fi fi-rr-user"></i>}
                 isLoading={isLoading}
-                className="hidden lg:flex"
               >
                 Sign in
               </Button>
@@ -387,74 +251,6 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
-        <Popup
-          isOpen={showMobileNav}
-          onClose={() => setShowMobileNav(false)}
-          pos="right"
-          height="100vh"
-          className="lg:hidden w-full "
-          draggable={true}
-        >
-          <div className="flex-1 overflow-y-auto">
-            <motion.nav
-              variants={menuVariants}
-              initial="closed"
-              animate={showMobileNav ? "open" : "closed"}
-              className="flex flex-col divide-y divide-gray-100"
-            >
-              {navLinks.map((link, index) => {
-                const isActive = link.matchPath(pathname);
-                return (
-                  <motion.div
-                    key={link.name}
-                    variants={itemVariants}
-                    className="w-full"
-                  >
-                    <Link
-                      href={link.href}
-                      className={`flex items-center px-6 py-4 transition-all ${isActive
-                        ? "bg-primary-50/50 text-primary-600"
-                        : "text-gray-700 hover:bg-gray-50"
-                        }`}
-                      onClick={() => handleLinkClick(index)}
-                    >
-                      <i
-                        className={`${link.icon} text-sm mr-4 ${isActive ? "text-primary-600" : "text-gray-500"
-                          }`}
-                      ></i>
-                      <span className="font-medium text-base">{link.name}</span>
-                      {isActive && (
-                        <div className="ml-auto">
-                          <i className="fi fi-rr-check text-primary-600"></i>
-                        </div>
-                      )}
-                    </Link>
-                  </motion.div>
-                );
-              })}
-
-              {!user && (
-                <motion.div
-                  variants={itemVariants}
-                  className="w-full"
-                >
-                  <button
-                    onClick={() => {
-                      handleLogin();
-                      setShowMobileNav(false);
-                    }}
-                    className="flex items-center px-6 py-4 text-primary-600 hover:bg-primary-50 transition-all w-full text-left"
-                  >
-                    <i className="fi fi-rr-user text-xl mr-4"></i>
-                    <span className="font-medium text-base">Sign in</span>
-                  </button>
-                </motion.div>
-              )}
-            </motion.nav>
-          </div>
-        </Popup>
-
         {/* Search Popup */}
         <Search
           isOpen={showSearch}
@@ -482,17 +278,6 @@ export default function Header() {
           setloginFormData={setLoginFormData}
         />
 
-        {/* Add keyboard shortcut listener */}
-        {useEffect(() => {
-          const handleKeyDown = (e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-              e.preventDefault();
-              setShowSearch(true);
-            }
-          };
-          window.addEventListener('keydown', handleKeyDown);
-          return () => window.removeEventListener('keydown', handleKeyDown);
-        }, [])}
       </header>
     </>
   );

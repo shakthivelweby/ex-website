@@ -11,6 +11,7 @@ const MODULES = [
   {
     id: "packages",
     name: "Packages",
+    shortName: "Packages",
     icon: "fi fi-rr-umbrella-beach",
     href: "/explore",
     image: "/package-image-1.webp",
@@ -21,10 +22,17 @@ const MODULES = [
       "Transparent pricing",
       "Verified operators",
     ],
+    accent: {
+      iconBg: "bg-primary-50",
+      iconColor: "text-primary-600",
+      hoverBorder: "hover:border-primary-200",
+      cardHover: "hover:bg-primary-50/30",
+    },
   },
   {
     id: "scheduled",
     name: "Scheduled Trips",
+    shortName: "Scheduled",
     icon: "fi fi-rr-calendar",
     href: "/scheduled",
     image:
@@ -36,24 +44,34 @@ const MODULES = [
       "Group experiences",
       "Hassle-free planning",
     ],
+    accent: {
+      iconBg: "bg-sky-50",
+      iconColor: "text-sky-600",
+      hoverBorder: "hover:border-sky-200",
+      cardHover: "hover:bg-sky-50/40",
+    },
   },
   {
     id: "attractions",
     name: "Attractions",
+    shortName: "Attractions",
     icon: "fi fi-rr-ferris-wheel",
     href: "/attractions",
     image: "/attraction-image-1.jpg",
     description:
       "Book tickets to museums, theme parks, and landmarks. Skip queues and secure entry before you arrive.",
-    highlights: [
-      "Instant confirmation",
-      "Top-rated sights",
-      "Flexible dates",
-    ],
+    highlights: ["Instant confirmation", "Top-rated sights", "Flexible dates"],
+    accent: {
+      iconBg: "bg-amber-50",
+      iconColor: "text-amber-600",
+      hoverBorder: "hover:border-amber-200",
+      cardHover: "hover:bg-amber-50/40",
+    },
   },
   {
     id: "events",
     name: "Events",
+    shortName: "Events",
     icon: "fi fi-rr-glass-cheers",
     href: "/events",
     image: "/event-image-1.jpg",
@@ -64,42 +82,47 @@ const MODULES = [
       "Sports & theatre",
       "Date-based search",
     ],
+    accent: {
+      iconBg: "bg-rose-50",
+      iconColor: "text-rose-600",
+      hoverBorder: "hover:border-rose-200",
+      cardHover: "hover:bg-rose-50/40",
+    },
   },
   {
     id: "rentals",
     name: "Rentals",
+    shortName: "Rentals",
     icon: "fi fi-rr-car-side",
     href: "/rentals",
     image: "/rental-image-1.jpg",
     description:
       "Rent cars and vehicles to explore at your own pace. Compare options from trusted local rental partners.",
-    highlights: [
-      "Flexible pickup",
-      "Wide vehicle range",
-      "Direct rates",
-    ],
+    highlights: ["Flexible pickup", "Wide vehicle range", "Direct rates"],
+    accent: {
+      iconBg: "bg-indigo-50",
+      iconColor: "text-indigo-600",
+      hoverBorder: "hover:border-indigo-200",
+      cardHover: "hover:bg-indigo-50/40",
+    },
   },
   {
     id: "activities",
     name: "Activities",
+    shortName: "Activities",
     icon: "fi fi-rr-hiking",
     href: "/activities",
     image: "/activity-image-1.jpg",
     description:
       "Outdoor adventures, workshops, and local experiences that make your trip memorable. Book by location and date.",
-    highlights: [
-      "Adventure & wellness",
-      "Local experiences",
-      "Small groups",
-    ],
+    highlights: ["Adventure & wellness", "Local experiences", "Small groups"],
+    accent: {
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      hoverBorder: "hover:border-emerald-200",
+      cardHover: "hover:bg-emerald-50/40",
+    },
   },
-];
-
-const TRUST_ITEMS = [
-  { icon: "fi fi-rr-shield-check", label: "Verified suppliers" },
-  { icon: "fi fi-rr-hand-holding-usd", label: "No middleman fees" },
-  { icon: "fi fi-rr-badge-check", label: "Transparent pricing" },
-  { icon: "fi fi-rr-headset", label: "24/7 support" },
 ];
 
 const STEPS = [
@@ -123,20 +146,31 @@ const STEPS = [
   },
 ];
 
-function ModuleNav() {
+function ModuleCtaStrip() {
   return (
-    <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-      {MODULES.map((module) => (
-        <Link
-          key={module.id}
-          href={`#module-${module.id}`}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#EBEBEB] bg-white text-sm font-medium text-[#222222] hover:border-[#222222] hover:shadow-sm transition-all"
-        >
-          <i className={`${module.icon} text-[#717171] text-sm`} />
-          {module.name}
-        </Link>
-      ))}
-    </div>
+    <section className="relative z-10 -mt-10 md:-mt-12 px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+          {MODULES.map((module) => (
+            <Link
+              key={module.id}
+              href={module.href}
+              className={`group flex flex-col items-center text-center gap-2.5 sm:gap-3 px-3 py-4 sm:py-5 bg-white/95 backdrop-blur-sm rounded-2xl border border-white/60 shadow-[0_4px_24px_rgba(6,148,148,0.08)] ${module.accent.hoverBorder} ${module.accent.cardHover} hover:shadow-[0_12px_36px_rgba(6,148,148,0.14)] hover:-translate-y-0.5 transition-all duration-200`}
+            >
+              <span
+                className={`flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${module.accent.iconBg} ${module.accent.iconColor} transition-transform duration-200 group-hover:scale-105`}
+              >
+                <i className={`${module.icon} text-base sm:text-lg`} />
+              </span>
+              <span className="text-[12px] sm:text-[13px] font-semibold text-[#222222] group-hover:text-[#111111] leading-tight tracking-tight transition-colors">
+                <span className="sm:hidden">{module.shortName}</span>
+                <span className="hidden sm:inline">{module.name}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -150,9 +184,7 @@ function ModuleSection({ module, index, reversed }) {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div
-            className={`relative ${reversed ? "lg:order-2" : ""}`}
-          >
+          <div className={`relative ${reversed ? "lg:order-2" : ""}`}>
             <div className="relative aspect-[5/4] rounded-2xl overflow-hidden bg-[#F0F0F0] shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
               <Image
                 src={module.image}
@@ -213,7 +245,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative bg-[#222222]">
-        <div className="relative h-[55vh] min-h-[420px] max-h-[580px] w-full overflow-hidden">
+        <div className="relative h-[62vh] min-h-[480px] max-h-[640px] w-full overflow-hidden">
           <Image
             src="https://images.pexels.com/photos/2155749/pexels-photo-2155749.jpeg"
             alt="Explore destinations worldwide"
@@ -236,8 +268,7 @@ export default function HomePage() {
               </p>
               <h1 className="text-[36px] md:text-[52px] lg:text-[56px] font-semibold text-white leading-[1.08] tracking-tight mb-4">
                 Pay less.
-                <br className="hidden sm:block" />
-                {" "}Book direct.
+                <br className="hidden sm:block" /> Book direct.
               </h1>
               <p className="text-white/80 text-base md:text-lg leading-relaxed max-w-md mx-auto">
                 Packages, events, attractions, activities & more — from verified
@@ -267,30 +298,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trust strip */}
-      <section className="bg-[#FAFAFA] border-b border-[#EBEBEB]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-            {TRUST_ITEMS.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center gap-3 justify-center lg:justify-start"
-              >
-                <span className="flex items-center justify-center w-9 h-9 rounded-full bg-white border border-[#EBEBEB] shrink-0">
-                  <i className={`${item.icon} text-primary-500 text-sm`} />
-                </span>
-                <span className="text-sm font-medium text-[#222222]">
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ModuleCtaStrip />
 
-      {/* Module intro + quick nav */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 md:pt-20 pb-10 md:pb-12">
-        <div className="text-center max-w-2xl mx-auto mb-10">
+      <div className="h-10 md:h-12 bg-gradient-to-b from-primary-50/40 to-white" />
+
+      {/* Module intro */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 md:pt-10 pb-6 md:pb-8">
+        <div className="text-center max-w-2xl mx-auto">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary-600 mb-3">
             Six ways to travel
           </p>
@@ -302,7 +316,6 @@ export default function HomePage() {
             pick what fits your trip and book with confidence.
           </p>
         </div>
-        <ModuleNav />
       </section>
 
       {/* Module sections */}

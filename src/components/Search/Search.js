@@ -16,12 +16,48 @@ import AttractionsSearchFilters from "./AttractionsSearchFilters";
 import ActivitiesSearchFilters from "./ActivitiesSearchFilters";
 
 const SEARCH_MODULES = [
-  { id: "package", label: "Packages", shortLabel: "Packages", icon: "fi-rr-umbrella-beach", enabled: true },
-  { id: "schedule", label: "Scheduled Trips", shortLabel: "Scheduled", icon: "fi-rr-pending", enabled: true },
-  { id: "events", label: "Events", shortLabel: "Events", icon: "fi-rr-glass-cheers", enabled: true },
-  { id: "attractions", label: "Attractions", shortLabel: "Attractions", icon: "fi-rr-ferris-wheel", enabled: true },
-  { id: "activities", label: "Activities", shortLabel: "Activities", icon: "fi-rr-hiking", enabled: true },
-  { id: "rentals", label: "Rentals", shortLabel: "Rentals", icon: "fi-rr-car", enabled: false },
+  {
+    id: "package",
+    label: "Packages",
+    shortLabel: "Packages",
+    icon: "fi-rr-umbrella-beach",
+    enabled: true,
+  },
+  {
+    id: "schedule",
+    label: "Scheduled Trips",
+    shortLabel: "Scheduled",
+    icon: "fi-rr-pending",
+    enabled: true,
+  },
+  {
+    id: "events",
+    label: "Events",
+    shortLabel: "Events",
+    icon: "fi-rr-glass-cheers",
+    enabled: true,
+  },
+  {
+    id: "attractions",
+    label: "Attractions",
+    shortLabel: "Attractions",
+    icon: "fi-rr-ferris-wheel",
+    enabled: true,
+  },
+  {
+    id: "activities",
+    label: "Activities",
+    shortLabel: "Activities",
+    icon: "fi-rr-hiking",
+    enabled: true,
+  },
+  {
+    id: "rentals",
+    label: "Rentals",
+    shortLabel: "Rentals",
+    icon: "fi-rr-car",
+    enabled: false,
+  },
 ];
 
 const formatEventDate = (date) => {
@@ -103,8 +139,12 @@ export default function Search({ isOpen, onClose, type }) {
   const [selectedModule, setSelectedModule] = useState(type || "package");
   const [selectedDestinations, setSelectedDestinations] = useState([]);
   const [eventFilters, setEventFilters] = useState(createDefaultEventFilters);
-  const [attractionFilters, setAttractionFilters] = useState(createDefaultAttractionFilters);
-  const [activityFilters, setActivityFilters] = useState(createDefaultActivityFilters);
+  const [attractionFilters, setAttractionFilters] = useState(
+    createDefaultAttractionFilters,
+  );
+  const [activityFilters, setActivityFilters] = useState(
+    createDefaultActivityFilters,
+  );
   const router = useRouter();
 
   const isPackageModule = selectedModule === "package";
@@ -122,13 +162,17 @@ export default function Search({ isOpen, onClose, type }) {
 
   const { data: destinationsData, isLoading: isDestinationsLoading } =
     useAllDestinations(isOpen && showDestinationPicker);
-  const { data: eventCategoriesData } = useEventCategories(isOpen && isEventsModule);
-  const { data: eventLanguagesData } = useEventLanguages(isOpen && isEventsModule);
+  const { data: eventCategoriesData } = useEventCategories(
+    isOpen && isEventsModule,
+  );
+  const { data: eventLanguagesData } = useEventLanguages(
+    isOpen && isEventsModule,
+  );
   const { data: attractionCategoriesData } = useAttractionCategories(
-    isOpen && isAttractionsModule
+    isOpen && isAttractionsModule,
   );
   const { data: activityCategoriesData } = useActivityCategories(
-    isOpen && isActivitiesModule
+    isOpen && isActivitiesModule,
   );
 
   const eventCategories = eventCategoriesData?.data || [];
@@ -158,14 +202,14 @@ export default function Search({ isOpen, onClose, type }) {
     return allDestinations.filter(
       (dest) =>
         dest.name?.toLowerCase().includes(query) ||
-        dest.state?.name?.toLowerCase().includes(query)
+        dest.state?.name?.toLowerCase().includes(query),
     );
   }, [allDestinations, searchQuery]);
 
   const toggleDestination = (destination) => {
     if (isScheduleModule) {
       setSelectedDestinations((prev) =>
-        prev.some((d) => d.id === destination.id) ? [] : [destination]
+        prev.some((d) => d.id === destination.id) ? [] : [destination],
       );
       return;
     }
@@ -194,7 +238,10 @@ export default function Search({ isOpen, onClose, type }) {
 
     if (selectedModule === "schedule") {
       if (normalized.length >= 1) {
-        localStorage.setItem("choosedDestination", JSON.stringify(normalized[0]));
+        localStorage.setItem(
+          "choosedDestination",
+          JSON.stringify(normalized[0]),
+        );
         window.dispatchEvent(new CustomEvent("destinationChanged"));
       }
       router.replace("/scheduled", { scroll: false });
@@ -216,7 +263,7 @@ export default function Search({ isOpen, onClose, type }) {
     } else {
       sessionStorage.setItem(
         "packageSearchDestinations",
-        JSON.stringify(normalized)
+        JSON.stringify(normalized),
       );
       const ids = normalized.map((d) => d.id).join(",");
       const countryCounts = normalized.reduce((acc, d) => {
@@ -225,7 +272,7 @@ export default function Search({ isOpen, onClose, type }) {
         return acc;
       }, {});
       const primaryCountryId = Object.entries(countryCounts).sort(
-        (a, b) => b[1] - a[1]
+        (a, b) => b[1] - a[1],
       )[0]?.[0];
 
       if (primaryCountryId) {
@@ -265,12 +312,18 @@ export default function Search({ isOpen, onClose, type }) {
     const params = new URLSearchParams();
     params.set("date_from", attractionFilters.dateFrom);
     params.set("date_to", attractionFilters.dateTo);
-    if (attractionFilters.category) params.set("category", attractionFilters.category);
-    if (attractionFilters.price_from) params.set("price_from", attractionFilters.price_from);
-    if (attractionFilters.price_to) params.set("price_to", attractionFilters.price_to);
-    if (attractionFilters.longitude) params.set("longitude", attractionFilters.longitude);
-    if (attractionFilters.latitude) params.set("latitude", attractionFilters.latitude);
-    if (attractionFilters.location) params.set("location", attractionFilters.location);
+    if (attractionFilters.category)
+      params.set("category", attractionFilters.category);
+    if (attractionFilters.price_from)
+      params.set("price_from", attractionFilters.price_from);
+    if (attractionFilters.price_to)
+      params.set("price_to", attractionFilters.price_to);
+    if (attractionFilters.longitude)
+      params.set("longitude", attractionFilters.longitude);
+    if (attractionFilters.latitude)
+      params.set("latitude", attractionFilters.latitude);
+    if (attractionFilters.location)
+      params.set("location", attractionFilters.location);
 
     router.push(`/attractions?${params.toString()}`);
     onClose();
@@ -282,12 +335,18 @@ export default function Search({ isOpen, onClose, type }) {
     const params = new URLSearchParams();
     params.set("date_from", activityFilters.dateFrom);
     params.set("date_to", activityFilters.dateTo);
-    if (activityFilters.category) params.set("category", activityFilters.category);
-    if (activityFilters.price_from) params.set("price_from", activityFilters.price_from);
-    if (activityFilters.price_to) params.set("price_to", activityFilters.price_to);
-    if (activityFilters.longitude) params.set("longitude", activityFilters.longitude);
-    if (activityFilters.latitude) params.set("latitude", activityFilters.latitude);
-    if (activityFilters.location) params.set("location", activityFilters.location);
+    if (activityFilters.category)
+      params.set("category", activityFilters.category);
+    if (activityFilters.price_from)
+      params.set("price_from", activityFilters.price_from);
+    if (activityFilters.price_to)
+      params.set("price_to", activityFilters.price_to);
+    if (activityFilters.longitude)
+      params.set("longitude", activityFilters.longitude);
+    if (activityFilters.latitude)
+      params.set("latitude", activityFilters.latitude);
+    if (activityFilters.location)
+      params.set("location", activityFilters.location);
 
     router.push(`/activities?${params.toString()}`);
     onClose();
@@ -341,7 +400,9 @@ export default function Search({ isOpen, onClose, type }) {
               }`}
             >
               <i className={`fi ${module.icon} text-[13px] md:text-base`} />
-              <span className="md:text-center md:leading-tight">{module.shortLabel}</span>
+              <span className="md:text-center md:leading-tight">
+                {module.shortLabel}
+              </span>
               {isDisabled && (
                 <span className="text-[10px] opacity-70 md:mt-0.5">Soon</span>
               )}
@@ -418,7 +479,9 @@ export default function Search({ isOpen, onClose, type }) {
                     className="text-center py-8 rounded-xl bg-[#F7F7F7]"
                   >
                     <i className="fi fi-rr-map-marker-cross text-[#B0B0B0] text-xl mb-2" />
-                    <p className="text-sm text-[#717171]">No destinations found</p>
+                    <p className="text-sm text-[#717171]">
+                      No destinations found
+                    </p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -577,7 +640,9 @@ export default function Search({ isOpen, onClose, type }) {
           <div className="flex items-center justify-center px-6 py-10">
             <div className="text-center">
               <i className="fi fi-rr-hourglass-end text-[#B0B0B0] text-2xl mb-3" />
-              <p className="text-sm font-medium text-[#222222] mb-1">Coming soon</p>
+              <p className="text-sm font-medium text-[#222222] mb-1">
+                Coming soon
+              </p>
               <p className="text-xs text-[#717171] max-w-[220px]">
                 This category isn&apos;t available yet. Try Packages or Events.
               </p>

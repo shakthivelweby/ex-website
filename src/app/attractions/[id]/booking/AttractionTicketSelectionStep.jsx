@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import EventTicketOptionCard from "@/app/events/[id]/booking/EventTicketOptionCard";
 import RichTextContent from "@/components/common/RichTextContent";
 import SectionLoader from "@/components/loading/SectionLoader";
+import { detailDatePickerPopperProps, DetailDatePickerTrigger } from "@/components/booking/detailDatePickerProps";
 
 function AccordionChevron({ expanded }) {
   return (
@@ -52,7 +53,7 @@ export default function AttractionTicketSelectionStep({
   const visitDateObj = selectedDate ? new Date(`${selectedDate}T12:00:00`) : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
+    <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm">
       <div className="border-b border-gray-100 px-4 py-3.5">
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -78,7 +79,7 @@ export default function AttractionTicketSelectionStep({
 
       <div className="space-y-2 p-3 sm:p-4">
         {/* Visit date */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="rounded-xl border border-gray-200 bg-white">
           <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
             <div
               className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg border ${
@@ -108,15 +109,15 @@ export default function AttractionTicketSelectionStep({
                 {selectedDate ? formatDate(selectedDate) : "Choose a date"}
               </p>
             </div>
-            <div className="shrink-0">
+            <div className="shrink-0 [&_.react-datepicker-wrapper]:!w-auto">
               <DatePicker
                 selected={visitDateObj}
                 onChange={onDateChange}
                 minDate={new Date()}
                 filterDate={(date) => !isDateDisabled(date)}
-                dateFormat="dd/MM/yyyy"
-                className="w-[5.5rem] cursor-pointer rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-center text-xs font-medium text-gray-700 outline-none transition-colors hover:bg-gray-100 focus:border-gray-400 focus:ring-1 focus:ring-gray-300"
+                customInput={<DetailDatePickerTrigger />}
                 popperPlacement="bottom-end"
+                {...detailDatePickerPopperProps}
               />
             </div>
           </div>

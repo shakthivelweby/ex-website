@@ -1,5 +1,6 @@
 import AttractionBookingPage from "./AttractionBookingPage";
 import { attractionInfo } from "../service";
+import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
 
 const BookingPage = async ({ params }) => {
   const { id } = await params;
@@ -9,7 +10,7 @@ const BookingPage = async ({ params }) => {
   const attraction = attractionResponse?.data;
   
   // Extract closeout_dates for date disabling
-  const closeoutDates = attraction?.closeout_dates || [];
+  const closeoutDates = normalizeCloseoutDates(attraction?.closeout_dates || []);
   
   // Extract guide_rate for guide pricing - handle both possible data structures
   const guideRate = attraction?.attraction?.attraction_ticket_type_prices?.[0]?.guide_rate || 

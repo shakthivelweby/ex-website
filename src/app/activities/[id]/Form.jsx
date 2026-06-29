@@ -7,7 +7,8 @@ import isLogin from "@/utils/isLogin";
 import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
+import { isActivityCloseoutDate, normalizeCloseoutDates, dateToYmd } from "@/utils/closeoutUtils";
+import { detailDatePickerPopperProps } from "@/components/booking/detailDatePickerProps";
 import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
 
 function formatVisitDateLabel(date) {
@@ -723,7 +724,7 @@ const Form = ({
 
   return (
     <div className={isMobilePopup ? "pb-24" : ""}>
-      <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
         <div className="border-b border-gray-100 px-4 py-3.5">
           <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
             Book this activity
@@ -876,7 +877,7 @@ const Form = ({
                   }}
                   customInput={<DatePickerTrigger />}
                   popperPlacement="bottom-end"
-                  showPopperArrow={false}
+                  {...detailDatePickerPopperProps}
                 />
               </div>
             </div>

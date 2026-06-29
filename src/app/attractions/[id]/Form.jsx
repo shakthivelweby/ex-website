@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, forwardRef } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/common/Button";
 import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
@@ -11,8 +11,10 @@ import { getTicketPricesForDate } from "./service";
 import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
+  dateToYmd,
 } from "@/utils/closeoutUtils";
 import InlineSpinner from "@/components/loading/InlineSpinner";
+import { detailDatePickerPopperProps, DetailDatePickerTrigger } from "@/components/booking/detailDatePickerProps";
 
 function applyAdminChargeOnly(amountRaw) {
   const amount = Number(amountRaw || 0);
@@ -49,20 +51,6 @@ function formatVisitDateLabel(dateStr) {
   });
 }
 
-const DatePickerTrigger = forwardRef(function DatePickerTrigger({ value, onClick }, ref) {
-  return (
-    <button
-      type="button"
-      ref={ref}
-      onClick={onClick}
-      className="fi-box h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100"
-      aria-label={value ? `Change date, currently ${value}` : "Choose visit date"}
-    >
-      <i className="fi fi-rr-calendar text-sm" aria-hidden="true" />
-    </button>
-  );
-});
-
 function MetaChip({ icon, label, value }) {
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
@@ -92,17 +80,12 @@ const Form = ({
   const [selectedDate, setSelectedDate] = useState(attractionDetails?.selectedDate || "");
   const [ticketPrices, setTicketPrices] = useState(attractionDetails?.dateSpecificPricing || []);
 
-  const isDateDisabled = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const dateStr = `${year}-${month}-${day}`;
-    return isActivityCloseoutDate(
+  const isDateDisabled = (date) =>
+    isActivityCloseoutDate(
       normalizeCloseoutDates(attractionDetails?.closeoutDates || []),
-      dateStr,
+      dateToYmd(date),
       date
     );
-  };
 
   useEffect(() => {
     if (attractionDetails?.dateSpecificPricing && attractionDetails?.selectedDate) {
@@ -175,7 +158,7 @@ const Form = ({
 
   return (
     <div className={isMobilePopup ? "pb-24" : ""}>
-      <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+      <div className="rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
         <div className="border-b border-gray-100 px-4 py-3.5">
           <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
             Book your visit
@@ -248,9 +231,9 @@ const Form = ({
                   onChange={handleDateChange}
                   minDate={new Date()}
                   filterDate={(date) => !isDateDisabled(date)}
-                  customInput={<DatePickerTrigger />}
+                  customInput={<DetailDatePickerTrigger />}
                   popperPlacement="bottom-end"
-                  showPopperArrow={false}
+                  {...detailDatePickerPopperProps}
                 />
               </div>
             </div>
@@ -258,28 +241,32 @@ const Form = ({
         </div>
 
         <div className="space-y-2.5 px-4 py-3.5">
-          {getSelectedTicketsCount() === 0 ? (
-            <Button
-              onClick={handleTicketSelection}
-              size="lg"
-              className="w-full h-12 text-base font-semibold"
-              disabled={!selectedDate}
-              isLoading={isNavigating}
-              loadingLabel="Opening tickets…"
-            >
-              Select tickets
-            </Button>
-          ) : (
-            <Button
-              onClick={submitHandler}
-              size="lg"
-              className="w-full h-12 text-base font-semibold"
-              isLoading={isLoading}
-              loadingLabel={enquireOnly ? "Sending enquiry…" : "Booking…"}
-            >
-              {enquireOnly ? "Send enquiry" : "Book now"}
-            </Button>
-          )}
+          {!isMobilePopup ? (
+            <>
+              {getSelectedTicketsCount() === 0 ? (
+                <Button
+                  onClick={handleTicketSelection}
+                  size="lg"
+                  className="w-full h-12 text-base font-semibold"
+                  disabled={!selectedDate}
+                  isLoading={isNavigating}
+                  loadingLabel="Opening tickets…"
+                >
+                  Select tickets
+                </Button>
+              ) : (
+                <Button
+                  onClick={submitHandler}
+                  size="lg"
+                  className="w-full h-12 text-base font-semibold"
+                  isLoading={isLoading}
+                  loadingLabel={enquireOnly ? "Sending enquiry…" : "Booking…"}
+                >
+                  {enquireOnly ? "Send enquiry" : "Book now"}
+                </Button>
+              )}
+            </>
+          ) : null}
           <div className="pt-1">
             <PaymentTrustPanel compact />
           </div>
@@ -287,18 +274,21 @@ const Form = ({
       </div>
 
       {isMobilePopup ? (
-        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 bg-white p-4">
-          <Button
-            onClick={handleTicketSelection}
-            size="lg"
-            className="w-full"
-            disabled={!selectedDate}
-            isLoading={isNavigating}
-            loadingLabel="Opening tickets…"
-          >
-            Select tickets
-          </Button>
-        </div>
+        <>
+          <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <Button
+              onClick={handleTicketSelection}
+              size="lg"
+              className="w-full"
+              disabled={!selectedDate}
+              isLoading={isNavigating}
+              loadingLabel="Opening tickets…"
+            >
+              Select tickets
+            </Button>
+          </div>
+          <div className="h-20" aria-hidden />
+        </>
       ) : null}
     </div>
   );

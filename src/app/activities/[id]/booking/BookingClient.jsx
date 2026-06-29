@@ -22,6 +22,7 @@ import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/Paym
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
+import { detailDatePickerPopperProps } from "@/components/booking/detailDatePickerProps";
 import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
 import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
@@ -1373,6 +1374,8 @@ const BookingClient = ({ activityId }) => {
                           className={`w-full rounded-xl border bg-white px-4 py-3 pl-11 text-sm text-gray-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 ${
                             errors.selectedDate ? "border-red-400" : "border-gray-200"
                           }`}
+                          popperPlacement="bottom-start"
+                          {...detailDatePickerPopperProps}
                         />
                         <i className="fi fi-rr-calendar pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                       </div>

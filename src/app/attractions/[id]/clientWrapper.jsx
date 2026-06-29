@@ -280,16 +280,18 @@ const AttractionDetailClient = ({ attractionDetails }) => {
         />
       ) : null}
 
-      <div className="fixed bottom-16 left-4 right-4 z-40 lg:hidden">
-        <Button
-          onClick={() => setShowMobileForm(true)}
-          size="lg"
-          className="w-full !justify-between !rounded-2xl px-5 shadow-lg"
-        >
-          <span className="text-sm font-semibold">Select tickets</span>
-          <span className="text-sm font-bold tabular-nums">{attractionDetails.price}</span>
-        </Button>
-      </div>
+      {!showMobileForm ? (
+        <div className="fixed bottom-16 left-4 right-4 z-40 lg:hidden">
+          <Button
+            onClick={() => setShowMobileForm(true)}
+            size="lg"
+            className="w-full !justify-between !rounded-2xl px-5 shadow-lg"
+          >
+            <span className="text-sm font-semibold">Select tickets</span>
+            <span className="text-sm font-bold tabular-nums">{attractionDetails.price}</span>
+          </Button>
+        </div>
+      ) : null}
     </main>
   );
 };

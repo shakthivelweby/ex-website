@@ -333,6 +333,17 @@ body {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
 }
 
+.detail-booking-datepicker-popper {
+  z-index: 80 !important;
+}
+
+.detail-booking-datepicker-popper .react-datepicker {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 0.875rem !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+  font-family: inherit !important;
+}
+
 /* Add these styles for react-date-range */
 .custom-date-range .rdrMonth {
   width: 100% !important;

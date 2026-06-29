@@ -1,5 +1,6 @@
 import AttractionDetailClient from "./clientWrapper";
 import { attractionInfo, getAttractionGallery, getTicketPricesForDateServer } from "./service";
+import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
 
 const AttractionDetailPage = async ({ params, searchParams }) => {
   const { id } = await params;
@@ -111,7 +112,7 @@ const AttractionDetailPage = async ({ params, searchParams }) => {
     categories: categoryName ? [categoryName] : [],
     openingTime: new Date(`1970-01-01T${attraction.attraction.start_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
     closingTime: new Date(`1970-01-01T${attraction.attraction.end_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-    closeoutDates: attraction.closeout_dates || [],
+    closeoutDates: normalizeCloseoutDates(attraction.closeout_dates || []),
     // openingTime: attraction.attraction.start_time,
     // closingTime: attraction.attraction.end_time,
     location: attraction.attraction.location,

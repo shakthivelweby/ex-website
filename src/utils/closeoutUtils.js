@@ -1,5 +1,15 @@
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+export function dateToYmd(dateInput) {
+  const d =
+    dateInput instanceof Date ? dateInput : new Date(`${dateInput}T12:00:00`);
+  if (!Number.isFinite(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function isDateInRange(ymd, start, end) {
   if (!ymd) return false;
   if (start && ymd < start) return false;
@@ -66,8 +76,9 @@ export function isActivityCloseoutDate(closeouts, ymd, dateInput) {
   const dayKey = getDayKeyFromDate(dateObj);
 
   return closeouts.some((entry) => {
-    const start = entry?.start_date ?? entry?.startDate ?? null;
-    const end = entry?.end_date ?? entry?.endDate ?? null;
+    const legacyDate = entry?.date ?? null;
+    const start = entry?.start_date ?? entry?.startDate ?? legacyDate ?? null;
+    const end = entry?.end_date ?? entry?.endDate ?? legacyDate ?? null;
     const applicableDays = normalizeApplicableDays(
       entry?.applicable_days ?? entry?.applicableDays ?? null
     );
@@ -92,12 +103,38 @@ export function isActivityCloseoutDate(closeouts, ymd, dateInput) {
 
 export function normalizeCloseoutDates(raw) {
   if (!Array.isArray(raw)) return [];
-  return raw.map((entry) => ({
-    ...entry,
-    start_date: entry?.start_date ?? entry?.startDate ?? null,
-    end_date: entry?.end_date ?? entry?.endDate ?? null,
-    applicable_days: normalizeApplicableDays(
-      entry?.applicable_days ?? entry?.applicableDays ?? null
-    ),
-  }));
+  return raw.map((entry) => {
+    const legacyDate = entry?.date ?? null;
+    const start = entry?.start_date ?? entry?.startDate ?? legacyDate ?? null;
+    const end = entry?.end_date ?? entry?.endDate ?? legacyDate ?? null;
+
+    return {
+      ...entry,
+      start_date: start,
+      end_date: end,
+      applicable_days: normalizeApplicableDays(
+        entry?.applicable_days ?? entry?.applicableDays ?? null
+      ),
+    };
+  });
+}
+
+/**
+ * First calendar day on/after `fromYmd` that is not a close-out (for default visit date).
+ */
+export function findFirstBookableDate(closeouts, fromYmd, maxLookahead = 120) {
+  const normalized = normalizeCloseoutDates(closeouts);
+  const start = fromYmd || dateToYmd(new Date());
+  const cursor = new Date(`${start}T12:00:00`);
+  if (!Number.isFinite(cursor.getTime())) return start;
+
+  for (let i = 0; i < maxLookahead; i += 1) {
+    const ymd = dateToYmd(cursor);
+    if (!isActivityCloseoutDate(normalized, ymd, cursor)) {
+      return ymd;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return start;
 }

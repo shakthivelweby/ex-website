@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -31,6 +31,8 @@ import { formatTimeTo12Hour } from "@/utils/formatDate";
 import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
+  findFirstBookableDate,
+  dateToYmd,
 } from "@/utils/closeoutUtils";
 import { normalizeAttractionBookingData } from "@/utils/attractionTicketPrices";
 import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
@@ -283,19 +285,14 @@ const AttractionBookingPage = ({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Function to check if a date should be disabled (same as Form.jsx)
-  const isDateDisabled = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const dateStr = `${year}-${month}-${day}`;
+  const normalizedCloseoutDates = useMemo(
+    () => normalizeCloseoutDates(closeoutDates),
+    [closeoutDates]
+  );
 
-    return isActivityCloseoutDate(
-      normalizeCloseoutDates(closeoutDates),
-      dateStr,
-      date
-    );
-  };
+  // Function to check if a date should be disabled (same as Form.jsx)
+  const isDateDisabled = (date) =>
+    isActivityCloseoutDate(normalizedCloseoutDates, dateToYmd(date), date);
 
   // Initialise visit date from localStorage (detail page) or today, then load tickets for that date.
   useEffect(() => {
@@ -305,10 +302,11 @@ const AttractionBookingPage = ({
       typeof window !== "undefined"
         ? localStorage.getItem(`attraction_${attractionId}_selectedDate`)
         : null;
-    const visitDate =
+    const preferredDate =
       storedDate && /^\d{4}-\d{2}-\d{2}$/.test(storedDate)
         ? storedDate
         : new Date().toISOString().split("T")[0];
+    const visitDate = findFirstBookableDate(normalizedCloseoutDates, preferredDate);
     setSelectedDate(visitDate);
 
     const loadBookingDetails = async () => {
@@ -328,7 +326,7 @@ const AttractionBookingPage = ({
     };
 
     loadBookingDetails();
-  }, [attractionId]);
+  }, [attractionId, normalizedCloseoutDates]);
 
   useEffect(() => {
     try {

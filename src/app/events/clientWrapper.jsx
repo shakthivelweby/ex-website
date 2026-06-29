@@ -48,6 +48,32 @@ const ClientWrapper = ({
 
   const [filters, setFilters] = useState(initialFilters);
 
+  useEffect(() => {
+    const nextFilters = {
+      date: initialSearchParams.date || "",
+      date_from: initialSearchParams.date_from || "",
+      date_to: initialSearchParams.date_to || "",
+      language: initialSearchParams.language || "",
+      category: initialSearchParams.category || "",
+      price_from: initialSearchParams.price_from || "",
+      price_to: initialSearchParams.price_to || "",
+      longitude: initialSearchParams.longitude || "",
+      latitude: initialSearchParams.latitude || "",
+      location: initialSearchParams.location || "",
+    };
+
+    setFilters((prev) => {
+      const changed = Object.keys(nextFilters).some(
+        (key) => prev[key] !== nextFilters[key],
+      );
+      return changed ? nextFilters : prev;
+    });
+  }, [initialSearchParams]);
+
+  useEffect(() => {
+    setEvents(initialEvents || []);
+  }, [initialEvents]);
+
   // Mark component as client-side after mount
   useEffect(() => {
     setIsClient(true);

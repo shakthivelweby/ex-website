@@ -255,7 +255,7 @@ export default function EventsSearchFilters({
   return (
     <div
       className={`overflow-y-auto ${
-        compact ? "px-4 py-3 space-y-4 max-h-[38vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+        compact ? "px-4 py-3 space-y-4 max-h-[48vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
       }`}
     >
       {/* Location */}

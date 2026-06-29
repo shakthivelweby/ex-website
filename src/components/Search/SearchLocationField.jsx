@@ -1,11 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import LocationSearchInput from "../LocationSearchInput";
 
 function normalizeCoord(value) {
   if (value === null || value === undefined || value === "") return "";
   const num = Number(value);
   return Number.isFinite(num) ? String(num) : "";
+}
+
+async function geocodePlaceName(query, apiKey) {
+  if (!apiKey || !query?.trim()) return null;
+
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        query,
+      )}&components=country:in&key=${encodeURIComponent(apiKey)}`,
+    );
+    const data = await response.json();
+    if (data.status !== "OK" || !data.results?.[0]?.geometry?.location) {
+      return null;
+    }
+
+    const { lat, lng } = data.results[0].geometry.location;
+    return { latitude: lat, longitude: lng };
+  } catch {
+    return null;
+  }
 }
 
 export default function SearchLocationField({
@@ -16,6 +38,9 @@ export default function SearchLocationField({
   onChange,
   placeholder = "Enter city or destination name...",
 }) {
+  const [isResolving, setIsResolving] = useState(false);
+  const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
   const applyLocation = (next) => {
     onChange?.({
       location: next.location || "",
@@ -43,11 +68,33 @@ export default function SearchLocationField({
     });
   };
 
-  const handleDestinationPick = (destination) => {
+  const handleDestinationPick = async (destination) => {
+    let nextLatitude = destination.latitude;
+    let nextLongitude = destination.longitude;
+
+    if (
+      (!normalizeCoord(nextLatitude) || !normalizeCoord(nextLongitude)) &&
+      googleApiKey
+    ) {
+      setIsResolving(true);
+      const geocoded = await geocodePlaceName(
+        destination.state?.name
+          ? `${destination.name}, ${destination.state.name}, India`
+          : `${destination.name}, India`,
+        googleApiKey,
+      );
+      setIsResolving(false);
+
+      if (geocoded) {
+        nextLatitude = geocoded.latitude;
+        nextLongitude = geocoded.longitude;
+      }
+    }
+
     applyLocation({
       location: destination.name,
-      latitude: destination.latitude,
-      longitude: destination.longitude,
+      latitude: nextLatitude,
+      longitude: nextLongitude,
     });
   };
 
@@ -66,15 +113,6 @@ export default function SearchLocationField({
 
   return (
     <div className="space-y-2.5">
-      <LocationSearchInput
-        value={location}
-        onPlaceSelected={handlePlaceSelected}
-        onClear={clearLocation}
-        googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-        placeholder={placeholder}
-        repositionDropdown
-      />
-
       {destinations.length > 0 ? (
         <div>
           <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
@@ -87,8 +125,9 @@ export default function SearchLocationField({
                 <button
                   key={destination.id}
                   type="button"
+                  disabled={isResolving}
                   onClick={() => handleDestinationPick(destination)}
-                  className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all ${
+                  className={`inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all disabled:opacity-60 ${
                     selected
                       ? "bg-gray-900 text-white shadow-sm"
                       : "border border-gray-200 bg-gray-50 text-gray-700 hover:border-gray-300 hover:bg-white"
@@ -110,6 +149,19 @@ export default function SearchLocationField({
             })}
           </div>
         </div>
+      ) : null}
+
+      <LocationSearchInput
+        value={location}
+        onPlaceSelected={handlePlaceSelected}
+        onClear={clearLocation}
+        googleApiKey={googleApiKey}
+        placeholder={placeholder}
+        repositionDropdown
+      />
+
+      {isResolving ? (
+        <p className="text-[11px] text-gray-500">Resolving location…</p>
       ) : null}
     </div>
   );

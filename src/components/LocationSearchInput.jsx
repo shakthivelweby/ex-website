@@ -58,6 +58,9 @@ export default function LocationSearchInput({
 
   useEffect(() => {
     setInputValue(value);
+    if (inputRef.current && inputRef.current.value !== (value || "")) {
+      inputRef.current.value = value || "";
+    }
   }, [value]);
 
   const repositionPacDropdown = () => {
@@ -232,6 +235,9 @@ export default function LocationSearchInput({
   }, []);
 
   const handleClear = () => {
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
     setInputValue("");
     setLocationError(null);
     onClear?.();
@@ -246,8 +252,8 @@ export default function LocationSearchInput({
         <input
           ref={inputRef}
           type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          defaultValue={value}
+          onInput={(e) => setInputValue(e.target.value)}
           placeholder={placeholder}
           className="block w-full h-11 bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-20 text-sm text-gray-900
             placeholder:text-gray-400 focus:outline-none focus:border-primary-300 focus:bg-white transition-all"

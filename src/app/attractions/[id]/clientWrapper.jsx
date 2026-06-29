@@ -251,9 +251,43 @@ const AttractionDetailClient = ({ attractionDetails }) => {
               <div className="space-y-2">
                 {attractionDetails.faqs.map((faq, index) => (
                   <Accordion key={index} title={faq.question} defaultOpen={index === 0}>
-                    <p className="text-sm text-gray-600">{faq.answer}</p>
+                    <RichTextContent html={faq.answer} className="text-sm text-gray-600" />
                   </Accordion>
                 ))}
+              </div>
+            </SectionCard>
+          ) : null}
+
+          {attractionDetails.inclusions?.length > 0 ||
+          attractionDetails.exclusions?.length > 0 ? (
+            <SectionCard title="What's included">
+              <div className="grid gap-6 md:grid-cols-2">
+                {attractionDetails.inclusions?.length > 0 ? (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-900">Inclusions</h3>
+                    <ul className="space-y-2">
+                      {attractionDetails.inclusions.map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                          <i className="fi fi-rr-check mt-0.5 text-emerald-600" aria-hidden />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {attractionDetails.exclusions?.length > 0 ? (
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-gray-900">Exclusions</h3>
+                    <ul className="space-y-2">
+                      {attractionDetails.exclusions.map((item) => (
+                        <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
+                          <i className="fi fi-rr-cross-small mt-0.5 text-red-500" aria-hidden />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             </SectionCard>
           ) : null}

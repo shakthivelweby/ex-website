@@ -13,33 +13,9 @@ import {
   normalizeCloseoutDates,
   dateToYmd,
 } from "@/utils/closeoutUtils";
+import { minDisplayedEntryFeeFromRows } from "@/utils/attractionPricing";
 import InlineSpinner from "@/components/loading/InlineSpinner";
 import { detailDatePickerPopperProps, DetailDatePickerTrigger } from "@/components/booking/detailDatePickerProps";
-
-function applyAdminChargeOnly(amountRaw) {
-  const amount = Number(amountRaw || 0);
-  return Math.round(amount * 100) / 100;
-}
-
-function minDisplayedEntryFeeFromRows(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) return null;
-  const candidates = [];
-  for (const row of rows) {
-    const rate = row?.rate_type;
-    const adminPct = row?.admin_charge ?? 0;
-    if (rate === "full") {
-      const base = Number(row?.full_rate || 0);
-      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
-    } else if (rate === "pax") {
-      const adult = Number(row?.adult_price || 0);
-      if (adult > 0) candidates.push(applyAdminChargeOnly(adult, adminPct));
-    } else {
-      const base = Number(row?.full_rate || row?.adult_price || 0);
-      if (base > 0) candidates.push(applyAdminChargeOnly(base, adminPct));
-    }
-  }
-  return candidates.length ? Math.min(...candidates) : null;
-}
 
 function formatVisitDateLabel(dateStr) {
   if (!dateStr) return null;

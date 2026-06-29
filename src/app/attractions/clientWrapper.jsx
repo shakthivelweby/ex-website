@@ -22,6 +22,7 @@ import {
   getAttractions,
 } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+import { applyAdminCharge } from "@/utils/attractionPricing";
 
 const normalizeAttractionFilters = (raw = {}) => {
   const dateFrom = raw.date_from || raw.date || "";
@@ -238,6 +239,7 @@ const ClientWrapper = ({
             city: attraction.city,
             type:
               attraction.attraction_category_master?.name ||
+              attraction.attraction_category ||
               attraction.category ||
               "",
             image:
@@ -246,13 +248,14 @@ const ClientWrapper = ({
               attraction.cover_image,
             price: (() => {
               const rt = attraction.price?.rate_type;
+              const adminPct = Number(attraction.price?.admin_charge ?? 0);
               const base =
                 rt === "full"
                   ? Number(attraction.price?.full_rate || 0)
                   : rt === "pax"
                   ? Number(attraction.price?.adult_price || 0)
                   : Number(attraction.price?.full_rate || attraction.price || 0);
-              return Math.round(base * 100) / 100;
+              return applyAdminCharge(base, adminPct);
             })(),
             rating: attraction.rating || 0,
             reviewCount: attraction.review_count || 0,

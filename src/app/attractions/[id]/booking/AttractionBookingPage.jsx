@@ -35,34 +35,15 @@ import {
   dateToYmd,
 } from "@/utils/closeoutUtils";
 import { normalizeAttractionBookingData } from "@/utils/attractionTicketPrices";
+import {
+  attractionAdminPct,
+  applyAdminCharge,
+  applyDiscountOnAmount,
+  resolvePaxAdultChildRaw,
+  attractionHasGuideOption,
+  computeAttractionGuideTotal,
+} from "@/utils/attractionPricing";
 import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
-
-function attractionAdminPct(ticket) {
-  return Math.max(0, Number(ticket?.admin_charge ?? 0));
-}
-
-function applyAdminCharge(amountRaw, adminPctRaw) {
-  const amount = Number(amountRaw || 0);
-  return Math.round(amount * 100) / 100;
-}
-
-/** Discount applies on the admin-inclusive amount. */
-function applyDiscountOnAmount(amountRaw, discountPctRaw) {
-  const amount = Number(amountRaw || 0);
-  const pct = Math.max(0, Number(discountPctRaw || 0));
-  if (pct <= 0) return amount;
-  return Math.round((amount - (amount * pct) / 100) * 100) / 100;
-}
-
-function resolvePaxAdultChildRaw(ticket) {
-  let adultPrice = parseFloat(ticket.adult_price || 0);
-  let childPrice = parseFloat(ticket.child_price || 0);
-  if (adultPrice === 0 && childPrice === 0 && ticket.full_rate) {
-    adultPrice = parseFloat(ticket.full_rate);
-    childPrice = parseFloat(ticket.full_rate);
-  }
-  return { adultPrice, childPrice };
-}
 
 function getAvailabilityMeta(slots) {
   if (slots == null || slots === "") {
@@ -235,7 +216,6 @@ function TermsAgreement({ checked, onChange, id = "attractionTermsAgreement" }) 
 const AttractionBookingPage = ({
   attractionId,
   closeoutDates = [],
-  guideRate = 0,
   initialAttractionData = null,
 }) => {
   const router = useRouter();
@@ -458,6 +438,14 @@ const AttractionBookingPage = ({
     return tickets.adult + tickets.child;
   };
 
+  const ticketPrices = ticketData?.attraction_ticket_type_prices;
+  const hasGuideOption = attractionHasGuideOption(ticketPrices);
+  const guideTotal = computeAttractionGuideTotal(
+    ticketPrices,
+    adultChildTickets,
+    needGuide
+  );
+
   const getTotalPrice = () => {
     let total = 0;
 
@@ -492,8 +480,12 @@ const AttractionBookingPage = ({
     });
 
     // Add guide price if guide is selected
-    if (needGuide && guideRate > 0) {
-      total += parseFloat(guideRate);
+    if (needGuide) {
+      total += computeAttractionGuideTotal(
+        ticketData?.attraction_ticket_type_prices,
+        adultChildTickets,
+        true
+      );
     }
     return total;
   };
@@ -629,8 +621,13 @@ const AttractionBookingPage = ({
 
     if (!formattedTickets.length) return null;
 
-    if (needGuide && guideRate > 0) {
-      totalAmount += parseFloat(guideRate);
+    const guideAmount = computeAttractionGuideTotal(
+      ticketData?.attraction_ticket_type_prices,
+      adultChildTickets,
+      needGuide
+    );
+    if (guideAmount > 0) {
+      totalAmount += guideAmount;
     }
 
     const adultCount = Object.values(adultChildTickets).reduce(
@@ -651,7 +648,6 @@ const AttractionBookingPage = ({
       child_count: childCount,
       bookingTickets: formattedTickets,
       include_guide: needGuide,
-      guide_rate: needGuide ? guideRate : 0,
     };
   };
 
@@ -915,6 +911,24 @@ const AttractionBookingPage = ({
         setPendingCheckout({ bookingId, paymentAmount });
       }
 
+      if (paymentAmount <= 0.01) {
+        setPaymentPhase(null);
+        const userEmail = getLoggedInUserEmail() || userContact.email || "";
+        setCompletedBookingId(bookingId);
+        setSuccessMessage({
+          title: "You're all set!",
+          message: "Your attraction booking has been confirmed.",
+          emailSent: false,
+          userEmail,
+          visitDate: selectedDate ? formatDate(selectedDate) : "—",
+          guestSummary: getGuestSummary(),
+          amountPaid: money(0),
+        });
+        setShowSuccess(true);
+        localStorage.removeItem(`attraction_${attractionId}_selectedDate`);
+        return;
+      }
+
       setPaymentPhase("preparing");
       const orderRes = await createOrder({
         attraction_id: apiBookingData.attraction_id,
@@ -1021,8 +1035,8 @@ const AttractionBookingPage = ({
       (childUnit - discountedChild) * tickets.child;
   });
 
-  if (needGuide && guideRate > 0) {
-    subtotalOriginal += Number(guideRate || 0);
+  if (needGuide && guideTotal > 0) {
+    subtotalOriginal += guideTotal;
   }
 
   const subtotalForSummary = Math.max(0, subtotalOriginal - discountForSummary);
@@ -1041,10 +1055,11 @@ const AttractionBookingPage = ({
     conveniencePercent,
     convenienceFeeAmount: convenienceAmount,
     grandTotal: grandTotalForSummary,
-    guideAmount: needGuide && guideRate > 0 ? Number(guideRate) : 0,
+    guideAmount: needGuide && guideTotal > 0 ? guideTotal : 0,
   });
 
   const getCheckoutPayLabel = (grandTotal) => {
+    if (grandTotal <= 0.01) return "Confirm booking";
     const plan = getSplitPaymentPlan(grandTotal, razorpayMax);
     return plan.requiresSplit
       ? `Pay ₹${plan.firstPayment.toFixed(2)} now`
@@ -1139,7 +1154,8 @@ const AttractionBookingPage = ({
                 getLineMaxQty={getLineMaxQty}
                 needGuide={needGuide}
                 onNeedGuideChange={setNeedGuide}
-                guideRate={guideRate}
+                hasGuideOption={hasGuideOption}
+                guideAmount={guideTotal}
                 formatDate={formatDate}
               />
             ) : (
@@ -1207,14 +1223,14 @@ const AttractionBookingPage = ({
                     return rows;
                   })}
 
-                  {needGuide && guideRate > 0 ? (
+                  {needGuide && guideTotal > 0 ? (
                     <AttractionReviewRow
                       ticketName="Guide service"
                       visitDate={formatDate(selectedDate)}
                       guestLabel="Add-on"
                       quantity={1}
-                      unitPrice={Number(guideRate)}
-                      lineTotal={Number(guideRate)}
+                      unitPrice={guideTotal}
+                      lineTotal={guideTotal}
                     />
                   ) : null}
                 </div>

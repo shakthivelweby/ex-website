@@ -1,6 +1,7 @@
 import ClientWrapper from "./clientWrapper";
 import { getAttractionCategories, getAttractionLocations, getAttractions } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+import { applyAdminCharge } from "@/utils/attractionPricing";
 
 export default async function Attractions({ searchParams }) {
   const allCategories = await getAttractionCategories();
@@ -41,17 +42,22 @@ export default async function Attractions({ searchParams }) {
     description: attraction.description,
     location: attraction.location,
     city: attraction.city,
-    type: attraction.attraction_category_master?.name || attraction.category || "",
+    type:
+      attraction.attraction_category_master?.name ||
+      attraction.attraction_category ||
+      attraction.category ||
+      "",
     image: attraction.image || attraction.thumb_image || attraction.cover_image,
     price: (() => {
       const rt = attraction.price?.rate_type;
+      const adminPct = Number(attraction.price?.admin_charge ?? 0);
       const base =
         rt === "full"
           ? Number(attraction.price?.full_rate || 0)
           : rt === "pax"
           ? Number(attraction.price?.adult_price || 0)
           : Number(attraction.price?.full_rate || attraction.price || 0);
-      return Math.round(base * 100) / 100;
+      return applyAdminCharge(base, adminPct);
     })(),
     rating: attraction.rating || 0,
     reviewCount: attraction.review_count || 0,

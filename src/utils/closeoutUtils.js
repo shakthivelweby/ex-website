@@ -110,6 +110,7 @@ export function normalizeCloseoutDates(raw) {
 
     return {
       ...entry,
+      date: legacyDate,
       start_date: start,
       end_date: end,
       applicable_days: normalizeApplicableDays(

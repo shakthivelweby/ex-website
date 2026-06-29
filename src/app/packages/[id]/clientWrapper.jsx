@@ -557,7 +557,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
                         </Popup>
 
                         {packages && packages.length > 0 ? (
-                            <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] items-stretch gap-4 sm:gap-5 lg:gap-6">
                                 {packages.map((pkg) => (
                                     <PackageCard
                                         key={pkg.id}

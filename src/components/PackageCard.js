@@ -157,7 +157,6 @@ const PackageCard = (props) => {
     pkg.pickupPoint.trim().toLowerCase() !== pkg.startingFrom?.trim().toLowerCase();
 
   const metaChips = [
-    tourMeta ? { icon: tourMeta.icon, label: tourMeta.label, tone: tourMeta.tone } : null,
     pkg.duration ? { icon: "fi fi-rr-calendar-clock", label: pkg.duration, tone: "muted" } : null,
     groupSize ? { icon: "fi fi-rr-users", label: groupSize, tone: "muted" } : null,
     slotStatus
@@ -175,7 +174,7 @@ const PackageCard = (props) => {
               alt={pkg.imageAlt}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 34vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary-50 to-gray-100">
@@ -215,7 +214,7 @@ const PackageCard = (props) => {
           ) : null}
         </div>
 
-        <div className="flex flex-1 flex-col gap-2.5 p-4">
+        <div className="flex flex-1 flex-col gap-2 p-3.5 sm:p-4">
           <div className="space-y-1.5">
             <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-primary-700">
               {pkg.title}
@@ -250,22 +249,22 @@ const PackageCard = (props) => {
             ) : null}
           </div>
 
-          <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+          <div className="mt-auto space-y-2.5 border-t border-gray-100 pt-3">
             {hasPrice ? (
-              <div className="inline-flex min-w-0 items-baseline gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-1.5">
+              <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
                 <span className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
                   From
                 </span>
-                <span className="text-base font-bold text-gray-900">
+                <span className="text-base font-bold leading-none text-gray-900">
                   ₹{pkg.price.toLocaleString()}
                 </span>
-                <span className="text-[10px] text-gray-500">/ person</span>
+                <span className="text-[10px] leading-none text-gray-500">/ person</span>
               </div>
             ) : (
               <span className="text-xs font-medium text-gray-500">Price on request</span>
             )}
 
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-900 px-3 py-1.5 text-[11px] font-semibold leading-none text-white transition-colors group-hover:bg-primary-600">
+            <span className="inline-flex w-full items-center justify-center gap-1 rounded-full bg-gray-900 px-3 py-2 text-[11px] font-semibold leading-none text-white transition-colors group-hover:bg-primary-600">
               View package
               <span className="fi-box h-3.5 w-3.5 shrink-0 leading-none">
                 <i className="fi fi-rr-arrow-right text-[10px] transition-transform group-hover:translate-x-0.5" />

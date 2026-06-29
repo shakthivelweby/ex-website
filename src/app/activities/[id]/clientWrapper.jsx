@@ -11,6 +11,7 @@ import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import RichTextContent from "@/components/common/RichTextContent";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
 import DetailSubHeader, { DETAIL_SIDEBAR_STICKY_TOP } from "@/components/layout/DetailSubHeader";
+import { getTicketCardDisplayPrice } from "@/utils/activityTicketPricing";
 
 function SectionCard({ title, children, className = "" }) {
   return (
@@ -39,10 +40,13 @@ function GuideItem({ icon, label, value }) {
   );
 }
 
-function formatTicketPrice(ticket) {
-  const base = Number(ticket?.price || ticket?.adult_price || 0);
-  if (!Number.isFinite(base) || base <= 0) return null;
-  return Math.round(base * 100) / 100;
+function formatTicketDisplayPrice(ticket, activityDetails, visitDate, visitTimeSlot) {
+  const price = getTicketCardDisplayPrice(ticket, activityDetails, {
+    visitDate,
+    timeSlotId: visitTimeSlot,
+  });
+  if (price.amount == null) return null;
+  return price;
 }
 
 function TicketTabButton({ active, onClick, icon, label }) {
@@ -78,7 +82,14 @@ const ActivityDetailPage = ({ activityDetails }) => {
   const [showTicketDetailsPopup, setShowTicketDetailsPopup] = useState(false);
   const [selectedTicketForDetails, setSelectedTicketForDetails] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [visitDate, setVisitDate] = useState(null);
+  const [visitTimeSlot, setVisitTimeSlot] = useState("");
   const enquireOnly = false;
+
+  const handleVisitContextChange = ({ visitDate: nextDate, visitTimeSlot: nextSlot }) => {
+    setVisitDate(nextDate ?? null);
+    setVisitTimeSlot(nextSlot ?? "");
+  };
 
   // Combine main image with gallery images
   const allImages = activityDetails.gallery && activityDetails.gallery.length > 0
@@ -451,6 +462,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
             activityDetails={activityDetails}
             isMobilePopup={true}
             enquireOnly={enquireOnly}
+            onVisitContextChange={handleVisitContextChange}
             selectedTicket={
               activityDetails.ticketOptions?.find(
                 ticket => ticket.id === selectedTicketId
@@ -565,16 +577,42 @@ const ActivityDetailPage = ({ activityDetails }) => {
                 {/* Price */}
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-gray-900">
-                    ₹
                     {(() => {
-                      const base =
-                        Number(selectedTicketForDetails.price || 0) ||
-                        Number(selectedTicketForDetails.adult_price || 0);
-                      return (Math.round(base * 100) / 100).toFixed(0);
+                      const price = formatTicketDisplayPrice(
+                        selectedTicketForDetails,
+                        activityDetails,
+                        visitDate,
+                        visitTimeSlot
+                      );
+                      if (!price) return "—";
+                      return (
+                        <>
+                          ₹{Number(price.amount).toFixed(0)}
+                          {price.strikeAmount != null &&
+                          Number(price.strikeAmount) > Number(price.amount) ? (
+                            <span className="ml-2 text-sm font-normal text-gray-400 line-through">
+                              ₹{Number(price.strikeAmount).toFixed(0)}
+                            </span>
+                          ) : null}
+                        </>
+                      );
                     })()}
                   </span>
                   {selectedTicketForDetails.rateType === "pax" && (
-                    <span className="text-xs text-gray-500">per person</span>
+                    <span className="text-xs text-gray-500">
+                      per person
+                      {(() => {
+                        const price = formatTicketDisplayPrice(
+                          selectedTicketForDetails,
+                          activityDetails,
+                          visitDate,
+                          visitTimeSlot
+                        );
+                        if (price?.isSeasonal) return " · seasonal rate";
+                        if (price?.showFrom) return " · from";
+                        return "";
+                      })()}
+                    </span>
                   )}
                 </div>
 
@@ -612,6 +650,7 @@ const ActivityDetailPage = ({ activityDetails }) => {
           <Form
             activityDetails={activityDetails}
             enquireOnly={enquireOnly}
+            onVisitContextChange={handleVisitContextChange}
             selectedTicket={
               activityDetails.ticketOptions?.find((ticket) => ticket.id === selectedTicketId) || null
             }
@@ -839,10 +878,14 @@ const ActivityDetailPage = ({ activityDetails }) => {
                         const hasInclusions = Array.isArray(ticket.inclusions) && ticket.inclusions.length > 0;
                         const hasExclusions = Array.isArray(ticket.exclusions) && ticket.exclusions.length > 0;
                         const hasItinerary = Array.isArray(ticket.itineraries) && ticket.itineraries.length > 0;
-                        const unitPrice = formatTicketPrice(ticket);
+                        const visitPrice = getTicketCardDisplayPrice(ticket, activityDetails, {
+                          visitDate,
+                          timeSlotId: visitTimeSlot,
+                        });
+                        const displayAmount = visitPrice.amount;
                         const showStrikePrice =
-                          Number(ticket.originalPrice) > 0 &&
-                          Number(ticket.originalPrice) > Number(ticket.price || 0);
+                          visitPrice.strikeAmount != null &&
+                          Number(visitPrice.strikeAmount) > Number(displayAmount);
                         const hasDetails = hasInclusions || hasExclusions || hasItinerary;
                         const inclusionPreview = (ticket.inclusions || []).slice(0, 3);
                         const ticketDescription = String(
@@ -901,18 +944,23 @@ const ActivityDetailPage = ({ activityDetails }) => {
                                       ) : null}
                                     </div>
                                     <div className="shrink-0 text-right">
-                                      {unitPrice != null ? (
+                                      {displayAmount != null ? (
                                         <>
                                           <p className="text-xl font-bold tabular-nums text-gray-900">
-                                            ₹{unitPrice.toFixed(0)}
+                                            ₹{Number(displayAmount).toFixed(0)}
                                           </p>
                                           {showStrikePrice ? (
                                             <p className="text-xs text-gray-400 line-through">
-                                              ₹{Number(ticket.originalPrice).toFixed(0)}
+                                              ₹{Number(visitPrice.strikeAmount).toFixed(0)}
                                             </p>
                                           ) : null}
                                           <p className="text-[11px] text-gray-500">
                                             {ticket.rateType === "full" ? "per ticket" : "per person"}
+                                            {visitPrice.isSeasonal
+                                              ? " · seasonal rate"
+                                              : visitPrice.showFrom
+                                                ? " · from"
+                                                : ""}
                                           </p>
                                         </>
                                       ) : (
@@ -1152,7 +1200,15 @@ const ActivityDetailPage = ({ activityDetails }) => {
                 (ticket) => ticket.id === selectedTicketId
               );
               if (selectedTicket) {
-                return `₹${selectedTicket.price || selectedTicket.adult_price || 0}`;
+                const price = formatTicketDisplayPrice(
+                  selectedTicket,
+                  activityDetails,
+                  visitDate,
+                  visitTimeSlot
+                );
+                if (price?.amount != null) {
+                  return `₹${Number(price.amount).toFixed(0)}`;
+                }
               }
               return activityDetails.price;
             })()}

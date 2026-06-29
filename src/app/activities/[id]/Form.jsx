@@ -1,15 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect, forwardRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Button from "@/components/common/Button";
 import ActivityTimeSlotPicker from "@/components/activities/ActivityTimeSlotPicker";
+import ActivityVisitDatePicker from "@/components/activities/ActivityVisitDatePicker";
 import isLogin from "@/utils/isLogin";
 import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { isActivityCloseoutDate, normalizeCloseoutDates, dateToYmd } from "@/utils/closeoutUtils";
-import { detailDatePickerPopperProps } from "@/components/booking/detailDatePickerProps";
 import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
+import { resolveActivityTicketUnitPricing, toActivityVisitYmd, computeActivityLineTotal } from "@/utils/activityTicketPricing";
 
 function formatVisitDateLabel(date) {
   if (!date) return null;
@@ -20,20 +18,6 @@ function formatVisitDateLabel(date) {
     year: "numeric",
   });
 }
-
-const DatePickerTrigger = forwardRef(function DatePickerTrigger({ value, onClick }, ref) {
-  return (
-    <button
-      type="button"
-      ref={ref}
-      onClick={onClick}
-      className="fi-box h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 transition-colors hover:bg-gray-100"
-      aria-label={value ? `Change date, currently ${value}` : "Choose date"}
-    >
-      <i className="fi fi-rr-calendar text-sm" aria-hidden="true" />
-    </button>
-  );
-});
 
 function CounterRow({ label, value, onDec, onInc, disabled, min = 0 }) {
   return (
@@ -79,104 +63,7 @@ function formatTime(timeString) {
 }
 
 function toYmd(date) {
-  try {
-    const d = new Date(date);
-    if (Number.isNaN(d.getTime())) return "";
-    // Force Indian timezone (Asia/Kolkata) so close-out/season dates match backend.
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).formatToParts(d);
-    const y = parts.find((p) => p.type === "year")?.value;
-    const m = parts.find((p) => p.type === "month")?.value;
-    const day = parts.find((p) => p.type === "day")?.value;
-    return y && m && day ? `${y}-${m}-${day}` : "";
-  } catch {
-    return "";
-  }
-}
-
-function isDateInRange(ymd, start, end) {
-  if (!ymd || !start || !end) return false;
-  return ymd >= start && ymd <= end;
-}
-
-function getSeasonalPriceForTicket(seasonalDates, ticketTypeId, ymd) {
-  if (!Array.isArray(seasonalDates) || !ticketTypeId || !ymd) return null;
-  const row = seasonalDates.find((r) => {
-    const rid =
-      r.activity_ticket_type_id ??
-      r.activityTicketTypeId ??
-      r.ticket_type_id ??
-      r.ticketTypeId ??
-      r.activity_ticket_type?.id;
-    const start = r.start_date ?? r.startDate;
-    const end = r.end_date ?? r.endDate;
-    return String(rid) === String(ticketTypeId) && isDateInRange(ymd, start, end);
-  });
-  return row || null;
-}
-
-/** Normalize HH:MM(:ss) for matching catalogue slot to seasonal slot rows. */
-function normalizeSlotTimeKey(timeString) {
-  if (timeString == null || timeString === "") return "";
-  const s = String(timeString).trim();
-  const parts = s.split(":");
-  if (parts.length < 2) return s.slice(0, 8);
-  const h = String(parseInt(parts[0], 10)).padStart(2, "0");
-  const m = String(parseInt(parts[1], 10)).padStart(2, "0");
-  return `${h}:${m}`;
-}
-
-/**
- * When seasonal pricing includes per–activity-time-slot rows, merge those amounts
- * for the slot the user selected (matches activity_time_slot_id, else same start_time).
- */
-function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
-  if (!seasonalRow || !activitySlotObj) return seasonalRow;
-  const merged = { ...seasonalRow };
-  const slots = seasonalRow.time_slots || seasonalRow.timeSlots || [];
-  if (!Array.isArray(slots) || slots.length === 0) return merged;
-
-  const slotId = activitySlotObj.id != null ? String(activitySlotObj.id) : "";
-  const slotStart = activitySlotObj.start_time ?? activitySlotObj.startTime;
-
-  let match = null;
-  if (slotId) {
-    match = slots.find((ts) => {
-      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
-      return tsSid != null && String(tsSid) === slotId;
-    });
-  }
-  if (!match && slotStart) {
-    const key = normalizeSlotTimeKey(slotStart);
-    match = slots.find((ts) => {
-      const tsSid = ts.activity_time_slot_id ?? ts.activityTimeSlotId;
-      if (tsSid != null) return false;
-      return normalizeSlotTimeKey(ts.start_time ?? ts.startTime) === key;
-    });
-  }
-
-  if (!match) return merged;
-
-  const oFull = match.full_rate ?? match.fullRate;
-  const oAdult = match.adult_price ?? match.adultPrice;
-  const oChild = match.child_price ?? match.childPrice;
-
-  const hasOverride =
-    (oFull !== undefined && oFull !== null && oFull !== "") ||
-    (oAdult !== undefined && oAdult !== null && oAdult !== "") ||
-    (oChild !== undefined && oChild !== null && oChild !== "");
-
-  if (!hasOverride) return merged;
-
-  if (oFull !== undefined && oFull !== null && oFull !== "") merged.full_rate = oFull;
-  if (oAdult !== undefined && oAdult !== null && oAdult !== "") merged.adult_price = oAdult;
-  if (oChild !== undefined && oChild !== null && oChild !== "") merged.child_price = oChild;
-
-  return merged;
+  return toActivityVisitYmd(date);
 }
 
 function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
@@ -223,6 +110,7 @@ const Form = ({
   isMobilePopup = false,
   enquireOnly = false,
   selectedTicket = null,
+  onVisitContextChange,
 }) => {
   const { isNavigating, navigate } = useNavigateWithLoading();
   const [isLoading, setIsLoading] = useState(false);
@@ -237,12 +125,11 @@ const Form = ({
   const isSlotBased = Boolean(activityDetails?.time_slot_based);
   const selectedYmd = selectedDate ? toYmd(selectedDate) : "";
 
-  const getSlotRawById = (slotId) => {
-    if (!slotId) return null;
-    const list = Array.isArray(activityDetails?.time_slot_pricing)
-      ? activityDetails.time_slot_pricing
-      : [];
-    return list.find((s) => String(s.id) === String(slotId)) || null;
+  const handleVisitDateChange = (date) => {
+    setSelectedDate(date);
+    setSelectedTimeSlot("");
+    setErrors((prev) => ({ ...prev, date: null, timeSlot: null }));
+    onVisitContextChange?.({ visitDate: date, visitTimeSlot: "" });
   };
 
   const availableSlotOptions = useMemo(
@@ -275,210 +162,14 @@ const Form = ({
     }
   }, [pickerSlotOptions, selectedTimeSlot, selectedYmd]);
 
-  const getSlotTicketUnitPrices = () => {
-    if (!isSlotBased || !selectedTicket || !selectedTimeSlot) return null;
-    const slot = getSlotRawById(selectedTimeSlot);
-    if (!slot) return null;
-    const ticketPriceRow = Array.isArray(slot.ticket_prices || slot.ticketPrices)
-      ? (slot.ticket_prices || slot.ticketPrices).find(
-          (p) => String(p.activity_ticket_type_id) === String(selectedTicket.id)
-        )
-      : null;
-    if (!ticketPriceRow) return null;
-
-    const rateType = normalizeRateType(ticketPriceRow.rate_type || selectedTicket.rateType, {
-      adultPrice: ticketPriceRow.adult_price,
-      childPrice: ticketPriceRow.child_price,
-      fullRate: ticketPriceRow.full_rate,
-    });
-    // Admin/discount are typically stored on ticket base pricing. Some APIs may also provide them on slot rows.
-    // IMPORTANT: Prefer `selectedTicket` first, because slot rows often include `admin_charge: 0` which would
-    // otherwise override the real ticket admin percentage.
-    const pricingFallback = activityDetails?.current_pricing || {};
-    const discountFromTicket = pickNumber(
-      selectedTicket,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountFromActivity = pickNumber(
-      pricingFallback,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountFromSlot = pickNumber(
-      ticketPriceRow,
-      ["discount", "discount_percentage", "discountPercent"],
-      0
-    );
-    const discountPct =
-      discountFromTicket > 0
-        ? discountFromTicket
-        : discountFromActivity > 0
-          ? discountFromActivity
-          : discountFromSlot;
-
-    const adminFromTicket = pickNumber(
-      selectedTicket,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminFromActivity = pickNumber(
-      pricingFallback,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminFromSlot = pickNumber(
-      ticketPriceRow,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      0
-    );
-    const adminChargePct =
-      adminFromTicket > 0
-        ? adminFromTicket
-        : adminFromActivity > 0
-          ? adminFromActivity
-          : adminFromSlot;
-
-    // Prefer backend-computed admin-inclusive slot prices when available.
-    const hasBackendAdmin =
-      ticketPriceRow?.adult_price_with_admin !== undefined ||
-      ticketPriceRow?.full_rate_with_admin !== undefined;
-
-    const adultUnitBase =
-      rateType === "full"
-        ? Number((hasBackendAdmin ? ticketPriceRow.full_rate_with_admin : ticketPriceRow.full_rate) || 0)
-        : Number((hasBackendAdmin ? ticketPriceRow.adult_price_with_admin : ticketPriceRow.adult_price) || 0);
-    const childUnitBase = Number((hasBackendAdmin ? ticketPriceRow.child_price_with_admin : ticketPriceRow.child_price) || 0);
-
-    const adminPctToApply = hasBackendAdmin ? 0 : adminChargePct;
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminPctToApply);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminPctToApply);
-
-    const adminPctRaw = pickNumber(
-      ticketPriceRow,
-      ["admin_charge", "adminCharge", "admin_charge_percentage"],
-      adminChargePct
-    );
-
-    return {
-      rateType,
-      adultUnit,
-      childUnit,
-      adultUnitBase,
-      childUnitBase,
-      discountPct,
-      // If backend already included admin in *_with_admin, never apply admin again in UI math.
-      adminChargePct: hasBackendAdmin ? 0 : adminChargePct,
-      // Catalogue admin % (ticket / activity / slot resolution) for applying to seasonal bases
-      // when slot prices are already admin-inclusive (adminChargePct is forced to 0 above).
-      catalogAdminChargePct: adminChargePct,
-      // Keep raw admin % only for reference/debugging if needed.
-      adminChargePctRaw: adminPctRaw,
-    };
-  };
-
   const getEffectiveTicketUnitPrices = () => {
     if (!selectedTicket) return null;
-
-    const seasonalRowRaw = getSeasonalPriceForTicket(
-      activityDetails?.seasonal_dates,
-      selectedTicket.id,
-      selectedYmd
-    );
-    const selectedSlotRaw =
-      isSlotBased && selectedTimeSlot ? getSlotRawById(selectedTimeSlot) : null;
-    const seasonalRow =
-      seasonalRowRaw && selectedSlotRaw
-        ? mergeSeasonalWithSelectedSlot(seasonalRowRaw, selectedSlotRaw)
-        : seasonalRowRaw;
-
-    const slotUnit = getSlotTicketUnitPrices();
-
-    // Slot + season: when the date is in season, use seasonal row prices only (ignore slot catalogue base).
-    if (slotUnit && seasonalRow) {
-      const rateType = normalizeRateType(
-        seasonalRow.rate_type || slotUnit.rateType || selectedTicket.rateType,
-        {
-          adultPrice: seasonalRow.adult_price,
-          childPrice: seasonalRow.child_price,
-          fullRate: seasonalRow.full_rate,
-        }
-      );
-      const discountPct =
-        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
-        slotUnit.discountPct;
-      const adminChargePct =
-        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-        slotUnit.catalogAdminChargePct ??
-        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
-
-      const adultUnitBase =
-        rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
-      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-      return {
-        source: "slot-seasonal",
-        rateType,
-        adultUnit,
-        childUnit,
-        adultUnitBase,
-        childUnitBase,
-        discountPct,
-        adminChargePct,
-        adminChargePctRaw: slotUnit.adminChargePctRaw,
-      };
-    }
-
-    if (slotUnit) return { source: "slot", ...slotUnit };
-
-    // Non-slot + season: seasonal row replaces catalogue base for that date.
-    if (seasonalRow) {
-      const rateType = normalizeRateType(seasonalRow.rate_type || selectedTicket.rateType, {
-        adultPrice: seasonalRow.adult_price,
-        childPrice: seasonalRow.child_price,
-        fullRate: seasonalRow.full_rate,
-      });
-      const discountPct =
-        pickNumber(seasonalRow, ["discount", "discount_percentage", "discountPercent"], null) ??
-        pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0);
-      const adminChargePct =
-        pickNumber(seasonalRow, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0);
-
-      const adultUnitBase =
-        rateType === "full"
-          ? Number(seasonalRow.full_rate || 0)
-          : Number(seasonalRow.adult_price || 0);
-      const childUnitBase = Number(seasonalRow.child_price || 0);
-
-      const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-      const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-      return { source: "seasonal", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
-    }
-
-    const rateType = normalizeRateType(selectedTicket.rateType, {
-      adultPrice: selectedTicket.adult_price,
-      childPrice: selectedTicket.child_price,
-      fullRate: selectedTicket.full_rate ?? selectedTicket.price,
+    return resolveActivityTicketUnitPricing({
+      ticket: selectedTicket,
+      activityDetails,
+      visitYmd: selectedYmd,
+      timeSlotId: selectedTimeSlot,
     });
-    const discountPct = pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"]);
-    const adminChargePct = pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"]);
-
-    const adultUnitBase =
-      rateType === "full"
-        ? Number(selectedTicket.price || selectedTicket.full_rate || 0)
-        : Number(selectedTicket.price || selectedTicket.adult_price || 0);
-    const childUnitBase = Number(selectedTicket.child_price || 0);
-
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
-
-    return { source: "base", rateType, adultUnit, childUnit, adultUnitBase, childUnitBase, discountPct, adminChargePct };
   };
 
   const getTotalParts = () => {
@@ -765,23 +456,32 @@ const Form = ({
                     : `for ${totalPaxCount} pax`;
 
                 if (!readyForTotal && selectedTicket) {
-                  const effective = getEffectiveTicketUnitPrices();
-                  const adminPct = Number(
-                    effective?.adminChargePct ??
-                      pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-                      pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
-                      0
-                  );
-                  const rateType = effective?.rateType || uiRateType;
-                  const qty = rateType === "full" ? Math.max(1, Number(ticketCount) || 1) : totalPaxCount;
-                  const base = Number(effective?.adultUnitBase ?? selectedTicket.price ?? selectedTicket.adult_price ?? 0);
-                  const unit = applyDiscountAndAdminCharge(base, 0, adminPct);
-                  const total = unit * qty;
+                  const effective = resolveActivityTicketUnitPricing({
+                    ticket: selectedTicket,
+                    activityDetails,
+                    visitYmd: selectedYmd || "",
+                    timeSlotId: selectedTimeSlot || "",
+                  });
+                  const guideRate = pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0);
+                  const total = computeActivityLineTotal(effective, {
+                    adultCount,
+                    childCount,
+                    ticketCount,
+                    guideRate,
+                    includeGuide,
+                  });
+                  const isSeasonalPreview =
+                    effective?.source === "seasonal" || effective?.source === "slot-seasonal";
                   return (
-                    <span className="text-xl font-bold tabular-nums">
-                      ₹{Number(total || 0).toFixed(0)}{" "}
-                      <span className="text-xs font-normal text-gray-400">{unitLabel}</span>
-                    </span>
+                    <div>
+                      <span className="text-xl font-bold tabular-nums">
+                        ₹{Number(total || 0).toFixed(0)}{" "}
+                        <span className="text-xs font-normal text-gray-400">{unitLabel}</span>
+                      </span>
+                      {isSeasonalPreview ? (
+                        <p className="text-[10px] text-primary-200">Seasonal rate applied</p>
+                      ) : null}
+                    </div>
                   );
                 }
 
@@ -814,74 +514,43 @@ const Form = ({
         </div>
 
         <div className="space-y-3 border-b border-gray-100 px-4 py-3.5">
-          <p className="text-xs font-semibold text-gray-900">Visit date</p>
-          {isMobilePopup ? (
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date) => {
-                setSelectedDate(date);
-                setSelectedTimeSlot("");
-                setErrors((prev) => ({ ...prev, date: null, timeSlot: null }));
-              }}
-              minDate={new Date()}
-              filterDate={(date) => {
-                const ymd = toYmd(date);
-                return !isActivityCloseoutDate(
-                  normalizeCloseoutDates(activityDetails?.closeout_dates),
-                  ymd,
-                  date
-                );
-              }}
-              inline
-              dateFormat="dd/MM/yyyy"
-            />
-          ) : (
-            <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-3 py-2.5">
-              <div
-                className={`flex h-11 w-11 flex-col items-center justify-center rounded-md border ${
-                  selectedDate
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 bg-gray-50 text-gray-500"
-                }`}
-              >
-                {selectedDate ? (
-                  <>
-                    <span className="text-[8px] font-semibold uppercase leading-none opacity-80">
-                      {selectedDate.toLocaleDateString("en-US", { month: "short" })}
-                    </span>
-                    <span className="text-base font-bold leading-none">{selectedDate.getDate()}</span>
-                  </>
-                ) : (
-                  <span className="text-lg font-bold leading-none">—</span>
-                )}
-              </div>
-              <p className="min-w-0 truncate text-sm font-semibold text-gray-900">
-                {selectedDate ? formatVisitDateLabel(selectedDate) : "Choose a date"}
-              </p>
-              <div className="shrink-0 [&_.react-datepicker-wrapper]:!w-auto">
-                <DatePicker
+          <label className="block text-sm font-medium text-gray-800">Visit date</label>
+          <p className="text-xs text-gray-500">
+            Green dates are available to book. Amber dates use seasonal rates. Red dates are unavailable.
+          </p>
+          <div className="relative">
+            {isMobilePopup ? (
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                <ActivityVisitDatePicker
+                  activityDetails={activityDetails}
+                  selectedTicketId={selectedTicket?.id}
                   selected={selectedDate}
-                  onChange={(date) => {
-                    setSelectedDate(date);
-                    setSelectedTimeSlot("");
-                    setErrors((prev) => ({ ...prev, date: null, timeSlot: null }));
-                  }}
-                  minDate={new Date()}
-                  filterDate={(date) => {
-                    const ymd = toYmd(date);
-                    return !isActivityCloseoutDate(
-                      normalizeCloseoutDates(activityDetails?.closeout_dates),
-                      ymd,
-                      date
-                    );
-                  }}
-                  customInput={<DatePickerTrigger />}
-                  popperPlacement="bottom-end"
-                  {...detailDatePickerPopperProps}
+                  onChange={handleVisitDateChange}
+                  inline
                 />
               </div>
-            </div>
-          )}
+            ) : (
+              <>
+                <ActivityVisitDatePicker
+                  activityDetails={activityDetails}
+                  selectedTicketId={selectedTicket?.id}
+                  selected={selectedDate}
+                  onChange={handleVisitDateChange}
+                  placeholderText="Choose date"
+                  className="w-full h-11 px-3 pr-10 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 cursor-pointer font-medium bg-white"
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <i className="fi fi-rr-calendar text-lg" />
+                </div>
+              </>
+            )}
+          </div>
+          {isMobilePopup && selectedDate ? (
+            <p className="text-sm text-gray-600">
+              <span className="font-medium text-gray-800">Selected:</span>{" "}
+              {formatVisitDateLabel(selectedDate)}
+            </p>
+          ) : null}
           {errors.date ? <p className="text-xs text-red-500">{errors.date}</p> : null}
           {errors.ticket ? <p className="text-xs text-red-500">{errors.ticket}</p> : null}
 
@@ -894,6 +563,7 @@ const Form = ({
                 onChange={(slotId) => {
                   setSelectedTimeSlot(slotId);
                   setErrors((prev) => ({ ...prev, timeSlot: null }));
+                  onVisitContextChange?.({ visitDate: selectedDate, visitTimeSlot: slotId });
                 }}
                 error={errors.timeSlot}
                 disabled={!selectedDate}

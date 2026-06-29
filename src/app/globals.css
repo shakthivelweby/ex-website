@@ -207,8 +207,12 @@ body {
   border: 1px solid #e5e7eb !important;
   border-radius: 1rem !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   font-family: inherit !important;
+}
+
+.package-booking-datepicker.react-datepicker--inline {
+  overflow: hidden !important;
 }
 
 .package-booking-datepicker .react-datepicker__month-container {
@@ -324,13 +328,22 @@ body {
 }
 
 .package-booking-datepicker-popper {
-  z-index: 60 !important;
+  z-index: 200 !important;
+  width: auto !important;
 }
 
-.package-booking-datepicker-popper .react-datepicker {
+.package-booking-datepicker-popper .react-datepicker,
+.package-booking-datepicker-popper .package-booking-datepicker.react-datepicker {
+  width: 20rem !important;
+  max-width: calc(100vw - 2rem) !important;
   border: 1px solid #e5e7eb !important;
   border-radius: 1rem !important;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12) !important;
+  overflow: visible !important;
+}
+
+.react-datepicker-popper.package-booking-datepicker-popper {
+  z-index: 200 !important;
 }
 
 .detail-booking-datepicker-popper {

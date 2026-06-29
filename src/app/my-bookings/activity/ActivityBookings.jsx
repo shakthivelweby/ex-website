@@ -6,6 +6,20 @@ import { useQuery } from "@tanstack/react-query";
 import Button from "@/components/common/Button";
 import { getActivityBookings } from "./service";
 import SectionLoader from "@/components/loading/SectionLoader";
+import {
+  bookingListPadding,
+  bookingCardClass,
+  bookingCardHeaderClass,
+  bookingCardMainClass,
+  bookingCardTitleRowClass,
+  bookingCardMetaClass,
+  bookingCardChipClass,
+  bookingCardLocationChipClass,
+  bookingCardPriceClass,
+  bookingCardActionsClass,
+  bookingActionBtnClass,
+  bookingActionBtnWideClass,
+} from "../bookingCardStyles";
 
 function ticketTypeId(row) {
   return row?.activity_ticket_type_id ?? row?.activityTicketTypeId;
@@ -236,7 +250,7 @@ const ActivityBookings = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className={bookingListPadding}>
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-red-100">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
             <i className="fi fi-rr-exclamation text-xl text-red-500"></i>
@@ -251,7 +265,7 @@ const ActivityBookings = () => {
 
   if (!Array.isArray(bookings) || bookings.length === 0) {
     return (
-      <div className="p-6">
+      <div className={bookingListPadding}>
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 flex items-center justify-center">
             <i className="fi fi-rr-ticket text-2xl text-gray-400"></i>
@@ -277,8 +291,8 @@ const ActivityBookings = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="space-y-4">
+    <div className={bookingListPadding}>
+      <div className="space-y-3 sm:space-y-4">
         {bookings.map((booking) => {
           const ticketRows =
             booking.activity_booking_tickets ||
@@ -299,29 +313,32 @@ const ActivityBookings = () => {
           return (
             <div
               key={booking.id}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+              className={bookingCardClass}
             >
-              <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                    <h3 className="text-base font-semibold text-gray-900">
+              <div className={bookingCardHeaderClass}>
+                <div className={bookingCardMainClass}>
+                  <div className={bookingCardTitleRowClass}>
+                    <h3 className="text-base font-semibold text-gray-900 break-words">
                       {booking.activity?.name || "Activity"}
                     </h3>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                    <div className={bookingCardMetaClass}>
+                      <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                         <i className="fi fi-rr-calendar text-blue-500"></i>
                         {booking.visit_date
                           ? formatDate(booking.visit_date)
                           : formatDate(booking.created_at)}
                       </span>
-                      <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                      <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                         <i className="fi fi-rr-users text-blue-500"></i>
                         {paxGuestSummary || `${ticketCount} Tickets`}
                       </span>
                       {booking.activity?.location && (
-                        <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
-                          <i className="fi fi-rr-marker"></i>
-                          {booking.activity.location}
+                        <span
+                          className={`${bookingCardLocationChipClass} bg-blue-50 text-blue-600`}
+                          title={booking.activity.location}
+                        >
+                          <i className="fi fi-rr-marker shrink-0"></i>
+                          <span className="truncate">{booking.activity.location}</span>
                         </span>
                       )}
                     </div>
@@ -331,7 +348,7 @@ const ActivityBookings = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-2">
+                <div className={bookingCardPriceClass}>
                   <div className="flex items-center gap-2">
                     {(() => {
                       const pb = getPricingBreakdown(booking);
@@ -381,12 +398,12 @@ const ActivityBookings = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+              <div className={bookingCardActionsClass}>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => toggleDetails(booking.id)}
-                  className="!rounded-full !text-xs !px-4 !py-2"
+                  className={bookingActionBtnClass}
                 >
                   <i
                     className={`fi fi-rr-${
@@ -400,7 +417,7 @@ const ActivityBookings = () => {
                   variant="primary"
                   size="sm"
                   onClick={() => router.push(`/my-bookings/activity/ticket/${booking.id}`)}
-                  className="!rounded-full !text-xs !px-4 !py-2"
+                  className={bookingActionBtnClass}
                 >
                   <i className="fi fi-rr-ticket mr-1.5"></i>
                   View Ticket
@@ -410,7 +427,7 @@ const ActivityBookings = () => {
                   variant="outline"
                   size="sm"
                   onClick={() => router.push(`/activities/${booking.activity_id}`)}
-                  className="!rounded-full !text-xs !px-4 !py-2"
+                  className={bookingActionBtnWideClass}
                 >
                   <i className="fi fi-rr-eye mr-1.5"></i>
                   View Activity

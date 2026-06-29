@@ -14,6 +14,20 @@ import {
 } from "./service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import SectionLoader from "@/components/loading/SectionLoader";
+import {
+  bookingListPadding,
+  bookingCardClass,
+  bookingCardHeaderClass,
+  bookingCardMainClass,
+  bookingCardTitleRowClass,
+  bookingCardMetaClass,
+  bookingCardChipClass,
+  bookingCardLocationChipClass,
+  bookingCardPriceClass,
+  bookingCardActionsClass,
+  bookingActionBtnClass,
+  bookingActionBtnWideClass,
+} from "../bookingCardStyles";
 
 const formatDateTime = (dateString) => {
   const d = new Date(dateString);
@@ -189,7 +203,7 @@ export default function RentalBookings() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className={bookingListPadding}>
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-red-100">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
             <i className="fi fi-rr-exclamation text-xl text-red-500"></i>
@@ -204,7 +218,7 @@ export default function RentalBookings() {
 
   if (!bookings.length) {
     return (
-      <div className="p-6">
+      <div className={bookingListPadding}>
         <div className="bg-white rounded-2xl p-8 text-center shadow-sm">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-50 flex items-center justify-center">
             <i className="fi fi-rr-car text-2xl text-gray-400"></i>
@@ -230,7 +244,7 @@ export default function RentalBookings() {
   }
 
   return (
-    <div className="p-6">
+    <div className={bookingListPadding}>
       <SuccessPopup
         show={showPopup}
         onClose={() => setShowPopup(false)}
@@ -238,7 +252,7 @@ export default function RentalBookings() {
         message={popupConfig.message}
         icon={popupConfig.icon}
       />
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {bookings.map((b) => {
           const title = b.item?.title || "Rental";
           const full = parseFloat(b.total_full_amount || 0);
@@ -260,25 +274,28 @@ export default function RentalBookings() {
           return (
             <div
               key={b.id}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+              className={bookingCardClass}
             >
-              <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                    <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+              <div className={bookingCardHeaderClass}>
+                <div className={bookingCardMainClass}>
+                  <div className={bookingCardTitleRowClass}>
+                    <h3 className="text-base font-semibold text-gray-900 break-words">{title}</h3>
+                    <div className={bookingCardMetaClass}>
+                      <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                         <i className="fi fi-rr-calendar text-blue-500"></i>
                         {formatDateTime(b.start_datetime)}
                       </span>
-                      <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                      <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                         <i className="fi fi-rr-calendar text-blue-500"></i>
                         {formatDateTime(b.end_datetime)}
                       </span>
                       {locationLabel !== "-" ? (
-                        <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
-                          <i className="fi fi-rr-marker"></i>
-                          {locationLabel}
+                        <span
+                          className={`${bookingCardLocationChipClass} bg-blue-50 text-blue-600`}
+                          title={locationLabel}
+                        >
+                          <i className="fi fi-rr-marker shrink-0"></i>
+                          <span className="truncate">{locationLabel}</span>
                         </span>
                       ) : null}
                     </div>
@@ -288,7 +305,7 @@ export default function RentalBookings() {
                   </p>
                 </div>
 
-                <div className="flex flex-col items-start md:items-end gap-2">
+                <div className={bookingCardPriceClass}>
                   <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900">
                       {formatCurrency(
@@ -325,12 +342,12 @@ export default function RentalBookings() {
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+              <div className={bookingCardActionsClass}>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setExpandedBooking(expandedBooking === b.id ? null : b.id)}
-                  className="!rounded-full !text-xs !px-4 !py-2"
+                  className={bookingActionBtnClass}
                 >
                   <i
                     className={`fi fi-rr-${expandedBooking === b.id ? "angle-up" : "angle-down"} mr-1.5`}
@@ -341,7 +358,7 @@ export default function RentalBookings() {
                   variant="outline"
                   size="sm"
                   onClick={() => router.push(`/rentals/${b.rental_item_id}`)}
-                  className="!rounded-full !text-xs !px-4 !py-2"
+                  className={bookingActionBtnClass}
                 >
                   <i className="fi fi-rr-eye mr-1.5"></i>
                   View Rental
@@ -354,7 +371,7 @@ export default function RentalBookings() {
                     disabled={isProcessingPayment}
                     isLoading={isProcessingPayment}
                     loadingLabel="Processing..."
-                    className="!rounded-full !text-xs !px-4 !py-2"
+                    className={bookingActionBtnWideClass}
                   >
                     {`Pay Balance ${formatCurrency(balance)}`}
                   </Button>

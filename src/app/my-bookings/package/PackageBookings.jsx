@@ -12,6 +12,19 @@ import {
   paymentFailure,
 } from "../../checkout/package/service";
 import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import {
+  bookingListPadding,
+  bookingCardClass,
+  bookingCardHeaderClass,
+  bookingCardMainClass,
+  bookingCardTitleRowClass,
+  bookingCardMetaClass,
+  bookingCardChipClass,
+  bookingCardPriceClass,
+  bookingCardActionsClass,
+  bookingActionBtnClass,
+  bookingActionBtnWideClass,
+} from "../bookingCardStyles";
 
 const PackageBookings = () => {
   const router = useRouter();
@@ -291,7 +304,7 @@ const PackageBookings = () => {
   const perPage = paginationData.per_page || 10;
 
   return (
-    <div className="p-6">
+    <div className={bookingListPadding}>
       {bookingsError ? (
         <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-red-100">
           <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
@@ -325,32 +338,32 @@ const PackageBookings = () => {
         </div>
       ) : (
         <>
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {bookings.map((booking) => (
               <div
                 key={booking.id}
-                className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+                className={bookingCardClass}
               >
                 {/* Package Info */}
-                <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                      <h3 className="text-base font-semibold text-gray-900">
+                <div className={bookingCardHeaderClass}>
+                  <div className={bookingCardMainClass}>
+                    <div className={bookingCardTitleRowClass}>
+                      <h3 className="text-base font-semibold text-gray-900 break-words">
                         {booking.package?.name}
                       </h3>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                      <div className={bookingCardMetaClass}>
+                        <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                           <i className="fi fi-rr-calendar text-blue-500"></i>
                           {formatDate(booking.booking_date)}
                         </span>
-                        <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                        <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                           <i className="fi fi-rr-users text-blue-500"></i>
                           {booking.adult_count +
                             (booking.child_count || 0)}{" "}
                           Travelers
                         </span>
                         {booking.package?.tour_type === "fixed_departure" && (
-                          <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
+                          <span className={`${bookingCardChipClass} bg-blue-50 text-blue-600`}>
                             <i className="fi fi-rr-plane-departure"></i>
                             Scheduled Trip
                           </span>
@@ -363,7 +376,7 @@ const PackageBookings = () => {
                   </div>
 
                   {/* Price — compact summary only */}
-                  <div className="flex flex-col items-end gap-1.5 text-right w-full md:w-auto shrink-0">
+                  <div className={`${bookingCardPriceClass} w-full md:w-auto text-left md:text-right`}>
                     <div className="flex items-center gap-2 justify-end flex-wrap">
                       <span className="text-lg font-bold text-gray-900 tabular-nums">
                         {formatCurrency(booking.total_paid)}
@@ -397,12 +410,12 @@ const PackageBookings = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                <div className={bookingCardActionsClass}>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => togglePaymentHistory(booking.id)}
-                    className="!rounded-full !text-xs !px-4 !py-2"
+                    className={bookingActionBtnClass}
                   >
                     <i
                       className={`fi fi-rr-${
@@ -423,7 +436,7 @@ const PackageBookings = () => {
                       disabled={isProcessingPayment}
                       isLoading={isProcessingPayment}
                       loadingLabel="Processing..."
-                      className="!rounded-full !text-xs !px-4 !py-2"
+                      className={bookingActionBtnWideClass}
                     >
                       Pay Balance {formatCurrency(booking.balance)}
                     </Button>

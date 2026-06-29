@@ -6,6 +6,21 @@ import Button from "@/components/common/Button";
 import { getAttractionBookings } from "./service";
 import { useQuery } from "@tanstack/react-query";
 import SectionLoader from "@/components/loading/SectionLoader";
+import {
+  bookingListPadding,
+  bookingCardClass,
+  bookingCardHeaderClass,
+  bookingCardMainClass,
+  bookingCardTitleRowClass,
+  bookingCardMetaClass,
+  bookingCardChipClass,
+  bookingCardLocationChipClass,
+  bookingCardPriceClass,
+  bookingCardActionsClass,
+  bookingActionBtnClass,
+  bookingActionBtnWideClass,
+  bookingPaginationClass,
+} from "../bookingCardStyles";
 
 const AttractionBookings = () => {
   const router = useRouter();
@@ -283,28 +298,28 @@ const AttractionBookings = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="space-y-4">
+    <div className={bookingListPadding}>
+      <div className="space-y-3 sm:space-y-4">
         {attractionBookings.map((booking) => (
           <div
             key={booking.id}
-            className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300"
+            className={bookingCardClass}
           >
             {/* Attraction Info */}
-            <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-              <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
-                  <h3 className="text-base font-semibold text-gray-900">
+            <div className={bookingCardHeaderClass}>
+              <div className={bookingCardMainClass}>
+                <div className={bookingCardTitleRowClass}>
+                  <h3 className="text-base font-semibold text-gray-900 break-words">
                     {booking.attraction?.name || "Attraction Name"}
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                  <div className={bookingCardMetaClass}>
+                    <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                       <i className="fi fi-rr-calendar text-blue-500"></i>
                       {booking.visit_date
                         ? formatDate(booking.visit_date)
                         : formatDate(booking.created_at)}
                     </span>
-                    <span className="text-xs px-3 py-1 rounded-full bg-gray-50 text-gray-600 flex items-center gap-1.5">
+                    <span className={`${bookingCardChipClass} bg-gray-50 text-gray-600`}>
                       <i className="fi fi-rr-users text-blue-500"></i>
                       {booking.total_count ||
                         parseInt(booking.adult_count || 0) +
@@ -312,9 +327,12 @@ const AttractionBookings = () => {
                       Visitors
                     </span>
                     {booking.attraction?.location && (
-                      <span className="text-xs px-3 py-1 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5">
-                        <i className="fi fi-rr-marker"></i>
-                        {booking.attraction.location}
+                      <span
+                        className={`${bookingCardLocationChipClass} bg-blue-50 text-blue-600`}
+                        title={booking.attraction.location}
+                      >
+                        <i className="fi fi-rr-marker shrink-0"></i>
+                        <span className="truncate">{booking.attraction.location}</span>
                       </span>
                     )}
                   </div>
@@ -325,7 +343,7 @@ const AttractionBookings = () => {
               </div>
 
               {/* Price Info */}
-              <div className="flex flex-col items-start md:items-end gap-2">
+              <div className={bookingCardPriceClass}>
                 <div className="flex items-center gap-2">
                   {(() => {
                     const pb = getAttractionPricingBreakdown(booking);
@@ -377,12 +395,12 @@ const AttractionBookings = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+            <div className={bookingCardActionsClass}>
               <Button
                 onClick={() => togglePaymentHistory(booking.id)}
                 variant="outline"
                 size="sm"
-                className="!rounded-full !text-xs !px-4 !py-2 flex items-center justify-center"
+                className={bookingActionBtnClass}
               >
                 <i
                   className={`fi fi-rr-${
@@ -396,7 +414,7 @@ const AttractionBookings = () => {
                 onClick={() => router.push(`/my-bookings/attraction/ticket/${booking.id}`)}
                 variant="primary"
                 size="sm"
-                className="!rounded-full !text-xs !px-4 !py-2 flex items-center justify-center"
+                className={bookingActionBtnClass}
               >
                 <i className="fi fi-rr-ticket mr-1.5"></i>
                 View Ticket
@@ -408,7 +426,7 @@ const AttractionBookings = () => {
                 }
                 variant="outline"
                 size="sm"
-                className="!px-3 !py-2 flex items-center justify-center"
+                className={bookingActionBtnWideClass}
               >
                 <i className="fi fi-rr-eye mr-1.5"></i>
                 View Attraction
@@ -717,14 +735,14 @@ const AttractionBookings = () => {
 
       {/* Pagination */}
       {lastPage > 1 && (
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
+        <div className={bookingPaginationClass}>
+          <div className="text-sm text-gray-700 text-center sm:text-left">
             Showing {(currentPageData - 1) * (pagination.per_page || 10) + 1} to{" "}
             {Math.min(currentPageData * (pagination.per_page || 10), total)} of{" "}
             {total} bookings
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2">
             <Button
               variant="outline"
               size="sm"

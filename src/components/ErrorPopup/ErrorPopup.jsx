@@ -147,7 +147,7 @@ const ErrorPopup = ({
                   type="button"
                   onClick={secondaryAction.onClick}
                   disabled={secondaryAction.isLoading || primaryAction?.isLoading}
-                  className="flex-1 h-11 sm:h-12 px-4 border border-gray-200 bg-white text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:flex-1 shrink-0 min-h-11 h-11 sm:min-h-12 sm:h-12 px-4 border border-gray-200 bg-white text-gray-700 text-sm font-semibold rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {secondaryAction.label}
                 </button>
@@ -157,8 +157,8 @@ const ErrorPopup = ({
                   type="button"
                   onClick={primaryAction.onClick}
                   disabled={primaryAction.isLoading}
-                  className={`flex-1 h-11 sm:h-12 px-4 bg-primary-600 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-primary-700 transition-all shadow-md shadow-primary-600/15 hover:shadow-primary-600/25 disabled:opacity-70 disabled:cursor-not-allowed ${
-                    secondaryAction ? "" : "w-full"
+                  className={`w-full sm:flex-1 shrink-0 min-h-11 h-11 sm:min-h-12 sm:h-12 px-4 bg-primary-600 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-primary-700 transition-all shadow-md shadow-primary-600/15 hover:shadow-primary-600/25 disabled:opacity-70 disabled:cursor-not-allowed ${
+                    secondaryAction ? "" : "sm:w-full"
                   }`}
                 >
                   {primaryAction.isLoading ? (

@@ -232,50 +232,90 @@ const Form = ({
     return rateData?.stopSale === true;
   };
 
-  const renderCalendarDayContents = (day, date) => {
+  const getDayClassName = (date) => {
     const dateStr = formatDate(date);
     const rateData = calendarRates?.data?.find((rate) => rate.date === dateStr);
     const isFirstBookable = dateStr === formatDate(firstBookableDate);
-
-    let subLabel = null;
-    let subColor = "#059669";
+    const classes = [];
 
     if (rateData?.stopSale) {
-      subLabel = "N/A";
-      subColor = "#EF4444";
-    } else if (isFirstBookable) {
-      subLabel = bookableFromLabel;
-      subColor = "#059669";
+      classes.push("pkg-day--unavailable");
     } else if (!isOnlineBookingAllowed(date)) {
-      subLabel = "Enquiry";
-      subColor = "#D97706";
+      classes.push("pkg-day--enquiry");
     } else {
-      subLabel = "Book";
-      subColor = "#059669";
+      classes.push("pkg-day--bookable");
     }
 
-    return (
-      <div style={{ textAlign: "center", position: "relative" }}>
-        <div>{day}</div>
-        {subLabel && (
-          <div
-            style={{
-              fontSize: isFirstBookable ? "0.55em" : "0.65em",
-              color: subColor,
-              position: "absolute",
-              left: 0,
-              top: "23px",
-              textAlign: "center",
-              width: "100%",
-              fontWeight: "500",
-              lineHeight: 1.1,
-            }}
-          >
-            {subLabel}
-          </div>
-        )}
+    if (isFirstBookable) {
+      classes.push("pkg-day--first-bookable");
+    }
+
+    return classes.join(" ");
+  };
+
+  const renderCalendarDayContents = (day) => (
+    <span className="pkg-day-num">{day}</span>
+  );
+
+  const renderCalendarHeader = ({
+    date,
+    decreaseMonth,
+    increaseMonth,
+    prevMonthButtonDisabled,
+    nextMonthButtonDisabled,
+  }) => (
+    <div className="pkg-cal-header">
+      <div className="flex items-center justify-between px-1 pb-2">
+        <button
+          type="button"
+          onClick={decreaseMonth}
+          disabled={prevMonthButtonDisabled}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-30"
+          aria-label="Previous month"
+        >
+          <i className="fi fi-rr-angle-left text-sm" />
+        </button>
+        <span className="text-sm font-semibold text-gray-800">
+          {date.toLocaleString("default", { month: "long", year: "numeric" })}
+        </span>
+        <button
+          type="button"
+          onClick={increaseMonth}
+          disabled={nextMonthButtonDisabled}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-30"
+          aria-label="Next month"
+        >
+          <i className="fi fi-rr-angle-right text-sm" />
+        </button>
       </div>
-    );
+      <div className="flex flex-wrap justify-center gap-1.5 px-1 pb-2">
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">
+          Book
+        </span>
+        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
+          Enquiry
+        </span>
+        <span className="rounded-full bg-teal-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-teal-700">
+          From
+        </span>
+        <span className="rounded-full bg-red-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-red-600">
+          N/A
+        </span>
+      </div>
+    </div>
+  );
+
+  const calendarPickerProps = {
+    selected: selectedDate,
+    onChange: (date) => onDateChange(date),
+    onMonthChange: (date) => setCurrentMonth(date),
+    dateFormat: "dd/MM/yyyy",
+    minDate: new Date(),
+    filterDate: (date) => !isDateDisabled(date),
+    renderDayContents: renderCalendarDayContents,
+    renderCustomHeader: renderCalendarHeader,
+    dayClassName: getDayClassName,
+    calendarClassName: "package-booking-datepicker",
   };
 
   /**
@@ -597,58 +637,42 @@ const Form = ({
           <label className="block text-sm font-medium text-gray-800 mb-1">
             Starting Date
           </label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-gray-500 mb-3">
             Online booking from{" "}
             <span className="font-medium text-green-700">{bookableFromLabel}</span>
-            . Dates before that are enquiry only.
+            . Earlier dates are enquiry only.
           </p>
           <div className="relative">
             {isMobilePopup ? (
-              // Inline calendar for mobile
-
-              <div className="border-t border-gray-200 pt-3">
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => onDateChange(date)}
-                  onMonthChange={(date) => {
-                    setCurrentMonth(date);
-                  }}
-                  dateFormat="dd/MM/yyyy"
-                  inline
-                  minDate={new Date()}
-                  filterDate={(date) => !isDateDisabled(date)}
-                  renderDayContents={renderCalendarDayContents}
-                />
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                <DatePicker {...calendarPickerProps} inline />
               </div>
             ) : (
-              // Popup calendar for desktop
               <>
                 <DatePicker
-                  minDate={new Date()}
+                  {...calendarPickerProps}
                   placeholderText="Choose Date"
-                  className="w-full h-8 px-0 pr-10 border-b text-gray-800 border-gray-300 focus:outline-none focus:ring-none focus:border-primary-500 cursor-pointer font-medium"
-                  selected={selectedDate}
-                  onChange={(date) => onDateChange(date)}
-                  onMonthChange={(date) => {
-                    setCurrentMonth(date);
-                  }}
-                  dateFormat="dd/MM/yyyy"
-                  filterDate={(date) => !isDateDisabled(date)}
+                  className="w-full h-11 px-3 pr-10 border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 cursor-pointer font-medium bg-white"
                   popperPlacement="bottom-start"
-                  renderDayContents={renderCalendarDayContents}
+                  popperClassName="package-booking-datepicker-popper"
                 />
-                <div className="absolute right-0 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-800">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
                   <i className="fi fi-rr-calendar text-lg"></i>
                 </div>
               </>
             )}
           </div>
-          {isMobilePopup && (
-            <div className="mt-3 text-sm text-gray-500 flex items-center">
-              <i className="fi fi-rr-info mr-2"></i>
-              Selected date:{" "}
-              {selectedDate ? selectedDate.toLocaleDateString() : "None"}
-            </div>
+
+          {isMobilePopup && selectedDate && (
+            <p className="mt-3 text-sm text-gray-600">
+              <span className="font-medium text-gray-800">Selected:</span>{" "}
+              {selectedDate.toLocaleDateString("en-GB", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </p>
           )}
         </div>
 

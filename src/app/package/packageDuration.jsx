@@ -6,7 +6,7 @@ const PackageDuration = ({ combinationData, date, packageId }) => {
   return (
     <>
       {combinationData.map((combination) => {
-        const { id, days, night, images } = combination;
+        const { id, days, nights, images } = combination;
         return (
           <Link key={id} href={`/package/${id}?date=${date}`}>
             <div className={`flex items-center bg-white border border-gray-200 rounded-full p-1 transition-colors ${packageId === id ? "border-primary-500" : "border-gray-200"}`}>
@@ -22,7 +22,8 @@ const PackageDuration = ({ combinationData, date, packageId }) => {
                 <div className="w-6 h-6 mr-2 rounded-full bg-gray-200"></div>
               )}
               <p className="text-sm font-medium text-gray-800">
-                {days} days, {night} nights
+                {days} {days === 1 ? "day" : "days"}, {nights}{" "}
+                {nights === 1 ? "night" : "nights"}
               </p>
             </div>
           </Link>

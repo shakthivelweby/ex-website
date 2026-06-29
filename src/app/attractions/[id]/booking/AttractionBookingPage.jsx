@@ -33,6 +33,7 @@ import {
   normalizeCloseoutDates,
 } from "@/utils/closeoutUtils";
 import { normalizeAttractionBookingData } from "@/utils/attractionTicketPrices";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 function attractionAdminPct(ticket) {
   return Math.max(0, Number(ticket?.admin_charge ?? 0));
@@ -238,7 +239,8 @@ const AttractionBookingPage = ({
   const router = useRouter();
   const [attractionData, setAttractionData] = useState(initialAttractionData);
   const [ticketData, setTicketData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!initialAttractionData);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [selectedDate, setSelectedDate] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
@@ -361,7 +363,7 @@ const AttractionBookingPage = ({
     if (dateString && attractionId) {
       localStorage.setItem(`attraction_${attractionId}_selectedDate`, dateString);
       try {
-        setLoading(true);
+        setTicketsLoading(true);
         const response = await getDetailsForBooking(attractionId, dateString);
         if (response?.data) {
           const normalized = normalizeAttractionBookingData(response.data);
@@ -371,7 +373,7 @@ const AttractionBookingPage = ({
       } catch (error) {
         console.error("Error fetching booking details for date:", error);
       } finally {
-        setLoading(false);
+        setTicketsLoading(false);
       }
     }
   };
@@ -1052,11 +1054,7 @@ const AttractionBookingPage = ({
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <BookingPageSkeleton />;
   }
 
   if (!attractionData) {
@@ -1064,21 +1062,17 @@ const AttractionBookingPage = ({
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            {loading ? "Loading..." : "Attraction not found"}
+            Attraction not found
           </h2>
           <p className="text-gray-600">
-            {loading
-              ? "Please wait while we fetch the attraction details..."
-              : "The attraction you're looking for doesn't exist or there was an error loading the data."}
+            The attraction you&apos;re looking for doesn&apos;t exist or there was an error loading the data.
           </p>
-          {!loading && (
-            <button
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
-            >
-              Try Again
-            </button>
-          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -1133,6 +1127,7 @@ const AttractionBookingPage = ({
                 selectedDate={selectedDate}
                 onDateChange={handleVisitDateChange}
                 isDateDisabled={isDateDisabled}
+                ticketsLoading={ticketsLoading}
                 ticketPrices={ticketData?.attraction_ticket_type_prices}
                 adultChildTickets={adultChildTickets}
                 expandedTicketType={expandedTicketType}
@@ -1407,14 +1402,6 @@ const AttractionBookingPage = ({
                       <div className="mt-3">
                         <PaymentTrustPanel compact />
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleBack}
-                        className="fi-inline mx-auto mt-2 flex text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
-                      >
-                        <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
-                        <span>Edit ticket selection</span>
-                      </button>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import PageLoader from "@/components/loading/PageLoader";
 
 export default function Loading() {
-  return <PageLoader message="Loading attraction details..." />;
+  return <PageLoader message="Loading activity details..." />;
 }

@@ -4,6 +4,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import EventTicketOptionCard from "@/app/events/[id]/booking/EventTicketOptionCard";
 import RichTextContent from "@/components/common/RichTextContent";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 function AccordionChevron({ expanded }) {
   return (
@@ -31,6 +32,7 @@ export default function AttractionTicketSelectionStep({
   selectedDate,
   onDateChange,
   isDateDisabled,
+  ticketsLoading = false,
   ticketPrices,
   adultChildTickets,
   expandedTicketType,
@@ -121,7 +123,10 @@ export default function AttractionTicketSelectionStep({
         </div>
 
         {/* Ticket types */}
-        {ticketPrices?.map((ticket) => {
+        {ticketsLoading ? (
+          <SectionLoader message="Loading tickets for selected date..." />
+        ) : ticketPrices?.length ? (
+        ticketPrices.map((ticket) => {
           const ticketTypeId = ticket.attraction_ticket_type_id;
           const ticketName =
             ticket.attraction_ticket_type?.attraction_ticket_type_master?.name ||
@@ -245,7 +250,10 @@ export default function AttractionTicketSelectionStep({
               ) : null}
             </div>
           );
-        })}
+        })
+        ) : (
+          <SectionLoader message="No tickets available for this date." className="py-8" />
+        )}
 
         {getTotalSelectedTickets() === 0 ? (
           <p className="py-1 text-center text-[11px] text-gray-400">

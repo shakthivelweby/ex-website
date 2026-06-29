@@ -40,6 +40,15 @@ function formatCurrency(amount) {
   })}`;
 }
 
+function shouldShowCancellationPolicy(text) {
+  if (!text || typeof text !== "string") return false;
+  const normalized = text.trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.includes("lorem ipsum")) return false;
+  if (normalized.includes("standard dummy")) return false;
+  return true;
+}
+
 function TicketPerforation({ className = "" }) {
   return (
     <div className={`relative h-6 ${className}`} aria-hidden="true">
@@ -368,7 +377,7 @@ export default function BookingTicket({
             </p>
           </div>
 
-          {ticket?.cancellation_policy && (
+          {shouldShowCancellationPolicy(ticket?.cancellation_policy) && (
             <div className="mx-4 mb-4 rounded-xl bg-gray-100 px-4 py-3 text-center text-xs leading-relaxed text-gray-600 dark:bg-gray-800 dark:text-gray-300 sm:mx-5">
               {ticket.cancellation_policy}
             </div>

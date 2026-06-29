@@ -12,6 +12,7 @@ import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
 } from "@/utils/closeoutUtils";
+import InlineSpinner from "@/components/loading/InlineSpinner";
 
 function applyAdminChargeOnly(amountRaw) {
   const amount = Number(amountRaw || 0);
@@ -85,6 +86,7 @@ const Form = ({
 }) => {
   const { isNavigating, navigate } = useNavigateWithLoading();
   const [isLoading, setIsLoading] = useState(false);
+  const [pricesLoading, setPricesLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState(propSelectedTickets || {});
   const [totalPrice, setTotalPrice] = useState(propTotalPrice || 0);
   const [selectedDate, setSelectedDate] = useState(attractionDetails?.selectedDate || "");
@@ -121,12 +123,15 @@ const Form = ({
 
     localStorage.setItem(`attraction_${attractionDetails.id}_selectedDate`, dateString);
     try {
+      setPricesLoading(true);
       const response = await getTicketPricesForDate(attractionDetails.id, dateString);
       if (response?.data?.ticket_prices) {
         setTicketPrices(response.data.ticket_prices);
       }
     } catch (error) {
       console.error("Error fetching date-specific pricing:", error);
+    } finally {
+      setPricesLoading(false);
     }
   };
 
@@ -196,7 +201,15 @@ const Form = ({
         </div>
 
         <div className="border-b border-gray-100 px-4 py-3.5">
-          <p className="mb-2 text-xs font-semibold text-gray-900">Visit date</p>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-gray-900">Visit date</p>
+            {pricesLoading ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                <InlineSpinner className="h-3.5 w-3.5 text-primary-500" />
+                Updating prices…
+              </span>
+            ) : null}
+          </div>
           {isMobilePopup ? (
             <DatePicker
               selected={visitDateObj}

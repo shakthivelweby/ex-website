@@ -10,6 +10,7 @@ import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/Paym
 import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
 import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import Button from "@/components/common/Button";
+import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { createOrder, verifyPayment, paymentFailure, reserveRentalSlot, cancelRentalReservation } from "./service";
 import { RENTAL_MIN_BOOKING_HOURS_DEFAULT, RENTAL_MIN_BILLING_HOURS } from "../../rentals/rentalBookingConstants";
@@ -23,12 +24,21 @@ import {
 } from "../../rentals/rentalBookingDraft";
 import { applyRentalAdminChargeOnly, computeRentalBookingMonetaryBreakdown, rentalCatalogPricingBasis, rentalDailyRateWithAdmin, computeBillingDaysCeilFromParts, resolveRentalWindowPricing, rentalWindowPeriodSubtotalForDisplay } from "../../rentals/rentalPricingCalc";
 import { hasValidAuthSession, getLoggedInUserEmail } from "@/utils/authSession";
+import PageLoader from "@/components/loading/PageLoader";
 
 const money = (v) => {
   const n = Number(v || 0);
   if (!Number.isFinite(n)) return "0.00";
   return n.toFixed(2);
 };
+
+function getRentalPayButtonLabel({ payChoice, canPayAdvance, selectedPayAmount }) {
+  const amount = money(selectedPayAmount);
+  if (payChoice === "advance" && canPayAdvance) {
+    return `Pay ₹${amount} now`;
+  }
+  return `Pay ₹${amount}`;
+}
 
 const getPaymentErrorPayload = (payRes) => {
   const code = payRes?.error?.code;
@@ -745,7 +755,7 @@ export default function RentalCheckoutPage() {
         description: `Rental booking for ${rental?.title || "rental"}`,
         orderId: orderRes?.data?.order_id,
         key: orderRes?.data?.key,
-        email: (() => {
+        email: getLoggedInUserEmail() || (() => {
           try {
             const u = JSON.parse(localStorage.getItem("user") || "null");
             return u?.email || "";
@@ -803,12 +813,35 @@ export default function RentalCheckoutPage() {
       setPaymentPhase("confirming");
       await new Promise((resolve) => setTimeout(resolve, 450));
 
-      const userEmail = getLoggedInUserEmail();
+      const userEmail =
+        getLoggedInUserEmail() ||
+        (() => {
+          try {
+            const u = JSON.parse(localStorage.getItem("user") || "null");
+            return u?.email || "";
+          } catch (_) {
+            return "";
+          }
+        })();
       const emailSent = Boolean(verifyRes?.data?.confirmation_email_sent);
+      const remainingBalance = Number(verifyRes?.data?.remaining_balance ?? balanceAmount);
+      const isFullyPaid = Boolean(
+        verifyRes?.data?.is_fully_paid ?? remainingBalance <= 0.01
+      );
       setPaymentPhase(null);
       setSuccessMessage({
-        title: "You're all set!",
-        message: "Your rental has been booked successfully.",
+        title: isFullyPaid ? "You're all set!" : "Advance payment received",
+        message: isFullyPaid
+          ? emailSent
+            ? "Your rental has been booked successfully."
+            : userEmail
+              ? "Your rental has been booked successfully. We'll email your confirmation shortly."
+              : "Your rental has been booked successfully."
+          : emailSent
+            ? `₹${money(remainingBalance)} is due before pickup. A confirmation email has been sent to your inbox.`
+            : userEmail
+              ? `₹${money(remainingBalance)} is due before pickup. We'll email your confirmation shortly.`
+              : `₹${money(remainingBalance)} is due before pickup.`,
         emailSent,
         userEmail,
         rentalTitle: rental?.title || "Rental",
@@ -854,11 +887,7 @@ export default function RentalCheckoutPage() {
   }
 
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 pt-28 pb-10 text-gray-600">
-        Loading checkout…
-      </div>
-    );
+    return <PageLoader message="Loading checkout..." />;
   }
 
   if (!rental) {
@@ -1047,6 +1076,16 @@ export default function RentalCheckoutPage() {
             </div>
           </div>
 
+          <div className="mt-4 space-y-3">
+            <PaymentTrustPanel />
+            <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3.5">
+              <p className="text-xs leading-relaxed text-blue-900">
+                <i className="fi fi-rr-envelope relative top-0 mr-1.5" aria-hidden="true" />
+                You&apos;ll receive an instant booking confirmation email after payment.
+              </p>
+            </div>
+          </div>
+
           <div className="mt-5 flex flex-col sm:flex-row gap-3">
             <button
               type="button"
@@ -1062,9 +1101,18 @@ export default function RentalCheckoutPage() {
               disabled={!reserveReady || !reservationBookingId}
               isLoading={isPaying || reserving}
               className="!rounded-xl !py-2.5 !px-4 !text-sm !font-semibold w-full sm:w-auto"
+              icon={<i className="fi fi-rr-lock" aria-hidden="true" />}
             >
-              {reserving ? "Reserving slot…" : isPaying ? "Processing…" : "Continue to payment"}
+              {reserving
+                ? "Reserving slot…"
+                : isPaying
+                  ? "Processing…"
+                  : getRentalPayButtonLabel({ payChoice, canPayAdvance, selectedPayAmount })}
             </Button>
+          </div>
+
+          <div className="mt-3">
+            <PaymentTrustPanel compact />
           </div>
 
           {reserving ? (

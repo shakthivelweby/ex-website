@@ -5,6 +5,7 @@ import Popup from "@/components/Popup";
 import Button from "@/components/common/Button";
 import RichTextContent from "@/components/common/RichTextContent";
 import { getDetailsForBooking } from "./service";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 const TicketSelectionPopup = ({
   isOpen,
@@ -127,9 +128,7 @@ const TicketSelectionPopup = ({
         title="Select Tickets"
         pos="bottom"
       >
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-        </div>
+        <SectionLoader message="Loading tickets..." />
       </Popup>
     );
   }

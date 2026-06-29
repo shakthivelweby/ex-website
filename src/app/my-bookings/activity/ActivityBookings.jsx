@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Button from "@/components/common/Button";
 import { getActivityBookings } from "./service";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 function ticketTypeId(row) {
   return row?.activity_ticket_type_id ?? row?.activityTicketTypeId;
@@ -227,8 +228,8 @@ const ActivityBookings = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[400px] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      <div className="min-h-[400px] bg-white">
+        <SectionLoader message="Loading activity bookings..." />
       </div>
     );
   }

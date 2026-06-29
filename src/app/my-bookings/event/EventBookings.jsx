@@ -9,6 +9,7 @@ import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { getPaymentErrorPayload } from "@/utils/paymentCheckoutUi";
 import { useQuery } from "@tanstack/react-query";
+import SectionLoader from "@/components/loading/SectionLoader";
 
 const EventBookings = () => {
   const router = useRouter();
@@ -144,8 +145,8 @@ const EventBookings = () => {
 
   if (eventBookingsLoading) {
     return (
-      <div className="min-h-[400px] bg-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-[400px] bg-white">
+        <SectionLoader message="Loading event bookings..." />
       </div>
     );
   }

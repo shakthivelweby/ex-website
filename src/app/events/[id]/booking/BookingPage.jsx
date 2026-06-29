@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getDetailsForBooking } from "../service";
 import { eventInfo } from "../service";
 import Button from "@/components/common/Button";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 import EventTicketOptionCard from "./EventTicketOptionCard";
 import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
 import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
@@ -878,11 +879,7 @@ const BookingPage = ({ eventId }) => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <BookingPageSkeleton />;
   }
 
   if (!eventData || !bookingData) {
@@ -1410,14 +1407,6 @@ const BookingPage = ({ eventId }) => {
                       <div className="mt-3">
                         <PaymentTrustPanel compact />
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleBack}
-                        className="fi-inline mx-auto mt-2 flex text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
-                      >
-                        <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
-                        <span>Edit ticket selection</span>
-                      </button>
                     </div>
                   )}
                 </div>

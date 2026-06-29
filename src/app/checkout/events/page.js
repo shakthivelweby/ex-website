@@ -11,6 +11,7 @@ import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import { book, createOrder, verifyPayment, paymentFailure } from "./service";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import Button from "@/components/common/Button";
+import PageLoader from "@/components/loading/PageLoader";
 
 export default function EventCheckoutPage() {
   const router = useRouter();
@@ -405,11 +406,7 @@ export default function EventCheckoutPage() {
   };
 
   if (isLoadingData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-      </div>
-    );
+    return <PageLoader message="Loading checkout..." />;
   }
 
   if (error) {

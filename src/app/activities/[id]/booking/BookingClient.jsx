@@ -23,6 +23,7 @@ import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
 import { getLoggedInUserEmail } from "@/utils/authSession";
 import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
 import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
+import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";
@@ -1242,12 +1243,8 @@ const BookingClient = ({ activityId }) => {
     }
   };
 
-  if (!activityDetails) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-      </div>
-    );
+  if (!sessionHydrated || !activityDetails) {
+    return <BookingPageSkeleton />;
   }
 
   return (

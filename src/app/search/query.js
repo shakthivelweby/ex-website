@@ -71,3 +71,12 @@ export const useActivityCategories = (enabled = true) => {
     staleTime: 1000 * 60 * 30,
   });
 };
+
+export const useRentalCategories = (enabled = true) => {
+  return useQuery({
+    queryKey: ["rental-categories"],
+    queryFn: () => searchService.getRentalCategories(),
+    enabled,
+    staleTime: 1000 * 60 * 30,
+  });
+};

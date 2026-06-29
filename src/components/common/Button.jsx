@@ -73,15 +73,13 @@ const Button = ({
           <LoadingSpinner />
           <span>{loadingLabel ?? children}</span>
         </>
+      ) : icon ? (
+        <span className="fi-inline items-center justify-center">
+          {icon}
+          <span>{children}</span>
+        </span>
       ) : (
-        <>
-          {icon ? (
-            <span className="inline-flex shrink-0 items-center justify-center leading-none">
-              {icon}
-            </span>
-          ) : null}
-          {children}
-        </>
+        children
       )}
     </button>
   );

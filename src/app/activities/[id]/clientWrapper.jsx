@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/common/Button";
 import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
@@ -9,10 +10,62 @@ import Form from "./Form";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import RichTextContent from "@/components/common/RichTextContent";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
-import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
+import DetailSubHeader, { DETAIL_SIDEBAR_STICKY_TOP } from "@/components/layout/DetailSubHeader";
+
+function SectionCard({ title, children, className = "" }) {
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] sm:p-6 ${className}`}
+    >
+      {title ? (
+        <h2 className="mb-3 text-base font-semibold tracking-tight text-gray-900">{title}</h2>
+      ) : null}
+      {children}
+    </section>
+  );
+}
+
+function GuideItem({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3.5">
+      <span className="fi-box h-9 w-9 shrink-0 rounded-lg border border-gray-200 bg-white text-primary-600">
+        <i className={`${icon} text-sm`} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-gray-500">{label}</p>
+        <p className="mt-0.5 text-sm font-semibold text-gray-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function formatTicketPrice(ticket) {
+  const base = Number(ticket?.price || ticket?.adult_price || 0);
+  if (!Number.isFinite(base) || base <= 0) return null;
+  return Math.round(base * 100) / 100;
+}
+
+function TicketTabButton({ active, onClick, icon, label }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-2 text-xs font-semibold transition-colors ${
+        active
+          ? "bg-white text-gray-900 shadow-sm"
+          : "text-gray-500 hover:text-gray-800"
+      }`}
+    >
+      <span className="fi-box h-4 w-4 shrink-0">
+        <i className={`${icon} text-[11px]`} aria-hidden="true" />
+      </span>
+      <span className="leading-none">{label}</span>
+    </button>
+  );
+}
 
 const ActivityDetailPage = ({ activityDetails }) => {
-  const { isNavigating, navigate } = useNavigateWithLoading();
+  const router = useRouter();
   const [showMobileForm, setShowMobileForm] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   // selectedTicketId = ticket chosen for booking/price
@@ -31,8 +84,6 @@ const ActivityDetailPage = ({ activityDetails }) => {
   const allImages = activityDetails.gallery && activityDetails.gallery.length > 0
     ? [{ image: activityDetails.image }, ...activityDetails.gallery]
     : [{ image: activityDetails.image }];
-
-  const currentImage = allImages[selectedImageIndex]?.image || activityDetails.image;
 
   // Dummy content functions
   const getDummyBriefDetails = (ticket) => {
@@ -310,13 +361,6 @@ const ActivityDetailPage = ({ activityDetails }) => {
     setTicketTabs((prev) => ({ ...prev, [ticketId]: tab }));
   };
 
-  // By default, expand the first ticket (once data is available)
-  useEffect(() => {
-    const firstId = activityDetails?.ticketOptions?.[0]?.id;
-    if (!firstId) return;
-    setExpandedTicketId((prev) => prev ?? firstId);
-  }, [activityDetails?.ticketOptions]);
-
   // By default, select the first ticket option (so booking can proceed)
   useEffect(() => {
     const options = activityDetails?.ticketOptions || [];
@@ -359,23 +403,35 @@ const ActivityDetailPage = ({ activityDetails }) => {
     </div>`;
   };
 
-  const handleMobileBooking = () => {
-    if (!enquireOnly) {
-      navigate(`/activities/${activityDetails.id}/booking`);
+  const handleMobileBooking = () => setShowMobileForm(true);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: activityDetails.title,
+      text: activityDetails.description?.replace(/<[^>]+>/g, "").slice(0, 120),
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        /* cancelled */
+      }
     } else {
-      setShowMobileForm(true);
+      await navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
     }
   };
 
+  const galleryImages = activityDetails.gallery || [];
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#f8f9fb] pb-28 lg:pb-12">
       <ImageViewer
-        images={
-          activityDetails.gallery?.map((img) => ({
-            image_url: img.image,
-            image_name: `Activity gallery image`,
-          })) || []
-        }
+        images={allImages.map((img, index) => ({
+          image_url: img.image,
+          image_name: `${activityDetails.title} - ${index + 1}`,
+        }))}
         isOpen={isImageViewerOpen}
         onClose={() => setIsImageViewerOpen(false)}
       />
@@ -384,11 +440,11 @@ const ActivityDetailPage = ({ activityDetails }) => {
       <Popup
         isOpen={showMobileForm}
         onClose={() => setShowMobileForm(false)}
-        title="Book Your Activity"
+        title="Book your activity"
         pos="bottom"
-        draggable={true}
+        draggable
         className="lg:hidden w-full rounded-t-3xl"
-        pannelStyle="h-[75vh]"
+        pannelStyle="h-[78vh]"
       >
         <div className="flex-1 overflow-y-auto p-4">
           <Form
@@ -542,666 +598,523 @@ const ActivityDetailPage = ({ activityDetails }) => {
         </div>
       </Popup>
 
-      {/* Hero Section */}
-      <div className="w-full bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-6 mt-10">
-          {/* Header */}
-          <div className="mb-6">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
-                    {activityDetails.title || "Untitled Activity"}
-                  </h1>
-                </div>
+      <DetailSubHeader
+        backLabel="Activities"
+        onBack={() => router.back()}
+        onShare={handleShare}
+        shareAriaLabel="Share activity"
+      />
 
-                {(activityDetails.popular || activityDetails.recommended) && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {activityDetails.popular && (
-                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                        Popular
-                      </span>
-                    )}
-                    {activityDetails.recommended && (
-                      <span className="inline-flex items-center gap-2 pl-2.5 pr-4 py-1 text-[11px] font-semibold text-gray-900 bg-white border border-black/10 shadow-sm whitespace-nowrap rounded-l-md rounded-r-sm max-w-[220px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600" />
-                        <span className="truncate">ExploreWorld Recommended</span>
-                      </span>
-                    )}
+      <DetailPageLayout
+        containerClassName="mt-6"
+        stickyTop={DETAIL_SIDEBAR_STICKY_TOP}
+        sidebar={
+          <Form
+            activityDetails={activityDetails}
+            enquireOnly={enquireOnly}
+            selectedTicket={
+              activityDetails.ticketOptions?.find((ticket) => ticket.id === selectedTicketId) || null
+            }
+          />
+        }
+      >
+        <div className="space-y-6 lg:space-y-8">
+          <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+            <div className="w-full">
+              <div className="lg:hidden relative">
+                <div className="relative h-[min(52vw,320px)] overflow-hidden">
+                  <div
+                    className="flex h-full transition-transform duration-500 ease-out"
+                    style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                  >
+                    {allImages.map((image, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className="relative block h-full min-w-full"
+                        onClick={() => {
+                          setSelectedImageIndex(index);
+                          setIsImageViewerOpen(true);
+                        }}
+                      >
+                        <Image
+                          src={image.image}
+                          alt={`${activityDetails.title} - ${index + 1}`}
+                          fill
+                          className="object-cover"
+                          sizes="100vw"
+                          priority={index === 0}
+                        />
+                      </button>
+                    ))}
                   </div>
-                )}
+                  {allImages.length > 1 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentSlide((prev) => (prev === 0 ? allImages.length - 1 : prev - 1))
+                        }
+                        className="absolute left-2 top-1/2 z-10 -translate-y-1/2 fi-box h-9 w-9 rounded-full bg-white/95 text-gray-800 shadow-md"
+                      >
+                        <i className="fi fi-rr-angle-left text-sm" aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCurrentSlide((prev) => (prev === allImages.length - 1 ? 0 : prev + 1))
+                        }
+                        className="absolute right-2 top-1/2 z-10 -translate-y-1/2 fi-box h-9 w-9 rounded-full bg-white/95 text-gray-800 shadow-md"
+                      >
+                        <i className="fi fi-rr-angle-right text-sm" aria-hidden="true" />
+                      </button>
+                      <span className="absolute right-3 top-3 rounded-full bg-black/50 px-2.5 py-0.5 text-xs text-white">
+                        {currentSlide + 1}/{allImages.length}
+                      </span>
+                    </>
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 via-transparent to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-left pointer-events-none">
+                    {(activityDetails.popular || activityDetails.recommended) && (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {activityDetails.popular ? (
+                          <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                            Popular
+                          </span>
+                        ) : null}
+                        {activityDetails.recommended ? (
+                          <span className="rounded-full border border-white/20 bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+                            Recommended
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                    <h1 className="text-xl font-bold leading-tight text-white">
+                      {activityDetails.title}
+                    </h1>
+                    {activityDetails.location ? (
+                      <p className="fi-inline mt-1 text-sm text-white/90">
+                        <i className="fi fi-rr-marker text-xs" aria-hidden="true" />
+                        <span>{activityDetails.location}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
-                {Number(activityDetails.rating) > 0 && (
-                  <div className="flex items-center gap-2">
-                    <i className="fi fi-sr-star text-yellow-400 text-sm"></i>
-                    <span className="font-medium text-gray-800">
-                      {Number(activityDetails.rating).toFixed(1)}
-                    </span>
-                    <span className="text-gray-500">
-                      ({Number(activityDetails.reviewCount || 0)} reviews)
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Image Gallery */}
-          <div className="w-full mb-8">
-            {/* Mobile Carousel - Hidden on desktop */}
-            <div className="lg:hidden relative">
-              <div className="relative h-[400px] rounded-xl overflow-hidden">
-                <div 
-                  className="flex transition-transform duration-500 ease-out h-full"
-                  style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-                >
-                  {allImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className="min-w-full h-full relative cursor-pointer"
-                      onClick={() => {
-                        setSelectedImageIndex(index);
-                        setIsImageViewerOpen(true);
-                      }}
-                    >
-                      <Image
-                        src={image.image}
-                        alt={`${activityDetails.title} - Image ${index + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="100vw"
-                        priority={index === 0}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Navigation Arrows */}
-                {allImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCurrentSlide((prev) => 
-                          prev === 0 ? allImages.length - 1 : prev - 1
-                        );
-                      }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all z-10"
-                    >
-                      <i className="fi fi-rr-angle-left text-gray-800"></i>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCurrentSlide((prev) => 
-                          prev === allImages.length - 1 ? 0 : prev + 1
-                        );
-                      }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 hover:bg-white shadow-lg flex items-center justify-center transition-all z-10"
-                    >
-                      <i className="fi fi-rr-angle-right text-gray-800"></i>
-                    </button>
-                  </>
-                )}
-
-
-                {/* Image Counter */}
-                <div className="absolute top-4 right-5 bg-black/50 text-white px-3 py-1 rounded-full text-sm z-10">
-                  {currentSlide + 1} / {allImages.length}
-                </div>
-
-                {/* Show All Photos Button */}
+              <div className="hidden lg:grid grid-cols-3 gap-1.5 p-1.5 h-[420px]">
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  type="button"
+                  className="relative col-span-2 overflow-hidden rounded-l-xl"
+                  onClick={() => {
+                    setSelectedImageIndex(0);
                     setIsImageViewerOpen(true);
                   }}
-                  className="absolute bottom-3 right-3 bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium transition-all z-10"
                 >
-                  <i className="fi fi-rr-apps"></i>
-                  <span>Show all photos</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Desktop Grid - Hidden on mobile */}
-            <div className="hidden lg:grid grid-cols-3 gap-2 h-[500px]">
-              {/* Main Large Image - Left Side (2/3 width) */}
-              <div 
-                className="relative col-span-2 rounded-l-xl overflow-hidden cursor-pointer group"
-                onClick={() => {
-                  setSelectedImageIndex(0);
-                  setIsImageViewerOpen(true);
-                }}
-              >
-                {allImages[0]?.image ? (
-                  <>
+                  {allImages[0]?.image ? (
                     <Image
                       src={allImages[0].image}
                       alt={activityDetails.title}
                       fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="66vw"
+                      className="object-cover transition-transform duration-300 hover:scale-105"
+                      sizes="50vw"
                       priority
                     />
-                    {/* Overlay on hover */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <i className="fi fi-rr-zoom-in text-white text-3xl"></i>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <i className="fi fi-rr-image text-gray-400 text-4xl"></i>
+                  ) : null}
+                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/75 via-gray-900/10 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-5 text-left">
+                    {activityDetails.categoryName || activityDetails.categories?.[0] ? (
+                      <span className="mb-2 inline-flex rounded-full border border-white/20 bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+                        {activityDetails.categoryName || activityDetails.categories[0]}
+                      </span>
+                    ) : null}
+                    <h1 className="text-2xl font-bold leading-tight text-white sm:text-3xl">
+                      {activityDetails.title}
+                    </h1>
+                    {activityDetails.location ? (
+                      <p className="fi-inline mt-2 text-sm text-white/90">
+                        <i className="fi fi-rr-marker text-xs" aria-hidden="true" />
+                        <span>{activityDetails.location}</span>
+                      </p>
+                    ) : null}
                   </div>
-                )}
-              </div>
-
-              {/* Right Side Grid - 1/3 width */}
-              <div className="grid grid-cols-1 grid-rows-2 gap-2">
-                {/* Top Right Image */}
-                {allImages[1]?.image && (
-                  <div
-                    className="relative rounded-tr-xl overflow-hidden cursor-pointer group"
-                    onClick={() => {
-                      setSelectedImageIndex(1);
-                      setIsImageViewerOpen(true);
-                    }}
-                  >
-                    <Image
-                      src={allImages[1].image}
-                      alt={`${activityDetails.title} - Image 2`}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="33vw"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <i className="fi fi-rr-zoom-in text-white text-2xl"></i>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {/* Bottom Right Image with Show All overlay */}
-                {allImages[2]?.image && (
-                  <div
-                    className="relative rounded-br-xl overflow-hidden cursor-pointer group"
-                    onClick={() => {
-                      setSelectedImageIndex(2);
-                      setIsImageViewerOpen(true);
-                    }}
-                  >
-                    <Image
-                      src={allImages[2].image}
-                      alt={`${activityDetails.title} - Image 3`}
-                      fill
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      sizes="33vw"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <i className="fi fi-rr-zoom-in text-white text-2xl"></i>
-                      </div>
-                    </div>
-                    {/* Show All Button - If more than 3 images */}
-                    {allImages.length > 3 && (
-                      <div
-                        className="absolute inset-0 bg-black/60 hover:bg-black/70 transition-all duration-300 flex items-center justify-center cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsImageViewerOpen(true);
-                        }}
-                      >
-                        <div className="text-center text-white">
-                          <div className="text-3xl font-bold mb-1">
-                            +{allImages.length - 3}
-                          </div>
-                          <div className="text-sm font-medium">
-                            Show all photos
-                          </div>
+                </button>
+                <div className="grid grid-rows-2 gap-1.5">
+                  {allImages[1]?.image ? (
+                    <button
+                      type="button"
+                      className="relative overflow-hidden rounded-tr-xl"
+                      onClick={() => {
+                        setSelectedImageIndex(1);
+                        setIsImageViewerOpen(true);
+                      }}
+                    >
+                      <Image src={allImages[1].image} alt="" fill className="object-cover hover:scale-105 transition-transform" sizes="25vw" />
+                    </button>
+                  ) : null}
+                  {allImages[2]?.image ? (
+                    <button
+                      type="button"
+                      className="relative overflow-hidden rounded-br-xl"
+                      onClick={() => {
+                        setSelectedImageIndex(allImages.length > 3 ? 0 : 2);
+                        setIsImageViewerOpen(true);
+                      }}
+                    >
+                      <Image src={allImages[2].image} alt="" fill className="object-cover hover:scale-105 transition-transform" sizes="25vw" />
+                      {allImages.length > 3 ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 text-white">
+                          <span className="text-2xl font-bold">+{allImages.length - 3}</span>
+                          <span className="text-xs font-medium">Show all</span>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      ) : null}
+                    </button>
+                  ) : null}
+                </div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 border-t border-gray-100 p-4 sm:grid-cols-3 sm:p-5">
+              <GuideItem
+                icon="fi fi-rr-clock"
+                label="Duration"
+                value={activityDetails.activityGuide?.duration || "TBD"}
+              />
+              {(activityDetails.categories || []).length > 0 ? (
+                <GuideItem
+                  icon="fi fi-rr-apps"
+                  label="Category"
+                  value={(activityDetails.categories || []).join(", ")}
+                />
+              ) : null}
+              {activityDetails.activityGuide?.layout ? (
+                <GuideItem
+                  icon="fi fi-rr-home"
+                  label="Setting"
+                  value={activityDetails.activityGuide.layout}
+                />
+              ) : null}
             </div>
           </div>
 
-          <DetailPageLayout
-            containerClassName="!px-0 pb-0"
-            stickyTop="top-20"
-            sidebar={
-              <Form
-                activityDetails={activityDetails}
-                enquireOnly={enquireOnly}
-                selectedTicket={
-                  activityDetails.ticketOptions?.find(
-                    (ticket) => ticket.id === selectedTicketId
-                  ) || null
-                }
-              />
-            }
-          >
-            <div className="space-y-8">
-              {/* Activity Details Sections */}
-              <div>
-                {/* Activity Guide */}
-                <div className="bg-white mb-12 border-b border-gray-200 pb-8">
-                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                    Activity Guide
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-4">
-                      <i className="fi fi-rr-clock text-xl text-primary-500"></i>
-                      <div>
-                        <p className="text-sm text-gray-500">Duration</p>
-                        <p className="font-medium text-sm text-gray-700">
-                          {activityDetails.activityGuide.duration}
-                        </p>
-                      </div>
-                    </div>
+          {activityDetails.description ? (
+            <SectionCard title="About this activity">
+              <RichTextContent html={activityDetails.description} />
+            </SectionCard>
+          ) : null}
 
-                    {(activityDetails.categories || []).length > 0 && (
-                      <div className="flex items-start gap-4">
-                        <i className="fi fi-rr-apps text-xl text-primary-500"></i>
-                        <div>
-                          <p className="text-sm text-gray-500">Category</p>
-                          <p className="font-medium text-sm text-gray-700">
-                            {(activityDetails.categories || []).join(", ")}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+          {galleryImages.length > 0 ? (
+            <SectionCard title="Gallery">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+                {galleryImages.slice(0, 6).map((image, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      setSelectedImageIndex(index + 1);
+                      setIsImageViewerOpen(true);
+                    }}
+                    className="group relative aspect-square overflow-hidden rounded-xl bg-gray-100"
+                  >
+                    <Image
+                      src={image.image}
+                      alt={`Gallery ${index + 1}`}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      sizes="(max-width: 640px) 50vw, 25vw"
+                    />
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
+          ) : null}
 
-                    {activityDetails.location && (
-                      <div className="flex items-start gap-4">
-                        <i className="fi fi-rr-marker text-xl text-primary-500"></i>
-                        <div>
-                          <p className="text-sm text-gray-500">Location</p>
-                          <p className="font-medium text-sm text-gray-700">
-                            {activityDetails.location}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {activityDetails.address && (
-                      <div className="flex items-start gap-4">
-                        <i className="fi fi-rr-map text-xl text-primary-500"></i>
-                        <div>
-                          <p className="text-sm text-gray-500">Address</p>
-                          <p className="font-medium text-sm text-gray-700">
-                            {activityDetails.address}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* About Section */}
-                <div className="bg-white rounded-xl mb-14">
-                  <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                    About the Activity
-                  </h2>
-                  <div className="text-gray-700 leading-relaxed text-sm">
-                    {activityDetails.description ? (
-                      <RichTextContent html={activityDetails.description} />
-                    ) : (
-                      <p>No description available.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Gallery Section */}
-                {activityDetails.gallery && activityDetails.gallery.length > 0 && (
-                  <div className="bg-white rounded-xl mb-14">
-                    <h2 className="text-base font-medium text-gray-700 mb-6 tracking-tight">
-                      Activity Gallery
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {activityDetails.gallery.map((image, index) => {
-                        // Create a dynamic layout with fixed heights for better object-cover
-                        const getImageClass = () => {
-                          if (index === 0) return "col-span-2 row-span-2"; // Large featured image
-                          if (index === 1) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 2) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 3) return "col-span-2 row-span-1"; // Wide image
-                          if (index === 4) return "col-span-1 row-span-1"; // Regular size
-                          if (index === 5) return "col-span-1 row-span-2"; // Tall image
-                          if (index === 6) return "col-span-1 row-span-1"; // Regular size
-                          return "col-span-1 row-span-1"; // Default for remaining images
-                        };
-
-                        const getHeight = () => {
-                          if (index === 0) return "h-[300px] md:h-[400px]"; // Large featured
-                          if (index === 3) return "h-[150px] md:h-[200px]"; // Wide
-                          if (index === 5) return "h-[300px] md:h-[400px]"; // Tall
-                          return "h-[150px] md:h-[200px]"; // Default regular
-                        };
-
-                        return (
-                          <div
-                            key={index}
-                            className={`relative ${getImageClass()} ${getHeight()} rounded-xl overflow-hidden group cursor-pointer`}
-                            onClick={() => setIsImageViewerOpen(true)}
-                          >
-                            <Image
-                              src={image.image}
-                              alt={`Activity gallery image ${index + 1}`}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-all duration-500 ease-out"
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                            />
-                            {/* Overlay on hover */}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <i className="fi fi-rr-zoom-in text-white text-2xl"></i>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Activity Tickets Options Section */}
-                {activityDetails.ticketOptions && activityDetails.ticketOptions.length > 0 && (
-                  <div className="bg-[#f5f5f5] p-3 sm:p-4 rounded-2xl mb-14">
-                    <h2 className="text-sm sm:text-base font-semibold text-gray-800 mb-4 tracking-tight">
-                      Activity Tickets Options
-                    </h2>
+          {activityDetails.ticketOptions && activityDetails.ticketOptions.length > 0 ? (
+            <SectionCard title="Choose your ticket">
                     <div className="space-y-2.5">
                       {activityDetails.ticketOptions.map((ticket, index) => {
                         const isSelected = selectedTicketId === ticket.id;
                         const isExpanded = expandedTicketId === ticket.id;
-                        const displayedFeatures = ticket.features?.slice(0, 3) || [];
                         const activeTab = getActiveTicketTab(ticket.id);
                         const hasInclusions = Array.isArray(ticket.inclusions) && ticket.inclusions.length > 0;
                         const hasExclusions = Array.isArray(ticket.exclusions) && ticket.exclusions.length > 0;
                         const hasItinerary = Array.isArray(ticket.itineraries) && ticket.itineraries.length > 0;
+                        const unitPrice = formatTicketPrice(ticket);
+                        const showStrikePrice =
+                          Number(ticket.originalPrice) > 0 &&
+                          Number(ticket.originalPrice) > Number(ticket.price || 0);
+                        const hasDetails = hasInclusions || hasExclusions || hasItinerary;
+                        const inclusionPreview = (ticket.inclusions || []).slice(0, 3);
+                        const ticketDescription = String(
+                          ticket.description || ticket.briefDetails || ""
+                        ).trim();
 
                         return (
-                          <div 
-                            key={ticket.id || index} 
-                            className={`border rounded-2xl p-3 sm:p-4 transition-all duration-200 ${
-                              isExpanded ? "bg-white border-primary-300 shadow-sm" : "bg-white border-gray-200 hover:border-gray-300"
+                          <article
+                            key={ticket.id || index}
+                            className={`overflow-hidden rounded-xl border transition-all ${
+                              isSelected
+                                ? "border-primary-500 bg-primary-50/30 ring-1 ring-primary-500/20"
+                                : "border-gray-200 bg-white hover:border-gray-300"
                             }`}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
-                              setExpandedTicketId((prev) => {
-                                const next = prev === ticket.id ? null : ticket.id;
-                                if (next === ticket.id) {
-                                  setActiveTicketTab(ticket.id, getActiveTicketTab(ticket.id));
-                                }
-                                return next;
-                              });
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                setExpandedTicketId((prev) => {
-                                  const next = prev === ticket.id ? null : ticket.id;
-                                  if (next === ticket.id) {
-                                    setActiveTicketTab(ticket.id, getActiveTicketTab(ticket.id));
-                                  }
-                                  return next;
-                                });
-                              }
-                            }}
                           >
-                            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center w-full">
-                              {/* Left Side - Main Heading */}
-                              <div className="flex-1 w-full lg:w-auto">
-                                <div className="flex items-start justify-between gap-3">
-                                  <h3 className="text-[15px] font-semibold text-gray-900 leading-snug">
-                                    {ticket.type || ticket.name}
-                                  </h3>
-                                  <div className="lg:hidden mt-0.5 text-gray-400">
-                                    <i className={`fi fi-rr-angle-small-${isExpanded ? "up" : "down"} text-lg`}></i>
-                                  </div>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5 mt-2">
-                                  {displayedFeatures.map((feature, featureIndex) => (
-                                    <span
-                                      key={featureIndex}
-                                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-200 text-[11px] font-medium text-gray-700"
-                                    >
-                                      <i className="fi fi-rr-check text-primary-600 text-[11px]"></i>
-                                      {typeof feature === 'string' ? feature : feature.name || feature}
-                                    </span>
-                                  ))}
-                                </div>
-
-                                {/* Show More Button */}
-                                {ticket.features && ticket.features.length > 3 && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedTicketForDetails(ticket);
-                                      setShowTicketDetailsPopup(true);
-                                    }}
-                                    onMouseDown={(e) => e.stopPropagation()}
-                                    className="mt-2 text-xs text-primary-700 hover:text-primary-800 font-semibold inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <span>Show More</span>
-                                    <i className="fi fi-br-angle-small-right text-xs"></i>
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Right Side - Price and Select Button */}
-                              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-2.5 w-full lg:w-auto lg:min-w-[170px]">
-                                {/* Price */}
-                                <div className="text-right">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                                      ₹
-                                      {(() => {
-                                        const base = Number(
-                                          ticket.price || ticket.adult_price || 0
-                                        );
-                                        return (Math.round(base * 100) / 100).toFixed(0);
-                                      })()}
-                                    </span>
-                                    {ticket.originalPrice && ticket.originalPrice > ticket.price && (
-                                      <span className="text-sm text-gray-500 line-through ml-1">
-                                        ₹{ticket.originalPrice}
-                                      </span>
-                                    )}
-                                    <span className="hidden lg:inline-flex items-center justify-center w-7 h-7 rounded-full border border-gray-200 bg-white text-gray-400 ml-2">
-                                      <i className={`fi fi-rr-angle-small-${isExpanded ? "up" : "down"} text-base`}></i>
-                                    </span>
-                                  </div>
-                                  {ticket.rateType === "pax" && (
-                                    <span className="text-xs text-gray-500">per person</span>
-                                  )}
-                                </div>
-
-                                {/* Select Button */}
+                            <div className="p-4">
+                              <div className="flex items-start gap-3">
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedTicketId(ticket.id);
-                                  }}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  className={`w-full sm:w-auto lg:w-full px-5 py-2 rounded-full font-semibold text-sm transition-all duration-200 cursor-pointer ${
+                                  type="button"
+                                  onClick={() => setSelectedTicketId(ticket.id)}
+                                  className={`fi-box mt-0.5 h-5 w-5 shrink-0 rounded-full border transition-colors ${
                                     isSelected
-                                      ? "bg-primary-600 text-white hover:bg-primary-700"
-                                      : "bg-primary-50 border border-primary-600 text-primary-700 hover:bg-primary-100"
+                                      ? "border-primary-600 bg-primary-600 text-white"
+                                      : "border-gray-300 bg-white text-transparent hover:border-primary-400"
                                   }`}
+                                  aria-label={isSelected ? "Selected ticket" : "Select ticket"}
+                                  aria-pressed={isSelected}
                                 >
-                                  {isSelected ? "Selected" : "Select"}
+                                  {isSelected ? (
+                                    <i className="fi fi-rr-check text-[10px]" aria-hidden="true" />
+                                  ) : null}
                                 </button>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <h3 className="text-base font-semibold text-gray-900">
+                                        {ticket.type || ticket.name}
+                                      </h3>
+                                      {!isExpanded && hasDetails ? (
+                                        <p className="mt-1 text-xs text-gray-500">
+                                          {[
+                                            hasInclusions
+                                              ? `${ticket.inclusions.length} inclusion${ticket.inclusions.length === 1 ? "" : "s"}`
+                                              : null,
+                                            hasExclusions
+                                              ? `${ticket.exclusions.length} exclusion${ticket.exclusions.length === 1 ? "" : "s"}`
+                                              : null,
+                                            hasItinerary
+                                              ? `${ticket.itineraries.length} stop${ticket.itineraries.length === 1 ? "" : "s"}`
+                                              : null,
+                                          ]
+                                            .filter(Boolean)
+                                            .join(" · ")}
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                      {unitPrice != null ? (
+                                        <>
+                                          <p className="text-xl font-bold tabular-nums text-gray-900">
+                                            ₹{unitPrice.toFixed(0)}
+                                          </p>
+                                          {showStrikePrice ? (
+                                            <p className="text-xs text-gray-400 line-through">
+                                              ₹{Number(ticket.originalPrice).toFixed(0)}
+                                            </p>
+                                          ) : null}
+                                          <p className="text-[11px] text-gray-500">
+                                            {ticket.rateType === "full" ? "per ticket" : "per person"}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <p className="text-sm font-medium text-gray-500">Price on request</p>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {!isExpanded && ticketDescription ? (
+                                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-600">
+                                      {ticketDescription.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}
+                                    </p>
+                                  ) : null}
+
+                                  {!isExpanded && inclusionPreview.length > 0 ? (
+                                    <div className="mt-3 flex flex-wrap gap-1.5">
+                                      {inclusionPreview.map((item, i) => (
+                                        <span
+                                          key={i}
+                                          className="inline-flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] text-gray-600"
+                                        >
+                                          <span className="fi-box h-3.5 w-3.5 shrink-0 text-primary-600">
+                                            <i className="fi fi-rr-check text-[9px]" aria-hidden="true" />
+                                          </span>
+                                          <span className="truncate">{item}</span>
+                                        </span>
+                                      ))}
+                                      {ticket.inclusions.length > 3 ? (
+                                        <span className="text-[11px] font-medium text-gray-400">
+                                          +{ticket.inclusions.length - 3} more
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+
+                                  {hasDetails ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setExpandedTicketId((prev) => (prev === ticket.id ? null : ticket.id));
+                                      }}
+                                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary-700 hover:text-primary-800"
+                                    >
+                                      <span>{isExpanded ? "Hide details" : "View inclusions & itinerary"}</span>
+                                      <span className="fi-box h-4 w-4 shrink-0">
+                                        <i
+                                          className={`fi fi-rr-angle-small-${isExpanded ? "up" : "down"} text-sm`}
+                                          aria-hidden="true"
+                                        />
+                                      </span>
+                                    </button>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
 
-                            {/* Ticket-level tabs */}
-                            {isExpanded && (
-                              <div
-                                className="mt-3 bg-white rounded-2xl border border-gray-200 overflow-hidden"
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseDown={(e) => e.stopPropagation()}
-                              >
-                                <div className="p-2 bg-gray-50 border-b border-gray-200">
-                                  <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveTicketTab(ticket.id, "inclusions");
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
-                                      activeTab === "inclusions"
-                                        ? "bg-primary-600 text-white"
-                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
-                                    }`}
-                                  >
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <i className="fi fi-rr-check text-[11px]"></i>
-                                      Inclusions
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveTicketTab(ticket.id, "exclusions");
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
-                                      activeTab === "exclusions"
-                                        ? "bg-primary-600 text-white"
-                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
-                                    }`}
-                                  >
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <i className="fi fi-rr-cross-small text-[11px]"></i>
-                                      Exclusions
-                                    </span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setActiveTicketTab(ticket.id, "itinerary");
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors ${
-                                      activeTab === "itinerary"
-                                        ? "bg-primary-600 text-white"
-                                        : "text-gray-700 hover:bg-white border border-gray-200 bg-white"
-                                    }`}
-                                  >
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <i className="fi fi-rr-route text-[11px]"></i>
-                                      Itinerary
-                                    </span>
-                                  </button>
-                                  </div>
+                            {isExpanded ? (
+                              <div className="border-t border-gray-200/80 bg-white px-4 pb-4 pt-3">
+                                <div className="mb-3 grid grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1">
+                                  <TicketTabButton
+                                    active={activeTab === "inclusions"}
+                                    onClick={() => setActiveTicketTab(ticket.id, "inclusions")}
+                                    icon="fi fi-rr-check"
+                                    label="Includes"
+                                  />
+                                  <TicketTabButton
+                                    active={activeTab === "exclusions"}
+                                    onClick={() => setActiveTicketTab(ticket.id, "exclusions")}
+                                    icon="fi fi-rr-cross-small"
+                                    label="Excludes"
+                                  />
+                                  <TicketTabButton
+                                    active={activeTab === "itinerary"}
+                                    onClick={() => setActiveTicketTab(ticket.id, "itinerary")}
+                                    icon="fi fi-rr-route"
+                                    label="Itinerary"
+                                  />
                                 </div>
 
-                                <div className="p-3 sm:p-4">
-                                  {activeTab === "inclusions" && (
-                                    <div className="space-y-2">
-                                      {hasInclusions ? (
-                                        <ul className="space-y-2">
-                                          {ticket.inclusions.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
-                                              <span className="mt-0.5 inline-flex w-5 h-5 items-center justify-center rounded-full bg-primary-50 border border-primary-100 text-primary-700 shrink-0">
-                                                <i className="fi fi-rr-check text-[10px]"></i>
-                                              </span>
-                                              <span className="leading-snug">{item}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      ) : (
-                                        <div className="text-sm text-gray-500">
-                                          No inclusions listed for this ticket.
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                {activeTab === "inclusions" ? (
+                                  hasInclusions ? (
+                                    <ul className="grid gap-2 sm:grid-cols-2">
+                                      {ticket.inclusions.map((item, i) => (
+                                        <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                                          <span className="fi-box h-5 w-5 shrink-0 rounded-full border border-primary-100 bg-primary-50 text-primary-700">
+                                            <i className="fi fi-rr-check text-[9px]" aria-hidden="true" />
+                                          </span>
+                                          <span className="leading-snug">{item}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">No inclusions listed for this ticket.</p>
+                                  )
+                                ) : null}
 
-                                  {activeTab === "exclusions" && (
-                                    <div className="space-y-2">
-                                      {hasExclusions ? (
-                                        <ul className="space-y-2">
-                                          {ticket.exclusions.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
-                                              <span className="mt-0.5 inline-flex w-5 h-5 items-center justify-center rounded-full bg-red-50 border border-red-100 text-red-600 shrink-0">
-                                                <i className="fi fi-rr-cross-small text-[10px]"></i>
-                                              </span>
-                                              <span className="leading-snug">{item}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      ) : (
-                                        <div className="text-sm text-gray-500">
-                                          No exclusions listed for this ticket.
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                {activeTab === "exclusions" ? (
+                                  hasExclusions ? (
+                                    <ul className="grid gap-2 sm:grid-cols-2">
+                                      {ticket.exclusions.map((item, i) => (
+                                        <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                                          <span className="fi-box h-5 w-5 shrink-0 rounded-full border border-red-100 bg-red-50 text-red-600">
+                                            <i className="fi fi-rr-cross-small text-[9px]" aria-hidden="true" />
+                                          </span>
+                                          <span className="leading-snug">{item}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">No exclusions listed for this ticket.</p>
+                                  )
+                                ) : null}
 
-                                  {activeTab === "itinerary" && (
-                                    <div className="space-y-2">
-                                      {hasItinerary ? (
-                                        <ol className="space-y-3">
-                                          {ticket.itineraries.map((step, i) => (
-                                            <li key={i} className="flex gap-3">
-                                              <div className="flex-shrink-0 w-6 h-6 bg-primary-50 border border-primary-100 rounded-full flex items-center justify-center">
-                                                <span className="text-primary-700 font-semibold text-xs">
-                                                  {step.step_number ?? i + 1}
+                                {activeTab === "itinerary" ? (
+                                  hasItinerary ? (
+                                    <ol className="space-y-3">
+                                      {ticket.itineraries.map((step, i) => (
+                                        <li key={i} className="flex items-start gap-3">
+                                          <span className="fi-box mt-0.5 h-7 w-7 shrink-0 rounded-full border border-gray-200 bg-gray-50 text-xs font-bold leading-none text-gray-700">
+                                            {step.step_number ?? i + 1}
+                                          </span>
+                                          <div className="min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900">
+                                              {step.title || "Step"}
+                                              {step.time ? (
+                                                <span className="ml-1.5 text-xs font-normal text-gray-500">
+                                                  ({step.time})
                                                 </span>
-                                              </div>
-                                              <div className="flex-1">
-                                                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                                                  <h4 className="font-semibold text-sm text-gray-800">
-                                                    {step.title || "Step"}
-                                                  </h4>
-                                                  {step.time && (
-                                                    <span className="text-xs text-gray-500">
-                                                      ({step.time})
-                                                    </span>
-                                                  )}
-                                                </div>
-                                                {step.description && (
-                                                  <p className="text-sm text-gray-600 mt-0.5 leading-snug">
-                                                    {step.description}
-                                                  </p>
-                                                )}
-                                              </div>
-                                            </li>
-                                          ))}
-                                        </ol>
-                                      ) : (
-                                        <div className="text-sm text-gray-500">
-                                          No itinerary provided for this ticket.
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
+                                              ) : null}
+                                            </p>
+                                            {step.description ? (
+                                              <p className="mt-0.5 text-sm leading-relaxed text-gray-600">
+                                                {step.description}
+                                              </p>
+                                            ) : null}
+                                          </div>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  ) : (
+                                    <p className="text-sm text-gray-500">No itinerary provided for this ticket.</p>
+                                  )
+                                ) : null}
+
+                                {ticket.features && ticket.features.length > 3 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedTicketForDetails(ticket);
+                                      setShowTicketDetailsPopup(true);
+                                    }}
+                                    className="mt-4 text-xs font-semibold text-primary-700 hover:underline"
+                                  >
+                                    View full ticket details
+                                  </button>
+                                ) : null}
                               </div>
-                            )}
-                          </div>
+                            ) : null}
+                          </article>
                         );
                       })}
                     </div>
-                  </div>
-                )}
+            </SectionCard>
+          ) : null}
 
-                {/* FAQ Section */}
-                {activityDetails.faqs && activityDetails.faqs.length > 0 && (
-                  <div className="bg-white mb-14 border-t border-gray-200 pt-8">
-                    <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                      Frequently Asked Questions
-                    </h2>
+          {(activityDetails.location || activityDetails.address) ? (
+            <SectionCard title="Location">
+              <div className="space-y-4">
+                <p className="text-sm leading-relaxed text-gray-700">
+                  {activityDetails.address || activityDetails.location}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activityDetails.mapLink) {
+                      window.open(activityDetails.mapLink, "_blank");
+                    } else if (activityDetails.latitude && activityDetails.longitude) {
+                      window.open(
+                        `https://www.google.com/maps/search/?api=1&query=${activityDetails.latitude},${activityDetails.longitude}`,
+                        "_blank"
+                      );
+                    } else {
+                      const address = encodeURIComponent(
+                        activityDetails.address || activityDetails.location || ""
+                      );
+                      window.open(
+                        `https://www.google.com/maps/search/?api=1&query=${address}`,
+                        "_blank"
+                      );
+                    }
+                  }}
+                  className="fi-inline rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-sm font-semibold text-primary-700 transition-colors hover:bg-primary-100"
+                >
+                  <span>Get directions</span>
+                  <i className="fi fi-rr-arrow-right text-xs" aria-hidden="true" />
+                </button>
+              </div>
+            </SectionCard>
+          ) : null}
+
+          {activityDetails.faqs && activityDetails.faqs.length > 0 ? (
+            <SectionCard title="Frequently asked questions">
                     <div className="space-y-2">
                       {activityDetails.faqs.map((faq, index) => (
                         <Accordion
@@ -1213,40 +1126,27 @@ const ActivityDetailPage = ({ activityDetails }) => {
                         </Accordion>
                       ))}
                     </div>
-                  </div>
-                )}
+            </SectionCard>
+          ) : null}
 
-                {/* Terms & Conditions Section */}
-                {activityDetails.terms && (
-                  <div className="bg-white rounded-xl mb-14">
-                    <h2 className="text-base font-medium text-gray-700 mb-4 tracking-tight">
-                      Terms & Conditions
-                    </h2>
-                    <Accordion
-                      title="Activity Terms & Conditions"
-                      defaultOpen={true}
-                    >
-                      <RichTextContent html={activityDetails.terms} className="text-gray-600" />
+          {activityDetails.terms ? (
+            <SectionCard title="Terms & conditions">
+                    <Accordion title="Activity terms & conditions" defaultOpen>
+                      <RichTextContent html={activityDetails.terms} className="text-sm text-gray-600" />
                     </Accordion>
-                  </div>
-                )}
-              </div>
-            </div>
-          </DetailPageLayout>
+            </SectionCard>
+          ) : null}
         </div>
-      </div>
+      </DetailPageLayout>
 
-      {/* Fixed Mobile Booking Button */}
-      <div className="fixed bottom-16 left-4 right-4 lg:hidden z-40">
+      <div className="fixed bottom-16 left-4 right-4 z-40 lg:hidden">
         <Button
           onClick={handleMobileBooking}
           size="lg"
-          className="w-full !rounded-full !justify-between shadow-lg px-6"
-          isLoading={isNavigating}
-          loadingLabel={enquireOnly ? "Opening…" : "Opening booking…"}
+          className="w-full !justify-between !rounded-2xl px-5 shadow-lg"
         >
-          <span className="text-sm">{enquireOnly ? "Send Enquiry" : "Book Now"}</span>
-          <span className="flex items-center text-sm font-bold">
+          <span className="text-sm font-semibold">Book now</span>
+          <span className="text-sm font-bold tabular-nums">
             {(() => {
               const selectedTicket = activityDetails.ticketOptions?.find(
                 (ticket) => ticket.id === selectedTicketId
@@ -1256,7 +1156,6 @@ const ActivityDetailPage = ({ activityDetails }) => {
               }
               return activityDetails.price;
             })()}
-            <i className="fi fi-rr-ticket ml-2 text-sm" />
           </span>
         </Button>
       </div>

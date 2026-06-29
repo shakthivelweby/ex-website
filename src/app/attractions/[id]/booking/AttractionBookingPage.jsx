@@ -24,6 +24,7 @@ import {
   roundMoney,
 } from "@/utils/paymentCompletion";
 import SplitPaymentNotice from "@/components/booking/SplitPaymentNotice";
+import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import isLogin from "@/utils/isLogin";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
@@ -1225,6 +1226,16 @@ const AttractionBookingPage = ({
                   ) : null}
                 </div>
 
+                <div className="space-y-3 border-t border-gray-100 p-4">
+                  <PaymentTrustPanel />
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3.5">
+                    <p className="text-xs leading-relaxed text-blue-900">
+                      <i className="fi fi-rr-envelope relative top-0 mr-1.5" aria-hidden="true" />
+                      You&apos;ll receive an instant confirmation email with your e-ticket after payment.
+                    </p>
+                  </div>
+                </div>
+
                 <SplitPaymentNotice
                   grandTotal={getPriceBreakdown().grandTotal}
                   className="mx-4 mt-3"
@@ -1389,23 +1400,21 @@ const AttractionBookingPage = ({
                         disabled={isPaying || !termsAccepted}
                         isLoading={isPaying}
                         loadingLabel="Processing…"
+                        icon={<i className="fi fi-rr-lock" aria-hidden="true" />}
                       >
                         {getCheckoutPayLabel(getPriceBreakdown().grandTotal)}
                       </Button>
-                      <div className="flex flex-col items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={handleBack}
-                          className="fi-inline text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
-                        >
-                          <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
-                          <span>Edit ticket selection</span>
-                        </button>
-                        <p className="fi-inline m-0 text-[11px] text-gray-400">
-                          <i className="fi fi-rr-shield-check text-[11px]" aria-hidden="true" />
-                          <span>Secure checkout · Razorpay</span>
-                        </p>
+                      <div className="mt-3">
+                        <PaymentTrustPanel compact />
                       </div>
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="fi-inline mx-auto mt-2 flex text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+                      >
+                        <i className="fi fi-rr-angle-left text-[11px]" aria-hidden="true" />
+                        <span>Edit ticket selection</span>
+                      </button>
                     </div>
                   )}
                 </div>

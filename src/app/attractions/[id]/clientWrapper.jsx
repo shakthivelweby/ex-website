@@ -9,6 +9,7 @@ import Accordion from "@/components/Accordion";
 import Popup from "@/components/Popup";
 import ImageViewer from "@/components/ImageViewer/ImageViewer";
 import DetailPageLayout from "@/components/layout/DetailPageLayout";
+import DetailSubHeader, { DETAIL_SIDEBAR_STICKY_TOP } from "@/components/layout/DetailSubHeader";
 import RichTextContent from "@/components/common/RichTextContent";
 
 function SectionCard({ title, children, className = "" }) {
@@ -89,30 +90,16 @@ const AttractionDetailClient = ({ attractionDetails }) => {
         </div>
       </Popup>
 
-      <div className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="fi-inline -ml-2 rounded-full px-2 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-          >
-            <i className="fi fi-rr-arrow-left text-sm" aria-hidden="true" />
-            <span>Attractions</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleShare}
-            className="fi-box h-9 w-9 rounded-full border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50"
-            aria-label="Share attraction"
-          >
-            <i className="fi fi-rr-share text-sm" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
+      <DetailSubHeader
+        backLabel="Attractions"
+        onBack={() => router.back()}
+        onShare={handleShare}
+        shareAriaLabel="Share attraction"
+      />
 
       <DetailPageLayout
         containerClassName="mt-6"
-        stickyTop="top-24"
+        stickyTop={DETAIL_SIDEBAR_STICKY_TOP}
         sidebar={<Form attractionDetails={attractionDetails} />}
       >
         <div className="space-y-6 lg:space-y-8">

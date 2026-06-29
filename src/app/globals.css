@@ -697,6 +697,13 @@ select {
   height: 1em;
   font-style: normal;
   line-height: 1;
+  position: static;
+  top: auto;
+}
+
+.fi-box > i.fi {
+  position: static;
+  top: auto;
 }
 
 .fi-box > .fi::before {
@@ -720,6 +727,8 @@ select {
   justify-content: center;
   line-height: 1;
   font-style: normal;
+  position: static;
+  top: auto;
 }
 
 .fi-inline > .fi::before,

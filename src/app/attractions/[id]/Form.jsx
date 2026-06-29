@@ -2,6 +2,7 @@
 
 import { useState, useEffect, forwardRef } from "react";
 import Button from "@/components/common/Button";
+import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
 import { useNavigateWithLoading } from "@/hooks/useNavigateWithLoading";
 import DatePicker from "react-datepicker";
@@ -266,10 +267,9 @@ const Form = ({
               {enquireOnly ? "Send enquiry" : "Book now"}
             </Button>
           )}
-          <p className="fi-inline m-0 justify-center text-[11px] text-gray-400">
-            <i className="fi fi-rr-shield-check text-[11px]" aria-hidden="true" />
-            <span>Secure checkout · Instant confirmation</span>
-          </p>
+          <div className="pt-1">
+            <PaymentTrustPanel compact />
+          </div>
         </div>
       </div>
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/common/Button";
+import ActivityTimeSlotPicker from "@/components/activities/ActivityTimeSlotPicker";
+import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -14,8 +16,13 @@ import {
 } from "../../service";
 import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
-import SuccessPopup from "@/components/SuccessPopup/SuccessPopup";
+import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
+import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
+import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
+import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
+import { getLoggedInUserEmail } from "@/utils/authSession";
 import { isActivityCloseoutDate, normalizeCloseoutDates } from "@/utils/closeoutUtils";
+import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
 
 function formatCancellationPolicyRow(row) {
   if (!row) return "";
@@ -202,10 +209,15 @@ function pickNumber(obj, keys, fallback = 0) {
 const BookingClient = ({ activityId }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentPhase, setPaymentPhase] = useState(null);
+  const [showPaymentError, setShowPaymentError] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  const [pendingCheckout, setPendingCheckout] = useState(null);
   const [activityDetails, setActivityDetails] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
   const [ticketCount, setTicketCount] = useState(1);
   const [includeGuide, setIncludeGuide] = useState(false);
 
@@ -222,26 +234,106 @@ const BookingClient = ({ activityId }) => {
   const [errors, setErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const termsSectionRef = useRef(null);
   const [completedBookingId, setCompletedBookingId] = useState(null);
   const [successMessage, setSuccessMessage] = useState({
     title: "",
     message: "",
+    emailSent: false,
+    userEmail: "",
+    visitDate: "",
+    detailRightLabel: "Guests",
+    detailRight: "",
+    amountPaid: "",
   });
 
   const isSlotBased = Boolean(activityDetails?.time_slot_based);
-  const slotOptions = Array.isArray(activityDetails?.time_slot_pricing)
-    ? activityDetails.time_slot_pricing.map((slot) => ({
-        id: String(slot.id),
-        label: `${formatTime(slot.start_time)} - ${formatTime(slot.end_time)}`,
-        raw: slot,
-      }))
-    : [];
+  const selectedYmd = formData.selectedDate ? toYmd(formData.selectedDate) : "";
+
+  const getSlotRawById = (slotId) => {
+    if (!slotId) return null;
+    const list = Array.isArray(activityDetails?.time_slot_pricing)
+      ? activityDetails.time_slot_pricing
+      : [];
+    return list.find((s) => String(s.id) === String(slotId)) || null;
+  };
+
+  const availableSlotOptions = useMemo(
+    () =>
+      buildActivitySlotOptions(activityDetails?.time_slot_pricing, {
+        visitYmd: selectedYmd,
+        ticketTypeId: selectedTicket?.id,
+        formatTime,
+      }),
+    [activityDetails?.time_slot_pricing, selectedYmd, selectedTicket?.id]
+  );
+
+  const pickerSlotOptions = useMemo(
+    () =>
+      mergeSelectedSlotIntoOptions(
+        availableSlotOptions,
+        formData.selectedTimeSlot,
+        activityDetails?.time_slot_pricing,
+        formatTime
+      ),
+    [
+      availableSlotOptions,
+      formData.selectedTimeSlot,
+      activityDetails?.time_slot_pricing,
+    ]
+  );
+
+  const formatVisitDate = (date) => {
+    if (!date) return "—";
+    try {
+      return new Date(date).toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return "—";
+    }
+  };
+
+  const getGuestSummary = () =>
+    `${formData.adultCount} adult(s), ${formData.childCount} child(ren)`;
+
+  const goToCompletedTicket = () => {
+    setShowSuccess(false);
+    if (completedBookingId) {
+      router.push(`/my-bookings/activity/ticket/${completedBookingId}`);
+    } else {
+      router.push("/my-bookings?tab=activities");
+    }
+  };
+
+  const goToMyBookings = () => {
+    setShowSuccess(false);
+    router.push("/my-bookings?tab=activities");
+  };
 
   const selectedSlotLabel = isSlotBased
-    ? slotOptions.find((s) => s.id === String(formData.selectedTimeSlot))?.label || ""
+    ? pickerSlotOptions.find((s) => s.id === String(formData.selectedTimeSlot))?.label ||
+      (() => {
+        const raw = getSlotRawById(formData.selectedTimeSlot);
+        if (!raw) return "";
+        return `${formatTime(raw.start_time)} – ${formatTime(raw.end_time)}`;
+      })()
     : "";
 
-  const selectedYmd = formData.selectedDate ? toYmd(formData.selectedDate) : "";
+  useEffect(() => {
+    if (!sessionHydrated || !formData.selectedTimeSlot || !selectedYmd) return;
+    if (pickerSlotOptions.length === 0) return;
+
+    const stillAvailable = pickerSlotOptions.some(
+      (slot) => slot.id === String(formData.selectedTimeSlot)
+    );
+    if (!stillAvailable) {
+      setFormData((prev) => ({ ...prev, selectedTimeSlot: "" }));
+    }
+  }, [sessionHydrated, pickerSlotOptions, formData.selectedTimeSlot, selectedYmd]);
 
   // Load booking session + authoritative cancellation policies from API
   useEffect(() => {
@@ -263,7 +355,7 @@ const BookingClient = ({ activityId }) => {
           setFormData((prev) => ({
             ...prev,
             selectedDate: data.selectedDate ? new Date(data.selectedDate) : null,
-            selectedTimeSlot: data.selectedTimeSlot || "",
+            selectedTimeSlot: data.selectedTimeSlot ? String(data.selectedTimeSlot) : "",
             adultCount: data.adultCount || 1,
             childCount: data.childCount || 0,
           }));
@@ -288,22 +380,39 @@ const BookingClient = ({ activityId }) => {
         }
 
         // Session payload used to omit cancellation_policies; always merge from API when possible.
+        const visitYmd = bookingDataStr
+          ? (() => {
+              try {
+                const parsed = JSON.parse(bookingDataStr);
+                return parsed.selectedDate ? toYmd(new Date(parsed.selectedDate)) : today;
+              } catch {
+                return today;
+              }
+            })()
+          : today;
+
         try {
           const res = await apiMiddleware.get(`/activity-details/${activityId}`, {
-            params: { date: today },
+            params: { date: visitYmd || today },
           });
           const inner = res.data?.data;
           const policies = Array.isArray(inner?.cancellation_policies)
             ? inner.cancellation_policies
             : [];
           const closeoutDates = normalizeCloseoutDates(inner?.closeout_dates);
+          const apiSlots = Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [];
           if (!cancelled && details) {
             details = {
               ...details,
+              time_slot_based: Boolean(
+                inner?.activity?.time_slot_based ?? details.time_slot_based
+              ),
+              time_slot_pricing:
+                apiSlots.length > 0 ? apiSlots : details.time_slot_pricing || [],
               cancellation_policies: policies,
               closeout_dates: closeoutDates,
             };
-          } else if (!cancelled && !details && (policies.length || closeoutDates.length)) {
+          } else if (!cancelled && !details && (policies.length || closeoutDates.length || apiSlots.length)) {
             details = {
               id: activityId,
               title: inner?.activity?.name || "Activity",
@@ -311,7 +420,7 @@ const BookingClient = ({ activityId }) => {
               price: 0,
               duration: "—",
               time_slot_based: Boolean(inner?.activity?.time_slot_based),
-              time_slot_pricing: Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [],
+              time_slot_pricing: apiSlots,
               cancellation_policies: policies,
               closeout_dates: closeoutDates,
             };
@@ -322,6 +431,7 @@ const BookingClient = ({ activityId }) => {
 
         if (!cancelled) {
           if (details) setActivityDetails(details);
+          setSessionHydrated(true);
         }
       } catch (error) {
         console.error("Error loading booking data:", error);
@@ -336,6 +446,7 @@ const BookingClient = ({ activityId }) => {
             time_slot_pricing: [],
             cancellation_policies: [],
           });
+          setSessionHydrated(true);
         }
       }
     };
@@ -348,7 +459,7 @@ const BookingClient = ({ activityId }) => {
 
   const getSlotTicketUnitPrices = () => {
     if (!isSlotBased || !selectedTicket || !formData.selectedTimeSlot) return null;
-    const slot = slotOptions.find((s) => s.id === String(formData.selectedTimeSlot))?.raw;
+    const slot = getSlotRawById(formData.selectedTimeSlot);
     if (!slot) return null;
     const ticketPriceRow = Array.isArray(slot.ticket_prices || slot.ticketPrices)
       ? (slot.ticket_prices || slot.ticketPrices).find(
@@ -457,7 +568,7 @@ const BookingClient = ({ activityId }) => {
     );
     const selectedSlotRaw =
       isSlotBased && formData.selectedTimeSlot
-        ? slotOptions.find((s) => s.id === String(formData.selectedTimeSlot))?.raw
+        ? getSlotRawById(formData.selectedTimeSlot)
         : null;
     const seasonalRow =
       seasonalRowRaw && selectedSlotRaw
@@ -734,8 +845,18 @@ const BookingClient = ({ activityId }) => {
       newErrors.selectedDate = "Please select a date";
     }
 
-    if (isSlotBased && !formData.selectedTimeSlot) {
-      newErrors.selectedTimeSlot = "Please select a time slot";
+    if (isSlotBased) {
+      if (!formData.selectedDate) {
+        newErrors.selectedTimeSlot = "Select a visit date first";
+      } else if (availableSlotOptions.length === 0 && pickerSlotOptions.length === 0) {
+        newErrors.selectedTimeSlot = "No time slots available for this date. Try another date.";
+      } else if (!formData.selectedTimeSlot) {
+        newErrors.selectedTimeSlot = "Please select a time slot";
+      } else if (
+        !pickerSlotOptions.some((s) => s.id === String(formData.selectedTimeSlot))
+      ) {
+        newErrors.selectedTimeSlot = "Selected time slot is no longer available";
+      }
     }
 
     if (effectivePricing?.rateType === "full") {
@@ -761,9 +882,339 @@ const BookingClient = ({ activityId }) => {
     }
   }, []);
 
-  // Handle form submission
+  const closePaymentError = () => {
+    setShowPaymentError(false);
+    setPaymentError(null);
+  };
+
+  const showPaymentErrorModal = (payload) => {
+    setPaymentError(payload);
+    setShowPaymentError(true);
+  };
+
+  const getOrderErrorPayload = (message) => {
+    const text = String(message || "");
+    if (/maximum amount/i.test(text)) {
+      return {
+        variant: "warning",
+        title: "Payment amount too high",
+        message:
+          "This order exceeds Razorpay's per-transaction limit. Large payments are split automatically — please try again.",
+        hint: "If it still fails, raise the limit in your Razorpay Dashboard (Account → Transaction limits).",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      };
+    }
+    return {
+      variant: "warning",
+      title: "Couldn't start payment",
+      message: text || "We couldn't prepare your payment. Please try again.",
+      hint: "Your booking is saved. You can continue to payment when you're ready.",
+      canRetry: true,
+      primaryLabel: "Continue to payment",
+      primaryIcon: "fi-rr-refresh",
+      secondaryLabel: "Close",
+    };
+  };
+
+  const buildApiBookingData = () => {
+    if (!selectedTicket && !activityDetails?.ticketOptions?.[0]) {
+      return null;
+    }
+
+    const ticketId = selectedTicket?.id || activityDetails.ticketOptions?.[0]?.id;
+    const effective = getEffectiveTicketUnitPrices();
+    const basePrice = effective
+      ? effective.adultUnit
+      : selectedTicket?.price || activityDetails?.price || 0;
+    const adminChargePct = Number(
+      effective?.adminChargePct ??
+        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
+        pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
+        0
+    );
+
+    const originalAdultUnit = applyDiscountAndAdminCharge(
+      effective?.adultUnitBase ?? basePrice,
+      0,
+      adminChargePct
+    );
+    const originalChildUnitBase =
+      effective?.childUnitBase ??
+      selectedTicket?.child_price ??
+      (effective?.adultUnitBase ?? basePrice) * 0.7;
+    const originalChildUnit = applyDiscountAndAdminCharge(originalChildUnitBase, 0, adminChargePct);
+
+    const bookingTickets = [];
+    let originalTotal = 0;
+    let discountedTotal = 0;
+
+    if (effective?.rateType === "full") {
+      const qty = Math.max(1, Number(ticketCount) || 1);
+      bookingTickets.push({
+        activity_ticket_type_id: ticketId,
+        quantity: qty,
+        unit_price: basePrice,
+        total_price: basePrice * qty,
+      });
+      discountedTotal += basePrice * qty;
+      originalTotal += originalAdultUnit * qty;
+    } else if (formData.adultCount > 0) {
+      bookingTickets.push({
+        activity_ticket_type_id: ticketId,
+        quantity: formData.adultCount,
+        unit_price: basePrice,
+        total_price: basePrice * formData.adultCount,
+      });
+      discountedTotal += basePrice * formData.adultCount;
+      originalTotal += originalAdultUnit * formData.adultCount;
+    }
+
+    if (effective?.rateType !== "full" && formData.childCount > 0) {
+      const childPrice =
+        effective?.childUnit > 0
+          ? effective.childUnit
+          : selectedTicket?.child_price
+            ? selectedTicket.child_price
+            : basePrice * 0.7;
+
+      bookingTickets.push({
+        activity_ticket_type_id: ticketId,
+        quantity: formData.childCount,
+        unit_price: childPrice,
+        total_price: childPrice * formData.childCount,
+      });
+      discountedTotal += childPrice * formData.childCount;
+      originalTotal += originalChildUnit * formData.childCount;
+    }
+
+    const guideAmt =
+      Number(pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) || 0) * (includeGuide ? 1 : 0);
+    const totalAmountForApi = Number((originalTotal + guideAmt).toFixed(2));
+    const discountAmountForApi = Number(Math.max(0, originalTotal - discountedTotal).toFixed(2));
+
+    return {
+      activity_id: activityId,
+      visit_date: formData.selectedDate.toISOString().split("T")[0],
+      visit_time_slot_label: isSlotBased
+        ? selectedSlotLabel || formData.selectedTimeSlot || null
+        : null,
+      total_amount: totalAmountForApi,
+      discount_amount: discountAmountForApi,
+      adult_count: formData.adultCount,
+      child_count: formData.childCount,
+      include_guide: includeGuide,
+      bookingTickets,
+    };
+  };
+
+  const openRazorpayAndVerify = async (orderData, paymentAmount, bookingId, bookingReference) => {
+    setPaymentPhase(null);
+    const chargeAmount = Number(orderData?.amount ?? paymentAmount);
+
+    const paymentResponse = await initializeRazorpayPayment({
+      amount: chargeAmount,
+      currency: "INR",
+      name: "Explore World",
+      description: `Booking for ${activityDetails.title}`,
+      orderId: orderData.order_id,
+      key: orderData.key,
+      email: user?.email || "",
+      contact: user?.phone || "",
+    });
+
+    if (!paymentResponse.status) {
+      setPaymentPhase(null);
+      try {
+        if (orderData.activity_payment_id) {
+          await activityPaymentFailed({ activity_payment_id: orderData.activity_payment_id });
+        }
+      } catch (_) {}
+      showPaymentErrorModal(getPaymentErrorPayload(paymentResponse));
+      return false;
+    }
+
+    setPaymentPhase("verifying");
+    const verifyResponse = await verifyActivityPayment({
+      payment_id: paymentResponse.data.razorpay_payment_id,
+      order_id: orderData.order_id,
+      signature: paymentResponse.data.razorpay_signature,
+      customer_email: getLoggedInUserEmail() || user?.email || undefined,
+    });
+
+    if (!isApiOk(verifyResponse)) {
+      setPaymentPhase(null);
+      try {
+        if (orderData.activity_payment_id) {
+          await activityPaymentFailed({ activity_payment_id: orderData.activity_payment_id });
+        }
+      } catch (_) {}
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Payment verification failed",
+        message:
+          verifyResponse?.message || "We couldn't confirm your payment on our end.",
+        hint: "If an amount was deducted from your account, please contact support with your payment reference.",
+        canRetry: true,
+        primaryLabel: "Try again",
+        primaryIcon: "fi-rr-refresh",
+        secondaryLabel: "Close",
+      });
+      return false;
+    }
+
+    setPaymentPhase("confirming");
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    setPaymentPhase(null);
+
+    sessionStorage.removeItem("bookingData");
+    setPendingCheckout(null);
+
+    const confirmationData = {
+      bookingId,
+      bookingReference: bookingReference || null,
+      paymentId: paymentResponse.data.razorpay_payment_id,
+      amount: chargeAmount,
+      activity: activityDetails,
+      date: formData.selectedDate,
+    };
+    sessionStorage.setItem("bookingConfirmation", JSON.stringify(confirmationData));
+
+    const emailSent = Boolean(verifyResponse?.data?.confirmation_email_sent);
+    const userEmail = getLoggedInUserEmail() || user?.email || "";
+    const visitDetailRight =
+      isSlotBased && selectedSlotLabel
+        ? `${selectedSlotLabel} · ${getGuestSummary()}`
+        : getGuestSummary();
+
+    setCompletedBookingId(bookingId);
+    setSuccessMessage({
+      title: "You're all set!",
+      message: bookingReference
+        ? `Your activity has been booked successfully. Reference: ${bookingReference}.`
+        : "Your activity has been booked successfully.",
+      emailSent,
+      userEmail,
+      visitDate: formatVisitDate(formData.selectedDate),
+      detailRightLabel: isSlotBased && selectedSlotLabel ? "Time slot" : "Guests",
+      detailRight: visitDetailRight,
+      amountPaid: money(chargeAmount),
+    });
+    setShowSuccess(true);
+    return true;
+  };
+
+  const executeCheckout = async () => {
+    setIsPaying(true);
+    setErrorMessage("");
+
+    try {
+      if (!validateForm()) {
+        if (!formData.agreeToTerms) {
+          termsSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+        return;
+      }
+
+      const apiBookingData = buildApiBookingData();
+      if (!apiBookingData) {
+        showPaymentErrorModal({
+          variant: "warning",
+          title: "Missing booking details",
+          message: "Please select a ticket type to continue.",
+          canRetry: false,
+          primaryLabel: "Close",
+        });
+        return;
+      }
+
+      let bookingId = pendingCheckout?.bookingId;
+      let paymentAmount = pendingCheckout?.paymentAmount;
+      let bookingReference = pendingCheckout?.bookingReference || null;
+
+      if (!bookingId) {
+        const bookingResponse = await createActivityBooking(apiBookingData);
+        if (!isApiOk(bookingResponse)) {
+          showPaymentErrorModal(
+            getOrderErrorPayload(bookingResponse?.message || "Booking creation failed")
+          );
+          return;
+        }
+
+        const bookingData = getApiData(bookingResponse) || {};
+        bookingId = bookingData.id;
+        if (!bookingId) {
+          showPaymentErrorModal(getOrderErrorPayload("Booking creation failed (missing booking id)"));
+          return;
+        }
+
+        paymentAmount =
+          bookingData?.grand_total != null && bookingData.grand_total !== ""
+            ? Number(bookingData.grand_total)
+            : Number(grandTotalUi || 0);
+        bookingReference = bookingData.booking_reference || null;
+
+        setPendingCheckout({ bookingId, paymentAmount, bookingReference });
+      }
+
+      setPaymentPhase("preparing");
+      const orderResponse = await createActivityOrder({
+        activity_id: activityId,
+        activity_booking_id: bookingId,
+        amount: paymentAmount,
+      });
+
+      if (!isApiOk(orderResponse)) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderResponse?.message));
+        return;
+      }
+
+      const orderData = getApiData(orderResponse) || {};
+      await openRazorpayAndVerify(orderData, paymentAmount, bookingId, bookingReference);
+    } catch (error) {
+      setPaymentPhase(null);
+      if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+        showPaymentErrorModal({
+          variant: "warning",
+          title: "Verification taking longer",
+          message: "Payment verification is taking longer than expected.",
+          hint: "Please check My Bookings to confirm whether your payment was successful before trying again.",
+          canRetry: false,
+          primaryLabel: "Close",
+        });
+      } else {
+        showPaymentErrorModal({
+          variant: "error",
+          title: "Something went wrong",
+          message:
+            error.response?.data?.message ||
+            error.message ||
+            "Failed to complete booking. Please try again.",
+          hint: "Your booking details are still saved on this page.",
+          canRetry: true,
+          primaryLabel: "Try again",
+          primaryIcon: "fi-rr-refresh",
+          secondaryLabel: "Close",
+        });
+      }
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
+  const handlePaymentRetry = async () => {
+    closePaymentError();
+    setErrorMessage("");
+    await executeCheckout();
+  };
+
   const handleSubmit = async (e) => {
-    // handle both <form onSubmit> and Button onClick
     if (e?.preventDefault) e.preventDefault();
 
     if (!isLogin()) {
@@ -772,212 +1223,22 @@ const BookingClient = ({ activityId }) => {
       return;
     }
 
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setErrorMessage("");
-
-      // Prepare booking tickets
-      const bookingTickets = [];
-      // If we have selectedTicket (from previous page), use its ID
-      // If none (default activity), we might not have a ticket ID. 
-      // Assuming selectedTicket is present if we came from details page with a selection.
-      // If not, we might need a fallback or fail.
-
-      if (!selectedTicket && !activityDetails.ticketOptions?.[0]) {
-        throw new Error("No ticket type selected");
-      }
-
-      const ticketId = selectedTicket?.id || activityDetails.ticketOptions?.[0]?.id;
-      const effective = getEffectiveTicketUnitPrices();
-      const basePrice = effective
-        ? effective.adultUnit
-        : selectedTicket?.price || activityDetails?.price || 0;
-      const adminChargePct = Number(
-        effective?.adminChargePct ??
-          pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-          pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
-          0
-      );
-      const discountPct = Number(effective?.discountPct ?? pickNumber(selectedTicket, ["discount", "discount_percentage", "discountPercent"], 0) ?? 0);
-
-      // Original (pre-discount) unit prices (admin charge still applies, discount removed)
-      const originalAdultUnit = applyDiscountAndAdminCharge(
-        effective?.adultUnitBase ?? basePrice,
-        0,
-        adminChargePct
-      );
-      const originalChildUnitBase = effective?.childUnitBase ?? selectedTicket?.child_price ?? (effective?.adultUnitBase ?? basePrice) * 0.7;
-      const originalChildUnit = applyDiscountAndAdminCharge(originalChildUnitBase, 0, adminChargePct);
-
-      let originalTotal = 0;
-      let discountedTotal = 0;
-
-      if (effective?.rateType === "full") {
-        const qty = Math.max(1, Number(ticketCount) || 1);
-        bookingTickets.push({
-          activity_ticket_type_id: ticketId,
-          quantity: qty,
-          unit_price: basePrice,
-          total_price:
-            effective?.rateType === "full"
-              ? basePrice * qty
-              : basePrice * formData.adultCount
-        });
-        discountedTotal += (basePrice * qty);
-        originalTotal += (originalAdultUnit * qty);
-      } else if (formData.adultCount > 0) {
-        bookingTickets.push({
-          activity_ticket_type_id: ticketId,
-          quantity: formData.adultCount,
-          unit_price: basePrice,
-          total_price: basePrice * formData.adultCount
-        });
-        discountedTotal += (basePrice * formData.adultCount);
-        originalTotal += (originalAdultUnit * formData.adultCount);
-      }
-
-      if (effective?.rateType !== "full" && formData.childCount > 0) {
-        const childPrice = effective?.childUnit > 0
-          ? effective.childUnit
-          : selectedTicket?.child_price
-            ? selectedTicket.child_price
-            : (basePrice * 0.7);
-
-        bookingTickets.push({
-          activity_ticket_type_id: ticketId,
-          quantity: formData.childCount,
-          unit_price: childPrice,
-          total_price: childPrice * formData.childCount
-        });
-        discountedTotal += (childPrice * formData.childCount);
-        originalTotal += (originalChildUnit * formData.childCount);
-      }
-
-      // totalPrice currently represents discounted subtotal + guide (pre-tax) in UI.
-      // For backend consistency, send total_amount as original (pre-discount) subtotal (+ guide),
-      // and discount_amount as the difference.
-      const guideAmt = Number(pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) || 0) * (includeGuide ? 1 : 0);
-      const totalAmountForApi = Number((originalTotal + guideAmt).toFixed(2));
-      const discountAmountForApi = Number(Math.max(0, originalTotal - discountedTotal).toFixed(2));
-
-      const apiBookingData = {
-        activity_id: activityId,
-        visit_date: formData.selectedDate.toISOString().split('T')[0],
-        visit_time_slot_label: isSlotBased ? (selectedSlotLabel || formData.selectedTimeSlot || null) : null,
-        total_amount: totalAmountForApi,
-        discount_amount: discountAmountForApi,
-        adult_count: formData.adultCount,
-        child_count: formData.childCount,
-        include_guide: includeGuide,
-        bookingTickets: bookingTickets
-      };
-
-      // 1. Create Booking
-      const bookingResponse = await createActivityBooking(apiBookingData);
-
-      if (!isApiOk(bookingResponse)) {
-        throw new Error(bookingResponse?.message || "Booking creation failed");
-      }
-
-      const bookingData = getApiData(bookingResponse) || {};
-      const bookingId = bookingData.id;
-      if (!bookingId) {
-        throw new Error("Booking creation failed (missing booking id)");
-      }
-
-      const payableAmount =
-        bookingData?.grand_total != null && bookingData.grand_total !== ""
-          ? Number(bookingData.grand_total)
-          : Number(grandTotalUi || 0);
-
-      // 2. Create Order
-      const orderResponse = await createActivityOrder({
-        activity_id: activityId,
-        activity_booking_id: bookingId,
-        amount: payableAmount
-      });
-
-      if (!isApiOk(orderResponse)) {
-        throw new Error(orderResponse?.message || "Payment order creation failed");
-      }
-
-      const orderData = getApiData(orderResponse) || {};
-
-      // 3. Initialize Razorpay
-      const paymentResponse = await initializeRazorpayPayment({
-        amount: payableAmount,
-        currency: "INR",
-        name: "Explore World",
-        description: `Booking for ${activityDetails.title}`,
-        orderId: orderData.order_id,
-        key: orderData.key,
-        email: user?.email || "",
-        contact: user?.phone || "",
-      });
-
-      if (!paymentResponse.status) {
-        if (orderData.activity_payment_id) {
-          await activityPaymentFailed({ activity_payment_id: orderData.activity_payment_id });
-        }
-        throw new Error("Payment initialization failed");
-      }
-
-      // 4. Verify Payment
-      const verifyResponse = await verifyActivityPayment({
-        payment_id: paymentResponse.data.razorpay_payment_id,
-        order_id: orderData.order_id,
-        signature: paymentResponse.data.razorpay_signature
-      });
-
-      if (isApiOk(verifyResponse)) {
-        sessionStorage.removeItem("bookingData");
-
-        // Store confirmation data for the confirmation page (optional)
-        const confirmationData = {
-          bookingId: bookingId,
-          bookingReference: bookingData.booking_reference || null,
-          paymentId: paymentResponse.data.razorpay_payment_id,
-            amount: payableAmount,
-          activity: activityDetails,
-          date: formData.selectedDate
-        };
-        sessionStorage.setItem("bookingConfirmation", JSON.stringify(confirmationData));
-
-        setCompletedBookingId(bookingId);
-        setSuccessMessage({
-          title: "Booking Successful!",
-          message: bookingData.booking_reference
-            ? `Your booking reference is ${bookingData.booking_reference}. Opening your ticket…`
-            : "Your activity has been booked successfully. Opening your ticket…",
-        });
-        setShowSuccess(true);
-        setTimeout(() => {
-          setShowSuccess(false);
-          router.push(`/my-bookings/activity/ticket/${bookingId}`);
-        }, 1800);
-      } else {
-        if (orderData.activity_payment_id) {
-          await activityPaymentFailed({ activity_payment_id: orderData.activity_payment_id });
-        }
-        throw new Error(verifyResponse?.message || "Payment verification failed");
-      }
-
-    } catch (error) {
-      console.error("Error creating booking:", error);
-      setErrorMessage(error.message || "Failed to create booking. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    await executeCheckout();
   };
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "selectedDate") {
+        next.selectedTimeSlot = "";
+      }
+      return next;
+    });
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: null }));
+    }
+    if (field === "selectedDate" && errors.selectedTimeSlot) {
+      setErrors((prev) => ({ ...prev, selectedTimeSlot: null }));
     }
   };
 
@@ -990,117 +1251,112 @@ const BookingClient = ({ activityId }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+    <div className="min-h-screen bg-[#f8f9fb] py-6 sm:py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <button
+            type="button"
             onClick={() => router.back()}
-            className="flex items-center text-sm gap-2 text-gray-600 hover:text-gray-800 mb-4"
+            className="fi-inline mb-4 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
           >
-            <i className="fi fi-rr-arrow-left"></i>
-            <span>Back to Activity</span>
+            <i className="fi fi-rr-arrow-left text-sm" aria-hidden="true" />
+            <span>Back to activity</span>
           </button>
-          <h1 className="text-2xl lg:text-3xl font-medium text-gray-900 tracking-tight">
-            Complete Your Booking
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 lg:text-3xl">
+            Complete your booking
           </h1>
-          <p className="text-gray-600 mt-1 text-sm">
-            Fill in your details to book this amazing activity
+          <p className="mt-1 text-sm text-gray-600">
+            Review your details and pay securely to confirm your spot
           </p>
         </div>
 
-
-
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
 
           {/* Booking Form */}
           <div className="min-w-0 max-w-full">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {errorMessage && (
-                <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4 text-sm">
+              {pendingCheckout ? (
+                <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+                  <p className="fi-inline items-start gap-2">
+                    <i className="fi fi-rr-time-forward text-sm" aria-hidden="true" />
+                    <span>
+                      Your booking is saved. Complete payment to confirm your spot — no charge was made
+                      if you closed the payment window.
+                    </span>
+                  </p>
+                </div>
+              ) : null}
+
+              {errorMessage ? (
+                <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {errorMessage}
                 </div>
-              )}
+              ) : null}
               {/* Booking Details */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                {/* Activity & Ticket Information */}
-                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-200">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h2 className="text-xl font-medium text-gray-900 mb-2 tracking-tight">
+              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.06)]">
+                <div className="border-b border-gray-100 bg-gray-50/80 px-5 py-4 sm:px-6">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        You&apos;re booking
+                      </p>
+                      <h2 className="mt-1 text-lg font-bold text-gray-900 sm:text-xl">
                         {activityDetails.title}
                       </h2>
-                      {selectedTicket && (
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium bg-primary-50 text-primary-700 border border-primary-300">
-                            <i className="fi fi-rr-ticket mr-1.5"></i>
-                            {selectedTicket.name || selectedTicket.type}
-                          </span>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        {formData.selectedDate && (
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <i className="fi fi-rr-calendar text-primary-500"></i>
-                            <span className="font-medium">
-                              {formData.selectedDate.toLocaleDateString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                              })}
-                            </span>
-                          </div>
-                        )}
-                        {formData.selectedTimeSlot && (
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <i className="fi fi-rr-clock text-primary-500"></i>
-                            <span className="font-medium">
-                              {selectedSlotLabel || formData.selectedTimeSlot}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <i className="fi fi-rr-users text-primary-500"></i>
-                          <span className="font-medium">
-                            {summaryCountLabel}
-                          </span>
-                        </div>
-                      </div>
+                      {selectedTicket ? (
+                        <span className="mt-2 inline-flex items-center rounded-full border border-primary-100 bg-primary-50 px-2.5 py-0.5 text-[11px] font-semibold text-primary-700">
+                          {selectedTicket.name || selectedTicket.type}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-gray-900 tracking-tight">
-                    Booking Details
-                  </h2>
-                </div>
-                {dataLoaded && (
-                  <div className="hidden mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-sm text-green-800 flex items-start gap-2">
-                      <i className="fi fi-rr-info-circle mt-0.5"></i>
-                      <span>
-                        Your booking details have been automatically filled from the previous page. You can still modify them if needed.
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {formData.selectedDate ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                        <i className="fi fi-rr-calendar relative top-0 text-primary-600" aria-hidden="true" />
+                        {formData.selectedDate.toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
                       </span>
-                    </p>
+                    ) : null}
+                    {formData.selectedTimeSlot && selectedSlotLabel ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                        <i className="fi fi-rr-clock relative top-0 text-primary-600" aria-hidden="true" />
+                        {selectedSlotLabel}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700">
+                      <i className="fi fi-rr-users relative top-0 text-primary-600" aria-hidden="true" />
+                      {summaryCountLabel}
+                    </span>
                   </div>
-                )}
-                <div className="space-y-4">
+                </div>
+
+                <div className="px-5 py-5 sm:px-6">
+                  {dataLoaded ? (
+                    <div className="mb-5 rounded-xl border border-green-200 bg-green-50 px-3.5 py-3 text-sm text-green-800">
+                      <p className="fi-inline items-start gap-2">
+                        <i className="fi fi-rr-check-circle text-sm" aria-hidden="true" />
+                        <span>
+                          Details from the previous step are pre-filled. You can still change them below.
+                        </span>
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <h3 className="mb-4 text-base font-semibold text-gray-900">Booking details</h3>
+                <div className="space-y-5">
                   {/* Date / Slot / Ticket Count (single row on desktop) */}
                   <div
                     className={`grid grid-cols-1 gap-4 ${
-                      effectivePricing?.rateType === "full"
-                        ? isSlotBased
-                          ? "md:grid-cols-3"
-                          : "md:grid-cols-2"
-                        : isSlotBased
-                          ? "md:grid-cols-2"
-                          : "md:grid-cols-1"
+                      effectivePricing?.rateType === "full" ? "sm:grid-cols-2" : "sm:grid-cols-1"
                     }`}
                   >
-                    {/* Date Picker */}
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <span>Select Date </span>
+                      <label className="mb-2 block text-xs font-semibold text-gray-900">
+                        Visit date
                       </label>
                       <div className="relative">
                         <DatePicker
@@ -1117,168 +1373,122 @@ const BookingClient = ({ activityId }) => {
                           }}
                           dateFormat="dd/MM/yyyy"
                           placeholderText="Choose a date"
-                          className={`w-full px-4 py-3 pl-12 border ${errors.selectedDate
-                            ? "border-red-500"
-                            : formData.selectedDate
-                              ? ""
-                              : "border-gray-300"
-                            } rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
+                          className={`w-full rounded-xl border bg-white px-4 py-3 pl-11 text-sm text-gray-800 outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 ${
+                            errors.selectedDate ? "border-red-400" : "border-gray-200"
+                          }`}
                         />
-                        <i className="fi fi-rr-calendar absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 text-lg pointer-events-none"></i>
+                        <i className="fi fi-rr-calendar pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
                       </div>
-                      {errors.selectedDate && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.selectedDate}
-                        </p>
-                      )}
+                      {errors.selectedDate ? (
+                        <p className="mt-1 text-xs text-red-500">{errors.selectedDate}</p>
+                      ) : null}
                     </div>
 
-                    {/* Time Slot */}
-                    {isSlotBased && (
+                    {effectivePricing?.rateType === "full" ? (
                       <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 bg-white">
-                          <span>Select Time Slot </span>
+                        <label className="mb-2 block text-xs font-semibold text-gray-900">
+                          Tickets
                         </label>
-                        <select
-                          value={formData.selectedTimeSlot}
-                          onChange={(e) =>
-                            handleInputChange("selectedTimeSlot", e.target.value)
-                          }
-                          className={`w-full px-4 py-3 border ${
-                            errors.selectedTimeSlot
-                              ? "border-red-500"
-                              : formData.selectedTimeSlot
-                                ? ""
-                                : "border-gray-300"
-                          } rounded-lg bg-transparent focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-gray-500 text-gray-800 outline-none`}
-                        >
-                          <option value="" className="text-gray-500 bg-white">
-                            Select a time slot
-                          </option>
-                          {slotOptions.map((slot) => (
-                            <option
-                              key={slot.id}
-                              value={slot.id}
-                              className="bg-white text-gray-800"
+                        <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+                          <span className="text-sm font-medium text-gray-800">Quantity</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setTicketCount(Math.max(1, Number(ticketCount) - 1))}
+                              className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
                             >
-                              {slot.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.selectedTimeSlot && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.selectedTimeSlot}
-                          </p>
-                        )}
+                              <i className="fi fi-rr-minus text-xs" aria-hidden="true" />
+                            </button>
+                            <span className="min-w-6 text-center text-sm font-bold tabular-nums text-gray-900">
+                              {ticketCount}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setTicketCount(Number(ticketCount) + 1)}
+                              className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
+                            >
+                              <i className="fi fi-rr-plus text-xs" aria-hidden="true" />
+                            </button>
+                          </div>
+                        </div>
+                        {errors.ticketCount ? (
+                          <p className="mt-1 text-xs text-red-500">{errors.ticketCount}</p>
+                        ) : null}
                       </div>
-                    )}
+                    ) : null}
+                  </div>
 
-                    {/* Ticket Count (full rate only) */}
-                    {effectivePricing?.rateType === "full" && (
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <span>Ticket Count</span>
-                        </label>
+                  {isSlotBased ? (
+                    <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+                      <label className="mb-3 block text-xs font-semibold text-gray-900">
+                        Time slot
+                      </label>
+                      <ActivityTimeSlotPicker
+                        slots={pickerSlotOptions}
+                        value={String(formData.selectedTimeSlot || "")}
+                        onChange={(slotId) => handleInputChange("selectedTimeSlot", slotId)}
+                        error={errors.selectedTimeSlot}
+                        disabled={!formData.selectedDate}
+                      />
+                    </div>
+                  ) : null}
+
+                  {effectivePricing?.rateType === "full" ? null : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+                        <span className="text-sm font-medium text-gray-800">Adults</span>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => setTicketCount(Math.max(1, Number(ticketCount) - 1))}
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            <i className="fi fi-rr-minus text-sm text-gray-500"></i>
-                          </button>
-                          <span className="min-w-10 text-center text-lg font-medium text-gray-800">
-                            {ticketCount}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setTicketCount(Number(ticketCount) + 1)}
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                          >
-                            <i className="fi fi-rr-plus text-sm text-gray-500"></i>
-                          </button>
-                        </div>
-                        {errors.ticketCount && (
-                          <p className="text-red-500 text-xs mt-1">{errors.ticketCount}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {effectivePricing?.rateType === "full" ? null : (
-                    <div className="flex gap-10">
-                      {/* Adult Count */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <span>Number of Adults</span>
-                        </label>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
                             onClick={() =>
-                              handleInputChange(
-                                "adultCount",
-                                Math.max(1, formData.adultCount - 1)
-                              )
+                              handleInputChange("adultCount", Math.max(1, formData.adultCount - 1))
                             }
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                            className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
                           >
-                            <i className="fi fi-rr-minus text-sm text-gray-500"></i>
+                            <i className="fi fi-rr-minus text-xs" aria-hidden="true" />
                           </button>
-                          <span className="flex-1 text-center text-lg font-medium text-gray-800">
+                          <span className="min-w-6 text-center text-sm font-bold tabular-nums text-gray-900">
                             {formData.adultCount}
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleInputChange("adultCount", formData.adultCount + 1)
-                            }
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                            onClick={() => handleInputChange("adultCount", formData.adultCount + 1)}
+                            className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
                           >
-                            <i className="fi fi-rr-plus text-sm text-gray-500"></i>
+                            <i className="fi fi-rr-plus text-xs" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
 
-                      {/* Child Count */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                          <span>Number of Children</span>
-                        </label>
-                        <div className="flex items-center gap-3">
+                      <div className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
+                        <span className="text-sm font-medium text-gray-800">Children</span>
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() =>
-                              handleInputChange(
-                                "childCount",
-                                Math.max(0, formData.childCount - 1)
-                              )
+                              handleInputChange("childCount", Math.max(0, formData.childCount - 1))
                             }
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                            className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
                           >
-                            <i className="fi fi-rr-minus text-sm text-gray-500"></i>
+                            <i className="fi fi-rr-minus text-xs" aria-hidden="true" />
                           </button>
-                          <span className="flex-1 text-center text-lg font-medium text-gray-800">
+                          <span className="min-w-6 text-center text-sm font-bold tabular-nums text-gray-900">
                             {formData.childCount}
                           </span>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleInputChange("childCount", formData.childCount + 1)
-                            }
-                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                            onClick={() => handleInputChange("childCount", formData.childCount + 1)}
+                            className="fi-box h-8 w-8 rounded-md border border-gray-200 bg-white text-gray-600"
                           >
-                            <i className="fi fi-rr-plus text-sm text-gray-500"></i>
+                            <i className="fi fi-rr-plus text-xs" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* Buggy option removed */}
-
                   {selectedTicket && pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) > 0 ? (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between rounded-xl border border-gray-100 px-3 py-2.5">
                       <div>
                         <div className="text-sm font-medium text-gray-700">Need Guide</div>
                         <div className="text-xs text-gray-500">
@@ -1313,19 +1523,19 @@ const BookingClient = ({ activityId }) => {
                       onChange={(e) =>
                         handleInputChange("specialRequests", e.target.value)
                       }
-                      rows={4}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none resize-none text-gray-800 placeholder:text-gray-500 bg-white"
+                      rows={3}
+                      className="w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20"
                       placeholder="Any special requirements or requests..."
                     />
                   </div>
                 </div>
+                </div>
               </div>
 
-              {/* Cancellation Policy */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <i className="fi fi-rr-shield-check text-primary-500"></i>
-                  Cancellation Policy
+              <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:p-6">
+                <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
+                  <i className="fi fi-rr-shield-check relative top-0 text-primary-600" aria-hidden="true" />
+                  Cancellation policy
                 </h2>
                 {Array.isArray(activityDetails?.cancellation_policies) &&
                 activityDetails.cancellation_policies.length > 0 ? (
@@ -1346,8 +1556,10 @@ const BookingClient = ({ activityId }) => {
                 )}
               </div>
 
-              {/* Terms and Conditions */}
-              <div className="bg-white rounded-xl p-6 shadow-sm">
+              <div
+                ref={termsSectionRef}
+                className="scroll-mt-28 overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:p-6"
+              >
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -1386,10 +1598,9 @@ const BookingClient = ({ activityId }) => {
 
           {/* Booking Summary - Sidebar */}
           <div className="min-w-0 lg:shrink-0">
-            <div className="bg-white rounded-xl p-6 shadow-sm sticky top-6">
-              <h2 className="text-xl font-medium text-gray-900 mb-4 tracking-tight">
-                Booking Summary
-              </h2>
+            <div className="sticky top-24 space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.06)] sm:p-6">
+              <h2 className="mb-4 text-lg font-bold text-gray-900">Booking summary</h2>
 
               {/* Activity Info */}
               <div className="mb-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -1594,47 +1805,88 @@ const BookingClient = ({ activityId }) => {
                 </p>
               </div>
 
-              {/* Submit Button - Desktop */}
-              <div className="">
+              <div className="mb-4">
                 <Button
                   onClick={handleSubmit}
                   size="lg"
-                  className="w-full rounded-full"
-                  isLoading={isLoading}
-                  loadingLabel="Processing…"
-                  icon={<i className="fi fi-rr-check ml-2"></i>}
+                  className="h-12 w-full text-base font-semibold"
+                  isLoading={isPaying}
+                  loadingLabel="Opening payment…"
+                  icon={<i className="fi fi-rr-lock" aria-hidden="true" />}
                 >
-                  Confirm Booking
+                  Pay securely · Confirm booking
                 </Button>
+                <div className="mt-3">
+                  <PaymentTrustPanel compact />
+                </div>
               </div>
 
-              {/* Info Message */}
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-800">
-                  <i className="fi fi-rr-info mr-1"></i>
-                  You'll receive a confirmation email after booking
+              <PaymentTrustPanel className="mb-4 hidden lg:block" />
+
+              <div className="rounded-xl border border-blue-100 bg-blue-50/80 p-3.5">
+                <p className="text-xs leading-relaxed text-blue-900">
+                  <i className="fi fi-rr-envelope relative top-0 mr-1.5" aria-hidden="true" />
+                  You&apos;ll receive an instant confirmation email with your e-ticket after payment.
                 </p>
               </div>
+            </div>
             </div>
           </div>
         </div>
       </div>
 
-      {showSuccess && (
-        <SuccessPopup
-          show={showSuccess}
-          title={successMessage.title}
-          message={successMessage.message}
-          onClose={() => {
-            setShowSuccess(false);
-            if (completedBookingId) {
-              router.push(`/my-bookings/activity/ticket/${completedBookingId}`);
-            } else {
-              router.push("/my-bookings?tab=activities");
-            }
-          }}
-        />
-      )}
+      <PaymentSuccessPopup
+        show={showSuccess}
+        onClose={goToCompletedTicket}
+        title={successMessage.title}
+        message={successMessage.message}
+        itemLabel="Your activity"
+        itemTitle={activityDetails?.title || "Activity"}
+        amountPaid={successMessage.amountPaid}
+        detailLeftLabel="Visit date"
+        detailLeft={successMessage.visitDate}
+        detailRightLabel={successMessage.detailRightLabel}
+        detailRight={successMessage.detailRight}
+        emailSent={successMessage.emailSent}
+        userEmail={successMessage.userEmail}
+        primaryAction={{
+          label: "View ticket",
+          icon: "fi-rr-ticket",
+          onClick: goToCompletedTicket,
+        }}
+        secondaryAction={{
+          label: "Go to my bookings",
+          onClick: goToMyBookings,
+        }}
+      />
+
+      <PaymentProcessingOverlay show={Boolean(paymentPhase)} stage={paymentPhase || "verifying"} />
+
+      <ErrorPopup
+        show={showPaymentError}
+        onClose={closePaymentError}
+        variant={paymentError?.variant || "error"}
+        title={paymentError?.title}
+        message={paymentError?.message}
+        hint={paymentError?.hint}
+        closeOnBackdrop={paymentError?.variant === "cancelled"}
+        primaryAction={
+          paymentError?.canRetry
+            ? {
+                label: paymentError?.primaryLabel || "Try again",
+                icon: paymentError?.primaryIcon,
+                isLoading: isPaying && !paymentPhase,
+                loadingLabel: "Opening payment…",
+                onClick: handlePaymentRetry,
+              }
+            : { label: paymentError?.primaryLabel || "Close", onClick: closePaymentError }
+        }
+        secondaryAction={
+          paymentError?.canRetry
+            ? { label: paymentError?.secondaryLabel || "Close", onClick: closePaymentError }
+            : null
+        }
+      />
     </div>
   );
 };

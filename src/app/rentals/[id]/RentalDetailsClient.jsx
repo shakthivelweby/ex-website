@@ -15,6 +15,7 @@ import {
   normalizeRentalPickupOptions,
   getDefaultPickupOption,
 } from "@/app/rentals/rentalPickupUtils";
+import DetailSubHeader from "@/components/layout/DetailSubHeader";
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -277,31 +278,13 @@ export default function RentalDetailsClient({ rental }) {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 lg:pb-8">
-      <div className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3 h-14">
-            <button
-              type="button"
-              onClick={handleBackClick}
-              className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors shrink-0"
-            >
-              <i className="fi fi-rr-arrow-left text-base" />
-              <span>Back to rentals</span>
-            </button>
-            <p className="hidden md:block text-sm font-medium text-gray-900 truncate text-center flex-1 px-4">
-              {rental.title}
-            </p>
-            <button
-              type="button"
-              onClick={handleShare}
-              aria-label="Share rental"
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors shrink-0"
-            >
-              <i className="fi fi-rr-share text-lg text-gray-600" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <DetailSubHeader
+        backLabel="Back to rentals"
+        title={rental.title}
+        onBack={handleBackClick}
+        onShare={handleShare}
+        shareAriaLabel="Share rental"
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 lg:gap-8">

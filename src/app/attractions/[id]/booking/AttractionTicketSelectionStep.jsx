@@ -45,6 +45,8 @@ export default function AttractionTicketSelectionStep({
   getLineMaxQty,
   needGuide,
   onNeedGuideChange,
+  hasGuideOption = false,
+  guideAmount = 0,
   guideRate,
   closeoutDates = [],
   seasonalDates = [],
@@ -58,6 +60,21 @@ export default function AttractionTicketSelectionStep({
         .filter(Boolean),
     [ticketPrices]
   );
+
+  const guideRateLabel = useMemo(() => {
+    const rates = (ticketPrices || [])
+      .map((row) => Number(row?.guide_rate ?? 0))
+      .filter((rate) => rate > 0);
+    if (!rates.length) return null;
+    const minRate = Math.min(...rates);
+    return minRate === Math.max(...rates)
+      ? `₹${minRate} per ticket`
+      : `From ₹${minRate} per ticket`;
+  }, [ticketPrices]);
+
+  const showGuideOption = hasGuideOption || guideRate > 0 || guideRateLabel;
+  const guidePriceHint =
+    guideAmount > 0 ? `₹${guideAmount} for selected tickets` : guideRateLabel;
 
   return (
     <div className="rounded-2xl border border-gray-200/80 bg-white shadow-sm">
@@ -248,14 +265,16 @@ export default function AttractionTicketSelectionStep({
           </p>
         ) : null}
 
-        {guideRate > 0 ? (
+        {showGuideOption ? (
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
             <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
               <div className="flex items-center gap-3">
-                <IconBox icon="fi fi-rr-user-guide" />
+                <IconBox icon="fi fi-rr-user-skill" />
                 <div>
                   <p className="text-sm font-semibold text-gray-900">Need a guide</p>
-                  <p className="text-xs text-gray-500">₹{guideRate} per booking</p>
+                  {guidePriceHint ? (
+                    <p className="text-xs text-gray-500">{guidePriceHint}</p>
+                  ) : null}
                 </div>
               </div>
               <button

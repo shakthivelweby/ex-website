@@ -31,6 +31,7 @@ import {
   isActivityCloseoutDate,
   normalizeCloseoutDates,
 } from "@/utils/closeoutUtils";
+import { normalizeAttractionBookingData } from "@/utils/attractionTicketPrices";
 
 function attractionAdminPct(ticket) {
   return Math.max(0, Number(ticket?.admin_charge ?? 0));
@@ -178,8 +179,8 @@ function getTicketUnitPrices(ticket) {
 
 function getTicketFromPrice(ticket) {
   const prices = getTicketUnitPrices(ticket);
-  const lowest = Math.min(prices.adult.final, prices.child.final);
-  return prices.hasDiscount ? lowest.toFixed(2) : String(lowest);
+  const adult = prices.hasDiscount ? prices.adult.final : prices.adult.afterAdmin;
+  return prices.hasDiscount ? adult.toFixed(2) : String(adult);
 }
 
 function getLineMaxQty(ticket, lineType, tickets) {
@@ -312,8 +313,9 @@ const AttractionBookingPage = ({
         setLoading(true);
         const response = await getDetailsForBooking(attractionId, visitDate);
         if (response?.data) {
-          setAttractionData(response.data);
-          setTicketData(response.data);
+          const normalized = normalizeAttractionBookingData(response.data);
+          setAttractionData(normalized);
+          setTicketData(normalized);
         }
       } catch (error) {
         console.error("Error fetching booking details:", error);
@@ -344,10 +346,10 @@ const AttractionBookingPage = ({
 
   useEffect(() => {
     const prices = ticketData?.attraction_ticket_type_prices;
-    if (prices?.length && expandedTicketType == null) {
+    if (prices?.length) {
       setExpandedTicketType(prices[0].attraction_ticket_type_id);
     }
-  }, [ticketData?.attraction_ticket_type_prices, expandedTicketType]);
+  }, [ticketData?.attraction_ticket_type_prices]);
 
   const handleVisitDateChange = async (date) => {
     const dateString = date ? date.toISOString().split("T")[0] : "";
@@ -361,8 +363,9 @@ const AttractionBookingPage = ({
         setLoading(true);
         const response = await getDetailsForBooking(attractionId, dateString);
         if (response?.data) {
-          setAttractionData(response.data);
-          setTicketData(response.data);
+          const normalized = normalizeAttractionBookingData(response.data);
+          setAttractionData(normalized);
+          setTicketData(normalized);
         }
       } catch (error) {
         console.error("Error fetching booking details for date:", error);
@@ -433,10 +436,11 @@ const AttractionBookingPage = ({
   };
 
   const handleTicketTypeClick = (ticketTypeId) => {
-    if (expandedTicketType === ticketTypeId) {
+    const id = Number(ticketTypeId);
+    if (Number(expandedTicketType) === id) {
       setExpandedTicketType(null);
     } else {
-      setExpandedTicketType(ticketTypeId);
+      setExpandedTicketType(id);
     }
   };
 
@@ -521,8 +525,9 @@ const AttractionBookingPage = ({
     try {
       const response = await getDetailsForBooking(attractionId, selectedDate);
       if (response?.data) {
-        setAttractionData(response.data);
-        setTicketData(response.data);
+        const normalized = normalizeAttractionBookingData(response.data);
+        setAttractionData(normalized);
+        setTicketData(normalized);
       }
     } catch (error) {
       console.error("Error refreshing booking details:", error);

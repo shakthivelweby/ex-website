@@ -222,20 +222,7 @@ export default function Search({ isOpen, onClose, type }) {
       JSON.stringify(normalized),
     );
     const ids = normalized.map((d) => d.id).join(",");
-    const countryCounts = normalized.reduce((acc, d) => {
-      if (!d.country_id) return acc;
-      acc[d.country_id] = (acc[d.country_id] || 0) + 1;
-      return acc;
-    }, {});
-    const primaryCountryId = Object.entries(countryCounts).sort(
-      (a, b) => b[1] - a[1],
-    )[0]?.[0];
-
-    if (primaryCountryId) {
-      router.push(`/packages/${primaryCountryId}?destinations=${ids}`);
-    } else {
-      router.push(`/explore?destinations=${ids}`);
-    }
+    router.push(`/packages/search?destinations=${ids}`);
     onClose();
   };
 
@@ -330,7 +317,7 @@ export default function Search({ isOpen, onClose, type }) {
                     type="button"
                     onClick={() => handleModuleSelect(module)}
                     disabled={!module.enabled}
-                    className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:gap-1 sm:px-3 sm:py-2 sm:text-[12px] ${
+                    className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-medium transition-colors sm:gap-1 sm:px-3 sm:py-2 sm:text-[12px] ${
                       isActive
                         ? `border-current ${module.activeText}`
                         : !module.enabled
@@ -585,14 +572,14 @@ export default function Search({ isOpen, onClose, type }) {
                           </p>
                         </div>
                         <div
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          className={`fi-box h-5 w-5 shrink-0 rounded-full border ${
                             selected
-                              ? "border-primary-600 bg-primary-600"
+                              ? "border-primary-600 bg-primary-600 text-white"
                               : "border-[#DDDDDD]"
                           }`}
                         >
                           {selected ? (
-                            <i className="fi fi-rr-check text-[9px] text-white" />
+                            <i className="fi fi-rr-check text-[10px]" aria-hidden="true" />
                           ) : null}
                         </div>
                       </button>

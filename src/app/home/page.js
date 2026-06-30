@@ -37,6 +37,7 @@ function SupplierMountainScene() {
     "165,120 285,8 405,120",
     "595,120 715,14 835,120",
     "1025,120 1145,10 1265,120",
+    "1265,120 1355,22 1442,120",
   ];
 
   const nearPeaks = [
@@ -45,8 +46,6 @@ function SupplierMountainScene() {
     "655,120 730,58 805,120",
     "980,120 1055,70 1130,120",
   ];
-
-  const gapFillers = ["1145,10 1265,120 1345,32"];
 
   const trees = [
     "228,120 234,100 240,120",
@@ -85,13 +84,6 @@ function SupplierMountainScene() {
       {midPeaks.map((points) => (
         <polygon
           key={`mid-${points}`}
-          points={points}
-          fill="url(#supplier-mountain-mid)"
-        />
-      ))}
-      {gapFillers.map((points) => (
-        <polygon
-          key={`gap-${points}`}
           points={points}
           fill="url(#supplier-mountain-mid)"
         />
@@ -461,34 +453,67 @@ function ModuleSection({ module, index, reversed, bare = false, total = 6 }) {
 
 function PinnedModuleSections() {
   return (
-    <PinnedModuleScroll>
-      {MODULES.map((module, index) => (
-        <div
-          key={module.id}
-          className="module-pin-panel h-[100vh] min-h-[100vh] w-full"
-        >
+    <>
+      {/* Mobile / tablet: normal document scroll — no GSAP pin */}
+      <div className="lg:hidden">
+        {MODULES.map((module, index) => (
           <div
-            className={`module-pin-inner relative flex h-[100vh] min-h-[100vh] w-full items-start justify-center overflow-x-hidden overflow-y-auto py-8 lg:items-center lg:overflow-hidden lg:py-0 ${module.accent.pinBg}`}
+            key={module.id}
+            className={`border-b border-[#EBEBEB] last:border-b-0 ${module.accent.pinBg}`}
           >
-            <span
-              className="pointer-events-none absolute bottom-8 right-6 z-0 select-none text-[120px] font-medium leading-none tracking-tight text-[#000000]/[0.03] sm:right-10 sm:text-[160px] lg:bottom-12 lg:right-16 lg:text-[200px]"
-              aria-hidden
-            >
-              {String(index + 1).padStart(2, "0")}
-            </span>
-            <div className="relative z-10 w-full">
-              <ModuleSection
-                module={module}
-                index={index}
-                reversed={index % 2 === 1}
-                bare
-                total={MODULES.length}
-              />
+            <div className="relative py-10 md:py-12">
+              <span
+                className="pointer-events-none absolute bottom-6 right-4 z-0 select-none text-[88px] font-medium leading-none tracking-tight text-[#000000]/[0.03] sm:right-8 sm:text-[120px]"
+                aria-hidden
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div className="relative z-10 w-full">
+                <ModuleSection
+                  module={module}
+                  index={index}
+                  reversed={index % 2 === 1}
+                  bare
+                  total={MODULES.length}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </PinnedModuleScroll>
+        ))}
+      </div>
+
+      {/* Desktop: pinned scroll sections */}
+      <div className="hidden lg:block">
+        <PinnedModuleScroll>
+          {MODULES.map((module, index) => (
+            <div
+              key={module.id}
+              className="module-pin-panel h-[100vh] min-h-[100vh] w-full"
+            >
+              <div
+                className={`module-pin-inner relative flex h-[100vh] min-h-[100vh] w-full items-center justify-center overflow-hidden ${module.accent.pinBg}`}
+              >
+                <span
+                  className="pointer-events-none absolute bottom-12 right-16 z-0 select-none text-[200px] font-medium leading-none tracking-tight text-[#000000]/[0.03]"
+                  aria-hidden
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="relative z-10 w-full">
+                  <ModuleSection
+                    module={module}
+                    index={index}
+                    reversed={index % 2 === 1}
+                    bare
+                    total={MODULES.length}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </PinnedModuleScroll>
+      </div>
+    </>
   );
 }
 
@@ -563,7 +588,7 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="relative bg-[#222222]">
-        <div className="relative w-full py-4 sm:flex sm:min-h-[500px] sm:items-center sm:justify-center sm:py-10 md:min-h-[560px] md:py-14 lg:min-h-[620px]">
+        <div className="relative flex min-h-[min(88vh,760px)] w-full items-center justify-center py-8 sm:min-h-[500px] sm:py-10 md:min-h-[560px] md:py-14 lg:min-h-[620px]">
           <div className="pointer-events-none absolute inset-0">
             <Image
               src="/home/banner-image.jpg"
@@ -602,7 +627,7 @@ export default function HomePage() {
                 One platform, six ways to travel — each connects you directly to
                 verified suppliers.
               </p>
-              <p className="mt-3 text-xs font-medium text-[#B0B0B0]">
+              <p className="mt-3 hidden text-xs font-medium text-[#B0B0B0] lg:block">
                 Scroll to explore each category
               </p>
             </div>

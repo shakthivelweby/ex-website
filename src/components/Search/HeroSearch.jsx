@@ -223,20 +223,7 @@ export default function HeroSearch() {
       JSON.stringify(normalized),
     );
     const ids = normalized.map((d) => d.id).join(",");
-    const countryCounts = normalized.reduce((acc, d) => {
-      if (!d.country_id) return acc;
-      acc[d.country_id] = (acc[d.country_id] || 0) + 1;
-      return acc;
-    }, {});
-    const primaryCountryId = Object.entries(countryCounts).sort(
-      (a, b) => b[1] - a[1],
-    )[0]?.[0];
-
-    if (primaryCountryId) {
-      router.push(`/packages/${primaryCountryId}?destinations=${ids}`);
-    } else {
-      router.push(`/explore?destinations=${ids}`);
-    }
+    router.push(`/packages/search?destinations=${ids}`);
   };
 
   const runLocationSearch = () => {
@@ -283,11 +270,8 @@ export default function HeroSearch() {
       transition={{ duration: 0.5 }}
       className="relative z-10 w-full"
     >
-      <div className="overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] ring-1 ring-[#EBEBEB]">
-        <div className="px-5 pb-3 pt-5 text-center sm:px-8 sm:pb-4 sm:pt-7">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary-600 sm:mb-2 sm:text-[11px] sm:tracking-[0.2em]">
-            Explore World
-          </p>
+      <div className="overflow-hidden rounded-2xl bg-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ring-1 ring-white/50 backdrop-blur-md">
+        <div className="px-5 pb-3 pt-5 text-center sm:px-8 sm:pb-4 sm:pt-6">
           <h1 className="text-[30px] font-medium leading-[1.1] tracking-tight text-[#222222] sm:text-[34px] md:text-4xl">
             Pay less. Book direct.
           </h1>
@@ -312,7 +296,7 @@ export default function HeroSearch() {
                   key={module.id}
                   type="button"
                   onClick={() => handleModuleChange(module.id)}
-                  className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:gap-1 sm:px-4 sm:py-2 sm:text-[12px] ${
+                  className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-medium transition-colors sm:gap-1 sm:px-4 sm:py-2 sm:text-[12px] ${
                     isActive
                       ? `border-current ${module.activeText}`
                       : "border-transparent text-[#555555] hover:text-[#222222]"
@@ -332,13 +316,13 @@ export default function HeroSearch() {
             {showTabsScrollHint ? (
               <>
                 <div
-                  className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white via-white/95 to-transparent sm:hidden"
+                  className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white/80 via-white/70 to-transparent sm:hidden"
                   aria-hidden
                 />
                 <button
                   type="button"
                   onClick={scrollTabsRight}
-                  className="absolute right-0 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-[#EBEBEB] bg-white text-[#717171] shadow-sm sm:hidden"
+                  className="absolute right-0 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[#717171] shadow-sm backdrop-blur-sm sm:hidden"
                   aria-label="Swipe to see more categories"
                 >
                   <i className="fi fi-rr-angle-right text-xs" />
@@ -434,14 +418,14 @@ export default function HeroSearch() {
                   ? createPortal(
                       <div
                         ref={destinationDropdownRef}
-                        className="fixed z-[200] overflow-hidden rounded-2xl border border-[#E8E8E8] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.14)]"
+                        className="fixed z-[200] overflow-hidden rounded-2xl border border-white/50 bg-white/90 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-lg"
                         style={{
                           top: dropdownPosition.top,
                           left: dropdownPosition.left,
                           width: dropdownPosition.width,
                         }}
                       >
-                        <div className="border-b border-[#EBEBEB] bg-[#FAFAFA] px-3 py-2">
+                        <div className="border-b border-[#EBEBEB]/70 bg-[#FAFAFA]/80 px-3 py-2 backdrop-blur-sm">
                           <p className="text-xs font-medium text-[#717171]">
                             {isSchedule
                               ? "Select one destination"
@@ -500,14 +484,14 @@ export default function HeroSearch() {
                                   </p>
                                 </div>
                                 <div
-                                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                                  className={`fi-box h-5 w-5 shrink-0 rounded-full border ${
                                     selected
-                                      ? "border-primary-600 bg-primary-600"
+                                      ? "border-primary-600 bg-primary-600 text-white"
                                       : "border-[#DDDDDD]"
                                   }`}
                                 >
                                   {selected ? (
-                                    <i className="fi fi-rr-check text-[9px] text-white" />
+                                    <i className="fi fi-rr-check text-[10px]" aria-hidden="true" />
                                   ) : null}
                                 </div>
                               </button>

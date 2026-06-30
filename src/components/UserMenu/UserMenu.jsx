@@ -48,11 +48,11 @@ export default function UserMenu({
   menuRef = null,
 }) {
   const menuClassName = isMobileNav
-    ? "fixed left-0 right-0 bottom-[60px] w-full bg-white border-t border-gray-100 py-2 z-50 rounded-t-2xl shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+    ? "fixed left-0 right-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] w-full bg-white border-t border-[#EBEBEB] py-2 z-50 rounded-t-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.08)]"
     : "fixed lg:absolute right-0 lg:right-0 top-[60px] lg:top-full lg:mt-2 w-full lg:w-64 bg-white lg:rounded-xl shadow-lg border border-gray-100 py-2 z-50";
 
   const overlayClassName = isMobileNav
-    ? "fixed inset-0 bottom-[60px] bg-black/20 z-40"
+    ? "fixed inset-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] bg-[#222222]/40 z-40"
     : "lg:hidden fixed inset-x-0 top-[60px] bottom-0 bg-black/20 z-40";
 
   return (

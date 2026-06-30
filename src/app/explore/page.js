@@ -36,6 +36,7 @@ function MountainScene() {
     "165,120 285,8 405,120",
     "595,120 715,14 835,120",
     "1025,120 1145,10 1265,120",
+    "1265,120 1355,22 1442,120",
   ];
 
   const nearPeaks = [
@@ -44,8 +45,6 @@ function MountainScene() {
     "655,120 730,58 805,120",
     "980,120 1055,70 1130,120",
   ];
-
-  const gapFillers = ["1145,10 1265,120 1345,32"];
 
   const trees = [
     "228,120 234,100 240,120",
@@ -88,13 +87,6 @@ function MountainScene() {
           fill="url(#explore-mountain-mid)"
         />
       ))}
-      {gapFillers.map((points) => (
-        <polygon
-          key={`gap-${points}`}
-          points={points}
-          fill="url(#explore-mountain-mid)"
-        />
-      ))}
       {nearPeaks.map((points) => (
         <polygon
           key={`near-${points}`}
@@ -118,7 +110,7 @@ function HeaderMountainPattern({ animate = true }) {
   const shouldReduceMotion = useReducedMotion();
 
   const className =
-    "pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full sm:h-16 md:h-20";
+    "pointer-events-none absolute bottom-0 left-0 h-14 w-full sm:h-16 md:h-20";
 
   if (!animate || shouldReduceMotion) {
     return (

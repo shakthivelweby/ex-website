@@ -46,7 +46,6 @@ const Form = ({
 }) => {
   const { isNavigating, navigate } = useNavigateWithLoading();
   const isFreeBooking = enquireOnly || Boolean(attractionDetails?.freeBooking);
-  const [isLoading, setIsLoading] = useState(false);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState(propSelectedTickets || {});
   const [totalPrice, setTotalPrice] = useState(propTotalPrice || 0);
@@ -79,6 +78,16 @@ const Form = ({
     if (!dateString || !attractionDetails?.id) return;
 
     localStorage.setItem(`attraction_${attractionDetails.id}_selectedDate`, dateString);
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      params.set("date", dateString);
+      const qs = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        qs ? `${window.location.pathname}?${qs}` : window.location.pathname
+      );
+    }
     try {
       setPricesLoading(true);
       const response = await getTicketPricesForDate(attractionDetails.id, dateString);
@@ -100,20 +109,8 @@ const Form = ({
     if (selectedDate) {
       localStorage.setItem(`attraction_${attractionDetails.id}_selectedDate`, selectedDate);
     }
-    navigate(`/attractions/${attractionDetails.id}/booking`);
-  };
-
-  const submitHandler = async () => {
-    setIsLoading(true);
-    try {
-      if (!isLogin()) {
-        window.dispatchEvent(new CustomEvent("showLogin"));
-        return;
-      }
-      if (Object.keys(selectedTickets).length === 0 || !selectedDate) return;
-    } finally {
-      setIsLoading(false);
-    }
+    const qs = selectedDate ? `?date=${encodeURIComponent(selectedDate)}` : "";
+    navigate(`/attractions/${attractionDetails.id}/booking${qs}`);
   };
 
   const getSelectedTicketsCount = () =>
@@ -211,30 +208,16 @@ const Form = ({
 
         <div className="space-y-2.5 px-4 py-3.5">
           {!isMobilePopup ? (
-            <>
-              {getSelectedTicketsCount() === 0 ? (
-                <Button
-                  onClick={handleTicketSelection}
-                  size="lg"
-                  className="w-full h-12 text-base font-semibold"
-                  disabled={!selectedDate}
-                  isLoading={isNavigating}
-                  loadingLabel={isFreeBooking ? "Opening booking…" : "Opening tickets…"}
-                >
-                  {isFreeBooking ? "Book visit" : "Select tickets"}
-                </Button>
-              ) : (
-                <Button
-                  onClick={submitHandler}
-                  size="lg"
-                  className="w-full h-12 text-base font-semibold"
-                  isLoading={isLoading}
-                  loadingLabel={enquireOnly ? "Sending enquiry…" : "Booking…"}
-                >
-                  {enquireOnly ? "Send enquiry" : "Book now"}
-                </Button>
-              )}
-            </>
+            <Button
+              onClick={handleTicketSelection}
+              size="lg"
+              className="w-full h-12 text-base font-semibold"
+              disabled={!selectedDate}
+              isLoading={isNavigating}
+              loadingLabel={isFreeBooking ? "Opening booking…" : "Opening tickets…"}
+            >
+              {isFreeBooking ? "Book visit" : "Select tickets"}
+            </Button>
           ) : null}
           <div className="pt-1">
             <PaymentTrustPanel compact />

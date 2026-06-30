@@ -12,6 +12,8 @@ import {
   inputClass,
 } from "../ListingFilters/shared";
 
+const PRICE_FILTER_MAX = 10000;
+
 const AttractionFilters = ({
   initialFilters,
   onFilterChange,
@@ -84,7 +86,7 @@ const AttractionFilters = ({
 
   const hasPriceFilter =
     (tempFilters.price_from && Number(tempFilters.price_from) > 0) ||
-    (tempFilters.price_to && Number(tempFilters.price_to) < 1000);
+    (tempFilters.price_to && Number(tempFilters.price_to) < PRICE_FILTER_MAX);
 
   const FilterContent = () => (
     <div className="space-y-5">
@@ -161,25 +163,25 @@ const AttractionFilters = ({
           <div className="px-0.5 pt-1">
             <RangeSlider
               min={0}
-              max={1000}
-              step={50}
+              max={PRICE_FILTER_MAX}
+              step={100}
               initialValue={[
                 parseInt(tempFilters.price_from, 10) || 0,
-                parseInt(tempFilters.price_to, 10) || 1000,
+                parseInt(tempFilters.price_to, 10) || PRICE_FILTER_MAX,
               ]}
               onChange={(value) => patchFilters({ price_from: value[0], price_to: value[1] })}
               formatDisplay={(value) => {
                 if (!value || value.length !== 2) return "Any price";
-                if (value[0] === 0 && value[1] === 1000) return "Any price";
+                if (value[0] === 0 && value[1] === PRICE_FILTER_MAX) return "Any price";
                 if (value[0] === 0) return `Under ₹${value[1]}`;
-                if (value[1] === 1000) return `₹${value[0]}+`;
+                if (value[1] === PRICE_FILTER_MAX) return `₹${value[0]}+`;
                 return `₹${value[0]} – ₹${value[1]}`;
               }}
               title="Price range"
             />
             <div className="mt-2 flex justify-between text-[10px] font-medium text-gray-400">
               <span>Free</span>
-              <span>₹1000+</span>
+              <span>₹{PRICE_FILTER_MAX}+</span>
             </div>
           </div>
         </FilterField>

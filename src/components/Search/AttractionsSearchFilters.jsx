@@ -5,7 +5,7 @@ import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "./DateRangeSearchField";
 
 const PRICE_MIN = 0;
-const PRICE_MAX = 1000;
+const PRICE_MAX = 10000;
 
 export default function AttractionsSearchFilters({
   filters,
@@ -162,7 +162,7 @@ export default function AttractionsSearchFilters({
         />
         <div className="mt-1 flex justify-between text-xs text-gray-400">
           <span>Free</span>
-          <span>₹1000+</span>
+          <span>₹{PRICE_MAX}+</span>
         </div>
       </div>
     </div>

@@ -25,19 +25,27 @@ export const getAttractionCategories = async () => {
 
 // get all locations
 export const getAttractionLocations = async () => {
-  /*
-  // For now, return mock data. Later replace with actual API call
-  return {
-    data: mockLocations,
-    success: true,
-    message: "Locations fetched successfully"
-  };
-  
-  // Uncomment when API is ready
-  // const response = await apiServerMiddleware.get("/attraction-locations");
-  // return response.data;
-  */
-}
+  try {
+    const response = await apiServerMiddleware.get("/attractions");
+    const items =
+      response.data?.data?.data ||
+      response.data?.data ||
+      [];
+    const unique = [
+      ...new Set(
+        (Array.isArray(items) ? items : [])
+          .map((item) => item?.location || item?.city)
+          .filter(Boolean)
+      ),
+    ];
+    return {
+      data: unique.map((name) => ({ name, city: name })),
+      success: true,
+    };
+  } catch {
+    return { data: [], success: false };
+  }
+};
 
 // Helper function to parse date parameter
 const parseDateParameter = (dateParam) => {
@@ -153,45 +161,56 @@ export const list = async (filters = {}) => {
   // return response.data; 
 }
 
-// Client-side price filtering function
-const applyClientSidePriceFilter = (responseData, filters) => {
+const PRICE_FILTER_MAX = 10000;
+
+// Client-side rating + price filtering after API response
+const applyClientSideFilters = (responseData, filters) => {
   if (!responseData?.data?.data) return responseData;
+
+  let filteredAttractions = responseData.data.data;
+
+  if (filters.rating && !isNaN(parseFloat(filters.rating))) {
+    const minRating = parseFloat(filters.rating);
+    filteredAttractions = filteredAttractions.filter(
+      (attraction) => Number(attraction.rating || 0) >= minRating
+    );
+  }
 
   const priceFrom = parseFloat(filters.price_from) || 0;
   const priceTo = parseFloat(filters.price_to) || Infinity;
 
-  const filteredAttractions = responseData.data.data.filter((attraction) => {
-    if (
-      attraction.free_booking === true ||
-      attraction.free_booking === 1 ||
-      attraction.free_booking === "1"
-    ) {
-      return priceFrom <= 0;
-    }
+  if (filters.price_from || filters.price_to) {
+    filteredAttractions = filteredAttractions.filter((attraction) => {
+      if (
+        attraction.free_booking === true ||
+        attraction.free_booking === 1 ||
+        attraction.free_booking === "1"
+      ) {
+        return priceFrom <= 0;
+      }
 
-    const rt = attraction.price?.rate_type;
-    const adminPct = Number(attraction.price?.admin_charge ?? 0);
-    const discountPct = Number(attraction.price?.discount ?? 0);
-    const base =
-      rt === "full"
-        ? Number(attraction.price?.full_rate || 0)
-        : rt === "pax"
-        ? Number(attraction.price?.adult_price || 0)
-        : Number(attraction.price?.full_rate || attraction.price || 0);
-    const afterAdmin = applyAdminCharge(base, adminPct);
-    const displayPrice = applyDiscountOnAmount(afterAdmin, discountPct);
+      const rt = attraction.price?.rate_type;
+      const adminPct = Number(attraction.price?.admin_charge ?? 0);
+      const discountPct = Number(attraction.price?.discount ?? 0);
+      const base =
+        rt === "full"
+          ? Number(attraction.price?.full_rate || 0)
+          : rt === "pax"
+          ? Number(attraction.price?.adult_price || 0)
+          : Number(attraction.price?.full_rate || attraction.price || 0);
+      const afterAdmin = applyAdminCharge(base, adminPct);
+      const displayPrice = applyDiscountOnAmount(afterAdmin, discountPct);
 
-    return displayPrice >= priceFrom && displayPrice <= priceTo;
-  });
-  
+      return displayPrice >= priceFrom && displayPrice <= priceTo;
+    });
+  }
 
-  
   return {
     ...responseData,
     data: {
       ...responseData.data,
-      data: filteredAttractions
-    }
+      data: filteredAttractions,
+    },
   };
 };
 
@@ -212,14 +231,13 @@ export const getAttractions = async (filters = {}) => {
     if (filters.price_from && !isNaN(filters.price_from) && filters.price_from !== "0") {
       params.append("price_from", filters.price_from);
     }
-    if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== "1000") {
+    if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== String(PRICE_FILTER_MAX)) {
       params.append("price_to", filters.price_to);
     }
     
-    // Temporarily disable other filters until backend supports them
-    // if (filters.rating && filters.rating.trim()) {
-    //   params.append("rating", filters.rating.trim());
-    // }
+    if (filters.rating && String(filters.rating).trim()) {
+      params.append("rating", String(filters.rating).trim());
+    }
 
     if (filters.longitude && !isNaN(filters.longitude)) {
       params.append("longitude", filters.longitude);
@@ -261,22 +279,13 @@ export const getAttractions = async (filters = {}) => {
     
     const response = await apiServerMiddleware.get(url);
     
-    
-    // Apply client-side price filtering if needed
-    let filteredData = response.data;
-    if (filters.price_from || filters.price_to) {
-      filteredData = applyClientSidePriceFilter(response.data, filters);
-    }
+    let filteredData = applyClientSideFilters(response.data, filters);
     
     return filteredData;
   } catch (error) {
-  
-    
-    // If filtering fails, try to fetch all attractions without filters
-  
     try {
       const fallbackResponse = await apiServerMiddleware.get("/attractions");
-      return fallbackResponse.data;
+      return applyClientSideFilters(fallbackResponse.data, filters);
     } catch (fallbackError) {
       return {
         data: [],

@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import Popup from "../Popup";
 import { useAllDestinations, useRentalCategories } from "@/app/search/query";
 import { hasStoredImage } from "@/utils/imageUrl";
 import { buildCategoryTypesFromCategories } from "@/app/rentals/rentalCategoryTypeUtils";
@@ -40,14 +41,22 @@ export default function HeroSearch() {
   const router = useRouter();
   const destinationAnchorRef = useRef(null);
   const destinationDropdownRef = useRef(null);
+  const destinationSearchInputRef = useRef(null);
   const tabsScrollRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [showTabsScrollHint, setShowTabsScrollHint] = useState(true);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const [selectedModule, setSelectedModule] = useState("package");
   const [showDestinationDropdown, setShowDestinationDropdown] = useState(false);
   const [destinationQuery, setDestinationQuery] = useState("");
   const [selectedDestinations, setSelectedDestinations] = useState([]);
-  const [locationFilters, setLocationFilters] = useState(createDefaultDateFilters);
+  const [locationFilters, setLocationFilters] = useState(
+    createDefaultDateFilters,
+  );
 
   const isPackage = selectedModule === "package";
   const isSchedule = selectedModule === "schedule";
@@ -59,7 +68,8 @@ export default function HeroSearch() {
   const needsDates = !isDestinationModule;
 
   const activeModuleConfig =
-    HERO_MODULES.find((module) => module.id === selectedModule) ?? HERO_MODULES[0];
+    HERO_MODULES.find((module) => module.id === selectedModule) ??
+    HERO_MODULES[0];
 
   const { data: destinationsData, isLoading: isDestinationsLoading } =
     useAllDestinations(true);
@@ -101,7 +111,22 @@ export default function HeroSearch() {
   }, []);
 
   useEffect(() => {
-    if (!showDestinationDropdown) return undefined;
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!showDestinationDropdown || !isMobile) return undefined;
+    const timer = window.setTimeout(() => {
+      destinationSearchInputRef.current?.focus();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [showDestinationDropdown, isMobile]);
+
+  useEffect(() => {
+    if (!showDestinationDropdown || isMobile) return undefined;
 
     updateDropdownPosition();
     window.addEventListener("resize", updateDropdownPosition);
@@ -111,10 +136,10 @@ export default function HeroSearch() {
       window.removeEventListener("resize", updateDropdownPosition);
       window.removeEventListener("scroll", updateDropdownPosition, true);
     };
-  }, [showDestinationDropdown, updateDropdownPosition]);
+  }, [showDestinationDropdown, isMobile, updateDropdownPosition]);
 
   useEffect(() => {
-    if (!showDestinationDropdown) return undefined;
+    if (!showDestinationDropdown || isMobile) return undefined;
 
     const handleClickOutside = (event) => {
       if (destinationAnchorRef.current?.contains(event.target)) return;
@@ -123,7 +148,7 @@ export default function HeroSearch() {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showDestinationDropdown]);
+  }, [showDestinationDropdown, isMobile]);
 
   useEffect(() => {
     const el = tabsScrollRef.current;
@@ -228,11 +253,15 @@ export default function HeroSearch() {
 
   const runLocationSearch = () => {
     const params = new URLSearchParams();
-    if (locationFilters.dateFrom) params.set("date_from", locationFilters.dateFrom);
+    if (locationFilters.dateFrom)
+      params.set("date_from", locationFilters.dateFrom);
     if (locationFilters.dateTo) params.set("date_to", locationFilters.dateTo);
-    if (locationFilters.longitude) params.set("longitude", locationFilters.longitude);
-    if (locationFilters.latitude) params.set("latitude", locationFilters.latitude);
-    if (locationFilters.location) params.set("location", locationFilters.location);
+    if (locationFilters.longitude)
+      params.set("longitude", locationFilters.longitude);
+    if (locationFilters.latitude)
+      params.set("latitude", locationFilters.latitude);
+    if (locationFilters.location)
+      params.set("location", locationFilters.location);
 
     const basePath = isRentals
       ? "/rentals"
@@ -263,347 +292,514 @@ export default function HeroSearch() {
     runLocationSearch();
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="relative z-10 w-full"
-    >
-      <div className="overflow-hidden rounded-2xl bg-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ring-1 ring-white/50 backdrop-blur-md">
-        <div className="px-5 pb-3 pt-5 text-center sm:px-8 sm:pb-4 sm:pt-6">
-          <h1 className="text-[30px] font-medium leading-[1.1] tracking-tight text-[#222222] sm:text-[34px] md:text-4xl">
-            Pay less. Book direct.
-          </h1>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[#717171] sm:mt-2.5 sm:text-[15px]">
-            Packages, events, attractions, activities & more — from verified
-            suppliers, one search away.
-          </p>
+  const destinationPickerHint = isSchedule
+    ? "Select one destination"
+    : selectedDestinations.length > 0
+      ? `${selectedDestinations.length} selected — add more destinations`
+      : "Select one or more destinations";
+
+  const destinationPlaceholder =
+    selectedDestinations.length > 0
+      ? isSchedule
+        ? ""
+        : "Add more"
+      : isSchedule
+        ? "Pick a destination"
+        : "Search destinations to add";
+
+  const renderDestinationOptions = () => {
+    if (isDestinationsLoading) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#EBEBEB] border-t-primary-600" />
         </div>
+      );
+    }
 
-        <div className="border-t border-[#EBEBEB] px-5 py-2 sm:px-8 sm:py-2.5">
+    if (filteredDestinations.length === 0) {
+      return (
+        <p className="py-6 text-center text-sm text-[#717171]">
+          No destinations found
+        </p>
+      );
+    }
+
+    return filteredDestinations.map((destination) => {
+      const selected = selectedDestinations.some(
+        (d) => d.id === destination.id,
+      );
+      return (
+        <button
+          key={destination.id}
+          type="button"
+          onClick={() => toggleDestination(destination)}
+          className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors ${
+            selected
+              ? "bg-primary-50 ring-1 ring-primary-200"
+              : "hover:bg-[#FAFAFA]"
+          }`}
+        >
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#EBEBEB]">
+            {hasStoredImage(destination.thumb_image) &&
+            destination.thumb_image_url ? (
+              <Image
+                src={destination.thumb_image_url}
+                alt={destination.name}
+                fill
+                className="object-cover"
+                sizes="36px"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <i className="fi fi-rr-map-marker text-sm text-[#717171]" />
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-[#222222]">
+              {destination.name}
+            </p>
+            <p className="truncate text-xs text-[#717171]">
+              {destination.state?.name || "Destination"}
+            </p>
+          </div>
           <div
-            className="relative w-full"
+            className={`fi-box h-5 w-5 shrink-0 rounded-full border ${
+              selected
+                ? "border-primary-600 bg-primary-600 text-white"
+                : "border-[#DDDDDD]"
+            }`}
           >
-            <div
-              ref={tabsScrollRef}
-              className="flex snap-x snap-mandatory justify-start gap-0.5 overflow-x-auto pr-9 [-ms-overflow-style:none] [scrollbar-width:none] sm:justify-center sm:gap-1 sm:pr-0 [&::-webkit-scrollbar]:hidden"
-            >
-            {HERO_MODULES.map((module) => {
-              const isActive = selectedModule === module.id;
-              return (
-                <button
-                  key={module.id}
-                  type="button"
-                  onClick={() => handleModuleChange(module.id)}
-                  className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-medium transition-colors sm:gap-1 sm:px-4 sm:py-2 sm:text-[12px] ${
-                    isActive
-                      ? `border-current ${module.activeText}`
-                      : "border-transparent text-[#555555] hover:text-[#222222]"
-                  }`}
-                >
-                  <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-lg sm:h-8 sm:w-8 ${module.iconBg}`}
-                  >
-                    <i className={`fi ${module.icon} text-xs sm:text-sm ${module.iconColor}`} />
-                  </span>
-                  <span className="whitespace-nowrap">{module.label}</span>
-                </button>
-              );
-            })}
-            </div>
-
-            {showTabsScrollHint ? (
-              <>
-                <div
-                  className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white/80 via-white/70 to-transparent sm:hidden"
-                  aria-hidden
-                />
-                <button
-                  type="button"
-                  onClick={scrollTabsRight}
-                  className="absolute right-0 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[#717171] shadow-sm backdrop-blur-sm sm:hidden"
-                  aria-label="Swipe to see more categories"
-                >
-                  <i className="fi fi-rr-angle-right text-xs" />
-                </button>
-              </>
+            {selected ? (
+              <i className="fi fi-rr-check text-[10px]" aria-hidden="true" />
             ) : null}
           </div>
-        </div>
+        </button>
+      );
+    });
+  };
 
-        <div className="border-t border-[#EBEBEB] px-5 py-4 sm:px-8 sm:py-5">
-          <div
-            className={`grid w-full grid-cols-1 gap-2.5 sm:gap-3 ${
-              isDestinationModule
-                ? "sm:grid-cols-[minmax(0,1fr)_auto]"
-                : isRentals
-                  ? "sm:grid-cols-2 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto]"
-                  : "sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]"
-            } sm:items-end`}
-          >
-            {isDestinationModule ? (
-              <div ref={destinationAnchorRef} className="min-w-0">
-                <SearchInputBox label={isSchedule ? "Destination" : "Where to?"}>
-                  <div
-                    className={`flex min-h-[22px] flex-wrap items-center gap-1.5 ${
-                      isSchedule &&
-                      selectedDestinations.length > 0 &&
-                      !showDestinationDropdown
-                        ? "cursor-text"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      if (
-                        isSchedule &&
-                        selectedDestinations.length > 0 &&
-                        !showDestinationDropdown
-                      ) {
-                        setShowDestinationDropdown(true);
-                        requestAnimationFrame(() => updateDropdownPosition());
-                      }
-                    }}
-                  >
-                    {selectedDestinations.map((dest) => (
+  const renderSelectedDestinationChips = ({
+    onRemoveStopPropagation = true,
+  } = {}) =>
+    selectedDestinations.map((dest) => (
+      <span
+        key={dest.id}
+        className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 py-0.5 pl-2 pr-1 text-xs font-medium text-primary-700"
+      >
+        <span className="truncate">{dest.name}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            if (onRemoveStopPropagation) e.stopPropagation();
+            toggleDestination(dest);
+          }}
+          className="shrink-0 text-primary-500 hover:text-primary-800"
+          aria-label={`Remove ${dest.name}`}
+        >
+          <i className="fi fi-rr-cross-small text-[11px]" />
+        </button>
+      </span>
+    ));
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 w-full"
+      >
+        <div className="overflow-hidden rounded-2xl bg-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ring-1 ring-white/50 backdrop-blur-md">
+          <div className="px-5 pb-3 pt-5 text-center sm:px-8 sm:pb-4 sm:pt-6">
+            <h1 className="text-[30px] font-medium leading-[1.1] tracking-tight text-[#222222] sm:text-[34px] md:text-4xl">
+              Pay less. Book direct.
+            </h1>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[#717171] sm:mt-2.5 sm:text-[15px]">
+              Packages, events, attractions, activities & more — from verified
+              suppliers, one search away.
+            </p>
+          </div>
+
+          <div className="border-t border-[#EBEBEB] px-5 py-2 sm:px-8 sm:py-2.5">
+            <div className="relative w-full">
+              <div
+                ref={tabsScrollRef}
+                className="flex snap-x snap-mandatory justify-start gap-0.5 overflow-x-auto pr-9 [-ms-overflow-style:none] [scrollbar-width:none] sm:justify-center sm:gap-1 sm:pr-0 [&::-webkit-scrollbar]:hidden"
+              >
+                {HERO_MODULES.map((module) => {
+                  const isActive = selectedModule === module.id;
+                  return (
+                    <button
+                      key={module.id}
+                      type="button"
+                      onClick={() => handleModuleChange(module.id)}
+                      className={`flex shrink-0 snap-center flex-col items-center gap-0.5 border-b-2 px-2.5 py-1.5 text-[11px] font-medium transition-colors sm:gap-1 sm:px-4 sm:py-2 sm:text-[12px] ${
+                        isActive
+                          ? `border-current ${module.activeText}`
+                          : "border-transparent text-[#555555] hover:text-[#222222]"
+                      }`}
+                    >
                       <span
-                        key={dest.id}
-                        className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 py-0.5 pl-2 pr-1 text-xs font-medium text-primary-700"
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg sm:h-8 sm:w-8 ${module.iconBg}`}
                       >
-                        <span className="truncate">{dest.name}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleDestination(dest);
-                          }}
-                          className="shrink-0 text-primary-500 hover:text-primary-800"
-                          aria-label={`Remove ${dest.name}`}
-                        >
-                          <i className="fi fi-rr-cross-small text-[11px]" />
-                        </button>
+                        <i
+                          className={`fi ${module.icon} text-xs sm:text-sm ${module.iconColor}`}
+                        />
                       </span>
-                    ))}
-                    {!(
-                      isSchedule &&
-                      selectedDestinations.length > 0 &&
-                      !showDestinationDropdown
-                    ) ? (
-                      <input
-                        type="text"
-                        value={destinationQuery}
-                        onChange={(e) => {
-                          setDestinationQuery(e.target.value);
-                          setShowDestinationDropdown(true);
-                        }}
-                        onFocus={() => {
-                          setShowDestinationDropdown(true);
-                          requestAnimationFrame(() => updateDropdownPosition());
-                        }}
-                        placeholder={
-                          selectedDestinations.length > 0
+                      <span className="whitespace-nowrap">{module.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {showTabsScrollHint ? (
+                <>
+                  <div
+                    className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-white/80 via-white/70 to-transparent sm:hidden"
+                    aria-hidden
+                  />
+                  <button
+                    type="button"
+                    onClick={scrollTabsRight}
+                    className="absolute right-0 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 bg-white/90 text-[#717171] shadow-sm backdrop-blur-sm sm:hidden"
+                    aria-label="Swipe to see more categories"
+                  >
+                    <i className="fi fi-rr-angle-right text-xs" />
+                  </button>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="border-t border-[#EBEBEB] px-5 py-4 sm:px-8 sm:py-5">
+            <div
+              className={`grid w-full grid-cols-1 gap-2.5 sm:gap-3 ${
+                isDestinationModule
+                  ? "sm:grid-cols-[minmax(0,1fr)_auto]"
+                  : isRentals
+                    ? "sm:grid-cols-2 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto]"
+                    : "sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+              } sm:items-end`}
+            >
+              {isDestinationModule ? (
+                <div ref={destinationAnchorRef} className="min-w-0">
+                  <SearchInputBox
+                    label={isSchedule ? "Destination" : "Where to?"}
+                  >
+                    {isMobile ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowDestinationDropdown(true)}
+                        className="flex min-h-[22px] w-full flex-wrap items-center gap-1.5 text-left"
+                      >
+                        {renderSelectedDestinationChips()}
+                        <span
+                          className={`min-w-[72px] flex-1 text-sm font-medium ${
+                            selectedDestinations.length > 0 && isSchedule
+                              ? "text-transparent"
+                              : "text-[#B0B0B0]"
+                          }`}
+                        >
+                          {selectedDestinations.length > 0
                             ? isSchedule
                               ? ""
                               : "Add more"
                             : isSchedule
-                              ? "Pick a destination"
-                              : "Search destinations to add"
-                        }
-                        className="min-w-[72px] flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none"
-                      />
-                    ) : null}
-                  </div>
-                </SearchInputBox>
-
-                {showDestinationDropdown && typeof document !== "undefined"
-                  ? createPortal(
+                              ? "Tap to pick destination"
+                              : "Tap to choose destinations"}
+                        </span>
+                      </button>
+                    ) : (
                       <div
-                        ref={destinationDropdownRef}
-                        className="fixed z-[200] overflow-hidden rounded-2xl border border-white/50 bg-white/90 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-lg"
-                        style={{
-                          top: dropdownPosition.top,
-                          left: dropdownPosition.left,
-                          width: dropdownPosition.width,
+                        className={`flex min-h-[22px] flex-wrap items-center gap-1.5 ${
+                          isSchedule &&
+                          selectedDestinations.length > 0 &&
+                          !showDestinationDropdown
+                            ? "cursor-text"
+                            : ""
+                        }`}
+                        onClick={() => {
+                          if (
+                            isSchedule &&
+                            selectedDestinations.length > 0 &&
+                            !showDestinationDropdown
+                          ) {
+                            setShowDestinationDropdown(true);
+                            requestAnimationFrame(() =>
+                              updateDropdownPosition(),
+                            );
+                          }
                         }}
                       >
-                        <div className="border-b border-[#EBEBEB]/70 bg-[#FAFAFA]/80 px-3 py-2 backdrop-blur-sm">
-                          <p className="text-xs font-medium text-[#717171]">
-                            {isSchedule
-                              ? "Select one destination"
-                              : selectedDestinations.length > 0
-                                ? `${selectedDestinations.length} selected — add more destinations`
-                                : "Select one or more destinations"}
-                          </p>
-                        </div>
-                        <div className="max-h-72 overflow-y-auto p-2">
-                        {isDestinationsLoading ? (
-                          <div className="flex items-center justify-center py-8">
-                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#EBEBEB] border-t-primary-600" />
-                          </div>
-                        ) : filteredDestinations.length === 0 ? (
-                          <p className="py-6 text-center text-sm text-[#717171]">
-                            No destinations found
-                          </p>
-                        ) : (
-                          filteredDestinations.map((destination) => {
-                            const selected = selectedDestinations.some(
-                              (d) => d.id === destination.id,
-                            );
-                            return (
-                              <button
-                                key={destination.id}
-                                type="button"
-                                onClick={() => toggleDestination(destination)}
-                                className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors ${
-                                  selected
-                                    ? "bg-primary-50 ring-1 ring-primary-200"
-                                    : "hover:bg-[#FAFAFA]"
-                                }`}
-                              >
-                                <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-[#EBEBEB]">
-                                  {hasStoredImage(destination.thumb_image) &&
-                                  destination.thumb_image_url ? (
-                                    <Image
-                                      src={destination.thumb_image_url}
-                                      alt={destination.name}
-                                      fill
-                                      className="object-cover"
-                                      sizes="36px"
-                                    />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center">
-                                      <i className="fi fi-rr-map-marker text-sm text-[#717171]" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm font-medium text-[#222222]">
-                                    {destination.name}
-                                  </p>
-                                  <p className="truncate text-xs text-[#717171]">
-                                    {destination.state?.name || "Destination"}
-                                  </p>
-                                </div>
-                                <div
-                                  className={`fi-box h-5 w-5 shrink-0 rounded-full border ${
-                                    selected
-                                      ? "border-primary-600 bg-primary-600 text-white"
-                                      : "border-[#DDDDDD]"
-                                  }`}
-                                >
-                                  {selected ? (
-                                    <i className="fi fi-rr-check text-[10px]" aria-hidden="true" />
-                                  ) : null}
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                        </div>
-                        {!isSchedule && selectedDestinations.length > 0 ? (
-                          <div className="border-t border-[#EBEBEB] bg-[#FAFAFA] px-3 py-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowDestinationDropdown(false)}
-                              className="text-xs font-semibold text-primary-600 hover:text-primary-700"
-                            >
-                              Done selecting ({selectedDestinations.length})
-                            </button>
-                          </div>
+                        {renderSelectedDestinationChips()}
+                        {!(
+                          isSchedule &&
+                          selectedDestinations.length > 0 &&
+                          !showDestinationDropdown
+                        ) ? (
+                          <input
+                            type="text"
+                            value={destinationQuery}
+                            onChange={(e) => {
+                              setDestinationQuery(e.target.value);
+                              setShowDestinationDropdown(true);
+                            }}
+                            onFocus={() => {
+                              setShowDestinationDropdown(true);
+                              requestAnimationFrame(() =>
+                                updateDropdownPosition(),
+                              );
+                            }}
+                            placeholder={destinationPlaceholder}
+                            className="min-w-[72px] flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none"
+                          />
                         ) : null}
-                      </div>,
-                      document.body,
-                    )
-                  : null}
-              </div>
-            ) : (
-              <SearchInputBox label="Location">
-                <LocationSearchInput
+                      </div>
+                    )}
+                  </SearchInputBox>
+
+                  {showDestinationDropdown &&
+                  !isMobile &&
+                  typeof document !== "undefined"
+                    ? createPortal(
+                        <div
+                          ref={destinationDropdownRef}
+                          className="fixed z-[200] overflow-hidden rounded-2xl border border-white/50 bg-white/90 shadow-[0_16px_40px_rgba(0,0,0,0.14)] backdrop-blur-lg"
+                          style={{
+                            top: dropdownPosition.top,
+                            left: dropdownPosition.left,
+                            width: dropdownPosition.width,
+                          }}
+                        >
+                          <div className="border-b border-[#EBEBEB]/70 bg-[#FAFAFA]/80 px-3 py-2 backdrop-blur-sm">
+                            <p className="text-xs font-medium text-[#717171]">
+                              {destinationPickerHint}
+                            </p>
+                          </div>
+                          <div className="max-h-72 overflow-y-auto p-2">
+                            {renderDestinationOptions()}
+                          </div>
+                          {!isSchedule && selectedDestinations.length > 0 ? (
+                            <div className="border-t border-[#EBEBEB] bg-[#FAFAFA] px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setShowDestinationDropdown(false)
+                                }
+                                className="text-xs font-semibold text-primary-600 hover:text-primary-700"
+                              >
+                                Done selecting ({selectedDestinations.length})
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>,
+                        document.body,
+                      )
+                    : null}
+                </div>
+              ) : (
+                <SearchInputBox label="Location">
+                  <LocationSearchInput
+                    variant="hero"
+                    value={locationFilters.location}
+                    googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+                    placeholder={
+                      isRentals ? "Pickup city or area" : "City or destination"
+                    }
+                    repositionDropdown
+                    onPlaceSelected={(place) => {
+                      if (!place?.geometry?.location) return;
+                      const lat =
+                        typeof place.geometry.location.lat === "function"
+                          ? place.geometry.location.lat()
+                          : place.geometry.location.lat;
+                      const lng =
+                        typeof place.geometry.location.lng === "function"
+                          ? place.geometry.location.lng()
+                          : place.geometry.location.lng;
+                      setLocationFilters((prev) => ({
+                        ...prev,
+                        location: place.name || place.formatted_address || "",
+                        latitude: String(lat),
+                        longitude: String(lng),
+                      }));
+                    }}
+                    onClear={() =>
+                      setLocationFilters((prev) => ({
+                        ...prev,
+                        location: "",
+                        latitude: "",
+                        longitude: "",
+                      }))
+                    }
+                  />
+                </SearchInputBox>
+              )}
+
+              {isRentals ? (
+                <SearchInputBox label="What to rent?">
+                  <select
+                    value={locationFilters.form_type}
+                    onChange={(e) =>
+                      setLocationFilters((prev) => ({
+                        ...prev,
+                        form_type: e.target.value,
+                      }))
+                    }
+                    className="w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm font-medium text-[#222222] focus:outline-none [&:invalid]:text-[#B0B0B0]"
+                    required
+                  >
+                    <option value="" disabled>
+                      {rentalCategoryTypes.length === 0
+                        ? "Loading types..."
+                        : "Select rental type"}
+                    </option>
+                    {rentalCategoryTypes.map((type) => (
+                      <option key={type.form_type} value={type.form_type}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </SearchInputBox>
+              ) : null}
+
+              {needsDates ? (
+                <DateRangeSearchField
                   variant="hero"
-                  value={locationFilters.location}
-                  googleApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
-                  placeholder={isRentals ? "Pickup city or area" : "City or destination"}
-                  repositionDropdown
-                  onPlaceSelected={(place) => {
-                    if (!place?.geometry?.location) return;
-                    const lat =
-                      typeof place.geometry.location.lat === "function"
-                        ? place.geometry.location.lat()
-                        : place.geometry.location.lat;
-                    const lng =
-                      typeof place.geometry.location.lng === "function"
-                        ? place.geometry.location.lng()
-                        : place.geometry.location.lng;
+                  dateFrom={locationFilters.dateFrom}
+                  dateTo={locationFilters.dateTo}
+                  emptyLabel="Pick dates"
+                  onChange={({ dateFrom, dateTo }) =>
                     setLocationFilters((prev) => ({
                       ...prev,
-                      location: place.name || place.formatted_address || "",
-                      latitude: String(lat),
-                      longitude: String(lng),
-                    }));
-                  }}
-                  onClear={() =>
-                    setLocationFilters((prev) => ({
-                      ...prev,
-                      location: "",
-                      latitude: "",
-                      longitude: "",
+                      dateFrom,
+                      dateTo,
                     }))
                   }
                 />
-              </SearchInputBox>
-            )}
+              ) : null}
 
-            {isRentals ? (
-              <SearchInputBox label="What to rent?">
-                <select
-                  value={locationFilters.form_type}
-                  onChange={(e) =>
-                    setLocationFilters((prev) => ({
-                      ...prev,
-                      form_type: e.target.value,
-                    }))
-                  }
-                  className="w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm font-medium text-[#222222] focus:outline-none [&:invalid]:text-[#B0B0B0]"
-                  required
-                >
-                  <option value="" disabled>
-                    {rentalCategoryTypes.length === 0
-                      ? "Loading types..."
-                      : "Select rental type"}
-                  </option>
-                  {rentalCategoryTypes.map((type) => (
-                    <option key={type.form_type} value={type.form_type}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </SearchInputBox>
-            ) : null}
-
-            {needsDates ? (
-              <DateRangeSearchField
-                variant="hero"
-                dateFrom={locationFilters.dateFrom}
-                dateTo={locationFilters.dateTo}
-                emptyLabel="Pick dates"
-                onChange={({ dateFrom, dateTo }) =>
-                  setLocationFilters((prev) => ({ ...prev, dateFrom, dateTo }))
-                }
-              />
-            ) : null}
-
-            <button
-              type="button"
-              onClick={handleSearch}
-              className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors sm:h-[58px] sm:px-6 md:h-[70px] md:w-auto md:min-w-[130px] ${activeModuleConfig.searchBtn} ${
-                isRentals ? "sm:col-span-2 lg:col-span-1" : ""
-              }`}
-            >
-              <i className="fi fi-rr-search text-sm" />
-              {searchButtonLabel}
-            </button>
+              <button
+                type="button"
+                onClick={handleSearch}
+                className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors sm:h-[58px] sm:px-6 md:h-[70px] md:w-auto md:min-w-[130px] ${activeModuleConfig.searchBtn} ${
+                  isRentals ? "sm:col-span-2 lg:col-span-1" : ""
+                }`}
+              >
+                <i className="fi fi-rr-search text-sm" />
+                {searchButtonLabel}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {isMobile && isDestinationModule ? (
+        <Popup
+          isOpen={showDestinationDropdown}
+          onClose={() => setShowDestinationDropdown(false)}
+          showCloseButton={false}
+          pos="bottom"
+          draggable
+          className="w-full overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+          pannelStyle="h-[88vh] max-h-[88vh]"
+          overlayClassName="bg-black/30 backdrop-blur-[2px]"
+        >
+          <div className="flex min-h-0 flex-1 flex-col">
+            <header className="shrink-0 border-b border-[#EBEBEB] px-5 pb-3 pt-1 text-center sm:px-8">
+              <h2 className="text-lg font-medium leading-tight text-[#222222]">
+                {isSchedule ? "Pick destination" : "Where to?"}
+              </h2>
+            </header>
+
+            <section className="shrink-0 border-b border-[#EBEBEB] px-5 py-4 sm:px-8">
+              <SearchInputBox label={isSchedule ? "Destination" : "Where to?"}>
+                <div className="flex min-h-[22px] flex-wrap items-center gap-1.5">
+                  {renderSelectedDestinationChips({
+                    onRemoveStopPropagation: false,
+                  })}
+                  <input
+                    ref={destinationSearchInputRef}
+                    type="text"
+                    value={destinationQuery}
+                    onChange={(e) => setDestinationQuery(e.target.value)}
+                    placeholder={
+                      destinationPlaceholder || "Search destinations"
+                    }
+                    className="min-w-[72px] flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none"
+                  />
+                </div>
+              </SearchInputBox>
+            </section>
+
+            <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 [-webkit-overflow-scrolling:touch] sm:px-8">
+              <div className="sticky top-0 z-10 mb-2 border-b border-[#EBEBEB] bg-white py-2">
+                <p className="text-xs font-medium text-[#717171]">
+                  {destinationPickerHint}
+                  {!isDestinationsLoading ? (
+                    <span className="float-right text-[#B0B0B0]">
+                      {filteredDestinations.length}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
+
+              <AnimatePresence mode="wait">
+                {isDestinationsLoading ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center justify-center py-10"
+                  >
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#EBEBEB] border-t-primary-600" />
+                    <p className="mt-3 text-xs text-[#717171]">Loading...</p>
+                  </motion.div>
+                ) : filteredDestinations.length === 0 ? (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="rounded-xl bg-[#FAFAFA] py-8 text-center"
+                  >
+                    <p className="text-sm text-[#717171]">
+                      No destinations found
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="destinations"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-1"
+                  >
+                    {renderDestinationOptions()}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </section>
+
+            <section className="sticky bottom-0 z-20 mt-auto shrink-0 border-t border-[#EBEBEB] bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.04)] sm:px-8">
+              <button
+                type="button"
+                onClick={() => setShowDestinationDropdown(false)}
+                className="flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+              >
+                {isSchedule
+                  ? selectedDestinations.length > 0
+                    ? "Done"
+                    : "Close"
+                  : selectedDestinations.length > 0
+                    ? `Done (${selectedDestinations.length})`
+                    : "Close"}
+              </button>
+            </section>
+          </div>
+        </Popup>
+      ) : null}
+    </>
   );
 }

@@ -591,11 +591,19 @@ export default function HomePage() {
         <div className="relative flex min-h-[min(88vh,760px)] w-full items-center justify-center py-8 sm:min-h-[500px] sm:py-10 md:min-h-[560px] md:py-14 lg:min-h-[620px]">
           <div className="pointer-events-none absolute inset-0">
             <Image
-              src="/home/banner-image.jpg"
-              alt="Tropical resort with pool and ocean view"
+              src="/home/mobile-hero-image.jpg"
+              alt="Aerial view of turquoise ocean meeting a sandy beach"
               fill
               priority
-              className="object-cover object-center"
+              className="object-cover object-center md:hidden"
+              sizes="100vw"
+            />
+            <Image
+              src="/home/banner-image-new.jpg"
+              alt="Aerial view of turquoise ocean meeting a sandy beach"
+              fill
+              priority
+              className="hidden object-cover object-center md:block"
               sizes="100vw"
             />
           </div>

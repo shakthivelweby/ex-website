@@ -6,36 +6,29 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Popup from "../Popup";
-import { useAllDestinations, useRentalCategories } from "@/app/search/query";
+import {
+  useAllDestinations,
+  useRentalCategories,
+  useActivityCategories,
+  useEventCategories,
+  useAttractionCategories,
+} from "@/app/search/query";
 import { hasStoredImage } from "@/utils/imageUrl";
 import { buildCategoryTypesFromCategories } from "@/app/rentals/rentalCategoryTypeUtils";
-import DateRangeSearchField from "./DateRangeSearchField";
 import LocationSearchInput from "../LocationSearchInput";
 import SearchInputBox from "./SearchInputBox";
+import SearchTypePicker from "./SearchTypePicker";
 import { SEARCH_MODULES } from "./searchModules";
 
 const HERO_MODULES = SEARCH_MODULES;
 
-const formatDate = (date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-};
-
-const createDefaultDateFilters = () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStr = formatDate(today);
-  return {
-    location: "",
-    longitude: "",
-    latitude: "",
-    dateFrom: todayStr,
-    dateTo: todayStr,
-    form_type: "",
-  };
-};
+const createDefaultLocationFilters = () => ({
+  location: "",
+  longitude: "",
+  latitude: "",
+  form_type: "",
+  category: "",
+});
 
 export default function HeroSearch() {
   const router = useRouter();
@@ -55,7 +48,7 @@ export default function HeroSearch() {
   const [destinationQuery, setDestinationQuery] = useState("");
   const [selectedDestinations, setSelectedDestinations] = useState([]);
   const [locationFilters, setLocationFilters] = useState(
-    createDefaultDateFilters,
+    createDefaultLocationFilters,
   );
 
   const isPackage = selectedModule === "package";
@@ -65,7 +58,7 @@ export default function HeroSearch() {
   const isAttractions = selectedModule === "attractions";
   const isActivities = selectedModule === "activities";
   const isRentals = selectedModule === "rentals";
-  const needsDates = !isDestinationModule;
+  const hasTypePicker = isActivities || isEvents || isAttractions || isRentals;
 
   const activeModuleConfig =
     HERO_MODULES.find((module) => module.id === selectedModule) ??
@@ -75,10 +68,65 @@ export default function HeroSearch() {
     useAllDestinations(true);
   const allDestinations = destinationsData?.data || [];
 
-  const { data: rentalCategoriesData } = useRentalCategories(isRentals);
+  const { data: rentalCategoriesData, isLoading: isRentalCategoriesLoading } =
+    useRentalCategories(isRentals);
   const rentalCategoryTypes = useMemo(
     () => buildCategoryTypesFromCategories(rentalCategoriesData?.data || []),
     [rentalCategoriesData],
+  );
+
+  const { data: activityCategoriesData, isLoading: isActivityCategoriesLoading } =
+    useActivityCategories(isActivities);
+  const { data: eventCategoriesData, isLoading: isEventCategoriesLoading } =
+    useEventCategories(isEvents);
+  const { data: attractionCategoriesData, isLoading: isAttractionCategoriesLoading } =
+    useAttractionCategories(isAttractions);
+
+  const activityPickerItems = useMemo(
+    () =>
+      (activityCategoriesData?.data || []).map((category) => ({
+        id: category.id,
+        value: category.slug,
+        label: category.name,
+        image: category.image,
+        icon: "fi-rr-hiking",
+      })),
+    [activityCategoriesData],
+  );
+
+  const eventPickerItems = useMemo(
+    () =>
+      (eventCategoriesData?.data || []).map((category) => ({
+        id: category.id,
+        value: category.slug,
+        label: category.name,
+        image: category.image,
+        icon: "fi-rr-glass-cheers",
+      })),
+    [eventCategoriesData],
+  );
+
+  const attractionPickerItems = useMemo(
+    () =>
+      (attractionCategoriesData?.data || []).map((category) => ({
+        id: category.id,
+        value: category.slug,
+        label: category.name,
+        image: category.image,
+        icon: "fi-rr-ferris-wheel",
+      })),
+    [attractionCategoriesData],
+  );
+
+  const rentalPickerItems = useMemo(
+    () =>
+      rentalCategoryTypes.map((type) => ({
+        id: type.form_type,
+        value: type.form_type,
+        label: type.label,
+        icon: "fi-rr-car-side",
+      })),
+    [rentalCategoryTypes],
   );
 
   const filteredDestinations = useMemo(() => {
@@ -179,7 +227,7 @@ export default function HeroSearch() {
     setShowDestinationDropdown(false);
     setDestinationQuery("");
     setSelectedDestinations([]);
-    setLocationFilters(createDefaultDateFilters());
+    setLocationFilters(createDefaultLocationFilters());
   };
 
   const toggleDestination = (destination) => {
@@ -253,9 +301,6 @@ export default function HeroSearch() {
 
   const runLocationSearch = () => {
     const params = new URLSearchParams();
-    if (locationFilters.dateFrom)
-      params.set("date_from", locationFilters.dateFrom);
-    if (locationFilters.dateTo) params.set("date_to", locationFilters.dateTo);
     if (locationFilters.longitude)
       params.set("longitude", locationFilters.longitude);
     if (locationFilters.latitude)
@@ -273,6 +318,13 @@ export default function HeroSearch() {
 
     if (isRentals && locationFilters.form_type) {
       params.set("form_type", locationFilters.form_type);
+    }
+
+    if (
+      (isActivities || isEvents || isAttractions) &&
+      locationFilters.category
+    ) {
+      params.set("category", locationFilters.category);
     }
 
     const query = params.toString();
@@ -477,9 +529,9 @@ export default function HeroSearch() {
               className={`grid w-full grid-cols-1 gap-2.5 sm:gap-3 ${
                 isDestinationModule
                   ? "sm:grid-cols-[minmax(0,1fr)_auto]"
-                  : isRentals
-                    ? "sm:grid-cols-2 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto]"
-                    : "sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+                  : hasTypePicker
+                    ? "sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+                    : "sm:grid-cols-[minmax(0,1.2fr)_auto]"
               } sm:items-end`}
             >
               {isDestinationModule ? (
@@ -638,54 +690,101 @@ export default function HeroSearch() {
               )}
 
               {isRentals ? (
-                <SearchInputBox label="What to rent?">
-                  <select
-                    value={locationFilters.form_type}
-                    onChange={(e) =>
-                      setLocationFilters((prev) => ({
-                        ...prev,
-                        form_type: e.target.value,
-                      }))
-                    }
-                    className="w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm font-medium text-[#222222] focus:outline-none [&:invalid]:text-[#B0B0B0]"
-                    required
-                  >
-                    <option value="" disabled>
-                      {rentalCategoryTypes.length === 0
-                        ? "Loading types..."
-                        : "Select rental type"}
-                    </option>
-                    {rentalCategoryTypes.map((type) => (
-                      <option key={type.form_type} value={type.form_type}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                </SearchInputBox>
+                <SearchTypePicker
+                  label="What to rent?"
+                  title="Rental type"
+                  value={locationFilters.form_type}
+                  onChange={(form_type) =>
+                    setLocationFilters((prev) => ({ ...prev, form_type }))
+                  }
+                  items={rentalPickerItems}
+                  isLoading={isRentalCategoriesLoading}
+                  isMobile={isMobile}
+                  accent="indigo"
+                  allOption={{
+                    label: "All rentals",
+                    description: "Browse every rental type",
+                  }}
+                  mobilePlaceholder="Tap to choose rental type"
+                  desktopEmptyLabel="All rentals"
+                  searchPlaceholder="Search rental types"
+                  fallbackIcon="fi-rr-car-side"
+                />
               ) : null}
 
-              {needsDates ? (
-                <DateRangeSearchField
-                  variant="hero"
-                  dateFrom={locationFilters.dateFrom}
-                  dateTo={locationFilters.dateTo}
-                  emptyLabel="Pick dates"
-                  onChange={({ dateFrom, dateTo }) =>
-                    setLocationFilters((prev) => ({
-                      ...prev,
-                      dateFrom,
-                      dateTo,
-                    }))
+              {isActivities ? (
+                <SearchTypePicker
+                  label="Activity type"
+                  title="Activity type"
+                  value={locationFilters.category}
+                  onChange={(category) =>
+                    setLocationFilters((prev) => ({ ...prev, category }))
                   }
+                  items={activityPickerItems}
+                  isLoading={isActivityCategoriesLoading}
+                  isMobile={isMobile}
+                  accent="emerald"
+                  allOption={{
+                    label: "All activities",
+                    description: "Browse every activity type",
+                  }}
+                  mobilePlaceholder="Tap to choose activity type"
+                  desktopEmptyLabel="All activities"
+                  searchPlaceholder="Search activity types"
+                  fallbackIcon="fi-rr-hiking"
+                />
+              ) : null}
+
+              {isEvents ? (
+                <SearchTypePicker
+                  label="Event type"
+                  title="Event type"
+                  value={locationFilters.category}
+                  onChange={(category) =>
+                    setLocationFilters((prev) => ({ ...prev, category }))
+                  }
+                  items={eventPickerItems}
+                  isLoading={isEventCategoriesLoading}
+                  isMobile={isMobile}
+                  accent="rose"
+                  allOption={{
+                    label: "All events",
+                    description: "Browse every event type",
+                  }}
+                  mobilePlaceholder="Tap to choose event type"
+                  desktopEmptyLabel="All events"
+                  searchPlaceholder="Search event types"
+                  fallbackIcon="fi-rr-glass-cheers"
+                />
+              ) : null}
+
+              {isAttractions ? (
+                <SearchTypePicker
+                  label="Attraction type"
+                  title="Attraction type"
+                  value={locationFilters.category}
+                  onChange={(category) =>
+                    setLocationFilters((prev) => ({ ...prev, category }))
+                  }
+                  items={attractionPickerItems}
+                  isLoading={isAttractionCategoriesLoading}
+                  isMobile={isMobile}
+                  accent="amber"
+                  allOption={{
+                    label: "All attractions",
+                    description: "Browse every attraction type",
+                  }}
+                  mobilePlaceholder="Tap to choose attraction type"
+                  desktopEmptyLabel="All attractions"
+                  searchPlaceholder="Search attraction types"
+                  fallbackIcon="fi-rr-ferris-wheel"
                 />
               ) : null}
 
               <button
                 type="button"
                 onClick={handleSearch}
-                className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors sm:h-[58px] sm:px-6 md:h-[70px] md:w-auto md:min-w-[130px] ${activeModuleConfig.searchBtn} ${
-                  isRentals ? "sm:col-span-2 lg:col-span-1" : ""
-                }`}
+                className={`flex h-[52px] w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition-colors sm:h-[58px] sm:px-6 md:h-[70px] md:w-auto md:min-w-[130px] ${activeModuleConfig.searchBtn}`}
               >
                 <i className="fi fi-rr-search text-sm" />
                 {searchButtonLabel}

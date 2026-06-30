@@ -16,7 +16,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className="pb-24 pt-[52px] sm:pt-[60px]" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>

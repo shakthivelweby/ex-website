@@ -37,6 +37,7 @@ export default function SearchLocationField({
   destinations = [],
   onChange,
   placeholder = "Enter city or destination name...",
+  variant = "default",
 }) {
   const [isResolving, setIsResolving] = useState(false);
   const googleApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -112,8 +113,8 @@ export default function SearchLocationField({
   )?.id;
 
   return (
-    <div className="space-y-2.5">
-      {destinations.length > 0 ? (
+    <div className={variant === "hero" ? "" : "space-y-2.5"}>
+      {variant !== "hero" && destinations.length > 0 ? (
         <div>
           <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-gray-500">
             Popular destinations
@@ -152,6 +153,7 @@ export default function SearchLocationField({
       ) : null}
 
       <LocationSearchInput
+        variant={variant === "hero" ? "hero" : "default"}
         value={location}
         onPlaceSelected={handlePlaceSelected}
         onClear={clearLocation}

@@ -628,34 +628,40 @@ const Form = ({
           ) : null}
         </div>
 
-        <div className="space-y-2.5 px-4 py-3.5">
+        {!isMobilePopup ? (
+          <div className="space-y-2.5 px-4 py-3.5">
+            <Button
+              onClick={handleBooking}
+              size="lg"
+              className="w-full h-12 text-base font-semibold"
+              isLoading={isNavigating || isLoading}
+              loadingLabel={enquireOnly ? "Sending enquiry…" : "Continue to booking"}
+            >
+              {enquireOnly ? "Send enquiry" : "Continue to booking"}
+            </Button>
+            <div className="flex w-full items-center justify-center gap-1.5 text-[11px] text-gray-400">
+              <i className="fi fi-rr-shield-check relative top-0 text-[11px]" aria-hidden="true" />
+              <span>Secure checkout · Instant confirmation</span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {isMobilePopup ? (
+        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <Button
             onClick={handleBooking}
             size="lg"
             className="w-full h-12 text-base font-semibold"
             isLoading={isNavigating || isLoading}
-            loadingLabel={enquireOnly ? "Sending enquiry…" : "Continue to booking"}
+            loadingLabel={enquireOnly ? "Sending enquiry…" : "Continuing…"}
           >
             {enquireOnly ? "Send enquiry" : "Continue to booking"}
           </Button>
-          <div className="flex w-full items-center justify-center gap-1.5 text-[11px] text-gray-400">
+          <div className="mt-2 flex w-full items-center justify-center gap-1.5 text-[11px] text-gray-400">
             <i className="fi fi-rr-shield-check relative top-0 text-[11px]" aria-hidden="true" />
             <span>Secure checkout · Instant confirmation</span>
           </div>
-        </div>
-      </div>
-
-      {isMobilePopup ? (
-        <div className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-100 bg-white p-4">
-          <Button
-            onClick={handleBooking}
-            size="lg"
-            className="w-full"
-            isLoading={isNavigating || isLoading}
-            loadingLabel="Continuing…"
-          >
-            Continue to booking
-          </Button>
         </div>
       ) : null}
     </div>

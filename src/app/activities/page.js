@@ -1,6 +1,7 @@
 import ClientWrapper from "./clientWrapper";
 import { getActivityCategories, getActivityLocations, list, getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 
 // Force dynamic rendering to prevent build-time API calls
 export const dynamic = 'force-dynamic';
@@ -66,15 +67,29 @@ export default async function Activities({ searchParams }) {
     type: activity.activity_category_master?.name || activity.category || "",
     image: activity.image || activity.thumb_image || activity.cover_image,
     price: (() => {
+      if (
+        activity.free_booking === true ||
+        activity.free_booking === 1 ||
+        activity.free_booking === "1"
+      ) {
+        return 0;
+      }
       const rt = activity.price?.rate_type;
+      const adminPct = Number(activity.price?.admin_charge ?? 0);
+      const discountPct = Number(activity.price?.discount ?? 0);
       const base =
         rt === "full"
           ? Number(activity.price?.full_rate || 0)
           : rt === "pax"
           ? Number(activity.price?.adult_price || 0)
           : Number(activity.price?.full_rate || activity.price || 0);
-      return Math.round(base * 100) / 100;
+      const afterAdmin = applyAdminCharge(base, adminPct);
+      return applyDiscountOnAmount(afterAdmin, discountPct);
     })(),
+    freeBooking:
+      activity.free_booking === true ||
+      activity.free_booking === 1 ||
+      activity.free_booking === "1",
     rating: activity.rating || 0,
     reviewCount: activity.review_count || 0,
     duration: formatTimeTo12Hour(activity.start_time) || "updating",

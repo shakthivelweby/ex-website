@@ -5,17 +5,17 @@ import {
   getSupplierInfo,
 } from "./service";
 import ClientWrapper from "./clientWrapper";
+import { formatDate } from "@/utils/formatDate";
+import { getFirstBookableDate } from "@/utils/packageBookingLeadTime";
+
 export default async function PackageDetailPage({ params, searchParams }) {
   const { id } = await params;
-  const { date } = await searchParams;
+  const { date: dateParam } = await searchParams;
+  const date = dateParam || formatDate(getFirstBookableDate());
   const packageData = await getPackageDetails(id);
   const packageStayCategory = packageData.data.package_stay_categories[0];
   const packageCombinations = await getPackageCombinations(id, date);
   const supplierInfo = await getSupplierInfo(id);
-
-
-  console.log(packageCombinations);
-
 
   const packageRate = await getPackageRateServer(
     id,

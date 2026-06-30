@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { plainTextFromHtml } from "@/utils/sanitizeRichText";
 
 const formatLocation = (location, city) => {
   const loc = String(location || "").trim();
@@ -10,17 +11,12 @@ const formatLocation = (location, city) => {
   return loc || cityName || null;
 };
 
-const stripHtml = (value) =>
-  String(value || "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
 const ActivityCard = ({ activity }) => {
   const {
     title,
     image,
     price,
+    freeBooking,
     rating,
     reviewCount,
     popular,
@@ -38,8 +34,9 @@ const ActivityCard = ({ activity }) => {
   } = activity || {};
 
   const locationLabel = formatLocation(location, city);
-  const descriptionText = stripHtml(description);
-  const hasPrice = price && Number(price) > 0;
+  const descriptionText = plainTextFromHtml(description);
+  const isFree = freeBooking || (price !== undefined && Number(price) === 0);
+  const hasPrice = !isFree && price && Number(price) > 0;
   const hasValidStartTime = duration && duration !== "updating";
 
   const detailChips = [
@@ -149,7 +146,11 @@ const ActivityCard = ({ activity }) => {
 
           <div className="mt-auto flex items-center justify-between gap-3 border-t border-gray-100 pt-2.5">
             <div>
-              {hasPrice ? (
+              {isFree ? (
+                <div className="inline-flex items-baseline gap-1 rounded-md border border-emerald-100 bg-emerald-50 px-2 py-1">
+                  <span className="text-sm font-bold text-emerald-700">Free entry</span>
+                </div>
+              ) : hasPrice ? (
                 <div className="inline-flex items-baseline gap-1 rounded-md border border-gray-100 bg-gray-50 px-2 py-1">
                   <span className="text-sm font-bold text-gray-900">₹{price}</span>
                   <span className="text-[10px] text-gray-500">onwards</span>

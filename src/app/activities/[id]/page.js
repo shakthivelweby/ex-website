@@ -2,6 +2,7 @@ import ActivityDetailClient from "./clientWrapper";
 import { getActivityDetails, getActivityGallery } from "../service";
 import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
 import { formatActivityDuration } from "@/utils/formatActivityDuration";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 
 // Force dynamic rendering to prevent build-time API calls
 export const dynamic = "force-dynamic";
@@ -52,11 +53,12 @@ const ActivityDetailPage = async ({ params }) => {
     }
   }
 
-  // Detail page display: base ticket price only (admin charge is informational).
-  const applyAdminOnly = (amountRaw, adminRaw) => {
+  // Detail page display: admin charge + discount applied for customer-facing prices.
+  const displayPrice = (amountRaw, adminRaw, discountRaw) => {
     const amount = Number(amountRaw || 0);
     if (!Number.isFinite(amount) || amount <= 0) return 0;
-    return Math.round(amount * 100) / 100;
+    const afterAdmin = applyAdminCharge(amount, Number(adminRaw || 0));
+    return applyDiscountOnAmount(afterAdmin, Number(discountRaw || 0));
   };
 
   // Format time helper
@@ -85,7 +87,9 @@ const ActivityDetailPage = async ({ params }) => {
       priceObj?.admin_charge_percentage ??
       priceObj?.adminCharge ??
       0;
-    const priceWithAdmin = applyAdminOnly(base || 0, adminPct);
+    const discountPct =
+      priceObj?.discount ?? priceObj?.discount_percentage ?? priceObj?.discountPercent ?? 0;
+    const priceWithAdmin = displayPrice(base || 0, adminPct, discountPct);
 
     return {
       id: ticket.id,
@@ -130,9 +134,15 @@ const ActivityDetailPage = async ({ params }) => {
     location: activity.location || activity.city,
     address: activity.address || "",
     price:
-      bestPrice > 0
-        ? `₹${applyAdminOnly(bestPrice, activityData?.current_pricing?.admin_charge ?? 0)}`
-        : 'Price TBA',
+      activity.free_booking
+        ? "Free entry"
+        : bestPrice > 0
+        ? `₹${displayPrice(
+            bestPrice,
+            activityData?.current_pricing?.admin_charge ?? 0,
+            activityData?.current_pricing?.discount ?? 0
+          )}`
+        : "Price TBA",
     image: activity.cover_image || activity.thumb_image || activity.image,
     description: activity.description || "",
     activityGuide: {

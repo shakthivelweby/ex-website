@@ -1,6 +1,8 @@
 import apiServerMiddleware from "../api/serverMiddleware";
 import apiMiddleware from "../api/apiMiddleware";
-import axios from "axios";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
+
+const PRICE_FILTER_MAX = 10000;
 
 // get all activity categories
 export const getActivityCategories = async () => {
@@ -65,6 +67,56 @@ export const list = async (filters = {}) => {
   return getActivities(filters);
 }
 
+const applyClientSideFilters = (responseData, filters) => {
+  if (!responseData?.data?.data) return responseData;
+
+  let filteredActivities = responseData.data.data;
+
+  if (filters.rating && !isNaN(parseFloat(filters.rating))) {
+    const minRating = parseFloat(filters.rating);
+    filteredActivities = filteredActivities.filter(
+      (activity) => Number(activity.rating || 0) >= minRating
+    );
+  }
+
+  const priceFrom = parseFloat(filters.price_from) || 0;
+  const priceTo = parseFloat(filters.price_to) || Infinity;
+
+  if (filters.price_from || filters.price_to) {
+    filteredActivities = filteredActivities.filter((activity) => {
+      if (
+        activity.free_booking === true ||
+        activity.free_booking === 1 ||
+        activity.free_booking === "1"
+      ) {
+        return priceFrom <= 0;
+      }
+
+      const rt = activity.price?.rate_type;
+      const adminPct = Number(activity.price?.admin_charge ?? 0);
+      const discountPct = Number(activity.price?.discount ?? 0);
+      const base =
+        rt === "full"
+          ? Number(activity.price?.full_rate || 0)
+          : rt === "pax"
+          ? Number(activity.price?.adult_price || 0)
+          : Number(activity.price?.full_rate || activity.price || 0);
+      const afterAdmin = applyAdminCharge(base, adminPct);
+      const displayPrice = applyDiscountOnAmount(afterAdmin, discountPct);
+
+      return displayPrice >= priceFrom && displayPrice <= priceTo;
+    });
+  }
+
+  return {
+    ...responseData,
+    data: {
+      ...responseData.data,
+      data: filteredActivities,
+    },
+  };
+};
+
 // get activities with filters
 export const getActivities = async (filters = {}) => {
   try {
@@ -77,17 +129,16 @@ export const getActivities = async (filters = {}) => {
       params.append("category", filters.category.trim());
     }
 
-    if (filters.price_from && !isNaN(filters.price_from)) {
+    if (filters.price_from && !isNaN(filters.price_from) && filters.price_from !== "0") {
       params.append("price_from", filters.price_from);
     }
-    if (filters.price_to && !isNaN(filters.price_to)) {
+    if (filters.price_to && !isNaN(filters.price_to) && filters.price_to !== String(PRICE_FILTER_MAX)) {
       params.append("price_to", filters.price_to);
     }
 
-    // Rating filter not yet implemented in backend properly, but we can pass it
-    // if (filters.rating && filters.rating.trim()) {
-    //   params.append("rating", filters.rating.trim());
-    // }
+    if (filters.rating && String(filters.rating).trim()) {
+      params.append("rating", String(filters.rating).trim());
+    }
 
     if (filters.longitude && !isNaN(filters.longitude)) {
       params.append("longitude", filters.longitude);
@@ -122,17 +173,22 @@ export const getActivities = async (filters = {}) => {
 
     const response = await apiServerMiddleware.get(url);
 
-    return response.data;
+    return applyClientSideFilters(response.data, filters);
   } catch (error) {
     console.error("API call failed:", error);
-    return {
-      data: {
-        data: [],
-        pagination: {}
-      },
-      success: false,
-      message: "Failed to fetch activities"
-    };
+    try {
+      const fallbackResponse = await apiServerMiddleware.get("/activities");
+      return applyClientSideFilters(fallbackResponse.data, filters);
+    } catch (fallbackError) {
+      return {
+        data: {
+          data: [],
+          pagination: {},
+        },
+        success: false,
+        message: "Failed to fetch activities",
+      };
+    }
   }
 }
 
@@ -163,6 +219,22 @@ export const getActivityGallery = async (activityId) => {
     };
   }
 }
+
+// get activity ticket prices for a date
+export const getActivityTicketPrices = async (activityId, date) => {
+  try {
+    const response = await apiServerMiddleware.get(`/activity-ticket-prices/${activityId}`, {
+      params: { date },
+    });
+    return response.data;
+  } catch (error) {
+    return {
+      data: null,
+      success: false,
+      message: "Failed to fetch activity ticket prices",
+    };
+  }
+};
 
 // Create activity booking
 export const createActivityBooking = async (bookingData) => {

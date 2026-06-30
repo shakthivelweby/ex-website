@@ -93,12 +93,13 @@ function mergeSeasonalWithSelectedSlot(seasonalRow, activitySlotObj) {
   return merged;
 }
 
-export function applyDiscountAndAdminCharge(amountRaw, discountRaw) {
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
+
+export function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw = 0) {
   const amount = Number(amountRaw || 0);
-  const discount = Number(discountRaw || 0);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
-  const discounted = amount - (amount * Math.max(0, discount)) / 100;
-  return Number.isFinite(discounted) ? discounted : 0;
+  const afterAdmin = applyAdminCharge(amount, Number(adminChargeRaw || 0));
+  return applyDiscountOnAmount(afterAdmin, Number(discountRaw || 0));
 }
 
 function pickNumber(obj, keys, fallback = 0) {
@@ -174,8 +175,8 @@ function resolveSlotTicketUnitPrices(ticket, activityDetails, timeSlotId) {
     (hasBackendAdmin ? ticketPriceRow.child_price_with_admin : ticketPriceRow.child_price) || 0
   );
 
-  const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct);
-  const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct);
+  const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, hasBackendAdmin ? 0 : adminChargePct);
+  const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, hasBackendAdmin ? 0 : adminChargePct);
 
   return {
     rateType,
@@ -242,8 +243,8 @@ export function resolveActivityTicketUnitPricing({
         ? Number(seasonalRow.full_rate || 0)
         : Number(seasonalRow.adult_price || 0);
     const childUnitBase = Number(seasonalRow.child_price || 0);
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct);
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
 
     return {
       source: "slot-seasonal",
@@ -277,8 +278,8 @@ export function resolveActivityTicketUnitPricing({
         ? Number(seasonalRow.full_rate || 0)
         : Number(seasonalRow.adult_price || 0);
     const childUnitBase = Number(seasonalRow.child_price || 0);
-    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct);
-    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct);
+    const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+    const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
 
     return {
       source: "seasonal",
@@ -305,8 +306,8 @@ export function resolveActivityTicketUnitPricing({
       ? Number(ticket.price || ticket.full_rate || 0)
       : Number(ticket.price || ticket.adult_price || 0);
   const childUnitBase = Number(ticket.child_price || 0);
-  const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct);
-  const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct);
+  const adultUnit = applyDiscountAndAdminCharge(adultUnitBase, discountPct, adminChargePct);
+  const childUnit = applyDiscountAndAdminCharge(childUnitBase, discountPct, adminChargePct);
 
   return {
     source: "base",

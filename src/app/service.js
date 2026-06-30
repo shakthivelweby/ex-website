@@ -70,18 +70,14 @@ export const getFeaturedDestinations = async () => {
 
 export const getFeaturedPackages = async () => {
   try {
-    const response = await apiServerMiddleware.get("/packages/featured");
-    return {
-      status: true,
-      data: response.data,
-      message: "Success"
-    };
+    const response = await apiServerMiddleware.get("/trending-packages");
+    return normalizeListData(response.data);
   } catch (error) {
-    console.error('Error fetching featured packages:', error);
+    console.error("Error fetching featured packages:", error);
     return {
       status: false,
       data: [],
-      message: error.message || "Failed to fetch featured packages"
+      message: error.message || "Failed to fetch featured packages",
     };
   }
 };

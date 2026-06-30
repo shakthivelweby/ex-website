@@ -14,6 +14,8 @@ import {
 } from "../ListingFilters/shared";
 
 const RATING_OPTIONS = ["4.5", "4", "3.5", "3"];
+const PRICE_MIN = 0;
+const PRICE_MAX = 10000;
 
 const ActivityFilters = ({
   initialFilters,
@@ -86,7 +88,7 @@ const ActivityFilters = ({
 
   const hasPriceFilter =
     (tempFilters.price_from && Number(tempFilters.price_from) > 0) ||
-    (tempFilters.price_to && Number(tempFilters.price_to) < 1000);
+    (tempFilters.price_to && Number(tempFilters.price_to) < PRICE_MAX);
 
   const FilterContent = () => (
     <div className="space-y-5">
@@ -189,26 +191,26 @@ const ActivityFilters = ({
         >
           <div className="px-0.5 pt-1">
             <RangeSlider
-              min={0}
-              max={1000}
-              step={50}
+              min={PRICE_MIN}
+              max={PRICE_MAX}
+              step={100}
               initialValue={[
-                parseInt(tempFilters.price_from, 10) || 0,
-                parseInt(tempFilters.price_to, 10) || 1000,
+                parseInt(tempFilters.price_from, 10) || PRICE_MIN,
+                parseInt(tempFilters.price_to, 10) || PRICE_MAX,
               ]}
               onChange={(value) => patchFilters({ price_from: value[0], price_to: value[1] })}
               formatDisplay={(value) => {
                 if (!value || value.length !== 2) return "Any price";
-                if (value[0] === 0 && value[1] === 1000) return "Any price";
-                if (value[0] === 0) return `Under ₹${value[1]}`;
-                if (value[1] === 1000) return `₹${value[0]}+`;
+                if (value[0] === PRICE_MIN && value[1] === PRICE_MAX) return "Any price";
+                if (value[0] === PRICE_MIN) return `Under ₹${value[1]}`;
+                if (value[1] === PRICE_MAX) return `₹${value[0]}+`;
                 return `₹${value[0]} – ₹${value[1]}`;
               }}
               title="Price range"
             />
             <div className="mt-2 flex justify-between text-[10px] font-medium text-gray-400">
               <span>Free</span>
-              <span>₹1000+</span>
+              <span>₹{PRICE_MAX}+</span>
             </div>
           </div>
         </FilterField>

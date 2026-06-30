@@ -1,444 +1,484 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import ResolvableCoverImage from "@/components/common/ResolvableCoverImage";
+import Footer from "@/components/Footer/Footer";
 import { pickImageSource } from "@/utils/imageUrl";
-import { getExploreData, getFeaturedDestinations, getPackageCount } from "./service";
+import {
+  getExploreData,
+  getFeaturedDestinations,
+  getPackageCount,
+} from "./service";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode, Navigation } from 'swiper/modules';
+import { motion, useReducedMotion } from "framer-motion";
 
-// Import Swiper styles
-import 'swiper/css';
-import 'swiper/css/free-mode';
-import 'swiper/css/navigation';
+const TYPE = {
+  eyebrow:
+    "text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-[11px] sm:tracking-[0.2em]",
+  sectionTitle:
+    "text-2xl font-medium leading-[1.12] tracking-tight text-[#222222] md:text-[32px]",
+  body: "text-sm leading-relaxed text-[#717171] sm:text-[15px]",
+};
 
-export default function Explore() {
-  const [mounted, setMounted] = useState(false);
-  const [countries, setCountries] = useState([]);
-  const [activeCountry, setActiveCountry] = useState(0);
-  const [packageCounts, setPackageCounts] = useState({});
+const EXPLORE_CONTAINER =
+  "mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8";
 
-  const { data: featuredDestinationsData } = useQuery({
-    queryKey: ['featuredDestinations'],
-    queryFn: getFeaturedDestinations
-  });
+function MountainScene() {
+  const farPeaks = [
+    "0,120 95,28 190,120",
+    "380,120 500,34 620,120",
+    "810,120 930,38 1050,120",
+    "1200,120 1350,42 1442,120",
+  ];
 
-  const featuredDestinations = featuredDestinationsData?.data || [];
+  const midPeaks = [
+    "165,120 285,8 405,120",
+    "595,120 715,14 835,120",
+    "1025,120 1145,10 1265,120",
+  ];
 
+  const nearPeaks = [
+    "55,120 130,62 205,120",
+    "330,120 405,72 480,120",
+    "655,120 730,58 805,120",
+    "980,120 1055,70 1130,120",
+  ];
 
+  const gapFillers = ["1145,10 1265,120 1345,32"];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await getExploreData();
-      setCountries(response.data);
-      setMounted(true);
-      
-      // Fetch actual package counts for each country
-      const counts = {};
-      await Promise.all(
-        response.data.map(async (country) => {
-          const count = await getPackageCount(country.id);
-          counts[country.id] = count;
-        })
-      );
-      setPackageCounts(counts);
-    };
-    fetchData();
-  }, []);
-
-
-
-  if (!mounted) return null;
+  const trees = [
+    "228,120 234,100 240,120",
+    "248,120 252,108 256,120",
+    "520,120 526,104 532,120",
+    "870,120 875,106 880,120",
+    "1100,120 1105,108 1110,120",
+  ];
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <div className="relative h-[35vh] md:h-[58vh] w-full overflow-hidden">
-        <div className="absolute inset-0">
-          <Image
-            src="https://images.unsplash.com/photo-1437846972679-9e6e537be46e?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-            alt="Explore Destinations"
-            fill
-            className="object-cover"    
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
-        </div>
-        <div className="relative h-full container mx-auto px-4 flex flex-col justify-end pb-16">
-          <div className="max-w-3xl space-y-6">
-            <span className="inline-block text-xs tracking-[0.2em] uppercase text-white/90 font-medium">
-              Start Your Journey
-            </span>
-            <h1 className="text-4xl lg:text-6xl font-semibold text-white leading-[1.1] tracking-tight">
-              Explore Amazing Destinations
-            </h1>
-          </div>
-        </div>
-      </div>
+    <>
+      <defs>
+        <linearGradient id="explore-mountain-far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#011c1c" stopOpacity="0.65" />
+          <stop offset="100%" stopColor="#045858" stopOpacity="1" />
+        </linearGradient>
+        <linearGradient id="explore-mountain-mid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#045858" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#057676" stopOpacity="1" />
+        </linearGradient>
+        <linearGradient id="explore-mountain-near" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1ab2b2" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#057676" stopOpacity="0.95" />
+        </linearGradient>
+      </defs>
 
-      {/* Countries Navigation */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-100 shadow-sm hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 overflow-x-auto py-3 scrollbar-hide">
-            <button
-              onClick={() => setActiveCountry(0)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                activeCountry === 0
-                ? 'bg-gray-900 text-white shadow-md' 
-                : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <span>All</span>
-              <span className="text-xs opacity-80">({countries.length})</span>
-            </button>
-            {console.log(countries)}
-            {countries.map((country, index) => (
-            
-              <button
-                key={country.id}
-                onClick={() => setActiveCountry(index + 1)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                  activeCountry === index + 1
-                  ? 'bg-gray-900 text-white shadow-md' 
-                  : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <span>{country.name}</span>
-                <span className="text-xs opacity-80">({country.state.length})</span>
-              </button>
+      <rect x="-2" y="96" width="1444" height="26" fill="#045858" />
+
+      {farPeaks.map((points) => (
+        <polygon
+          key={`far-${points}`}
+          points={points}
+          fill="url(#explore-mountain-far)"
+        />
+      ))}
+      {midPeaks.map((points) => (
+        <polygon
+          key={`mid-${points}`}
+          points={points}
+          fill="url(#explore-mountain-mid)"
+        />
+      ))}
+      {gapFillers.map((points) => (
+        <polygon
+          key={`gap-${points}`}
+          points={points}
+          fill="url(#explore-mountain-mid)"
+        />
+      ))}
+      {nearPeaks.map((points) => (
+        <polygon
+          key={`near-${points}`}
+          points={points}
+          fill="url(#explore-mountain-near)"
+        />
+      ))}
+      {trees.map((points) => (
+        <polygon
+          key={`tree-${points}`}
+          points={points}
+          fill="#011c1c"
+          fillOpacity="0.55"
+        />
+      ))}
+    </>
+  );
+}
+
+function HeaderMountainPattern({ animate = true }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  const className =
+    "pointer-events-none absolute inset-x-0 bottom-0 h-14 w-full sm:h-16 md:h-20";
+
+  if (!animate || shouldReduceMotion) {
+    return (
+      <svg
+        className={className}
+        viewBox="0 0 1440 120"
+        preserveAspectRatio="none"
+        aria-hidden
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <MountainScene />
+      </svg>
+    );
+  }
+
+  return (
+    <motion.svg
+      className={className}
+      viewBox="0 0 1440 120"
+      preserveAspectRatio="none"
+      aria-hidden
+      xmlns="http://www.w3.org/2000/svg"
+      initial={{ y: "100%", opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <MountainScene />
+    </motion.svg>
+  );
+}
+
+function ExploreHeader({ loading, children }) {
+  return (
+    <section className="relative overflow-hidden bg-primary-600">
+      <HeaderMountainPattern animate={!loading} />
+      <div className={`relative z-10 ${EXPLORE_CONTAINER} py-10 sm:py-12 lg:py-14`}>
+        {loading ? (
+          <div className="max-w-xl space-y-3" aria-hidden>
+            <div className="h-3 w-20 animate-pulse rounded bg-white/25" />
+            <div className="h-9 w-64 animate-pulse rounded bg-white/30 sm:w-80" />
+            <div className="h-4 w-full animate-pulse rounded bg-white/20" />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SectionIntro({ eyebrow, title, description, action }) {
+  return (
+    <div className="mb-8 grid gap-4 sm:mb-10 lg:grid-cols-[1fr_auto] lg:items-end lg:gap-12">
+      <div className="max-w-xl">
+        <div className="mb-4 h-0.5 w-10 bg-primary-600" />
+        <p className={`mb-2 ${TYPE.eyebrow} text-primary-600`}>{eyebrow}</p>
+        <h2 className={TYPE.sectionTitle}>{title}</h2>
+        {description ? (
+          <p className={`mt-3 max-w-md ${TYPE.body}`}>{description}</p>
+        ) : null}
+      </div>
+      {action ? <div className="lg:text-right">{action}</div> : null}
+    </div>
+  );
+}
+
+function CardGridSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <div key={i} className="space-y-3">
+          <div className="aspect-[4/3] animate-pulse rounded-2xl bg-[#F3F3F3]" />
+          <div className="h-4 w-2/3 animate-pulse rounded bg-[#F3F3F3]" />
+          <div className="h-3 w-1/3 animate-pulse rounded bg-[#F3F3F3]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ExploreSkeleton() {
+  return (
+    <main className="min-h-screen bg-white text-[#222222]">
+      <ExploreHeader loading />
+
+      <section className={`${EXPLORE_CONTAINER} py-10 sm:py-12`}>
+        <div className="mb-8 space-y-3">
+          <div className="h-0.5 w-10 animate-pulse rounded bg-[#EBEBEB]" />
+          <div className="h-4 w-24 animate-pulse rounded bg-[#F3F3F3]" />
+          <div className="h-8 w-40 animate-pulse rounded bg-[#F3F3F3]" />
+        </div>
+        <CardGridSkeleton />
+      </section>
+
+      <section className="border-t border-[#EBEBEB] bg-[#FAFAFA]">
+        <div className={`${EXPLORE_CONTAINER} py-10 sm:py-12`}>
+          <div className="mb-8 space-y-3">
+            <div className="h-0.5 w-10 animate-pulse rounded bg-[#EBEBEB]" />
+            <div className="h-8 w-48 animate-pulse rounded bg-[#EBEBEB]" />
+          </div>
+          <div className="mb-6 flex gap-3 border-b border-[#EBEBEB] pb-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-4 w-16 animate-pulse rounded bg-[#EBEBEB]"
+              />
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Countries and their states */}
-      <div className="py-0 " id="destinations">
-        {countries.map((country, countryIndex) => (
-          <section key={country.id} className="px-4 my-16">
-            <div className="container mx-auto">
-              {/* Country Header */}
-              <div className="flex flex-col items-start mb-10">
-              
-                <div className="flex items-end justify-between w-full gap-4">
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-light text-gray-900 tracking-tight">
-                      Explore {country.name}
-                    </h2>
-                    <p className="text-gray-600 max-w-2xl">
-                      {country.state.length} States • {packageCounts[country.id] !== undefined ? packageCounts[country.id] : country.state.reduce((total, state) => total + (state.package_count || 0), 0)} Packages Available
-                    </p>
-                  </div>
-
-                  <div className="flex flex-col items-end gap-4 shrink-0">
-                    <Link
-                      href={`/packages/${country.id}`}
-                      className="text-primary-600 font-medium inline-flex items-center gap-2 hover:gap-3 transition-all text-sm sm:text-base"
-                    >
-                      View All
-                      <i className="fi fi-rr-arrow-right"></i>
-                    </Link>
-
-                    {country.state.length > 1 && (
-                      <div className="hidden md:flex items-center gap-3">
-                        <button
-                          type="button"
-                          aria-label={`Previous states in ${country.name}`}
-                          className={`states-swiper-button-prev-${country.id} w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100`}
-                        >
-                          <i className="fi fi-rr-angle-left text-gray-600 group-hover:text-primary-500 transition-colors"></i>
-                        </button>
-                        <button
-                          type="button"
-                          aria-label={`Next states in ${country.name}`}
-                          className={`states-swiper-button-next-${country.id} w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100`}
-                        >
-                          <i className="fi fi-rr-angle-right text-gray-600 group-hover:text-primary-500 transition-colors"></i>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* States Carousel */}
-              <Swiper
-                modules={[FreeMode, Navigation]}
-                spaceBetween={24}
-                slidesPerView={1.2}
-                freeMode={true}
-                navigation={{
-                  prevEl: `.states-swiper-button-prev-${country.id}`,
-                  nextEl: `.states-swiper-button-next-${country.id}`,
-                }}
-                breakpoints={{
-                  640: {
-                    slidesPerView: 2,
-                    spaceBetween: 24,
-                  },
-                  768: {
-                    slidesPerView: 2.5,
-                    spaceBetween: 24,
-                  },
-                  1024: {
-                    slidesPerView: 3.5,
-                    spaceBetween: 24,
-                  },
-                }}
-                className="w-full"
-              >
-          
-                {country.state.map((state) => {
-                  const stateImage = pickImageSource([
-                    { url: state.cover_image_url, filename: state.cover_image },
-                    { url: state.thumb_image_url, filename: state.thumb_image },
-                  ]);
-
-                  return (
-                  <SwiperSlide key={`${country.id}-${state.id}`}>
-                    <Link
-                      href={`/packages/${country.id}?state=${state.id}`}
-                      className="group block h-full"
-                    >
-                      <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
-                        {/* Main Image */}
-                        <div className="absolute inset-0">
-                          <ResolvableCoverImage
-                            src={stateImage?.url}
-                            filename={stateImage?.filename}
-                            alt={state.name}
-                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          />
-                        </div>
-
-                        {/* Overlay with split design */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90" />
-                        
-                        {/* Content Wrapper */}
-                        <div className="relative h-full flex flex-col">
-                          {/* Top Content */}
-                          <div className="p-6">
-                            <div className="inline-block bg-black/30 backdrop-blur-md rounded-lg px-4 py-1.5 text-white/90">
-                              <span className="text-sm font-medium tracking-wide">
-                                {state.package_count || 0} Tour Packages
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Bottom Content */}
-                          <div className="mt-auto p-6">
-                            <div className="relative">
-                              {/* Main Content */}
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <h3 className="text-2xl sm:text-3xl font-medium text-white tracking-tight">
-                                    {state.name}
-                                  </h3>
-                                  <p className="text-white/80 text-sm">
-                                    Discover amazing tour packages
-                                  </p>
-                                </div>
-
-                                {/* Action Button */}
-                                <button className="relative w-full group/btn">
-                                  <div className="absolute inset-0 bg-white/20 rounded-xl blur-xl group-hover/btn:bg-primary-500/40 transition-all duration-300"></div>
-                                  <div className="relative bg-white/20 backdrop-blur-sm border border-white/10 rounded-xl px-6 py-3 group-hover/btn:bg-primary-500 transition-all duration-300">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-white font-medium">View Packages</span>
-                                      <span className="text-white transform group-hover/btn:translate-x-1 transition-transform duration-300">
-                                        →
-                                      </span>
-                                    </div>
-                                  </div>
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-            </div>
-          </section>
-        ))}
-      </div>
-
-      {/* Featured Destinations */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col items-start mb-10">
-              {/* <div className="flex items-center gap-2 mb-4 justify-start">
-                  <div className="w-12 h-[2px] bg-primary-500"></div>
-                  <span className="text-xs tracking-[0.2em] uppercase text-primary-600 font-medium">
-                    Popular Choices
-                  </span>
-              </div> */}
-            <div className="flex items-end justify-between w-full">
-              <div className="inline-block relative">
-              <Image
-                          src="/home/star-light.png"
-                          alt=""
-                          width={100}
-                          height={100}
-                          className="absolute -left-8 -top-6 w-6 h-6 animate-pulse"
-                        />
-                <h2 className="text-3xl md:text-[42px] font-semibold text-gray-800 tracking-tighter mb-3">
-                  Featured Destinations
-                </h2>
-                <Image
-                          src="/home/star-dark.png"
-                          alt=""
-                          width={100}
-                          height={100}
-                          className="absolute top-0 -right-5 -bottom-4 w-10 h-10 animate-pulse"
-                        />
-                <p className="text-gray-600 max-w-2xl text-base">
-                  Discover our handpicked selection of India&apos;s most beloved travel destinations
-                </p>
-              </div>
-              
-              {/* Navigation Arrows */}
-              <div className="hidden md:flex items-center gap-3">
-                <button 
-                  className="featured-destinations-swiper-button-prev w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100"
-                >
-                  <i className="fi fi-rr-angle-left text-gray-600 group-hover:text-primary-500 transition-colors"></i>
-                </button>
-                <button 
-                  className="featured-destinations-swiper-button-next w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors group border border-gray-100"
-                >
-                  <i className="fi fi-rr-angle-right text-gray-600 group-hover:text-primary-500 transition-colors"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {featuredDestinations.length > 0 ? (
-            <Swiper
-              modules={[FreeMode, Navigation]}
-              spaceBetween={20}
-              slidesPerView={1.2}
-              freeMode={true}
-              navigation={{
-                prevEl: '.featured-destinations-swiper-button-prev',
-                nextEl: '.featured-destinations-swiper-button-next',
-              }}
-              breakpoints={{
-                640: {
-                  slidesPerView: 2,
-                  spaceBetween: 24,
-                },
-                768: {
-                  slidesPerView: 2.5,
-                  spaceBetween: 24,
-                },
-                1024: {
-                  slidesPerView: 3,
-                  spaceBetween: 24,
-                },
-                1280: {
-                  slidesPerView: 4,
-                  spaceBetween: 24,
-                },
-              }}
-              className="w-full"
-            >
-              {featuredDestinations.map((destination) => {
-                const packagesHref = `/packages/${destination.state.country_id}?state=${destination.state_id}&destination=${destination.id}`;
-                // Text `location` filter only: geo + HAVING(distance) drops rows with null lat/lng in DB.
-                const activitiesHref = `/activities?location=${encodeURIComponent(destination.name)}`;
-                const destinationImage = pickImageSource([
-                  { url: destination.cover_image_url, filename: destination.cover_image },
-                  { url: destination.thumb_image_url, filename: destination.thumb_image },
-                ]);
-
-                return (
-                <SwiperSlide key={destination.id}>
-                  <div className="flex h-full flex-col gap-2">
-                  <Link
-                    href={packagesHref}
-                    className="group block h-full min-h-0 flex-1"
-                  >
-                    <div className="relative w-full aspect-[3/4] bg-gray-100 rounded-2xl overflow-hidden">
-                      {/* Main Image */}
-                      <div className="absolute inset-0">
-                        <ResolvableCoverImage
-                          src={destinationImage?.url}
-                          filename={destinationImage?.filename}
-                          alt={destination.name}
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        />
-                      </div>
-
-                      {/* Gradient Overlays */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-
-                      {/* Content Container */}
-                      <div className="relative h-full flex flex-col">
-                        {/* Top Badge */}
-                        <div className="p-5">
-                          <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md rounded-full pl-2 pr-3 py-1">
-                            <div className="w-5 h-5 rounded-full bg-primary-500 flex items-center justify-center">
-                              <span className="text-[10px] font-semibold text-white">{destination.package_count || 0}</span>
-                            </div>
-                            <span className="text-xs font-medium text-white">Tour Packages</span>
-                          </div>
-                        </div>
-
-                        {/* Bottom Content */}
-                        <div className="mt-auto p-5 space-y-6">
-                          {/* Title */}
-                          <div>
-                            <h3 className="text-2xl font-medium text-white mb-1">
-                              {destination.name}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                              <div className="h-px w-5 bg-primary-500"></div>
-                              <span className="text-xs font-medium text-white/70 uppercase tracking-wider">Featured Destination</span>
-                            </div>
-                          </div>
-
-                          {/* Action Button */}
-                          <button className="w-full group/btn">
-                            <div className="relative overflow-hidden bg-white/10 hover:bg-primary-500 backdrop-blur-sm rounded-xl p-3.5 transition-all duration-300">
-                              <div className="relative z-10 flex items-center justify-between">
-                                <span className="text-sm font-medium text-white">View All Packages</span>
-                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                                  <span className="text-white transform group-hover/btn:translate-x-0.5 transition-transform duration-300">
-                                    →
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                  <Link
-                    href={activitiesHref}
-                    className="block shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-center text-sm font-medium text-gray-800 transition-colors hover:border-primary-500 hover:text-primary-600"
-                  >
-                    View activities near {destination.name}
-                  </Link>
-                  </div>
-                </SwiperSlide>
-                );
-              })}
-            </Swiper>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-500">No featured destinations available at the moment.</p>
-            </div>
-          )}
+          <CardGridSkeleton />
         </div>
       </section>
     </main>
   );
 }
 
+function DestinationCard({ href, image, title, count }) {
+  return (
+    <Link href={href} className="group block">
+      <article className="overflow-hidden rounded-2xl bg-white ring-1 ring-[#EBEBEB] transition-all duration-200 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] hover:ring-[#DDDDDD]">
+        <div className="relative aspect-[4/3] overflow-hidden bg-[#F0F0F0]">
+          <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+            <ResolvableCoverImage
+              src={image?.url}
+              filename={image?.filename}
+              alt={title}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          </div>
+        </div>
+        <div className="px-4 py-3.5">
+          <h3 className="text-[15px] font-medium text-[#222222] sm:text-base">
+            {title}
+          </h3>
+          <p className="mt-1 text-sm text-[#717171]">
+            {count || 0} package{count === 1 ? "" : "s"}
+          </p>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+export default function Explore() {
+  const [mounted, setMounted] = useState(false);
+  const [countries, setCountries] = useState([]);
+  const [packageCounts, setPackageCounts] = useState({});
+  const [activeCountryId, setActiveCountryId] = useState(null);
+
+  const { data: featuredDestinationsData, isLoading: featuredLoading } =
+    useQuery({
+      queryKey: ["featuredDestinations"],
+      queryFn: getFeaturedDestinations,
+    });
+
+  const featuredDestinations = featuredDestinationsData?.data || [];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await getExploreData();
+      const list = response.data || [];
+      setCountries(list);
+      if (list.length > 0) setActiveCountryId(list[0].id);
+      setMounted(true);
+
+      const counts = {};
+      await Promise.all(
+        list.map(async (country) => {
+          counts[country.id] = await getPackageCount(country.id);
+        }),
+      );
+      setPackageCounts(counts);
+    };
+    fetchData();
+  }, []);
+
+  const activeCountry = countries.find((c) => c.id === activeCountryId);
+
+  const activeCountryPackageCount = activeCountry
+    ? (packageCounts[activeCountry.id] ??
+      activeCountry.state?.reduce((t, s) => t + (s.package_count || 0), 0) ??
+      0)
+    : 0;
+
+  if (!mounted) return <ExploreSkeleton />;
+
+  return (
+    <main className="min-h-screen bg-white text-[#222222]">
+      <ExploreHeader loading={!mounted}>
+        <div className="max-w-2xl">
+          <p
+            className={`${TYPE.eyebrow} text-primary-200`}
+          >
+            Packages
+          </p>
+          <h1 className="mt-2 text-[30px] font-medium leading-[1.1] tracking-tight text-white sm:text-[34px] md:text-4xl">
+            Explore destinations
+          </h1>
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-white/80 sm:text-[15px]">
+            Curated travel packages from verified suppliers — browse by country
+            and book direct.
+          </p>
+        </div>
+      </ExploreHeader>
+
+      <section className={`${EXPLORE_CONTAINER} py-10 sm:py-12 lg:py-14`}>
+        <SectionIntro
+          eyebrow="Popular picks"
+          title="Featured destinations"
+          description="Hand-picked places travelers are booking right now."
+        />
+
+        {featuredLoading ? (
+          <CardGridSkeleton />
+        ) : featuredDestinations.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            {featuredDestinations.map((destination) => {
+              const packagesHref = `/packages/${destination.state.country_id}?state=${destination.state_id}&destination=${destination.id}`;
+              const destinationImage = pickImageSource([
+                {
+                  url: destination.cover_image_url,
+                  filename: destination.cover_image,
+                },
+                {
+                  url: destination.thumb_image_url,
+                  filename: destination.thumb_image,
+                },
+              ]);
+
+              return (
+                <DestinationCard
+                  key={destination.id}
+                  href={packagesHref}
+                  image={destinationImage}
+                  title={destination.name}
+                  count={destination.package_count}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <p className={`py-12 text-center ${TYPE.body}`}>
+            No featured destinations available.
+          </p>
+        )}
+      </section>
+
+      <section className="border-t border-[#EBEBEB] bg-[#FAFAFA]">
+        <div className={`${EXPLORE_CONTAINER} py-10 sm:py-12 lg:py-14`}>
+          <SectionIntro
+            eyebrow="By country"
+            title="Browse by region"
+            description="Select a country to view its states and available packages."
+            action={
+              activeCountry ? (
+                <Link
+                  href={`/packages/${activeCountry.id}`}
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 transition-all hover:gap-3 hover:text-primary-700"
+                >
+                  View all in {activeCountry.name}
+                  <i className="fi fi-rr-arrow-right text-xs" />
+                </Link>
+              ) : null
+            }
+          />
+
+          {countries.length > 0 && (
+            <div className="mb-8 flex gap-0.5 overflow-x-auto border-b border-[#EBEBEB] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {countries.map((country) => {
+                const isActive = country.id === activeCountryId;
+                return (
+                  <button
+                    key={country.id}
+                    type="button"
+                    onClick={() => setActiveCountryId(country.id)}
+                    className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors sm:px-4 ${
+                      isActive
+                        ? "border-primary-600 text-[#222222]"
+                        : "border-transparent text-[#717171] hover:text-[#222222]"
+                    }`}
+                  >
+                    {country.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {activeCountry ? (
+            <div>
+              <p className={`mb-6 ${TYPE.body}`}>
+                {activeCountry.state?.length || 0} regions ·{" "}
+                {activeCountryPackageCount} packages
+              </p>
+
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                {(activeCountry.state || []).map((state) => {
+                  const stateImage = pickImageSource([
+                    {
+                      url: state.cover_image_url,
+                      filename: state.cover_image,
+                    },
+                    {
+                      url: state.thumb_image_url,
+                      filename: state.thumb_image,
+                    },
+                  ]);
+
+                  return (
+                    <DestinationCard
+                      key={state.id}
+                      href={`/packages/${activeCountry.id}?state=${state.id}`}
+                      image={stateImage}
+                      title={state.name}
+                      count={state.package_count}
+                    />
+                  );
+                })}
+              </div>
+
+              {(activeCountry.state?.length || 0) === 0 && (
+                <p className={`py-12 text-center ${TYPE.body}`}>
+                  No regions listed for this country yet.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className={`py-12 text-center ${TYPE.body}`}>
+              No countries available yet.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className={`${EXPLORE_CONTAINER} py-10 sm:py-12`}>
+        <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-[#EBEBEB]">
+          <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div className="max-w-md">
+              <p className={`mb-2 ${TYPE.eyebrow} text-primary-600`}>
+                Scheduled trips
+              </p>
+              <h2 className="text-xl font-medium tracking-tight text-[#222222] sm:text-2xl">
+                Fixed departure dates?
+              </h2>
+              <p className={`mt-2 ${TYPE.body}`}>
+                Browse scheduled group trips with confirmed itineraries and
+                like-minded travelers.
+              </p>
+            </div>
+            <Link
+              href="/scheduled"
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+            >
+              View scheduled trips
+              <i className="fi fi-rr-arrow-right text-xs" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  );
+}

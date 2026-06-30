@@ -3,6 +3,7 @@
 import SearchLocationField from "./SearchLocationField";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "./DateRangeSearchField";
+import SearchInputBox from "./SearchInputBox";
 
 const PRICE_MIN = 0;
 const PRICE_MAX = 10000;
@@ -13,7 +14,9 @@ export default function AttractionsSearchFilters({
   categories = [],
   destinations = [],
   compact = false,
+  inputVariant = "default",
 }) {
+  const isHero = inputVariant === "hero";
   const toggleCategory = (slug) => {
     onFilterChange({
       ...filters,
@@ -37,55 +40,83 @@ export default function AttractionsSearchFilters({
   return (
     <div
       className={`overflow-y-auto ${
-        compact ? "px-4 py-3 space-y-4 max-h-[38vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+        isHero
+          ? "max-h-[38vh] space-y-3 px-5 py-4 sm:px-6 sm:py-5"
+          : compact
+            ? "max-h-[38vh] space-y-4 px-4 py-3"
+            : "max-h-[50vh] space-y-5 px-6 py-4"
       }`}
     >
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-marker text-gray-400" />
-            Location
-          </label>
-          {filters.location ? (
-            <button
-              type="button"
-              onClick={() =>
-                onFilterChange({
-                  ...filters,
-                  location: "",
-                  longitude: "",
-                  latitude: "",
-                })
-              }
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          ) : null}
+      {isHero ? (
+        <SearchInputBox label="Location">
+          <SearchLocationField
+            variant="hero"
+            location={filters.location}
+            latitude={filters.latitude}
+            longitude={filters.longitude}
+            destinations={destinations}
+            placeholder="City or destination"
+            onChange={(locationPatch) =>
+              onFilterChange({ ...filters, ...locationPatch })
+            }
+          />
+        </SearchInputBox>
+      ) : (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
+              <i className="fi fi-rr-marker text-gray-400" />
+              Location
+            </label>
+            {filters.location ? (
+              <button
+                type="button"
+                onClick={() =>
+                  onFilterChange({
+                    ...filters,
+                    location: "",
+                    longitude: "",
+                    latitude: "",
+                  })
+                }
+                className="text-xs text-primary-600 hover:text-primary-700"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <SearchLocationField
+            location={filters.location}
+            latitude={filters.latitude}
+            longitude={filters.longitude}
+            destinations={destinations}
+            onChange={(locationPatch) =>
+              onFilterChange({ ...filters, ...locationPatch })
+            }
+          />
         </div>
-        <SearchLocationField
-          location={filters.location}
-          latitude={filters.latitude}
-          longitude={filters.longitude}
-          destinations={destinations}
-          onChange={(locationPatch) =>
-            onFilterChange({ ...filters, ...locationPatch })
-          }
-        />
-      </div>
+      )}
 
       <DateRangeSearchField
+        variant={isHero ? "hero" : "default"}
         dateFrom={filters.dateFrom}
         dateTo={filters.dateTo}
+        emptyLabel="Pick dates"
         onChange={({ dateFrom, dateTo }) =>
           onFilterChange({ ...filters, dateFrom, dateTo })
         }
       />
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-ferris-wheel text-gray-400" />
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className={`flex items-center gap-1.5 ${
+              isHero
+                ? "text-[10px] font-medium text-[#717171] sm:text-[11px]"
+                : "text-xs font-medium uppercase tracking-wide text-gray-500"
+            }`}
+          >
+            {!isHero ? <i className="fi fi-rr-ferris-wheel text-gray-400" /> : null}
             Attraction Type
           </label>
           {filters.category && (
@@ -125,9 +156,15 @@ export default function AttractionsSearchFilters({
       </div>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-indian-rupee-sign text-gray-400" />
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className={`flex items-center gap-1.5 ${
+              isHero
+                ? "text-[10px] font-medium text-[#717171] sm:text-[11px]"
+                : "text-xs font-medium uppercase tracking-wide text-gray-500"
+            }`}
+          >
+            {!isHero ? <i className="fi fi-rr-indian-rupee-sign text-gray-400" /> : null}
             Price Range
           </label>
           {hasPriceFilter && (

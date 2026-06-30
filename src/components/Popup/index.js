@@ -6,16 +6,18 @@ import { motion, AnimatePresence, useDragControls } from "framer-motion";
 
 // PopupHeader component
 const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dragControls, isFullscreen }) => {
-  if (!title && !showCloseButton) return null;
-  
+  const showDragHandle = isMobile && draggable;
+  const showTitleRow = Boolean(title) || (showCloseButton && (!isMobile || !draggable));
+
+  if (!showDragHandle && !showTitleRow) return null;
+
   const startDragging = (event) => {
     dragControls.start(event);
   };
   
   return (
-    <div className="sticky top-0 bg-white border-b border-gray-100 z-10">
-      {/* Drag Handle for Mobile */}
-      {isMobile && draggable && (
+    <div className={`sticky top-0 z-10 bg-white ${showTitleRow ? "border-b border-gray-100" : ""}`}>
+      {showDragHandle && (
         <div 
           className="w-full flex justify-center items-center py-4 touch-none cursor-grab active:cursor-grabbing group"
           onPointerDown={startDragging}
@@ -23,26 +25,28 @@ const PopupHeader = ({ title, onClose, showCloseButton, isMobile, draggable, dra
           <div className="w-12 h-1 rounded-full bg-gray-300 transition-colors duration-200 group-hover:bg-primary-400" />
         </div>
       )}
-      <div className={`flex items-center justify-between pb-4 ${isFullscreen ? "max-w-4xl mx-auto w-full px-6 md:px-8 pt-4" : "px-6"}`}>
-        {title && (
-          <div className="flex-1">
-            {typeof title === "string" ? (
-              <h3 className={`font-medium text-gray-800 ${isFullscreen ? "text-xl" : "text-lg"}`}>{title}</h3>
-            ) : (
-              title
-            )}
-          </div>
-        )}
-        {showCloseButton && (!isMobile || !draggable) && (
-          <button
-            type="button"
-            className="rounded-full p-2 hover:bg-gray-100 transition-colors duration-200"
-            onClick={onClose}
-          >
-            <i className="fi fi-rr-cross text-lg text-gray-500"></i>
-          </button>
-        )}
-      </div>
+      {showTitleRow && (
+        <div className={`flex items-center justify-between pb-4 ${isFullscreen ? "max-w-4xl mx-auto w-full px-6 md:px-8 pt-4" : "px-6"}`}>
+          {title && (
+            <div className="flex-1">
+              {typeof title === "string" ? (
+                <h3 className={`font-medium text-gray-800 ${isFullscreen ? "text-xl" : "text-lg"}`}>{title}</h3>
+              ) : (
+                title
+              )}
+            </div>
+          )}
+          {showCloseButton && (!isMobile || !draggable) && (
+            <button
+              type="button"
+              className="rounded-full p-2 hover:bg-gray-100 transition-colors duration-200"
+              onClick={onClose}
+            >
+              <i className="fi fi-rr-cross text-lg text-gray-500"></i>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -268,7 +272,7 @@ export default function Popup({
                     ${positionClasses.panel}
                     ${pannelStyle}
                     bg-white text-left align-middle shadow-xl
-                    flex flex-col transform-gpu
+                    flex min-h-0 flex-col transform-gpu
                     ${isMobile ? className.replace(/max-w-\w+/g, '').trim() : className}
                   `}
                 >
@@ -283,8 +287,10 @@ export default function Popup({
                   />
                   <div
                     className={`${
-                      effectivePosition === "fullscreen" || effectivePosition === "center"
-                        ? "flex flex-col overflow-hidden"
+                      effectivePosition === "fullscreen" ||
+                      effectivePosition === "center" ||
+                      effectivePosition === "bottom"
+                        ? "flex flex-col flex-1 min-h-0 overflow-hidden"
                         : "flex-1 min-h-0 overflow-y-auto overscroll-contain"
                     } ${
                       effectivePosition === "fullscreen" ? "flex-1 min-h-0" : ""

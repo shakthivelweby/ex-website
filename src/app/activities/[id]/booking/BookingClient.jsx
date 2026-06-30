@@ -7,9 +7,15 @@ import ActivityTimeSlotPicker from "@/components/activities/ActivityTimeSlotPick
 import ActivityVisitDatePicker from "@/components/activities/ActivityVisitDatePicker";
 import PaymentTrustPanel from "@/components/booking/PaymentTrustPanel";
 import isLogin from "@/utils/isLogin";
-import { resolveActivityTicketUnitPricing, toActivityVisitYmd } from "@/utils/activityTicketPricing";
+import { resolveActivityTicketUnitPricing, toActivityVisitYmd, applyDiscountAndAdminCharge } from "@/utils/activityTicketPricing";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 import { normalizeCloseoutDates } from "@/utils/closeoutUtils";
 import { buildActivitySlotOptions, mergeSelectedSlotIntoOptions } from "@/utils/activityTimeSlotUtils";
+import {
+  isPartialPayment,
+  resolveRemainingBalance,
+  roundMoney,
+} from "@/utils/paymentCompletion";
 import BookingPageSkeleton from "@/components/loading/BookingPageSkeleton";
 import {
   createActivityBooking,
@@ -20,6 +26,7 @@ import {
 import apiMiddleware from "../../../api/apiMiddleware";
 import { initializeRazorpayPayment } from "@/sdk/razorpay";
 import PaymentSuccessPopup from "@/components/PaymentSuccessPopup/PaymentSuccessPopup";
+import BalancePaymentPopup from "@/components/booking/BalancePaymentPopup";
 import ErrorPopup from "@/components/ErrorPopup/ErrorPopup";
 import PaymentProcessingOverlay from "@/components/PaymentProcessingOverlay/PaymentProcessingOverlay";
 import { getPaymentErrorPayload, money } from "@/utils/paymentCheckoutUi";
@@ -75,14 +82,9 @@ function toYmd(date) {
   return toActivityVisitYmd(date);
 }
 
-function applyDiscountAndAdminCharge(amountRaw, discountRaw, adminChargeRaw) {
-  const amount = Number(amountRaw || 0);
-  const discount = Number(discountRaw || 0);
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
-
-  // Admin charge is informational only; apply discount on base price.
-  const discounted = amount - (amount * Math.max(0, discount)) / 100;
-  return Number.isFinite(discounted) ? discounted : 0;
+function getTicketMaxQty(ticket) {
+  const max = Number(ticket?.maximum_allowed_bookings_per_user);
+  return Number.isFinite(max) && max > 0 ? max : null;
 }
 
 function pickNumber(obj, keys, fallback = 0) {
@@ -103,6 +105,7 @@ const BookingClient = ({ activityId }) => {
   const [showPaymentError, setShowPaymentError] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
   const [pendingCheckout, setPendingCheckout] = useState(null);
+  const [balancePaymentPopup, setBalancePaymentPopup] = useState(null);
   const [activityDetails, setActivityDetails] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -255,20 +258,8 @@ const BookingClient = ({ activityId }) => {
           if (data.selectedDate || data.selectedTimeSlot) {
             setDataLoaded(true);
           }
-        } else {
-          details = {
-            id: activityId,
-            title: "Adventure Activity",
-            location: "Location",
-            price: 2500,
-            duration: "2-3 hours",
-            time_slot_based: false,
-            time_slot_pricing: [],
-            cancellation_policies: [],
-          };
         }
 
-        // Session payload used to omit cancellation_policies; always merge from API when possible.
         const visitYmd = bookingDataStr
           ? (() => {
               try {
@@ -280,48 +271,39 @@ const BookingClient = ({ activityId }) => {
             })()
           : today;
 
-        try {
-          const res = await apiMiddleware.get(`/activity-details/${activityId}`, {
-            params: { date: visitYmd || today },
-          });
-          const inner = res.data?.data;
-          const policies = Array.isArray(inner?.cancellation_policies)
-            ? inner.cancellation_policies
-            : [];
-          const closeoutDates = normalizeCloseoutDates(inner?.closeout_dates);
-          const apiSlots = Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [];
-          const seasonalDates = Array.isArray(inner?.seasonal_dates) ? inner.seasonal_dates : [];
-          if (!cancelled && details) {
-            details = {
-              ...details,
-              time_slot_based: Boolean(
-                inner?.activity?.time_slot_based ?? details.time_slot_based
-              ),
-              time_slot_pricing:
-                apiSlots.length > 0 ? apiSlots : details.time_slot_pricing || [],
-              seasonal_dates:
-                seasonalDates.length > 0 ? seasonalDates : details.seasonal_dates || [],
-              current_pricing: inner?.current_pricing ?? details.current_pricing ?? null,
-              cancellation_policies: policies,
-              closeout_dates: closeoutDates,
-            };
-          } else if (!cancelled && !details && (policies.length || closeoutDates.length || apiSlots.length)) {
-            details = {
-              id: activityId,
-              title: inner?.activity?.name || "Activity",
-              location: inner?.activity?.location || inner?.activity?.city || "",
-              price: 0,
-              duration: "—",
-              time_slot_based: Boolean(inner?.activity?.time_slot_based),
-              time_slot_pricing: apiSlots,
-              seasonal_dates: seasonalDates,
-              current_pricing: inner?.current_pricing ?? null,
-              cancellation_policies: policies,
-              closeout_dates: closeoutDates,
-            };
-          }
-        } catch {
-          // keep session / defaults; policies may stay empty
+        const res = await apiMiddleware.get(`/activity-details/${activityId}`, {
+          params: { date: visitYmd || today },
+        });
+        const inner = res.data?.data;
+        const activity = inner?.activity;
+        const policies = Array.isArray(inner?.cancellation_policies)
+          ? inner.cancellation_policies
+          : [];
+        const closeoutDates = normalizeCloseoutDates(inner?.closeout_dates);
+        const apiSlots = Array.isArray(inner?.time_slot_pricing) ? inner.time_slot_pricing : [];
+        const seasonalDates = Array.isArray(inner?.seasonal_dates) ? inner.seasonal_dates : [];
+
+        if (!cancelled && activity) {
+          details = {
+            ...(details || {}),
+            id: activityId,
+            title: activity.name || details?.title || "Activity",
+            location: activity.location || activity.city || details?.location || "",
+            price: details?.price ?? 0,
+            duration: activity.duration || details?.duration || "—",
+            free_booking: Boolean(activity.free_booking),
+            time_slot_based: Boolean(
+              activity.time_slot_based ?? details?.time_slot_based
+            ),
+            time_slot_pricing:
+              apiSlots.length > 0 ? apiSlots : details?.time_slot_pricing || [],
+            seasonal_dates:
+              seasonalDates.length > 0 ? seasonalDates : details?.seasonal_dates || [],
+            current_pricing: inner?.current_pricing ?? details?.current_pricing ?? null,
+            cancellation_policies: policies,
+            closeout_dates: closeoutDates,
+            ticketOptions: details?.ticketOptions || [],
+          };
         }
 
         if (!cancelled) {
@@ -333,10 +315,10 @@ const BookingClient = ({ activityId }) => {
         if (!cancelled) {
           setActivityDetails({
             id: activityId,
-            title: "Adventure Activity",
-            location: "Location",
-            price: 2500,
-            duration: "2-3 hours",
+            title: "Activity",
+            location: "",
+            price: 0,
+            duration: "—",
             time_slot_based: false,
             time_slot_pricing: [],
             cancellation_policies: [],
@@ -351,6 +333,50 @@ const BookingClient = ({ activityId }) => {
       cancelled = true;
     };
   }, [activityId]);
+
+  // Refetch authoritative pricing when visit date changes
+  useEffect(() => {
+    if (!sessionHydrated || !selectedYmd) return;
+    let cancelled = false;
+
+    const refreshPricing = async () => {
+      try {
+        const res = await apiMiddleware.get(`/activity-details/${activityId}`, {
+          params: { date: selectedYmd },
+        });
+        const inner = res.data?.data;
+        if (cancelled || !inner) return;
+
+        setActivityDetails((prev) =>
+          prev
+            ? {
+                ...prev,
+                time_slot_based: Boolean(
+                  inner?.activity?.time_slot_based ?? prev.time_slot_based
+                ),
+                time_slot_pricing: Array.isArray(inner?.time_slot_pricing)
+                  ? inner.time_slot_pricing
+                  : prev.time_slot_pricing,
+                seasonal_dates: Array.isArray(inner?.seasonal_dates)
+                  ? inner.seasonal_dates
+                  : prev.seasonal_dates,
+                current_pricing: inner?.current_pricing ?? prev.current_pricing,
+                closeout_dates: normalizeCloseoutDates(inner?.closeout_dates),
+                free_booking: Boolean(inner?.activity?.free_booking ?? prev.free_booking),
+              }
+            : prev
+        );
+        setPendingCheckout(null);
+      } catch {
+        // keep existing pricing
+      }
+    };
+
+    refreshPricing();
+    return () => {
+      cancelled = true;
+    };
+  }, [activityId, selectedYmd, sessionHydrated]);
 
   const getEffectiveTicketUnitPrices = () => {
     if (!selectedTicket) return null;
@@ -618,80 +644,87 @@ const BookingClient = ({ activityId }) => {
   };
 
   const buildApiBookingData = () => {
-    if (!selectedTicket && !activityDetails?.ticketOptions?.[0]) {
+    const ticket = selectedTicket || activityDetails?.ticketOptions?.[0];
+    const effective = getEffectiveTicketUnitPrices();
+    if (!ticket?.id || !effective || !formData.selectedDate) {
       return null;
     }
 
-    const ticketId = selectedTicket?.id || activityDetails.ticketOptions?.[0]?.id;
-    const effective = getEffectiveTicketUnitPrices();
-    const basePrice = effective
-      ? effective.adultUnit
-      : selectedTicket?.price || activityDetails?.price || 0;
-    const adminChargePct = Number(
-      effective?.adminChargePct ??
-        pickNumber(selectedTicket, ["admin_charge", "adminCharge", "admin_charge_percentage"], null) ??
-        pickNumber(activityDetails?.current_pricing || {}, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0) ??
-        0
+    const ticketId = ticket.id;
+    const adminPct = Number(
+      effective.catalogAdminChargePct ??
+        effective.adminChargePct ??
+        pickNumber(ticket, ["admin_charge", "adminCharge", "admin_charge_percentage"], 0)
     );
+    const discountPct = Number(effective.discountPct || 0);
+    const skipAdminInMath = effective.adminChargePct === 0 && effective.catalogAdminChargePct > 0;
+    const effectiveAdmin = skipAdminInMath ? 0 : adminPct;
 
-    const originalAdultUnit = applyDiscountAndAdminCharge(
-      effective?.adultUnitBase ?? basePrice,
-      0,
-      adminChargePct
-    );
-    const originalChildUnitBase =
-      effective?.childUnitBase ??
-      selectedTicket?.child_price ??
-      (effective?.adultUnitBase ?? basePrice) * 0.7;
-    const originalChildUnit = applyDiscountAndAdminCharge(originalChildUnitBase, 0, adminChargePct);
+    const isFree =
+      activityDetails?.free_booking === true ||
+      activityDetails?.free_booking === 1 ||
+      activityDetails?.free_booking === "1";
 
+    let discountAmount = 0;
+    let ticketSubtotal = 0;
     const bookingTickets = [];
-    let originalTotal = 0;
-    let discountedTotal = 0;
 
-    if (effective?.rateType === "full") {
-      const qty = Math.max(1, Number(ticketCount) || 1);
+    const adultQty =
+      effective.rateType === "full" ? Math.max(1, Number(ticketCount) || 1) : formData.adultCount;
+    const childQty = effective.rateType === "full" ? 0 : formData.childCount;
+    const totalQty = adultQty + childQty;
+    if (totalQty < 1) return null;
+
+    const adultRaw = Number(effective.adultUnitBase ?? 0);
+    const childRaw = Number(effective.childUnitBase ?? 0);
+
+    if (isFree) {
       bookingTickets.push({
         activity_ticket_type_id: ticketId,
-        quantity: qty,
-        unit_price: basePrice,
-        total_price: basePrice * qty,
+        quantity: totalQty,
+        adult_quantity: adultQty,
+        child_quantity: childQty,
+        unit_price: 0,
+        total_price: 0,
       });
-      discountedTotal += basePrice * qty;
-      originalTotal += originalAdultUnit * qty;
-    } else if (formData.adultCount > 0) {
+    } else if (effective.rateType === "full") {
+      const afterAdmin = applyAdminCharge(adultRaw, effectiveAdmin);
+      const unitFinal = applyDiscountOnAmount(afterAdmin, discountPct);
+      if (discountPct > 0) discountAmount += (afterAdmin - unitFinal) * adultQty;
+      const lineTotal = roundMoney(unitFinal * adultQty);
+      ticketSubtotal += lineTotal;
       bookingTickets.push({
         activity_ticket_type_id: ticketId,
-        quantity: formData.adultCount,
-        unit_price: basePrice,
-        total_price: basePrice * formData.adultCount,
+        quantity: adultQty,
+        adult_quantity: adultQty,
+        child_quantity: 0,
+        unit_price: unitFinal,
+        total_price: lineTotal,
       });
-      discountedTotal += basePrice * formData.adultCount;
-      originalTotal += originalAdultUnit * formData.adultCount;
+    } else {
+      const adultAfterAdmin = applyAdminCharge(adultRaw, effectiveAdmin);
+      const childAfterAdmin = applyAdminCharge(childRaw || adultRaw, effectiveAdmin);
+      const adultFinal = applyDiscountOnAmount(adultAfterAdmin, discountPct);
+      const childFinal = applyDiscountOnAmount(childAfterAdmin, discountPct);
+      if (discountPct > 0) {
+        discountAmount += (adultAfterAdmin - adultFinal) * adultQty;
+        discountAmount += (childAfterAdmin - childFinal) * childQty;
+      }
+      const lineTotal = roundMoney(adultFinal * adultQty + childFinal * childQty);
+      ticketSubtotal += lineTotal;
+      bookingTickets.push({
+        activity_ticket_type_id: ticketId,
+        quantity: totalQty,
+        adult_quantity: adultQty,
+        child_quantity: childQty,
+        unit_price: adultFinal,
+        total_price: lineTotal,
+      });
     }
 
-    if (effective?.rateType !== "full" && formData.childCount > 0) {
-      const childPrice =
-        effective?.childUnit > 0
-          ? effective.childUnit
-          : selectedTicket?.child_price
-            ? selectedTicket.child_price
-            : basePrice * 0.7;
-
-      bookingTickets.push({
-        activity_ticket_type_id: ticketId,
-        quantity: formData.childCount,
-        unit_price: childPrice,
-        total_price: childPrice * formData.childCount,
-      });
-      discountedTotal += childPrice * formData.childCount;
-      originalTotal += originalChildUnit * formData.childCount;
-    }
-
-    const guideAmt =
-      Number(pickNumber(selectedTicket, ["guide_rate", "guideRate"], 0) || 0) * (includeGuide ? 1 : 0);
-    const totalAmountForApi = Number((originalTotal + guideAmt).toFixed(2));
-    const discountAmountForApi = Number(Math.max(0, originalTotal - discountedTotal).toFixed(2));
+    const guideRate = Number(pickNumber(ticket, ["guide_rate", "guideRate"], 0) || 0);
+    const guideAmt = !isFree && includeGuide && guideRate > 0 ? guideRate : 0;
+    const totalAmountForApi = roundMoney(ticketSubtotal + guideAmt + discountAmount);
 
     return {
       activity_id: activityId,
@@ -700,7 +733,7 @@ const BookingClient = ({ activityId }) => {
         ? selectedSlotLabel || formData.selectedTimeSlot || null
         : null,
       total_amount: totalAmountForApi,
-      discount_amount: discountAmountForApi,
+      discount_amount: roundMoney(discountAmount),
       adult_count: formData.adultCount,
       child_count: formData.childCount,
       include_guide: includeGuide,
@@ -708,7 +741,13 @@ const BookingClient = ({ activityId }) => {
     };
   };
 
-  const openRazorpayAndVerify = async (orderData, paymentAmount, bookingId, bookingReference) => {
+  const openRazorpayAndVerify = async (
+    orderData,
+    paymentAmount,
+    bookingId,
+    bookingReference,
+    priorPaidAmount = 0
+  ) => {
     setPaymentPhase(null);
     const chargeAmount = Number(orderData?.amount ?? paymentAmount);
 
@@ -767,8 +806,37 @@ const BookingClient = ({ activityId }) => {
     await new Promise((resolve) => setTimeout(resolve, 450));
     setPaymentPhase(null);
 
+    const verifyData = getApiData(verifyResponse) || verifyResponse?.data || {};
+    const userEmail = getLoggedInUserEmail() || user?.email || "";
+    const remainingBalance = resolveRemainingBalance(verifyResponse, { data: orderData }, {
+      bookingRelation: "activityBooking",
+      bookingRelationSnake: "activity_booking",
+    });
+    const isPartial = isPartialPayment(verifyResponse, { data: orderData }, {
+      bookingRelation: "activityBooking",
+      bookingRelationSnake: "activity_booking",
+    });
+    const totalPaid = roundMoney(priorPaidAmount + chargeAmount);
+
     sessionStorage.removeItem("bookingData");
-    setPendingCheckout(null);
+    setPendingCheckout(
+      isPartial ? { bookingId, paymentAmount: remainingBalance, bookingReference } : null
+    );
+    setCompletedBookingId(bookingId);
+
+    if (isPartial) {
+      setBalancePaymentPopup({
+        bookingId,
+        activityId: parseInt(activityId, 10),
+        paidAmount: totalPaid,
+        remainingBalance,
+        emailSent: Boolean(verifyData?.confirmation_email_sent),
+        userEmail,
+      });
+      return true;
+    }
+
+    setBalancePaymentPopup(null);
 
     const confirmationData = {
       bookingId,
@@ -780,8 +848,7 @@ const BookingClient = ({ activityId }) => {
     };
     sessionStorage.setItem("bookingConfirmation", JSON.stringify(confirmationData));
 
-    const emailSent = Boolean(verifyResponse?.data?.confirmation_email_sent);
-    const userEmail = getLoggedInUserEmail() || user?.email || "";
+    const emailSent = Boolean(verifyData?.confirmation_email_sent);
     const visitDetailRight =
       isSlotBased && selectedSlotLabel
         ? `${selectedSlotLabel} · ${getGuestSummary()}`
@@ -802,6 +869,54 @@ const BookingClient = ({ activityId }) => {
     });
     setShowSuccess(true);
     return true;
+  };
+
+  const handleBalancePayLater = () => {
+    setBalancePaymentPopup(null);
+    router.push("/my-bookings?tab=activities");
+  };
+
+  const executeBalancePayment = async () => {
+    if (!balancePaymentPopup || isPaying) return;
+
+    const { bookingId, activityId: popupActivityId, remainingBalance, paidAmount } =
+      balancePaymentPopup;
+    setIsPaying(true);
+
+    try {
+      setPaymentPhase("preparing");
+      const orderResponse = await createActivityOrder({
+        activity_id: popupActivityId,
+        activity_booking_id: bookingId,
+        amount: remainingBalance,
+      });
+
+      if (!isApiOk(orderResponse)) {
+        setPaymentPhase(null);
+        showPaymentErrorModal(getOrderErrorPayload(orderResponse?.message));
+        return;
+      }
+
+      const orderData = getApiData(orderResponse) || {};
+      await openRazorpayAndVerify(
+        orderData,
+        Number(orderData?.amount ?? remainingBalance),
+        bookingId,
+        pendingCheckout?.bookingReference || null,
+        paidAmount
+      );
+    } catch (error) {
+      setPaymentPhase(null);
+      showPaymentErrorModal({
+        variant: "error",
+        title: "Something went wrong",
+        message: error.response?.data?.message || error.message || "Payment failed.",
+        canRetry: true,
+        primaryLabel: "Try again",
+      });
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const executeCheckout = async () => {
@@ -858,6 +973,30 @@ const BookingClient = ({ activityId }) => {
         bookingReference = bookingData.booking_reference || null;
 
         setPendingCheckout({ bookingId, paymentAmount, bookingReference });
+      }
+
+      if (paymentAmount <= 0.01) {
+        setPaymentPhase(null);
+        const userEmail = getLoggedInUserEmail() || user?.email || "";
+        setCompletedBookingId(bookingId);
+        setSuccessMessage({
+          title: "You're all set!",
+          message: bookingReference
+            ? `Your activity booking is confirmed. Reference: ${bookingReference}.`
+            : "Your activity booking is confirmed.",
+          emailSent: false,
+          userEmail,
+          visitDate: formatVisitDate(formData.selectedDate),
+          detailRightLabel: isSlotBased && selectedSlotLabel ? "Time slot" : "Guests",
+          detailRight:
+            isSlotBased && selectedSlotLabel
+              ? `${selectedSlotLabel} · ${getGuestSummary()}`
+              : getGuestSummary(),
+          amountPaid: money(0),
+        });
+        setShowSuccess(true);
+        sessionStorage.removeItem("bookingData");
+        return;
       }
 
       setPaymentPhase("preparing");
@@ -1525,6 +1664,16 @@ const BookingClient = ({ activityId }) => {
           </div>
         </div>
       </div>
+
+      <BalancePaymentPopup
+        show={Boolean(balancePaymentPopup)}
+        itemTitle={activityDetails?.title || "Activity"}
+        paidAmount={balancePaymentPopup?.paidAmount}
+        remainingBalance={balancePaymentPopup?.remainingBalance}
+        onPayNow={executeBalancePayment}
+        onPayLater={handleBalancePayLater}
+        isPaying={isPaying}
+      />
 
       <PaymentSuccessPopup
         show={showSuccess}

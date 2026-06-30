@@ -602,9 +602,9 @@ export default function CheckoutPage() {
               />
               <label htmlFor="termsAgreement" className="ml-2.5 block text-xs text-gray-700 cursor-pointer">
                 I agree to the{" "}
-                <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline">Terms and Conditions</a>,{" "}
-                <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline">Cancellation Policy</a>, and{" "}
-                <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline">Privacy Policy</a>
+                <a href="/termsandcondition" className="text-primary-600 hover:text-primary-700 font-semibold underline">Terms and Conditions</a>,{" "}
+                <a href="/termsandcondition#cancellation" className="text-primary-600 hover:text-primary-700 font-semibold underline">Cancellation Policy</a>, and{" "}
+                <a href="/termsandcondition#privacy" className="text-primary-600 hover:text-primary-700 font-semibold underline">Privacy Policy</a>
               </label>
             </div>
 
@@ -760,9 +760,9 @@ export default function CheckoutPage() {
                 />
                 <label htmlFor="termsAgreement" className="ml-3 block text-sm text-gray-700 cursor-pointer leading-relaxed">
                   I agree to the{" "}
-                  <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Terms and Conditions</a>,{" "}
-                  <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Cancellation Policy</a>, and{" "}
-                  <a href="#" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Privacy Policy</a>
+                  <a href="/termsandcondition" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Terms and Conditions</a>,{" "}
+                  <a href="/termsandcondition#cancellation" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Cancellation Policy</a>, and{" "}
+                  <a href="/termsandcondition#privacy" className="text-primary-600 hover:text-primary-700 font-semibold underline decoration-primary-200 hover:decoration-primary-400 transition-colors">Privacy Policy</a>
                 </label>
               </div>
 

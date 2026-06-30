@@ -15,6 +15,7 @@ import ListingGridLoader from "@/components/loading/ListingGridLoader";
 // Router hooks removed to avoid SSR issues
 import { getActivities } from "./service";
 import { formatTimeTo12Hour } from "@/utils/formatDate";
+import { applyAdminCharge, applyDiscountOnAmount } from "@/utils/attractionPricing";
 
 const normalizeActivityFilters = (raw = {}) => {
   const dateFrom = raw.date_from || raw.date || "";
@@ -193,15 +194,29 @@ export default function ClientWrapper({
               activity.thumb_image ||
               activity.cover_image,
             price: (() => {
+              if (
+                activity.free_booking === true ||
+                activity.free_booking === 1 ||
+                activity.free_booking === "1"
+              ) {
+                return 0;
+              }
               const rt = activity.price?.rate_type;
+              const adminPct = Number(activity.price?.admin_charge ?? 0);
+              const discountPct = Number(activity.price?.discount ?? 0);
               const base =
                 rt === "full"
                   ? Number(activity.price?.full_rate || 0)
                   : rt === "pax"
                   ? Number(activity.price?.adult_price || 0)
                   : Number(activity.price?.full_rate || activity.price || 0);
-              return Math.round(base * 100) / 100;
+              const afterAdmin = applyAdminCharge(base, adminPct);
+              return applyDiscountOnAmount(afterAdmin, discountPct);
             })(),
+            freeBooking:
+              activity.free_booking === true ||
+              activity.free_booking === 1 ||
+              activity.free_booking === "1",
             rating: activity.rating || 0,
             reviewCount: activity.review_count || 0,
             duration: formatTimeTo12Hour(activity.start_time) || "updating",
@@ -263,7 +278,7 @@ export default function ClientWrapper({
   }, [categories]);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white pb-24 lg:pb-8">
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 mt-3 lg:mt-10">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Filters Section - Desktop */}
@@ -282,19 +297,22 @@ export default function ClientWrapper({
           {/* Activities Content */}
           <div className="flex-grow">
             {/* Top Bar */}
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <h2 className="text-sm sm:text-base font-medium text-gray-900">
+            <div className="mb-4 flex items-start justify-between gap-3 sm:mb-6">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base font-medium leading-snug text-gray-900 sm:text-lg">
                   Activities in{" "}
-                  <span className="text-primary-600">{filters.location || "your area"}</span>
-                </h2>
-                <span className="text-xs sm:text-sm text-gray-500">
-                  {activities.length} activities available
-                </span>
+                  <span className="text-primary-600 break-words">
+                    {filters.location || "your area"}
+                  </span>
+                </h1>
+                <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">
+                  {activities.length}{" "}
+                  {activities.length === 1 ? "activity" : "activities"} available
+                </p>
               </div>
 
               {/* Mobile Filter Button */}
-              <div className="lg:hidden">
+              <div className="shrink-0 lg:hidden">
                 <button
                   onClick={() => {
                     setIsFilterOpen(true);
@@ -348,14 +366,14 @@ export default function ClientWrapper({
                               filters.category === category.slug ? "" : category.slug,
                           })
                         }
-                        className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[80px] ${
+                        className={`flex flex-col items-center gap-2 group flex-shrink-0 min-w-[72px] sm:min-w-[80px] ${
                           filters.category === category.slug
                             ? "text-primary-600"
                             : "text-gray-600 hover:text-primary-600"
                         }`}
                       >
                         <div
-                          className={`w-12 h-12 p-2.5 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                          className={`h-14 w-14 p-2.5 sm:h-12 sm:w-12 sm:p-3 rounded-xl flex items-center justify-center transition-all duration-200 ${
                             filters.category === category.slug
                               ? "bg-primary-50 shadow-sm"
                               : "bg-gray-50 group-hover:bg-primary-50 group-hover:shadow-sm"
@@ -371,7 +389,7 @@ export default function ClientWrapper({
                             <i className="fi fi-rr-tag text-gray-400 text-lg"></i>
                           )}
                         </div>
-                        <span className="text-xs font-medium text-center leading-tight whitespace-nowrap max-w-[80px] truncate">
+                        <span className="max-w-[72px] truncate text-center text-xs font-medium leading-tight sm:max-w-[80px]">
                           {category.name}
                         </span>
                       </button>

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import SearchLocationField from "./SearchLocationField";
 import RangeSlider from "../RangeSlider/RangeSlider";
 import DateRangeSearchField from "./DateRangeSearchField";
+import SearchInputBox from "./SearchInputBox";
 import {
   buildCategoryTypesFromCategories,
   formTypeIcon,
@@ -22,7 +23,9 @@ export default function RentalsSearchFilters({
   categories = [],
   destinations = [],
   compact = false,
+  inputVariant = "default",
 }) {
+  const isHero = inputVariant === "hero";
   const categoryTypes = useMemo(
     () => buildCategoryTypesFromCategories(categories),
     [categories],
@@ -57,52 +60,101 @@ export default function RentalsSearchFilters({
   return (
     <div
       className={`overflow-y-auto ${
-        compact ? "px-4 py-3 space-y-4 max-h-[38vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+        isHero
+          ? "max-h-[38vh] space-y-3 px-5 py-4 sm:px-6 sm:py-5"
+          : compact
+            ? "max-h-[38vh] space-y-4 px-4 py-3"
+            : "max-h-[50vh] space-y-5 px-6 py-4"
       }`}
     >
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-marker text-gray-400" />
-            Location
-          </label>
-          {filters.location ? (
-            <button
-              type="button"
-              onClick={() =>
-                onFilterChange({
-                  ...filters,
-                  location: "",
-                  longitude: "",
-                  latitude: "",
-                })
-              }
-              className="text-xs text-primary-600 hover:text-primary-700"
-            >
-              Clear
-            </button>
-          ) : null}
+      {isHero ? (
+        <SearchInputBox label="Location">
+          <SearchLocationField
+            variant="hero"
+            location={filters.location}
+            latitude={filters.latitude}
+            longitude={filters.longitude}
+            destinations={destinations}
+            placeholder="Pickup city or area"
+            onChange={(locationPatch) =>
+              onFilterChange({ ...filters, ...locationPatch })
+            }
+          />
+        </SearchInputBox>
+      ) : (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <label className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-gray-500">
+              <i className="fi fi-rr-marker text-gray-400" />
+              Location
+            </label>
+            {filters.location ? (
+              <button
+                type="button"
+                onClick={() =>
+                  onFilterChange({
+                    ...filters,
+                    location: "",
+                    longitude: "",
+                    latitude: "",
+                  })
+                }
+                className="text-xs text-primary-600 hover:text-primary-700"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <SearchLocationField
+            location={filters.location}
+            latitude={filters.latitude}
+            longitude={filters.longitude}
+            destinations={destinations}
+            placeholder="Enter city or pickup area..."
+            onChange={(locationPatch) =>
+              onFilterChange({ ...filters, ...locationPatch })
+            }
+          />
         </div>
-        <SearchLocationField
-          location={filters.location}
-          latitude={filters.latitude}
-          longitude={filters.longitude}
-          destinations={destinations}
-          placeholder="Enter city or pickup area..."
-          onChange={(locationPatch) =>
-            onFilterChange({ ...filters, ...locationPatch })
-          }
-        />
-      </div>
+      )}
 
       <DateRangeSearchField
+        variant={isHero ? "hero" : "default"}
         dateFrom={filters.dateFrom}
         dateTo={filters.dateTo}
+        emptyLabel="Pick dates"
         onChange={({ dateFrom, dateTo }) =>
           onFilterChange({ ...filters, dateFrom, dateTo })
         }
       />
 
+      {isHero ? (
+        <SearchInputBox label="What to rent?">
+          <select
+            value={filters.form_type}
+            onChange={(e) => {
+              const next = e.target.value;
+              onFilterChange({
+                ...filters,
+                form_type: next,
+                category: "",
+                sub_category: "",
+                ...(isVehicleFormType(next)
+                  ? {}
+                  : { transmission: "", fuel_type: "", seats: "" }),
+              });
+            }}
+            className="w-full cursor-pointer appearance-none border-0 bg-transparent p-0 text-sm font-medium text-[#222222] focus:outline-none [&:invalid]:text-[#B0B0B0]"
+          >
+            <option value="">Select rental type</option>
+            {categoryTypes.map((type) => (
+              <option key={type.form_type} value={type.form_type}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+        </SearchInputBox>
+      ) : (
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -155,8 +207,9 @@ export default function RentalsSearchFilters({
           )}
         </div>
       </div>
+      )}
 
-      {showVehicleFilters ? (
+      {showVehicleFilters && !isHero ? (
         <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/80 p-3">
           <p className="text-xs font-semibold text-gray-700">Vehicle preferences</p>
 
@@ -276,6 +329,7 @@ export default function RentalsSearchFilters({
         </div>
       ) : null}
 
+      {!isHero ? (
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -317,6 +371,7 @@ export default function RentalsSearchFilters({
           <span>₹1000+</span>
         </div>
       </div>
+      ) : null}
     </div>
   );
 }

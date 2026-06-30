@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import SearchLocationField from "./SearchLocationField";
+import DateRangeSearchField from "./DateRangeSearchField";
+import SearchInputBox from "./SearchInputBox";
 
 const QUICK_DATE_OPTIONS = ["Today", "Tomorrow", "This Weekend"];
 
@@ -36,7 +38,9 @@ export default function EventsSearchFilters({
   languages = [],
   destinations = [],
   compact = false,
+  inputVariant = "default",
 }) {
+  const isHero = inputVariant === "hero";
   const [dateRange, setDateRange] = useState([
     parseDate(filters.dateFrom),
     parseDate(filters.dateTo),
@@ -255,10 +259,28 @@ export default function EventsSearchFilters({
   return (
     <div
       className={`overflow-y-auto ${
-        compact ? "px-4 py-3 space-y-4 max-h-[48vh]" : "px-6 py-4 space-y-5 max-h-[50vh]"
+        isHero
+          ? "max-h-[48vh] space-y-3 px-5 py-4 sm:px-6 sm:py-5"
+          : compact
+            ? "max-h-[48vh] space-y-4 px-4 py-3"
+            : "max-h-[50vh] space-y-5 px-6 py-4"
       }`}
     >
-      {/* Location */}
+      {isHero ? (
+        <SearchInputBox label="Location">
+          <SearchLocationField
+            variant="hero"
+            location={filters.location}
+            latitude={filters.latitude}
+            longitude={filters.longitude}
+            destinations={destinations}
+            placeholder="City or destination"
+            onChange={(locationPatch) =>
+              onFilterChange({ ...filters, ...locationPatch })
+            }
+          />
+        </SearchInputBox>
+      ) : (
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -285,8 +307,19 @@ export default function EventsSearchFilters({
           }
         />
       </div>
+      )}
 
-      {/* Date range */}
+      {isHero ? (
+        <DateRangeSearchField
+          variant="hero"
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+          emptyLabel="Pick dates"
+          onChange={({ dateFrom, dateTo }) =>
+            onFilterChange({ ...filters, dateFrom, dateTo })
+          }
+        />
+      ) : (
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
@@ -367,12 +400,19 @@ export default function EventsSearchFilters({
           )}
         </div>
       </div>
+      )}
 
       {/* Language - multi select */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-comments text-gray-400" />
+          <label
+            className={`flex items-center gap-1.5 ${
+              isHero
+                ? "text-[10px] font-medium text-[#717171] sm:text-[11px]"
+                : "text-xs font-medium uppercase tracking-wide text-gray-500"
+            }`}
+          >
+            {!isHero ? <i className="fi fi-rr-comments text-gray-400" /> : null}
             Language
           </label>
           {filters.languages?.length > 0 && (
@@ -414,8 +454,14 @@ export default function EventsSearchFilters({
       {/* Category - multi select */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
-            <i className="fi fi-rr-apps text-gray-400" />
+          <label
+            className={`flex items-center gap-1.5 ${
+              isHero
+                ? "text-[10px] font-medium text-[#717171] sm:text-[11px]"
+                : "text-xs font-medium uppercase tracking-wide text-gray-500"
+            }`}
+          >
+            {!isHero ? <i className="fi fi-rr-apps text-gray-400" /> : null}
             Category
           </label>
           {filters.categories?.length > 0 && (

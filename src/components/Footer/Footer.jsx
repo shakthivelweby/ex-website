@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export default function Footer() {
+export default function Footer({ className = "" }) {
   const currentYear = new Date().getFullYear();
 
   const quickLinks = [
@@ -52,7 +52,13 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-black text-gray-300 mt-16">
+    <footer
+      className={
+        className
+          ? `bg-black text-gray-300 ${className}`
+          : "bg-black text-gray-300 mt-16"
+      }
+    >
       <div className="container mx-auto px-4 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Company Info */}

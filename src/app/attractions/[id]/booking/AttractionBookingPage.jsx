@@ -168,7 +168,9 @@ function getTicketFromPrice(ticket) {
 }
 
 function getLineMaxQty(ticket, lineType, tickets) {
-  const maxPerUser = Number(ticket.maximum_allowed_bookings_per_user || 10);
+  const configuredMax = Number(ticket.maximum_allowed_bookings_per_user);
+  const maxPerUser =
+    Number.isFinite(configuredMax) && configuredMax > 0 ? configuredMax : 999;
   const slots =
     ticket.available_slots != null ? Number(ticket.available_slots) : null;
   const other = lineType === "adult" ? tickets?.child || 0 : tickets?.adult || 0;

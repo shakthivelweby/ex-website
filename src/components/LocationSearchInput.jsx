@@ -44,6 +44,7 @@ export default function LocationSearchInput({
   placeholder = "Enter city or destination name...",
   className = "",
   repositionDropdown = false,
+  variant = "default",
 }) {
   const [inputValue, setInputValue] = useState(value);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -243,22 +244,34 @@ export default function LocationSearchInput({
     onClear?.();
   };
 
+  const isHero = variant === "hero";
+
+  const inputClassName = isHero
+    ? "block w-full border-0 bg-transparent p-0 pr-14 text-sm font-medium leading-tight text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none focus:ring-0"
+    : `block w-full h-11 bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-20 text-sm text-gray-900
+            placeholder:text-gray-400 focus:outline-none focus:border-primary-300 focus:bg-white transition-all`;
+
   return (
     <div className={className}>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <i className="fi fi-rr-marker text-gray-400 text-sm" />
-        </div>
+        {!isHero ? (
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <i className="fi fi-rr-marker text-gray-400 text-sm" />
+          </div>
+        ) : null}
         <input
           ref={inputRef}
           type="text"
           defaultValue={value}
           onInput={(e) => setInputValue(e.target.value)}
           placeholder={placeholder}
-          className="block w-full h-11 bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-20 text-sm text-gray-900
-            placeholder:text-gray-400 focus:outline-none focus:border-primary-300 focus:bg-white transition-all"
+          className={inputClassName}
         />
-        <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 pr-2">
+        <div
+          className={`absolute inset-y-0 right-0 flex items-center gap-0.5 ${
+            isHero ? "-right-1" : "pr-2"
+          }`}
+        >
           {inputValue && (
             <button
               type="button"
@@ -285,12 +298,12 @@ export default function LocationSearchInput({
           </button>
         </div>
       </div>
-      {locationError && (
+      {locationError && !isHero ? (
         <p className="mt-1.5 text-xs text-red-600 flex items-start gap-1.5">
           <i className="fi fi-rr-exclamation text-sm mt-0.5" />
           {locationError}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

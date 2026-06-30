@@ -666,6 +666,7 @@ select {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  margin-bottom: 0;
   box-sizing: border-box;
   overflow-wrap: break-word;
   word-break: normal;
@@ -705,6 +706,15 @@ select {
 
 .render-html li p {
   margin-bottom: 0;
+}
+
+/* Quill blank-line paragraphs */
+.render-html p:empty,
+.render-html p:has(> br:only-child) {
+  margin-top: 0;
+  margin-bottom: 0;
+  min-height: 1.25em;
+  line-height: 1.25;
 }
 
 .render-html .ql-align-left {

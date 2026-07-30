@@ -55,6 +55,7 @@ export default function Search({ isOpen, onClose, type }) {
   const [destinationQuery, setDestinationQuery] = useState("");
   const [selectedModule, setSelectedModule] = useState(type || "package");
   const [selectedDestinations, setSelectedDestinations] = useState([]);
+  const [packageDuration, setPackageDuration] = useState("");
   const [locationFilters, setLocationFilters] = useState(
     createDefaultLocationFilters,
   );
@@ -152,6 +153,7 @@ export default function Search({ isOpen, onClose, type }) {
     if (!isOpen) {
       setDestinationQuery("");
       setSelectedDestinations([]);
+      setPackageDuration("");
       setLocationFilters(createDefaultLocationFilters());
       if (!type) setSelectedModule("package");
     }
@@ -194,6 +196,7 @@ export default function Search({ isOpen, onClose, type }) {
     setSelectedModule(module.id);
     setDestinationQuery("");
     setSelectedDestinations([]);
+    setPackageDuration("");
     setLocationFilters(createDefaultLocationFilters());
   };
 
@@ -247,7 +250,11 @@ export default function Search({ isOpen, onClose, type }) {
       const item = normalized[0];
       const countryId = item.country_id ?? item.state?.country_id;
       if (!countryId) {
-        router.push("/explore");
+        const params = new URLSearchParams({
+          destinations: String(item.id),
+        });
+        if (packageDuration) params.set("duration", packageDuration);
+        router.push(`/packages/search?${params.toString()}`);
         onClose();
         return;
       }
@@ -257,6 +264,7 @@ export default function Search({ isOpen, onClose, type }) {
         state: item.state_id,
         destination: item.id,
       });
+      if (packageDuration) params.set("duration", packageDuration);
       router.push(`/packages/${countryId}?${params.toString()}`);
       onClose();
       return;
@@ -266,8 +274,11 @@ export default function Search({ isOpen, onClose, type }) {
       "packageSearchDestinations",
       JSON.stringify(normalized),
     );
+    const params = new URLSearchParams();
     const ids = normalized.map((d) => d.id).join(",");
-    router.push(`/packages/search?destinations=${ids}`);
+    if (ids) params.set("destinations", ids);
+    if (packageDuration) params.set("duration", packageDuration);
+    router.push(`/packages/search?${params.toString()}`);
     onClose();
   };
 
@@ -304,7 +315,11 @@ export default function Search({ isOpen, onClose, type }) {
   const handleSearch = () => {
     if (isDestinationModule) {
       if (selectedDestinations.length === 0) {
-        router.push(isSchedule ? "/scheduled" : "/explore");
+        if (isPackage && packageDuration) {
+          router.push(`/packages/search?duration=${packageDuration}`);
+        } else {
+          router.push(isSchedule ? "/scheduled" : "/explore");
+        }
         onClose();
         return;
       }
@@ -413,7 +428,9 @@ export default function Search({ isOpen, onClose, type }) {
           <div
             className={`grid w-full grid-cols-1 gap-2.5 sm:gap-3 ${
               isDestinationModule
-                ? ""
+                ? isPackage
+                  ? "sm:grid-cols-2"
+                  : ""
                 : isRentals
                   ? "sm:grid-cols-2"
                   : "sm:grid-cols-2"
@@ -493,6 +510,31 @@ export default function Search({ isOpen, onClose, type }) {
                 />
               </SearchInputBox>
             )}
+
+            {isPackage ? (
+              <SearchInputBox label="Number of days">
+                <input
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={packageDuration}
+                  onChange={(event) =>
+                    setPackageDuration(
+                      event.target.value === ""
+                        ? ""
+                        : String(
+                            Math.max(
+                              1,
+                              parseInt(event.target.value, 10) || 1,
+                            ),
+                          ),
+                    )
+                  }
+                  placeholder="Any duration"
+                  className="w-full border-0 bg-transparent p-0 text-sm font-medium text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none"
+                />
+              </SearchInputBox>
+            ) : null}
 
             {isRentals ? (
               <SearchTypePicker

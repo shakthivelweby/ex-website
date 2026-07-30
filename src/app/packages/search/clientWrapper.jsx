@@ -6,19 +6,8 @@ import ChipThumbImage from "@/components/common/ChipThumbImage";
 import ListingsEmptyState from "@/components/common/ListingsEmptyState";
 import Popup from "@/components/Popup";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-
-function buildFiltersFromParams(searchParams) {
-  return {
-    tour_type: searchParams.get("tour_type") || "",
-    price_from: searchParams.get("price_range_from") || "",
-    price_to: searchParams.get("price_range_to") || "",
-    suitable_id: searchParams.get("suitable_id") || "",
-    sort_by_price: searchParams.get("sort_by_price") || "",
-    destination: "",
-  };
-}
 
 export default function ClientWrapper({
   packages = [],
@@ -28,7 +17,6 @@ export default function ClientWrapper({
   suitableForOptions = [],
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const filters = useMemo(
@@ -38,6 +26,7 @@ export default function ClientWrapper({
       price_to: initialFilters.price_range_to || "",
       suitable_id: initialFilters.suitable_id || "",
       sort_by_price: initialFilters.sort_by_price || "",
+      duration: initialFilters.duration || "",
       destination: "",
     }),
     [initialFilters],
@@ -52,7 +41,7 @@ export default function ClientWrapper({
   }, [selectedDestinations]);
 
   const updateURL = (nextFilters, nextDestinationIds = destinationIds) => {
-    if (nextDestinationIds.length === 0) {
+    if (nextDestinationIds.length === 0 && !nextFilters.duration) {
       router.push("/explore");
       return;
     }
@@ -63,9 +52,21 @@ export default function ClientWrapper({
       );
       const countryId = destination?.state?.country_id;
       if (destination && countryId) {
-        router.push(
-          `/packages/${countryId}?state=${destination.state_id}&destination=${destination.id}`,
-        );
+        const params = new URLSearchParams({
+          state: String(destination.state_id),
+          destination: String(destination.id),
+        });
+        if (nextFilters.tour_type) params.set("tour_type", nextFilters.tour_type);
+        if (nextFilters.suitable_id) params.set("suitable_id", nextFilters.suitable_id);
+        if (nextFilters.sort_by_price) {
+          params.set("sort_by_price", nextFilters.sort_by_price);
+        }
+        if (nextFilters.duration) params.set("duration", nextFilters.duration);
+        if (nextFilters.price_from && nextFilters.price_to) {
+          params.set("price_range_from", nextFilters.price_from);
+          params.set("price_range_to", nextFilters.price_to);
+        }
+        router.push(`/packages/${countryId}?${params.toString()}`);
         return;
       }
     }
@@ -81,6 +82,9 @@ export default function ClientWrapper({
 
     if (nextFilters.sort_by_price) params.set("sort_by_price", nextFilters.sort_by_price);
     else params.delete("sort_by_price");
+
+    if (nextFilters.duration) params.set("duration", nextFilters.duration);
+    else params.delete("duration");
 
     if (nextFilters.price_from && nextFilters.price_to) {
       params.set("price_range_from", nextFilters.price_from);
@@ -98,7 +102,15 @@ export default function ClientWrapper({
   };
 
   const clearAllFilters = () => {
-    updateURL(buildFiltersFromParams(searchParams));
+    updateURL({
+      tour_type: "",
+      price_from: "",
+      price_to: "",
+      suitable_id: "",
+      sort_by_price: "",
+      duration: "",
+      destination: "",
+    });
   };
 
   const hasActiveFilters = () =>
@@ -106,6 +118,7 @@ export default function ClientWrapper({
       filters.tour_type ||
         filters.suitable_id ||
         filters.sort_by_price ||
+        filters.duration ||
         filters.price_from ||
         filters.price_to,
     );
@@ -142,12 +155,19 @@ export default function ClientWrapper({
           </nav>
 
           <h1 className="text-2xl font-medium tracking-tight text-[#222222] md:text-[32px]">
-            Packages in{" "}
-            <span className="text-primary-600">{destinationLabel}</span>
+            {selectedDestinations.length > 0 ? (
+              <>
+                Packages in{" "}
+                <span className="text-primary-600">{destinationLabel}</span>
+              </>
+            ) : (
+              "Package search results"
+            )}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#717171] sm:text-[15px]">
-            Showing packages that visit at least one of your selected destinations.
-            Remove a destination below to narrow your search.
+            {selectedDestinations.length > 0
+              ? "Showing packages that visit at least one of your selected destinations."
+              : "Showing packages that match your selected trip duration."}
           </p>
 
           {selectedDestinations.length > 0 ? (
@@ -242,7 +262,7 @@ export default function ClientWrapper({
               </div>
             </Popup>
 
-            {destinationIds.length === 0 ? (
+            {destinationIds.length === 0 && !filters.duration ? (
               <ListingsEmptyState
                 icon="fi fi-rr-map-marker"
                 title="No destinations selected"

@@ -55,6 +55,7 @@ const PackageFilters = ({
   const clearAllFilters = () => {
     const cleared = {
       tour_type: "",
+      duration: "",
       price_from: "",
       price_to: "",
       suitable_id: "",
@@ -101,6 +102,34 @@ const PackageFilters = ({
               </button>
             ))}
           </div>
+        </FilterField>
+      </section>
+
+      <div className="border-t border-gray-100" />
+
+      <section>
+        <FilterField
+          icon="fi fi-rr-calendar"
+          label="Number of days"
+          showClear={Boolean(tempFilters.duration)}
+          onClear={() => patchFilters({ duration: "" })}
+        >
+          <input
+            type="number"
+            min="1"
+            inputMode="numeric"
+            value={tempFilters.duration || ""}
+            onChange={(event) =>
+              patchFilters({
+                duration:
+                  event.target.value === ""
+                    ? ""
+                    : String(Math.max(1, parseInt(event.target.value, 10) || 1)),
+              })
+            }
+            placeholder="Any duration"
+            className={getSelectClass(Boolean(tempFilters.duration))}
+          />
         </FilterField>
       </section>
 

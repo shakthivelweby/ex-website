@@ -21,6 +21,14 @@ async function safeRequest(request, fallback) {
 export default async function PackageSearchPage({ searchParams }) {
   const resolved = await searchParams;
   const destinationIds = parseDestinationIds(resolved.destinations);
+  const initialFilters = {
+    tour_type: resolved.tour_type || "",
+    suitable_id: resolved.suitable_id || "",
+    sort_by_price: resolved.sort_by_price || "",
+    price_range_from: resolved.price_range_from || "",
+    price_range_to: resolved.price_range_to || "",
+    duration: resolved.duration || "",
+  };
 
   const allDestinationsResponse = await safeRequest(getAllDestinations, { data: [] });
   const allDestinations = Array.isArray(allDestinationsResponse?.data)
@@ -31,23 +39,20 @@ export default async function PackageSearchPage({ searchParams }) {
     const destination = allDestinations.find((item) => item.id === destinationIds[0]);
     const countryId = destination?.state?.country_id;
     if (destination && countryId) {
-      redirect(
-        `/packages/${countryId}?state=${destination.state_id}&destination=${destination.id}`,
-      );
+      const params = new URLSearchParams({
+        state: String(destination.state_id),
+        destination: String(destination.id),
+      });
+      Object.entries(initialFilters).forEach(([key, value]) => {
+        if (value) params.set(key, value);
+      });
+      redirect(`/packages/${countryId}?${params.toString()}`);
     }
   }
 
   const selectedDestinations = destinationIds
     .map((id) => allDestinations.find((item) => item.id === id))
     .filter(Boolean);
-
-  const initialFilters = {
-    tour_type: resolved.tour_type || "",
-    suitable_id: resolved.suitable_id || "",
-    sort_by_price: resolved.sort_by_price || "",
-    price_range_from: resolved.price_range_from || "",
-    price_range_to: resolved.price_range_to || "",
-  };
 
   const packagesResponse = await safeRequest(
     () =>

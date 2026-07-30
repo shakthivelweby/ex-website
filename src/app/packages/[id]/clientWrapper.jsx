@@ -54,6 +54,7 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
         price_to: initialFilters?.price_range_to || "",
         suitable_id: initialFilters?.suitableFor || "",
         sort_by_price: initialFilters?.sortBy || "",
+        duration: initialFilters?.duration || "",
         destination: "",
     });
 
@@ -143,6 +144,12 @@ const ClientWrapper = ({ packages, stateInfo, stateDestinations, type, destinati
             params.set("sort_by_price", newFilters.sort_by_price);
         } else {
             params.delete("sort_by_price");
+        }
+
+        if (newFilters.duration) {
+            params.set("duration", newFilters.duration);
+        } else {
+            params.delete("duration");
         }
 
         if (newFilters.price_from && newFilters.price_to) {

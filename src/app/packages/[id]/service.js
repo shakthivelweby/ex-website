@@ -6,7 +6,8 @@ const getPackages = async (filters = {}) => {
         suitable_id, 
         sort_by_price,
         price_range_from,
-        price_range_to
+        price_range_to,
+        duration
     } = filters;
     
     const response = await apiServerMiddleware.get('/packages', {
@@ -18,7 +19,8 @@ const getPackages = async (filters = {}) => {
             suitable_id: suitable_id || undefined,
             sort_by_price: sort_by_price || undefined,
             price_range_from: price_range_from || undefined,
-            price_range_to: price_range_to || undefined
+            price_range_to: price_range_to || undefined,
+            duration: duration || undefined
         }
     });
     console.log(response)

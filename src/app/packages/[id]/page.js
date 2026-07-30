@@ -27,7 +27,8 @@ const Packages = async ({ params, searchParams }) => {
     suitable_id,
     sort_by_price,
     price_range_from,
-    price_range_to
+    price_range_to,
+    duration
   } = await searchParams;
 
   const countryId = Number(id);
@@ -47,7 +48,8 @@ const Packages = async ({ params, searchParams }) => {
           suitableFor: suitable_id || "",
           sortBy: sort_by_price || "",
           price_range_from: price_range_from || "",
-          price_range_to: price_range_to || ""
+          price_range_to: price_range_to || "",
+          duration: duration || ""
         }}
         fallbackImage={metadata.images}
       />
@@ -64,7 +66,8 @@ const Packages = async ({ params, searchParams }) => {
         suitable_id,
         sort_by_price,
         price_range_from,
-        price_range_to
+        price_range_to,
+        duration
       }),
     { data: [] }
   );
@@ -103,7 +106,8 @@ const Packages = async ({ params, searchParams }) => {
         suitableFor: suitable_id || "",
         sortBy: sort_by_price || "",
         price_range_from: price_range_from || "",
-        price_range_to: price_range_to || ""
+        price_range_to: price_range_to || "",
+        duration: duration || ""
       }}
       fallbackImage={metadata.images}
     />

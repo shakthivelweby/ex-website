@@ -1,6 +1,8 @@
 import ClientWrapper from "./clientWrapper";
 import { getPackages, stateInfo, stateDestinations, countryInfo, getStates } from "./service";
 
+export const dynamic = "force-dynamic";
+
 // Add default export metadata to specify fallback image
 export const metadata = {
   images: {

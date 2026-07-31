@@ -19,6 +19,12 @@ import LocationSearchInput from "../LocationSearchInput";
 import SearchInputBox from "./SearchInputBox";
 import SearchTypePicker from "./SearchTypePicker";
 import { SEARCH_MODULES } from "./searchModules";
+import {
+  buildPackageLocationOptions,
+  filterLocationOptions,
+  isSameLocationOption,
+  locationOptionKey,
+} from "./packageLocations";
 
 const HERO_MODULES = SEARCH_MODULES;
 
@@ -130,15 +136,20 @@ export default function HeroSearch() {
     [rentalCategoryTypes],
   );
 
-  const filteredDestinations = useMemo(() => {
-    if (!destinationQuery.trim()) return allDestinations;
-    const query = destinationQuery.toLowerCase();
-    return allDestinations.filter(
-      (dest) =>
-        dest.name?.toLowerCase().includes(query) ||
-        dest.state?.name?.toLowerCase().includes(query),
-    );
-  }, [allDestinations, destinationQuery]);
+  const locationOptions = useMemo(() => {
+    if (isSchedule) {
+      return allDestinations.map((destination) => ({
+        ...destination,
+        type: "destination",
+      }));
+    }
+    return buildPackageLocationOptions(allDestinations);
+  }, [allDestinations, isSchedule]);
+
+  const filteredDestinations = useMemo(
+    () => filterLocationOptions(locationOptions, destinationQuery),
+    [locationOptions, destinationQuery],
+  );
 
   const updateDropdownPosition = useCallback(() => {
     const anchor = destinationAnchorRef.current;
@@ -233,19 +244,39 @@ export default function HeroSearch() {
   };
 
   const toggleDestination = (destination) => {
+    const itemType = destination.type || "destination";
+
     if (isSchedule) {
       setSelectedDestinations((prev) =>
-        prev.some((d) => d.id === destination.id) ? [] : [destination],
+        prev.some((d) => isSameLocationOption(d, destination))
+          ? []
+          : [{ ...destination, type: "destination" }],
       );
       setDestinationQuery("");
       setShowDestinationDropdown(false);
       return;
     }
 
+    if (itemType === "state") {
+      setSelectedDestinations((prev) => {
+        const exists = prev.some((d) => isSameLocationOption(d, destination));
+        return exists ? [] : [{ ...destination, type: "state" }];
+      });
+      setDestinationQuery("");
+      return;
+    }
+
     setSelectedDestinations((prev) => {
-      const exists = prev.some((d) => d.id === destination.id);
-      if (exists) return prev.filter((d) => d.id !== destination.id);
-      return [...prev, destination];
+      const withoutStates = prev.filter((d) => d.type !== "state");
+      const exists = withoutStates.some((d) =>
+        isSameLocationOption(d, { ...destination, type: "destination" }),
+      );
+      if (exists) {
+        return withoutStates.filter(
+          (d) => !isSameLocationOption(d, { ...destination, type: "destination" }),
+        );
+      }
+      return [...withoutStates, { ...destination, type: "destination" }];
     });
     setDestinationQuery("");
   };
@@ -260,7 +291,45 @@ export default function HeroSearch() {
       : "Search";
 
   const runPackageSearch = () => {
-    const normalized = selectedDestinations.map((dest) => ({
+    const selectedStates = selectedDestinations.filter((d) => d.type === "state");
+    const selectedDestinationItems = selectedDestinations.filter(
+      (d) => d.type !== "state",
+    );
+
+    if (isSchedule) {
+      if (selectedDestinationItems.length >= 1) {
+        const item = selectedDestinationItems[0];
+        localStorage.setItem(
+          "choosedDestination",
+          JSON.stringify({
+            id: item.id,
+            name: item.name,
+            type: "destination",
+            state_id: item.state_id,
+            country_id: item.state?.country_id,
+            destination_id: item.id,
+          }),
+        );
+        window.dispatchEvent(new CustomEvent("destinationChanged"));
+      }
+      router.push("/scheduled");
+      return;
+    }
+
+    if (selectedStates.length === 1 && selectedDestinationItems.length === 0) {
+      const state = selectedStates[0];
+      const countryId = state.country_id;
+      if (!countryId) {
+        router.push("/explore");
+        return;
+      }
+      const params = new URLSearchParams({ state: String(state.id) });
+      if (packageDuration) params.set("duration", packageDuration);
+      router.push(`/packages/${countryId}?${params.toString()}`);
+      return;
+    }
+
+    const normalized = selectedDestinationItems.map((dest) => ({
       id: dest.id,
       name: dest.name,
       type: "destination",
@@ -268,13 +337,6 @@ export default function HeroSearch() {
       country_id: dest.state?.country_id,
       destination_id: dest.id,
     }));
-
-    if (isSchedule) {
-      localStorage.setItem("choosedDestination", JSON.stringify(normalized[0]));
-      window.dispatchEvent(new CustomEvent("destinationChanged"));
-      router.push("/scheduled");
-      return;
-    }
 
     if (normalized.length === 1) {
       const item = normalized[0];
@@ -360,9 +422,11 @@ export default function HeroSearch() {
 
   const destinationPickerHint = isSchedule
     ? "Select one destination"
-    : selectedDestinations.length > 0
-      ? `${selectedDestinations.length} selected — add more destinations`
-      : "Select one or more destinations";
+    : selectedDestinations.some((d) => d.type === "state")
+      ? "State selected"
+      : selectedDestinations.length > 0
+        ? `${selectedDestinations.length} selected — add more destinations`
+        : "Select destinations or states";
 
   const destinationPlaceholder =
     selectedDestinations.length > 0
@@ -371,7 +435,7 @@ export default function HeroSearch() {
         : "Add more"
       : isSchedule
         ? "Pick a destination"
-        : "Search destinations to add";
+        : "Search destinations or states";
 
   const renderDestinationOptions = () => {
     if (isDestinationsLoading) {
@@ -385,18 +449,21 @@ export default function HeroSearch() {
     if (filteredDestinations.length === 0) {
       return (
         <p className="py-6 text-center text-sm text-[#717171]">
-          No destinations found
+          {isSchedule
+            ? "No destinations found"
+            : "No destinations or states found"}
         </p>
       );
     }
 
     return filteredDestinations.map((destination) => {
-      const selected = selectedDestinations.some(
-        (d) => d.id === destination.id,
+      const selected = selectedDestinations.some((d) =>
+        isSameLocationOption(d, destination),
       );
+      const isState = destination.type === "state";
       return (
         <button
-          key={destination.id}
+          key={locationOptionKey(destination)}
           type="button"
           onClick={() => toggleDestination(destination)}
           className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors ${
@@ -417,7 +484,11 @@ export default function HeroSearch() {
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center">
-                <i className="fi fi-rr-map-marker text-sm text-[#717171]" />
+                <i
+                  className={`fi ${
+                    isState ? "fi-rr-marker" : "fi-rr-map-marker"
+                  } text-sm text-[#717171]`}
+                />
               </div>
             )}
           </div>
@@ -426,7 +497,7 @@ export default function HeroSearch() {
               {destination.name}
             </p>
             <p className="truncate text-xs text-[#717171]">
-              {destination.state?.name || "Destination"}
+              {isState ? "State" : destination.state?.name || "Destination"}
             </p>
           </div>
           <div
@@ -450,7 +521,7 @@ export default function HeroSearch() {
   } = {}) =>
     selectedDestinations.map((dest) => (
       <span
-        key={dest.id}
+        key={locationOptionKey(dest)}
         className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 py-0.5 pl-2 pr-1 text-xs font-medium text-primary-700"
       >
         <span className="truncate">{dest.name}</span>
@@ -906,7 +977,9 @@ export default function HeroSearch() {
                     className="rounded-xl bg-[#FAFAFA] py-8 text-center"
                   >
                     <p className="text-sm text-[#717171]">
-                      No destinations found
+                      {isSchedule
+                        ? "No destinations found"
+                        : "No destinations or states found"}
                     </p>
                   </motion.div>
                 ) : (

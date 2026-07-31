@@ -18,6 +18,12 @@ import LocationSearchInput from "../LocationSearchInput";
 import SearchInputBox from "./SearchInputBox";
 import SearchTypePicker from "./SearchTypePicker";
 import { SEARCH_MODULES } from "./searchModules";
+import {
+  buildPackageLocationOptions,
+  filterLocationOptions,
+  isSameLocationOption,
+  locationOptionKey,
+} from "./packageLocations";
 
 const createDefaultLocationFilters = () => ({
   location: "",
@@ -181,15 +187,20 @@ export default function Search({ isOpen, onClose, type }) {
     };
   }, [isOpen, selectedModule]);
 
-  const filteredDestinations = useMemo(() => {
-    if (!destinationQuery.trim()) return allDestinations;
-    const query = destinationQuery.toLowerCase();
-    return allDestinations.filter(
-      (dest) =>
-        dest.name?.toLowerCase().includes(query) ||
-        dest.state?.name?.toLowerCase().includes(query),
-    );
-  }, [allDestinations, destinationQuery]);
+  const locationOptions = useMemo(() => {
+    if (isSchedule) {
+      return allDestinations.map((destination) => ({
+        ...destination,
+        type: "destination",
+      }));
+    }
+    return buildPackageLocationOptions(allDestinations);
+  }, [allDestinations, isSchedule]);
+
+  const filteredDestinations = useMemo(
+    () => filterLocationOptions(locationOptions, destinationQuery),
+    [locationOptions, destinationQuery],
+  );
 
   const handleModuleSelect = (module) => {
     if (!module.enabled) return;
@@ -201,18 +212,38 @@ export default function Search({ isOpen, onClose, type }) {
   };
 
   const toggleDestination = (destination) => {
+    const itemType = destination.type || "destination";
+
     if (isSchedule) {
       setSelectedDestinations((prev) =>
-        prev.some((d) => d.id === destination.id) ? [] : [destination],
+        prev.some((d) => isSameLocationOption(d, destination))
+          ? []
+          : [{ ...destination, type: "destination" }],
       );
       setDestinationQuery("");
       return;
     }
 
+    if (itemType === "state") {
+      setSelectedDestinations((prev) => {
+        const exists = prev.some((d) => isSameLocationOption(d, destination));
+        return exists ? [] : [{ ...destination, type: "state" }];
+      });
+      setDestinationQuery("");
+      return;
+    }
+
     setSelectedDestinations((prev) => {
-      const exists = prev.some((d) => d.id === destination.id);
-      if (exists) return prev.filter((d) => d.id !== destination.id);
-      return [...prev, destination];
+      const withoutStates = prev.filter((d) => d.type !== "state");
+      const exists = withoutStates.some((d) =>
+        isSameLocationOption(d, { ...destination, type: "destination" }),
+      );
+      if (exists) {
+        return withoutStates.filter(
+          (d) => !isSameLocationOption(d, { ...destination, type: "destination" }),
+        );
+      }
+      return [...withoutStates, { ...destination, type: "destination" }];
     });
     setDestinationQuery("");
   };
@@ -227,7 +258,48 @@ export default function Search({ isOpen, onClose, type }) {
       : "Search";
 
   const runPackageSearch = () => {
-    const normalized = selectedDestinations.map((dest) => ({
+    const selectedStates = selectedDestinations.filter((d) => d.type === "state");
+    const selectedDestinationItems = selectedDestinations.filter(
+      (d) => d.type !== "state",
+    );
+
+    if (isSchedule) {
+      if (selectedDestinationItems.length >= 1) {
+        const item = selectedDestinationItems[0];
+        localStorage.setItem(
+          "choosedDestination",
+          JSON.stringify({
+            id: item.id,
+            name: item.name,
+            type: "destination",
+            state_id: item.state_id,
+            country_id: item.state?.country_id,
+            destination_id: item.id,
+          }),
+        );
+        window.dispatchEvent(new CustomEvent("destinationChanged"));
+      }
+      router.push("/scheduled");
+      onClose();
+      return;
+    }
+
+    if (selectedStates.length === 1 && selectedDestinationItems.length === 0) {
+      const state = selectedStates[0];
+      const countryId = state.country_id;
+      if (!countryId) {
+        router.push("/explore");
+        onClose();
+        return;
+      }
+      const params = new URLSearchParams({ state: String(state.id) });
+      if (packageDuration) params.set("duration", packageDuration);
+      router.push(`/packages/${countryId}?${params.toString()}`);
+      onClose();
+      return;
+    }
+
+    const normalized = selectedDestinationItems.map((dest) => ({
       id: dest.id,
       name: dest.name,
       type: "destination",
@@ -235,16 +307,6 @@ export default function Search({ isOpen, onClose, type }) {
       country_id: dest.state?.country_id,
       destination_id: dest.id,
     }));
-
-    if (isSchedule) {
-      if (normalized.length >= 1) {
-        localStorage.setItem("choosedDestination", JSON.stringify(normalized[0]));
-        window.dispatchEvent(new CustomEvent("destinationChanged"));
-      }
-      router.push("/scheduled");
-      onClose();
-      return;
-    }
 
     if (normalized.length === 1) {
       const item = normalized[0];
@@ -441,7 +503,7 @@ export default function Search({ isOpen, onClose, type }) {
                 <div className="flex min-h-[22px] flex-wrap items-center gap-1.5">
                   {selectedDestinations.map((dest) => (
                     <span
-                      key={dest.id}
+                      key={locationOptionKey(dest)}
                       className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 py-0.5 pl-2 pr-1 text-xs font-medium text-primary-700"
                     >
                       <span className="truncate">{dest.name}</span>
@@ -466,7 +528,7 @@ export default function Search({ isOpen, onClose, type }) {
                           : "Add more"
                         : isSchedule
                           ? "Pick a destination"
-                          : "Search destinations to add"
+                          : "Search destinations or states"
                     }
                     className="min-w-[72px] flex-1 border-0 bg-transparent p-0 text-sm font-medium text-[#222222] placeholder:text-[#B0B0B0] focus:outline-none"
                   />
@@ -636,9 +698,11 @@ export default function Search({ isOpen, onClose, type }) {
               <p className="text-xs font-medium text-[#717171]">
                 {isSchedule
                   ? "Select one destination"
-                  : selectedDestinations.length > 0
-                    ? `${selectedDestinations.length} selected — add more destinations`
-                    : "Select one or more destinations"}
+                  : selectedDestinations.some((d) => d.type === "state")
+                    ? "State selected"
+                    : selectedDestinations.length > 0
+                      ? `${selectedDestinations.length} selected — add more destinations`
+                      : "Select destinations or states"}
                 {!isDestinationsLoading ? (
                   <span className="float-right text-[#B0B0B0]">
                     {filteredDestinations.length}
@@ -667,7 +731,11 @@ export default function Search({ isOpen, onClose, type }) {
                   exit={{ opacity: 0 }}
                   className="rounded-xl bg-[#FAFAFA] py-8 text-center"
                 >
-                  <p className="text-sm text-[#717171]">No destinations found</p>
+                  <p className="text-sm text-[#717171]">
+                    {isSchedule
+                      ? "No destinations found"
+                      : "No destinations or states found"}
+                  </p>
                 </motion.div>
               ) : (
                 <motion.div
@@ -677,12 +745,13 @@ export default function Search({ isOpen, onClose, type }) {
                   className="space-y-1"
                 >
                   {filteredDestinations.map((destination) => {
-                    const selected = selectedDestinations.some(
-                      (d) => d.id === destination.id,
+                    const selected = selectedDestinations.some((d) =>
+                      isSameLocationOption(d, destination),
                     );
+                    const isState = destination.type === "state";
                     return (
                       <button
-                        key={destination.id}
+                        key={locationOptionKey(destination)}
                         type="button"
                         onClick={() => toggleDestination(destination)}
                         className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors ${
@@ -703,7 +772,11 @@ export default function Search({ isOpen, onClose, type }) {
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center">
-                              <i className="fi fi-rr-map-marker text-sm text-[#717171]" />
+                              <i
+                                className={`fi ${
+                                  isState ? "fi-rr-marker" : "fi-rr-map-marker"
+                                } text-sm text-[#717171]`}
+                              />
                             </div>
                           )}
                         </div>
@@ -712,7 +785,9 @@ export default function Search({ isOpen, onClose, type }) {
                             {destination.name}
                           </p>
                           <p className="truncate text-xs text-[#717171]">
-                            {destination.state?.name || "Destination"}
+                            {isState
+                              ? "State"
+                              : destination.state?.name || "Destination"}
                           </p>
                         </div>
                         <div

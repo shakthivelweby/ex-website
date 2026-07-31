@@ -166,7 +166,7 @@ export default function ClientWrapper({
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#717171] sm:text-[15px]">
             {selectedDestinations.length > 0
-              ? "Showing packages that visit at least one of your selected destinations."
+              ? "Showing packages that include all of your selected destinations."
               : "Showing packages that match your selected trip duration."}
           </p>
 

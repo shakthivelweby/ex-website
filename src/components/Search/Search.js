@@ -20,9 +20,12 @@ import SearchTypePicker from "./SearchTypePicker";
 import { SEARCH_MODULES } from "./searchModules";
 import {
   buildPackageLocationOptions,
+  buildPackageSearchHref,
   filterLocationOptions,
   isSameLocationOption,
   locationOptionKey,
+  packageLocationPickerHint,
+  togglePackageLocation,
 } from "./packageLocations";
 
 const createDefaultLocationFilters = () => ({
@@ -212,8 +215,6 @@ export default function Search({ isOpen, onClose, type }) {
   };
 
   const toggleDestination = (destination) => {
-    const itemType = destination.type || "destination";
-
     if (isSchedule) {
       setSelectedDestinations((prev) =>
         prev.some((d) => isSameLocationOption(d, destination))
@@ -224,27 +225,7 @@ export default function Search({ isOpen, onClose, type }) {
       return;
     }
 
-    if (itemType === "state") {
-      setSelectedDestinations((prev) => {
-        const exists = prev.some((d) => isSameLocationOption(d, destination));
-        return exists ? [] : [{ ...destination, type: "state" }];
-      });
-      setDestinationQuery("");
-      return;
-    }
-
-    setSelectedDestinations((prev) => {
-      const withoutStates = prev.filter((d) => d.type !== "state");
-      const exists = withoutStates.some((d) =>
-        isSameLocationOption(d, { ...destination, type: "destination" }),
-      );
-      if (exists) {
-        return withoutStates.filter(
-          (d) => !isSameLocationOption(d, { ...destination, type: "destination" }),
-        );
-      }
-      return [...withoutStates, { ...destination, type: "destination" }];
-    });
+    setSelectedDestinations((prev) => togglePackageLocation(prev, destination));
     setDestinationQuery("");
   };
 
@@ -258,89 +239,35 @@ export default function Search({ isOpen, onClose, type }) {
       : "Search";
 
   const runPackageSearch = () => {
-    const selectedStates = selectedDestinations.filter((d) => d.type === "state");
-    const selectedDestinationItems = selectedDestinations.filter(
-      (d) => d.type !== "state",
-    );
+    const result = buildPackageSearchHref({
+      selectedLocations: selectedDestinations,
+      duration: packageDuration,
+      isSchedule,
+    });
 
-    if (isSchedule) {
-      if (selectedDestinationItems.length >= 1) {
-        const item = selectedDestinationItems[0];
-        localStorage.setItem(
-          "choosedDestination",
-          JSON.stringify({
-            id: item.id,
-            name: item.name,
-            type: "destination",
-            state_id: item.state_id,
-            country_id: item.state?.country_id,
-            destination_id: item.id,
-          }),
-        );
-        window.dispatchEvent(new CustomEvent("destinationChanged"));
-      }
-      router.push("/scheduled");
-      onClose();
-      return;
-    }
-
-    if (selectedStates.length === 1 && selectedDestinationItems.length === 0) {
-      const state = selectedStates[0];
-      const countryId = state.country_id;
-      if (!countryId) {
-        router.push("/explore");
-        onClose();
-        return;
-      }
-      const params = new URLSearchParams({ state: String(state.id) });
-      if (packageDuration) params.set("duration", packageDuration);
-      router.push(`/packages/${countryId}?${params.toString()}`);
-      onClose();
-      return;
-    }
-
-    const normalized = selectedDestinationItems.map((dest) => ({
-      id: dest.id,
-      name: dest.name,
-      type: "destination",
-      state_id: dest.state_id,
-      country_id: dest.state?.country_id,
-      destination_id: dest.id,
-    }));
-
-    if (normalized.length === 1) {
-      const item = normalized[0];
-      const countryId = item.country_id ?? item.state?.country_id;
-      if (!countryId) {
-        const params = new URLSearchParams({
-          destinations: String(item.id),
-        });
-        if (packageDuration) params.set("duration", packageDuration);
-        router.push(`/packages/search?${params.toString()}`);
-        onClose();
-        return;
-      }
-      localStorage.setItem("choosedDestination", JSON.stringify(item));
+    if (result.choosedDestination) {
+      localStorage.setItem(
+        "choosedDestination",
+        JSON.stringify(result.choosedDestination),
+      );
       window.dispatchEvent(new CustomEvent("destinationChanged"));
-      const params = new URLSearchParams({
-        state: item.state_id,
-        destination: item.id,
-      });
-      if (packageDuration) params.set("duration", packageDuration);
-      router.push(`/packages/${countryId}?${params.toString()}`);
-      onClose();
-      return;
     }
 
-    sessionStorage.setItem(
-      "packageSearchDestinations",
-      JSON.stringify(normalized),
-    );
-    const params = new URLSearchParams();
-    const ids = normalized.map((d) => d.id).join(",");
-    if (ids) params.set("destinations", ids);
-    if (packageDuration) params.set("duration", packageDuration);
-    router.push(`/packages/search?${params.toString()}`);
+    if (result.sessionDestinations) {
+      sessionStorage.setItem(
+        "packageSearchDestinations",
+        JSON.stringify(result.sessionDestinations),
+      );
+    }
+
+    if (result.sessionStates) {
+      sessionStorage.setItem(
+        "packageSearchStates",
+        JSON.stringify(result.sessionStates),
+      );
+    }
+
+    router.push(result.href);
     onClose();
   };
 
@@ -507,6 +434,11 @@ export default function Search({ isOpen, onClose, type }) {
                       className="inline-flex max-w-full items-center gap-0.5 rounded-full border border-primary-100 bg-primary-50 py-0.5 pl-2 pr-1 text-xs font-medium text-primary-700"
                     >
                       <span className="truncate">{dest.name}</span>
+                      {dest.type === "state" ? (
+                        <span className="text-[10px] font-normal text-primary-500">
+                          State
+                        </span>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => toggleDestination(dest)}
@@ -696,13 +628,9 @@ export default function Search({ isOpen, onClose, type }) {
           <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-2 [-webkit-overflow-scrolling:touch] sm:px-8">
             <div className="sticky top-0 z-10 mb-2 border-b border-[#EBEBEB] bg-white py-2">
               <p className="text-xs font-medium text-[#717171]">
-                {isSchedule
-                  ? "Select one destination"
-                  : selectedDestinations.some((d) => d.type === "state")
-                    ? "State selected"
-                    : selectedDestinations.length > 0
-                      ? `${selectedDestinations.length} selected — add more destinations`
-                      : "Select destinations or states"}
+                {packageLocationPickerHint(selectedDestinations, {
+                  isSchedule,
+                })}
                 {!isDestinationsLoading ? (
                   <span className="float-right text-[#B0B0B0]">
                     {filteredDestinations.length}

@@ -5,14 +5,34 @@ import PackageFilters from "@/components/PackageFilters/PackageFilters";
 import ChipThumbImage from "@/components/common/ChipThumbImage";
 import ListingsEmptyState from "@/components/common/ListingsEmptyState";
 import Popup from "@/components/Popup";
+import {
+  buildPackageSearchHref,
+  locationOptionKey,
+} from "@/components/Search/packageLocations";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+function applyListingFilters(params, nextFilters) {
+  if (nextFilters.tour_type) params.set("tour_type", nextFilters.tour_type);
+  if (nextFilters.suitable_id) params.set("suitable_id", nextFilters.suitable_id);
+  if (nextFilters.sort_by_price) {
+    params.set("sort_by_price", nextFilters.sort_by_price);
+  }
+  if (nextFilters.duration) params.set("duration", nextFilters.duration);
+  if (nextFilters.price_from && nextFilters.price_to) {
+    params.set("price_range_from", nextFilters.price_from);
+    params.set("price_range_to", nextFilters.price_to);
+  }
+  return params;
+}
+
 export default function ClientWrapper({
   packages = [],
   destinationIds = [],
+  stateIds = [],
   selectedDestinations = [],
+  selectedStates = [],
   initialFilters = {},
   suitableForOptions = [],
 }) {
@@ -32,69 +52,72 @@ export default function ClientWrapper({
     [initialFilters],
   );
 
-  const destinationLabel = useMemo(() => {
-    if (selectedDestinations.length === 0) return "your destinations";
-    if (selectedDestinations.length <= 2) {
-      return selectedDestinations.map((dest) => dest.name).join(" & ");
-    }
-    return `${selectedDestinations.length} destinations`;
-  }, [selectedDestinations]);
+  const selectedPlaces = useMemo(
+    () => [...selectedStates, ...selectedDestinations],
+    [selectedStates, selectedDestinations],
+  );
 
-  const updateURL = (nextFilters, nextDestinationIds = destinationIds) => {
-    if (nextDestinationIds.length === 0 && !nextFilters.duration) {
+  const destinationLabel = useMemo(() => {
+    if (selectedPlaces.length === 0) return "your search";
+    if (selectedPlaces.length <= 2) {
+      return selectedPlaces.map((place) => place.name).join(" & ");
+    }
+    return `${selectedPlaces.length} places`;
+  }, [selectedPlaces]);
+
+  const resultsDescription = useMemo(() => {
+    if (selectedPlaces.length === 0) {
+      return "Showing packages that match your selected trip duration.";
+    }
+    if (selectedStates.length > 0 && selectedDestinations.length > 0) {
+      return "Showing packages that visit all of your selected states and destinations.";
+    }
+    if (selectedStates.length > 0) {
+      return "Showing packages that visit all of your selected states.";
+    }
+    return "Showing packages that include all of your selected destinations.";
+  }, [selectedPlaces.length, selectedStates.length, selectedDestinations.length]);
+
+  const updateURL = (
+    nextFilters,
+    nextDestinationIds = destinationIds,
+    nextStateIds = stateIds,
+  ) => {
+    if (
+      nextDestinationIds.length === 0 &&
+      nextStateIds.length === 0 &&
+      !nextFilters.duration
+    ) {
       router.push("/explore");
       return;
     }
 
-    if (nextDestinationIds.length === 1) {
-      const destination = selectedDestinations.find(
-        (item) => item.id === nextDestinationIds[0],
+    const nextDestinations = selectedDestinations.filter((item) =>
+      nextDestinationIds.includes(item.id),
+    );
+    const nextStates = selectedStates.filter((item) =>
+      nextStateIds.includes(item.id),
+    );
+    const result = buildPackageSearchHref({
+      selectedLocations: [...nextStates, ...nextDestinations],
+      duration: nextFilters.duration,
+    });
+
+    if (result.choosedDestination) {
+      localStorage.setItem(
+        "choosedDestination",
+        JSON.stringify(result.choosedDestination),
       );
-      const countryId = destination?.state?.country_id;
-      if (destination && countryId) {
-        const params = new URLSearchParams({
-          state: String(destination.state_id),
-          destination: String(destination.id),
-        });
-        if (nextFilters.tour_type) params.set("tour_type", nextFilters.tour_type);
-        if (nextFilters.suitable_id) params.set("suitable_id", nextFilters.suitable_id);
-        if (nextFilters.sort_by_price) {
-          params.set("sort_by_price", nextFilters.sort_by_price);
-        }
-        if (nextFilters.duration) params.set("duration", nextFilters.duration);
-        if (nextFilters.price_from && nextFilters.price_to) {
-          params.set("price_range_from", nextFilters.price_from);
-          params.set("price_range_to", nextFilters.price_to);
-        }
-        router.push(`/packages/${countryId}?${params.toString()}`);
-        return;
-      }
+      window.dispatchEvent(new CustomEvent("destinationChanged"));
     }
 
-    const params = new URLSearchParams();
-    params.set("destinations", nextDestinationIds.join(","));
-
-    if (nextFilters.tour_type) params.set("tour_type", nextFilters.tour_type);
-    else params.delete("tour_type");
-
-    if (nextFilters.suitable_id) params.set("suitable_id", nextFilters.suitable_id);
-    else params.delete("suitable_id");
-
-    if (nextFilters.sort_by_price) params.set("sort_by_price", nextFilters.sort_by_price);
-    else params.delete("sort_by_price");
-
-    if (nextFilters.duration) params.set("duration", nextFilters.duration);
-    else params.delete("duration");
-
-    if (nextFilters.price_from && nextFilters.price_to) {
-      params.set("price_range_from", nextFilters.price_from);
-      params.set("price_range_to", nextFilters.price_to);
-    } else {
-      params.delete("price_range_from");
-      params.delete("price_range_to");
-    }
-
-    router.push(`/packages/search?${params.toString()}`);
+    const [path, existingQuery] = result.href.split("?");
+    const params = applyListingFilters(
+      new URLSearchParams(existingQuery || ""),
+      nextFilters,
+    );
+    const query = params.toString();
+    router.push(query ? `${path}?${query}` : path);
   };
 
   const handleFilterChange = (newFilters) => {
@@ -123,9 +146,20 @@ export default function ClientWrapper({
         filters.price_to,
     );
 
-  const removeDestination = (id) => {
-    const nextIds = destinationIds.filter((destId) => destId !== id);
-    updateURL(filters, nextIds);
+  const removePlace = (place) => {
+    if (place.type === "state") {
+      updateURL(
+        filters,
+        destinationIds,
+        stateIds.filter((id) => id !== place.id),
+      );
+      return;
+    }
+    updateURL(
+      filters,
+      destinationIds.filter((id) => id !== place.id),
+      stateIds,
+    );
   };
 
   const toggleFilter = () => {
@@ -155,7 +189,7 @@ export default function ClientWrapper({
           </nav>
 
           <h1 className="text-2xl font-medium tracking-tight text-[#222222] md:text-[32px]">
-            {selectedDestinations.length > 0 ? (
+            {selectedPlaces.length > 0 ? (
               <>
                 Packages in{" "}
                 <span className="text-primary-600">{destinationLabel}</span>
@@ -165,29 +199,36 @@ export default function ClientWrapper({
             )}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#717171] sm:text-[15px]">
-            {selectedDestinations.length > 0
-              ? "Showing packages that include all of your selected destinations."
-              : "Showing packages that match your selected trip duration."}
+            {resultsDescription}
           </p>
 
-          {selectedDestinations.length > 0 ? (
+          {selectedPlaces.length > 0 ? (
             <div className="mt-5 flex flex-wrap gap-2">
-              {selectedDestinations.map((destination) => (
+              {selectedPlaces.map((place) => (
                 <button
-                  key={destination.id}
+                  key={locationOptionKey(place)}
                   type="button"
-                  onClick={() => removeDestination(destination.id)}
+                  onClick={() => removePlace(place)}
                   className="inline-flex max-w-full items-center gap-2 rounded-full border border-primary-100 bg-white py-1.5 pl-1.5 pr-3 text-sm font-medium text-[#222222] shadow-sm transition-colors hover:border-primary-200 hover:bg-primary-50"
-                  aria-label={`Remove ${destination.name}`}
+                  aria-label={`Remove ${place.name}`}
                 >
                   <ChipThumbImage
-                    src={destination.thumb_image_url}
-                    filename={destination.thumb_image}
-                    alt={destination.name}
-                    iconClass="fi fi-rr-map-marker text-[10px]"
+                    src={place.thumb_image_url}
+                    filename={place.thumb_image}
+                    alt={place.name}
+                    iconClass={`fi ${
+                      place.type === "state"
+                        ? "fi-rr-marker"
+                        : "fi-rr-map-marker"
+                    } text-[10px]`}
                     className="h-7 w-7 rounded-full overflow-hidden relative flex-shrink-0"
                   />
-                  <span className="truncate">{destination.name}</span>
+                  <span className="truncate">{place.name}</span>
+                  {place.type === "state" ? (
+                    <span className="text-xs font-normal text-[#717171]">
+                      State
+                    </span>
+                  ) : null}
                   <i className="fi fi-rr-cross-small text-xs text-[#717171]" />
                 </button>
               ))}
@@ -262,11 +303,13 @@ export default function ClientWrapper({
               </div>
             </Popup>
 
-            {destinationIds.length === 0 && !filters.duration ? (
+            {destinationIds.length === 0 &&
+            stateIds.length === 0 &&
+            !filters.duration ? (
               <ListingsEmptyState
                 icon="fi fi-rr-map-marker"
-                title="No destinations selected"
-                description="Choose two or more destinations from search to see matching packages."
+                title="No locations selected"
+                description="Choose destinations or states from search to see matching packages."
               />
             ) : packages.length > 0 ? (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] items-stretch gap-4 sm:gap-5 lg:gap-6">
@@ -299,8 +342,8 @@ export default function ClientWrapper({
                 onClearFilters={hasActiveFilters() ? clearAllFilters : undefined}
                 description={
                   hasActiveFilters()
-                    ? "Try adjusting your filters or remove a destination."
-                    : "We couldn't find packages covering these destinations together yet."
+                    ? "Try adjusting your filters or remove a location."
+                    : "We couldn't find packages covering these states and destinations together yet."
                 }
               />
             )}
